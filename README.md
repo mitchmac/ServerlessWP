@@ -16,6 +16,9 @@ ServerlessWP puts Basic Authentication in front of the backend WordPress install
 
 1. Install the Serverless Framework for AWS - [Serverless installation guide](https://serverless.com/framework/docs/providers/aws/guide/installation/)
 2. Clone or download this repository
+3. Place necessary binary files in the "bin" directory.
+   * "php-cgi" and "wget" are the current binaries necessary. They must be compiled to run in the Lambda environment.
+   * This can be handled by running the "./build_bin.sh" script if you have Docker installed.
 
 ## Authors
 
