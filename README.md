@@ -50,6 +50,9 @@ define('WP_AUTO_UPDATE_CORE', false);
 
 /* That's all, stop editing! Happy blogging. */
 ```
+7. Edit serverless.yml
+8. Run "npm init"
+9. Run "severless deploy"
 
 ## Authors
 
