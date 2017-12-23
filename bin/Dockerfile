@@ -11,7 +11,8 @@ RUN yum -y groups install "Development tools" \
     mysql-devel \
     libjpeg-devel \
     libexif \
-    libexif-devel
+    libexif-devel \
+    wget
 
 RUN curl -L http://ca3.php.net/get/php-7.1.12.tar.bz2/from/this/mirror --create-dirs -o /work/php.tar.bz2
 
