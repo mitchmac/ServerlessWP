@@ -84,7 +84,7 @@ module.exports.dbwake = (event, context, callback) => {
                 else if(instance.DBInstanceStatus == 'available') {
                     var response = {
                         statusCode: 307,
-                        headers: {'Location': 'https://' + process.env['WP_EDITOR_CUSTOM_DOMAIN'] + '/' },
+                        headers: {'Location': 'https://' + event.headers.Host + '/' + process.env['WP_STAGE'] + '/' },
                         body: ''
                     };
                     callback(null, response);
