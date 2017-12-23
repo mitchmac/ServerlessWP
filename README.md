@@ -21,6 +21,7 @@ The backend WordPress website is crawled to generate the static website. The sta
 3. Place necessary binary files in the "bin" directory.
    * "php-cgi" and "wget" are the currently necessary binaries. They must be compiled to run in the Lambda environment.
    * This can be handled by running the "./build_bin.sh" script if you have Docker installed.
+   * The "lib" directory in "./bin" requires a library noted in [bin/lib/readme.txt](bin/lib/readme.txt). It will be put in place if "./build_bin.sh" is used.
 
 ## Authors
 
