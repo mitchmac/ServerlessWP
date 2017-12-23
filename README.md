@@ -37,10 +37,10 @@ define( 'DB_PASSWORD', getenv('WP_DB_PASS') );
 /** MySQL hostname */
 define( 'DB_HOST', getenv('WP_DB_HOST') );
 ```
-6. Modify "wp-config.php" for general ServerlessWP config:
+6. Modify "wp-config.php" for general ServerlessWP config by adding:
 ```php
-define('WP_HOME','https://' . getenv('WP_EDITOR_CUSTOM_DOMAIN'));
-define('WP_SITEURL','https://' . getenv('WP_EDITOR_CUSTOM_DOMAIN'));
+define('WP_HOME','https://' . getenv('HTTP_HOST') . '/' . getenv('WP_STAGE'));
+define('WP_SITEURL','https://' . getenv('HTTP_HOST') . '/' . getenv('WP_STAGE'));
 define('FORCE_SSL_ADMIN', true);
 define('FORCE_SSL_CONTENT', true);
 define('CONCATENATE_SCRIPTS', false);
