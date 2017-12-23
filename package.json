@@ -1,0 +1,16 @@
+{
+  "name": "ServerlessWP",
+  "version": "1.0.0",
+  "description": "Host WordPress as static website with AWS Serverless technology.",
+  "main": "web.js",
+  "dependencies": {
+    "http-string-parser": "^0.0.6",
+    "mime-types": "^2.1.17",
+    "recursive-readdir": "^2.2.1"
+  },
+  "devDependencies": {
+    "aws-sdk": "^2.124.0"
+  },
+  "author": "Mitch MacKenzie",
+  "license": "MIT"
+}
