@@ -10,6 +10,8 @@ ServerlessWP enables hosting the backend WordPress installation, where we add an
 
 ServerlessWP puts Basic Authentication in front of the backend WordPress installation to limit its exposure to bots and other sources of unwanted traffic. The backend WordPress website is crawled to generate the static website. The static HTML is uploaded to Amazon S3 for storage and hosting.
 
+*Disclaimer:* This is a proof of concept and involves lots of hackery.
+
 ## Installation
 
 1. Install the Serverless Framework for AWS - [Serverless installation guide](https://serverless.com/framework/docs/providers/aws/guide/installation/)
@@ -20,6 +22,11 @@ ServerlessWP puts Basic Authentication in front of the backend WordPress install
 * **Mitch MacKenzie**  - [mitchmac](https://github.com/mitchmac)
 
 ## Acknowledgments
+
+* [Chris White](https://github.com/cwhite92) - [Hosting a Laravel application on AWS Lambda](http://cwhite.me/hosting-a-laravel-application-on-aws-lambda/)
+* [Danny Linden](https://github.com/dannylinden) - [aws-lambda-php](https://github.com/dannylinden/aws-lambda-php)
+* [Peter Tilsen](https://github.com/petertilsen) - [basicAuthApiGateway](https://github.com/petertilsen/basicAuthApiGateway)
+* [hemanth.hm](https://github.com/hemanth) - [Copying shared library dependencies](https://h3manth.com/content/copying-shared-library-dependencies)
 
 ## License
 
