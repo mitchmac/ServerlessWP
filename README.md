@@ -23,6 +23,20 @@ The backend WordPress website is crawled to generate the static website. The sta
    * This can be handled by running the "./build_bin.sh" script if you have Docker installed.
    * The "lib" directory in "./bin" requires a library noted in [bin/lib/readme.txt](bin/lib/readme.txt). It will be put in place if "./build_bin.sh" is used.
 4. Place a WordPress installation directly in the "wp" directory so that "index.php" is found in the root of "wp".
+5. Modify "wp-config.php" for database config:
+```php
+/** The name of the database for WordPress */
+define( 'DB_NAME', getenv('WP_DB_NAME') );
+
+/** MySQL database username */
+define( 'DB_USER', getenv('WP_DB_USER') );
+
+/** MySQL database password */
+define( 'DB_PASSWORD', getenv('WP_DB_PASS') );
+
+/** MySQL hostname */
+define( 'DB_HOST', getenv('WP_DB_HOST') );
+```
 
 ## Authors
 
