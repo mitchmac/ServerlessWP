@@ -1,0 +1,14 @@
+# package directories
+node_modules
+jspm_packages
+
+# Serverless directories
+.serverless
+
+# Project files
+wp/*
+!wp/readme.txt
+bin/*
+!bin/readme.txt
+!bin/lib/readme.txt
+.idea
