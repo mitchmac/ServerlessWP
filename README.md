@@ -13,6 +13,7 @@ ServerlessWP puts Basic Authentication in front of the backend WordPress install
 ## Installation
 
 1. Install the Serverless Framework for AWS - [Serverless installation guide](https://serverless.com/framework/docs/providers/aws/guide/installation/)
+2. Clone or download this repository
 
 ## Authors
 
