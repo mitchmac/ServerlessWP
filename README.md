@@ -37,6 +37,19 @@ define( 'DB_PASSWORD', getenv('WP_DB_PASS') );
 /** MySQL hostname */
 define( 'DB_HOST', getenv('WP_DB_HOST') );
 ```
+6. Modify "wp-config.php" for general ServerlessWP config:
+```php
+define('WP_HOME','https://' . getenv('WP_EDITOR_CUSTOM_DOMAIN'));
+define('WP_SITEURL','https://' . getenv('WP_EDITOR_CUSTOM_DOMAIN'));
+define('FORCE_SSL_ADMIN', true);
+define('FORCE_SSL_CONTENT', true);
+define('CONCATENATE_SCRIPTS', false);
+define('WP_HTTP_BLOCK_EXTERNAL', true);
+define('DISALLOW_FILE_MODS', true);
+define('WP_AUTO_UPDATE_CORE', false);
+
+/* That's all, stop editing! Happy blogging. */
+```
 
 ## Authors
 
