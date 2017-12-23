@@ -27,6 +27,7 @@ ServerlessWP puts Basic Authentication in front of the backend WordPress install
 * [Danny Linden](https://github.com/dannylinden) - [aws-lambda-php](https://github.com/dannylinden/aws-lambda-php)
 * [Peter Tilsen](https://github.com/petertilsen) - [basicAuthApiGateway](https://github.com/petertilsen/basicAuthApiGateway)
 * [hemanth.hm](https://github.com/hemanth) - [Copying shared library dependencies](https://h3manth.com/content/copying-shared-library-dependencies)
+* [Ivan Perevernykhata](https://github.com/perevernihata) - [Start/Stop RDS instances on schedule](https://www.codeproject.com/Articles/1190194/Start-Stop-RDS-instances-on-schedule)
 
 ## License
 
