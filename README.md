@@ -47,6 +47,7 @@ define('CONCATENATE_SCRIPTS', false);
 define('WP_HTTP_BLOCK_EXTERNAL', true);
 define('DISALLOW_FILE_MODS', true);
 define('WP_AUTO_UPDATE_CORE', false);
+define('WP_DEBUG', true );
 
 /* That's all, stop editing! Happy blogging. */
 ```
