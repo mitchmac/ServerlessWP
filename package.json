@@ -1,9 +1,10 @@
 {
   "name": "ServerlessWP",
   "version": "1.0.0",
-  "description": "Host WordPress as static website with AWS Serverless technology.",
+  "description": "Host WordPress with AWS Serverless technology.",
   "main": "web.js",
   "dependencies": {
+    "http-headers": "^3.0.2",
     "http-string-parser": "^0.0.6",
     "mime-types": "^2.1.17",
     "recursive-readdir": "^2.2.1"
