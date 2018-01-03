@@ -1,0 +1,366 @@
+service: serverlesswp
+
+custom:
+    # Basic Authentication username that is used to access the WordPress backend, not the WordPress admin username.
+    WP_AUTH_USER: "user"
+
+    # Basic Authentication password used to access the WordPress backend. Use a strong password here.
+    WP_AUTH_PASS: "pass"
+
+    # The S3 bucket where the static website files will be stored and used as a CloudFront origin.
+    WP_S3_BUCKET: "serverlesswp.com"
+
+    # The database Name for the WordPress MySQL database (RDS).
+    WP_DB_NAME: "serverlesswp"
+
+    # The database user for the WordPress MySQL database (RDS). The WordPress backend will use this user to access the DB.
+    WP_DB_USER: "serverlesswpuser"
+
+    # The database user for the WordPress MySQL database (RDS). The WordPress backend will use this password to access the DB.
+    WP_DB_PASS: "serverlesswp_pass"
+
+    # The domain name that will host the static website that is generated.
+    WP_PUBLIC_DOMAIN: "www.serverlesswp.com"
+
+    # The base of the domain name, used for validation when creating the SSL certificate for the public domain name.
+    WP_PUBLIC_BASE_DOMAIN: "serverlesswp.com"
+
+    # The number of minutes of inactivity before the WordPress backend database is put to sleep.
+    WP_RDS_SLEEP_TIMEOUT: 120
+
+    # The number of seconds for Cache-Control header for static files served by the WordPress backend via Lambda.
+    WP_LAMBDA_STATIC_CACHE_TIME: 86400
+
+provider:
+    name: aws
+    runtime: nodejs6.10
+    stackTags:
+        STACK: "${self:service}"
+    iamRoleStatements:
+        - Effect: "Allow"
+          Action:
+          - rds:StopDBInstance
+          - rds:DescribeDBInstances
+          - rds:StartDBInstance
+          - ec2:CreateNetworkInterface
+          - ec2:DescribeNetworkInterfaces
+          - ec2:DetachNetworkInterface
+          - ec2:DeleteNetworkInterface
+          - cloudwatch:GetMetricStatistics
+          Resource: "*"
+        - Effect: "Allow"
+          Action:
+          - s3:*
+          Resource:
+          - arn:aws:s3:::${self:custom.WP_S3_BUCKET}/*
+          - arn:aws:s3:::${self:custom.WP_S3_BUCKET}
+
+    environment:
+        WP_DB_NAME: ${self:custom.WP_DB_NAME}
+        WP_DB_USER: ${self:custom.WP_DB_USER}
+        WP_DB_PASS: ${self:custom.WP_DB_PASS}
+        WP_RDS_SLEEP_TIMEOUT: ${self:custom.WP_RDS_SLEEP_TIMEOUT}
+        WP_DB_HOST:
+          "Fn::Join": [":", ["Fn::GetAtt": [ServerlessWPRDS, Endpoint.Address], "Fn::GetAtt": [ServerlessWPRDS, Endpoint.Port]]]
+        WP_DB_INSTANCE:
+          "Ref": ServerlessWPRDS
+        WP_WEB_FUNCTION_NAME: serverlesswp-${self:provider.stage}-wp_index
+        WP_STAGE: ${self:provider.stage}
+        WP_LAMBDA_STATIC_CACHE_TIME: ${self:custom.WP_LAMBDA_STATIC_CACHE_TIME}
+        WP_S3_BUCKET: ${self:custom.WP_S3_BUCKET}
+        WP_BASIC_AUTH_USER: ${self:custom.WP_AUTH_USER}
+        WP_BASIC_AUTH_PASSWORD: ${self:custom.WP_AUTH_PASS}
+        WP_PUBLIC_DOMAIN: ${self:custom.WP_PUBLIC_DOMAIN}
+
+exclude:
+    - build-wp.sh
+
+functions:
+    index:
+        handler: web.index
+        DependsOn: IamPolicyLambdaExecution
+        name: serverlesswp-${self:provider.stage}-wp_index
+        timeout: 30
+        memorySize: 1024
+        vpc:
+            securityGroupIds:
+              - "Fn::GetAtt": ServerlessSecurityGroup.GroupId
+            subnetIds:
+              - Ref: ServerlessSubnetA
+              - Ref: ServerlessSubnetB
+              - Ref: ServerlessSubnetC
+        events:
+            - http:
+                path: /
+                method: any
+                authorizer: basicAuth
+
+            - http:
+                path: /{proxy+}
+                method: any
+                authorizer: basicAuth
+
+    basicAuth:
+        handler: basic-auth.handler
+
+    staticGenerator:
+        handler: static.crawl
+        DependsOn: IamPolicyLambdaExecution
+        timeout: 30
+        memorySize: 1024
+        events:
+            - http:
+                path: /serverlesswp-crawl
+                method: get
+                authorizer: basicAuth
+
+    dbwake:
+        handler: db.dbwake
+        DependsOn: IamPolicyLambdaExecution
+        timeout: 20
+        memorySize: 128
+        events:
+            - http:
+                path: /serverlesswp-dbwake
+                method: get
+                authorizer: basicAuth
+
+    dbsleep:
+        handler: db.dbsleep
+        DependsOn: IamPolicyLambdaExecution
+        timeout: 10
+        memorySize: 128
+        events:
+            - schedule:
+                rate: rate(20 minutes)
+                enabled: true
+
+resources:
+  Resources:
+      ApiGatewayRestApi:
+          Type: "AWS::ApiGateway::RestApi"
+          Properties:
+          BinaryMediaTypes:
+            - "*~1*"
+    ServerlessCert:
+          Type: "AWS::CertificateManager::Certificate"
+          Properties:
+            DomainName: ${self:custom.WP_PUBLIC_DOMAIN}
+            DomainValidationOptions:
+              - DomainName: ${self:custom.WP_PUBLIC_DOMAIN}
+                ValidationDomain: ${self:custom.WP_PUBLIC_BASE_DOMAIN}
+              - DomainName: ${self:custom.WP_PUBLIC_BASE_DOMAIN}
+                ValidationDomain: ${self:custom.WP_PUBLIC_BASE_DOMAIN}
+            SubjectAlternativeNames:
+              - ${self:custom.WP_PUBLIC_BASE_DOMAIN}
+    ServerlessCloudfrontDistribution:
+        Type: 'AWS::CloudFront::Distribution'
+        Properties:
+          DistributionConfig:
+            Aliases:
+              - ${self:custom.WP_PUBLIC_DOMAIN}
+              - ${self:custom.WP_PUBLIC_BASE_DOMAIN}
+            Origins:
+                    - DomainName: ${self:custom.WP_S3_BUCKET}.s3.amazonaws.com
+                      Id: S3Origin
+                      S3OriginConfig:
+                        OriginAccessIdentity: ''
+            Enabled: true
+            PriceClass: "PriceClass_100"
+            DefaultRootObject: "index.html"
+            DefaultCacheBehavior:
+                      AllowedMethods:
+                      - GET
+                      - HEAD
+                      Compress: true
+                      TargetOriginId: S3Origin
+                      ViewerProtocolPolicy: redirect-to-https
+                      ForwardedValues:
+                        QueryString: false
+                        Cookies:
+                          Forward: none
+            ViewerCertificate:
+              AcmCertificateArn:
+                Ref: ServerlessCert
+              SslSupportMethod: sni-only
+
+    ServerlessGatewayResponse:
+        Type: 'AWS::ApiGateway::GatewayResponse'
+        Properties:
+          ResponseParameters:
+            gatewayresponse.header.WWW-Authenticate: "'Basic'"
+          ResponseType: UNAUTHORIZED
+          RestApiId:
+            Ref: 'ApiGatewayRestApi'
+          StatusCode: '401'
+    ServerlessVPC:
+          Type: AWS::EC2::VPC
+          Properties:
+            CidrBlock: "10.0.0.0/16"
+    ServerlessInternetGateway:
+          Type: AWS::EC2::InternetGateway
+    ServerlessVPCGatewayAttachment:
+        Type: AWS::EC2::VPCGatewayAttachment
+        Properties:
+          InternetGatewayId:
+            Ref: ServerlessInternetGateway
+          VpcId:
+            Ref: ServerlessVPC
+    ServerlessRouteTable:
+              Type: AWS::EC2::RouteTable
+              Properties:
+                VpcId:
+                  Ref: ServerlessVPC
+    ServerlessRoute:
+                    DependsOn: ServerlessInternetGateway
+                    Type: AWS::EC2::Route
+                    Properties:
+                      RouteTableId:
+                        Ref: ServerlessRouteTable
+                      GatewayId:
+                        Ref: ServerlessInternetGateway
+                      DestinationCidrBlock: 0.0.0.0/0
+    ServerlessSubnetA:
+          DependsOn: ServerlessVPC
+          Type: AWS::EC2::Subnet
+          Properties:
+            VpcId:
+              Ref: ServerlessVPC
+            AvailabilityZone: ${self:provider.region}a
+            CidrBlock: "10.0.0.0/24"
+    ServerlessSubnetB:
+          DependsOn: ServerlessVPC
+          Type: AWS::EC2::Subnet
+          Properties:
+            VpcId:
+              Ref: ServerlessVPC
+            AvailabilityZone: ${self:provider.region}c
+            CidrBlock: "10.0.1.0/24"
+    ServerlessSubnetC:
+          DependsOn: ServerlessVPC
+          Type: AWS::EC2::Subnet
+          Properties:
+            VpcId:
+              Ref: ServerlessVPC
+            AvailabilityZone: ${self:provider.region}d
+            CidrBlock: "10.0.2.0/24"
+    SubnetRouteAssocA:
+        Type: AWS::EC2::SubnetRouteTableAssociation
+        Properties:
+          RouteTableId:
+            Ref: ServerlessRouteTable
+          SubnetId:
+            Ref: ServerlessSubnetA
+    SubnetRouteAssocB:
+            Type: AWS::EC2::SubnetRouteTableAssociation
+            Properties:
+              RouteTableId:
+                Ref: ServerlessRouteTable
+              SubnetId:
+                Ref: ServerlessSubnetB
+    SubnetRouteAssocC:
+            Type: AWS::EC2::SubnetRouteTableAssociation
+            Properties:
+              RouteTableId:
+                Ref: ServerlessRouteTable
+              SubnetId:
+                Ref: ServerlessSubnetC
+    ServerlessSecurityGroup:
+          DependsOn: ServerlessVPC
+          Type: AWS::EC2::SecurityGroup
+          Properties:
+            GroupDescription: SecurityGroup for Serverless Functions
+            VpcId:
+              Ref: ServerlessVPC
+    ServerlessStorageSecurityGroup:
+          DependsOn: ServerlessVPC
+          Type: AWS::EC2::SecurityGroup
+          Properties:
+            GroupDescription: Security group for RDS Instance
+            VpcId:
+              Ref: ServerlessVPC
+            SecurityGroupIngress:
+            - IpProtocol: tcp
+              FromPort: '3306'
+              ToPort: '3306'
+              SourceSecurityGroupId:
+                Ref: ServerlessSecurityGroup
+    ServerlessRDSSubnetGroup:
+          Type: AWS::RDS::DBSubnetGroup
+          Properties:
+            DBSubnetGroupDescription: "RDS Subnet Group"
+            SubnetIds:
+            - Ref: ServerlessSubnetA
+            - Ref: ServerlessSubnetB
+            - Ref: ServerlessSubnetC
+    ServerlessWPRDS:
+          Type: AWS::RDS::DBInstance
+          Properties:
+            Engine: MySQL
+            DBName: ${self:custom.WP_DB_NAME}
+            MasterUsername: ${self:custom.WP_DB_USER}
+            MasterUserPassword: ${self:custom.WP_DB_PASS}
+            DBInstanceClass: db.t2.micro
+            AllocatedStorage: 5
+            VPCSecurityGroups:
+              - "Fn::GetAtt": ServerlessStorageSecurityGroup.GroupId
+            DBSubnetGroupName:
+                      Ref: ServerlessRDSSubnetGroup
+    S3Website:
+              Type: AWS::S3::Bucket
+              Properties:
+                AccessControl: PublicRead
+                BucketName: ${self:custom.WP_S3_BUCKET}
+                WebsiteConfiguration:
+                  IndexDocument: "index.html"
+    S3WebsitePolicy:
+          Type: "AWS::S3::BucketPolicy"
+          Properties:
+              Bucket:
+                Ref: "S3Website"
+              PolicyDocument:
+                Statement:
+                  -
+                   	Action:
+                      - "s3:GetObject"
+                    Effect: "Allow"
+                    Resource:
+                      Fn::Join:
+                                  - ""
+                                  -
+                                   	- "arn:aws:s3:::"
+                                    -
+                                      Ref: S3Website
+                                    - "/*"
+                    Principal: "*"
+    S3Endpoint:
+      Type: "AWS::EC2::VPCEndpoint"
+      Properties:
+        PolicyDocument:
+          Statement:
+           -
+            Effect: "Allow"
+            Principal: "*"
+            Action: "*"
+            Resource:
+                                  Fn::Join:
+                                              - ""
+                                              -
+                                               	- "arn:aws:s3:::"
+                                                -
+                                                  Ref: S3Website
+                                                - "/*"
+        ServiceName: com.amazonaws.${self:provider.region}.s3
+        VpcId:
+          Ref: ServerlessVPC
+        RouteTableIds:
+          -
+            Ref: ServerlessRouteTable
+    IndexLogGroup:
+          Type: "AWS::Logs::LogGroup"
+          Properties:
+            RetentionInDays: "7"
+    BasicAuthLogGroup:
+          Type: "AWS::Logs::LogGroup"
+          Properties:
+            RetentionInDays: "7"
