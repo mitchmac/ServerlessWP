@@ -8,22 +8,22 @@ custom:
     WP_AUTH_PASS: "pass"
 
     # The S3 bucket where the static website files will be stored and used as a CloudFront origin.
-    WP_S3_BUCKET: "serverlesswp.com"
+    WP_S3_BUCKET: "examples3bucket"
 
     # The database Name for the WordPress MySQL database (RDS).
     WP_DB_NAME: "serverlesswp"
 
     # The database user for the WordPress MySQL database (RDS). The WordPress backend will use this user to access the DB.
-    WP_DB_USER: "serverlesswpuser"
+    WP_DB_USER: "serverlesswpdbuser"
 
     # The database user for the WordPress MySQL database (RDS). The WordPress backend will use this password to access the DB.
-    WP_DB_PASS: "serverlesswp_pass"
+    WP_DB_PASS: "serverlesswp_dbpass"
 
     # The domain name that will host the static website that is generated.
-    WP_PUBLIC_DOMAIN: "www.serverlesswp.com"
+    WP_PUBLIC_DOMAIN: "www.example.com"
 
     # The base of the domain name, used for validation when creating the SSL certificate for the public domain name.
-    WP_PUBLIC_BASE_DOMAIN: "serverlesswp.com"
+    WP_PUBLIC_BASE_DOMAIN: "example.com"
 
     # The number of minutes of inactivity before the WordPress backend database is put to sleep.
     WP_RDS_SLEEP_TIMEOUT: 120
