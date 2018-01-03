@@ -12,7 +12,7 @@ ServerlessWP puts Basic Authentication in front of the backend WordPress install
 
 The backend WordPress website is crawled to generate the static website. The static HTML is uploaded to Amazon S3 for storage and hosting. AWS CloudFront is used to provide CDN hosting and SSL for the public-facing website.
 
-*Disclaimer: This is a proof of concept and involves lots of hackery.*
+*Disclaimer: This is a proof of concept!*
 
 ## Installation
 
@@ -23,37 +23,20 @@ The backend WordPress website is crawled to generate the static website. The sta
    * This can be handled by running the "./build_bin.sh" script if you have Docker installed.
    * The "./bin/lib" directory requires a library noted in [bin/lib/readme.txt](bin/lib/readme.txt). It will be put in place if "./build_bin.sh" is used.
 4. Place a WordPress installation directly in the "wp" directory so that "index.php" is found in the root of "wp".
-5. Modify "wp-config.php" for database config:
-```php
-/** The name of the database for WordPress */
-define( 'DB_NAME', getenv('WP_DB_NAME') );
-
-/** MySQL database username */
-define( 'DB_USER', getenv('WP_DB_USER') );
-
-/** MySQL database password */
-define( 'DB_PASSWORD', getenv('WP_DB_PASS') );
-
-/** MySQL hostname */
-define( 'DB_HOST', getenv('WP_DB_HOST') );
-```
-6. Modify "wp-config.php" for general ServerlessWP config by adding:
-```php
-define('WP_HOME','https://' . getenv('HTTP_HOST') . '/' . getenv('WP_STAGE'));
-define('WP_SITEURL','https://' . getenv('HTTP_HOST') . '/' . getenv('WP_STAGE'));
-define('FORCE_SSL_ADMIN', true);
-define('FORCE_SSL_CONTENT', true);
-define('CONCATENATE_SCRIPTS', false);
-define('WP_HTTP_BLOCK_EXTERNAL', true);
-define('DISALLOW_FILE_MODS', true);
-define('WP_AUTO_UPDATE_CORE', false);
-define('WP_DEBUG', true );
-
-/* That's all, stop editing! Happy blogging. */
-```
-7. Edit serverless.yml
-8. Run "npm init"
-9. Run "severless deploy"
+   * This can be handled by executing the "./build_wp.sh" script.
+5. Modify "wp-config.php" for ServerlessWP friendly configuration.
+   * This is handled by the "./build_wp.sh" script if used.
+   * Otherwise, use this [wp-config-base.php](https://github.com/mitchmac/ServerlessWP-plugin/blob/master/assets/wp-config-base.php) as a guide.
+6. To handle file uploads in the WordPress backend, install the necessary WordPress plugins (also handled by the "./build_wp.sh" script):
+   * [ServerlessWP](https://github.com/mitchmac/ServerlessWP-plugin/)
+   * [Amazon Web Services](https://en-ca.wordpress.org/plugins/amazon-web-services/)
+   * [WP Offload S3 Lite](https://wordpress.org/plugins/amazon-s3-and-cloudfront/)
+7. Place any other WordPress themes or plugins in the respective wp-content directories like a standard WordPress installation.
+8. Edit serverless.yml
+   * The "custom" section at the top of the file has variables that should be reviewed.
+9. Run "npm init"
+10. Run "severless deploy"
+   * The initial time this is run, it may take 30-60 minutes for AWS to create the necessary resources.
 
 ## Authors
 
