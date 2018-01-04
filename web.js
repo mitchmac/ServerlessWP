@@ -1,6 +1,5 @@
 'use strict';
 
-const AWS = require('aws-sdk');
 const execSync = require("child_process").execSync;
 const fs = require('fs');
 const httpHeaders = require('http-headers');
@@ -8,7 +7,6 @@ const mime = require('mime-types');
 const parser = require('http-string-parser');
 const spawn = require('child_process').spawn;
 const url = require('url').Url;
-const zlib = require('zlib');
 
 module.exports.index = (event, context, callback) => {
     process.env['LD_LIBRARY_PATH'] = '/var/task/bin/lib:' + process.env['LD_LIBRARY_PATH'];
