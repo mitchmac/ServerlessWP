@@ -137,11 +137,11 @@ functions:
 
 resources:
   Resources:
-      ApiGatewayRestApi:
+    ApiGatewayRestApi:
           Type: "AWS::ApiGateway::RestApi"
           Properties:
-          BinaryMediaTypes:
-            - "*~1*"
+            BinaryMediaTypes:
+              - "*~1*"
     ServerlessCert:
           Type: "AWS::CertificateManager::Certificate"
           Properties:
