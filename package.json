@@ -6,6 +6,7 @@
   "dependencies": {
     "http-headers": "^3.0.2",
     "http-string-parser": "^0.0.6",
+    "md5-file": "^3.2.3",
     "mime-types": "^2.1.17",
     "recursive-readdir": "^2.2.1"
   },
