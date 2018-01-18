@@ -4,6 +4,16 @@
 Many WordPress websites could be replaced by static HTML. Static websites are cheaper, faster, and more secure to host.
 Why not use WordPress as a static website generator so we can still edit content via our web browser and use many of the great WordPress themes and plugins?
 
+:white_check_mark: Fast & secure static website hosting
+
+:white_check_mark: Easy browser based content management
+
+:white_check_mark: Compatible with most WordPress themes and many plugins
+
+:white_check_mark: WordPress backend isolated from the web
+
+:white_check_mark: Pay only for what is used
+
 ## Learn more
 
 ServerlessWP enables hosting the backend WordPress installation, where we add and manage content, on AWS Serverless products so that we don't have to worry about maintaining a server. Serverless means we only pay for what we use, and most websites don't get edited too often. Combined with AWS free tier offerings, we can host the backend for next to nothing in cost.
