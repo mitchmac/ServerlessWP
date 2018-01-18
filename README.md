@@ -1,5 +1,5 @@
 # ServerlessWP
-*WordPress hosting for cheap perfectionists*
+*WordPress as a static website generator on AWS Serverless*
 
 Many WordPress websites could be replaced by static HTML. Static websites are cheaper, faster, and more secure to host.
 Why not use WordPress as a static website generator so we can still edit content via our web browser and use many of the great WordPress themes and plugins?
@@ -12,7 +12,7 @@ ServerlessWP puts Basic Authentication in front of the backend WordPress install
 
 The backend WordPress website is crawled to generate the static website. The static HTML is uploaded to Amazon S3 for storage and hosting. AWS CloudFront is used to provide CDN hosting and SSL for the public-facing website.
 
-*Disclaimer: This is a proof of concept!*
+*Disclaimer: This is a proof of concept! Breaking changes may be made if/when Aurora Serverless becomes a preferable database option versus the current RDS usage.*
 
 ## Installation
 
