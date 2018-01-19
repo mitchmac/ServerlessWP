@@ -79,6 +79,8 @@ provider:
           "Fn::Join" : ["", ["https://", { "Ref" : "ApiGatewayRestApi" }, ".execute-api.${self:provider.region}.amazonaws.com/${self:provider.stage}" ] ]
         WP_CF_DISTRIBUTION:
           "Ref": ServerlessCloudfrontDistribution
+        WP_CF_DOMAIN:
+          "Fn::GetAtt": [ServerlessCloudfrontDistribution, DomainName]
           
 exclude:
     - build-wp.sh
