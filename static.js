@@ -10,15 +10,64 @@ const spawn = require('child_process').spawn;
 
 const s3 = new AWS.S3({httpOptions: {timeout: 10000}});
 
+module.exports.crawlEndpoint = (event, context, callback) => {
+    var rds = new AWS.RDS();
+    var RDSParams = {
+        DBInstanceIdentifier: process.env.WP_DB_INSTANCE
+    };
+    rds.describeDBInstances(RDSParams, function(err, data) {
+        if (!err) {
+            data.DBInstances.forEach(function (instance) {
+                if (instance.DBInstanceStatus == 'available') {
+                    var lambda = new AWS.Lambda({region: process.env['WP_AWS_REGION']});
+
+                    var params = {
+                        FunctionName: process.env['WP_STATIC_FUNCTION_NAME'],
+                        InvocationType: 'Event',
+                        Payload: ''
+                    };
+
+                    lambda.invoke(params, function(error, data) {
+                        var response = {
+                            statusCode: 200,
+                            headers: {},
+                            body: 'Crawl started'
+                        };
+                        if (error) {
+                            console.error(error);
+                            var response = {
+                                statusCode: 500,
+                                headers: {},
+                                body: 'Crawl error'
+                            };
+                        } else if (data) {
+                            console.log(data);
+                        }
+                        callback(null, response);
+                    });
+                }
+                else {
+                    var response = {
+                        statusCode: 500,
+                        headers: {},
+                        body: 'Site not ready'
+                    };
+                    callback(null, response);
+                }
+            });
+        }
+    });
+
+};
+
 module.exports.crawl = (event, context, callback) => {
     process.env['LD_LIBRARY_PATH'] = '/var/task/bin/lib:' + process.env['LD_LIBRARY_PATH'];
 
-    var startUrl = 'https://' + event.headers.Host + '/' + process.env['WP_STAGE'] + '/';
+    var startUrl = process.env['WP_BACKEND_URL'];
     var user = "--user=" + process.env['WP_BASIC_AUTH_USER'];
     var password = "--password=" + process.env['WP_BASIC_AUTH_PASSWORD'];
 
     // @TODO: delete any previous leftover files.
-    // @TODO: check if db is up.
 
     var crawlerArgs = [
         '-r',
@@ -64,7 +113,7 @@ module.exports.crawl = (event, context, callback) => {
         if (fs.existsSync(baseDir)) {
 
             // Try to remove any references to the API Gateway URL from HTML.
-            var urlSearch = event.headers.Host + "/" + process.env['WP_STAGE'];
+            var urlSearch = process.env['WP_BACKEND_URL'].replace('https://', '');
             var urlReplace = process.env['WP_PUBLIC_DOMAIN'];
             execSync("find " + baseDir + " -type f -exec sed -i 's#" + urlSearch + "#" + urlReplace + "#g' {} +");
 
@@ -125,14 +174,6 @@ module.exports.crawl = (event, context, callback) => {
 };
 
 var uploadsComplete = function (s3Files, crawlFiles, callback) {
-    const response = {
-        statusCode: 200,
-        headers: {},
-        body: 'Crawl complete'
-    };
-
-    var opCount = 0;
-
     var findFile = function (file, source) {
         return source.find(function (obj) { return obj.startsWith('/tmp/crawl/' + process.env['WP_STAGE'] + '/' + file); });
     };
@@ -149,17 +190,7 @@ var uploadsComplete = function (s3Files, crawlFiles, callback) {
                 if (error) {
                     console.log(error);
                 }
-                opCount++;
-                if (opCount === s3Files.length) {
-                    callback(null, response);
-                }
             });
-        }
-        else {
-            opCount++;
-            if (opCount == s3Files.length) {
-                callback(null, response);
-            }
         }
     }
 
