@@ -48,6 +48,7 @@ provider:
           - ec2:DeleteNetworkInterface
           - cloudwatch:GetMetricStatistics
           - lambda:InvokeFunction
+          - cloudfront:CreateInvalidation
           Resource: "*"
         - Effect: "Allow"
           Action:
@@ -76,7 +77,9 @@ provider:
         WP_AWS_REGION: ${self:provider.region}
         WP_BACKEND_URL:
           "Fn::Join" : ["", ["https://", { "Ref" : "ApiGatewayRestApi" }, ".execute-api.${self:provider.region}.amazonaws.com/${self:provider.stage}" ] ]
-
+        WP_CF_DISTRIBUTION:
+          "Ref": ServerlessCloudfrontDistribution
+          
 exclude:
     - build-wp.sh
 
