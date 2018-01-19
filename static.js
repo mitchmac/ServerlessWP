@@ -13,7 +13,7 @@ const s3 = new AWS.S3({httpOptions: {timeout: 10000}});
 module.exports.crawlEndpoint = (event, context, callback) => {
     var rds = new AWS.RDS();
     var RDSParams = {
-        DBInstanceIdentifier: process.env.WP_DB_INSTANCE
+        DBInstanceIdentifier: process.env['WP_DB_INSTANCE']
     };
     rds.describeDBInstances(RDSParams, function(err, data) {
         if (!err) {
@@ -123,7 +123,7 @@ module.exports.crawl = (event, context, callback) => {
                 if (items.length > 0) {
                     // @TODO: Handle more than 1000 files.
                     var listParams = {
-                        Bucket: process.env.WP_S3_BUCKET
+                        Bucket: process.env['WP_S3_BUCKET']
                     };
                     s3.listObjectsV2(listParams, function(err, data) {
 
@@ -143,7 +143,7 @@ module.exports.crawl = (event, context, callback) => {
 
                                 var fileData = fs.createReadStream(items[i]);
                                 var params = {
-                                    Bucket: process.env.WP_S3_BUCKET,
+                                    Bucket: process.env['WP_S3_BUCKET'],
                                     Key: fileKey,
                                     ACL: 'public-read',
                                     Body: fileData,
@@ -178,19 +178,31 @@ var uploadsComplete = function (s3Files, crawlFiles, callback) {
         return source.find(function (obj) { return obj.startsWith('/tmp/crawl/' + process.env['WP_STAGE'] + '/' + file); });
     };
 
+    var opCount = 0;
+
     for (var i = 0; i < s3Files.length; i++) {
         var fileKey = s3Files[i].Key;
         var found = findFile(fileKey, crawlFiles);
         if (typeof found === 'undefined' && !fileKey.startsWith('wp-content/uploads')) {
             var params = {
-                Bucket: process.env.WP_S3_BUCKET,
+                Bucket: process.env['WP_S3_BUCKET'],
                 Key: fileKey
             };
             s3.deleteObject(params, function(error, data) {
                 if (error) {
                     console.log(error);
                 }
+                opCount++;
+                if (opCount == s3Files.length) {
+                    invalidateCloudFront();
+                }
             });
+        }
+        else {
+            opCount++;
+            if (opCount == s3Files.length) {
+                invalidateCloudFront();
+            }
         }
     }
 
@@ -203,4 +215,28 @@ var shouldUpload = function (fileKey, hash, data) {
 
     var existing = data['Contents'].find(function (obj) { return obj.Key === fileKey; });
     return !(typeof existing !== 'undefined' && existing.ETag === '"' + hash + '"');
+};
+
+var invalidateCloudFront = function() {
+    var cf = new AWS.CloudFront();
+    var params = {
+        DistributionId: process.env['WP_CF_DISTRIBUTION'],
+        InvalidationBatch: {
+            CallerReference: Date.now().toString(),
+            Paths: {
+                Quantity: 1,
+                Items: [
+                    '/*'
+                ]
+            }
+        }
+    };
+    cf.createInvalidation(params, function(error, data) {
+        if (error) {
+            console.log(error);
+        }
+        else {
+            console.log(data);
+        }
+    });
 };
