@@ -47,6 +47,7 @@ provider:
           - ec2:DetachNetworkInterface
           - ec2:DeleteNetworkInterface
           - cloudwatch:GetMetricStatistics
+          - lambda:InvokeFunction
           Resource: "*"
         - Effect: "Allow"
           Action:
@@ -65,12 +66,16 @@ provider:
         WP_DB_INSTANCE:
           "Ref": ServerlessWPRDS
         WP_WEB_FUNCTION_NAME: serverlesswp-${self:provider.stage}-wp_index
+        WP_STATIC_FUNCTION_NAME: serverlesswp-${self:provider.stage}-wp_staticGen
         WP_STAGE: ${self:provider.stage}
         WP_LAMBDA_STATIC_CACHE_TIME: ${self:custom.WP_LAMBDA_STATIC_CACHE_TIME}
         WP_S3_BUCKET: ${self:custom.WP_S3_BUCKET}
         WP_BASIC_AUTH_USER: ${self:custom.WP_AUTH_USER}
         WP_BASIC_AUTH_PASSWORD: ${self:custom.WP_AUTH_PASS}
         WP_PUBLIC_DOMAIN: ${self:custom.WP_PUBLIC_DOMAIN}
+        WP_AWS_REGION: ${self:provider.region}
+        WP_BACKEND_URL:
+          "Fn::Join" : ["", ["https://", { "Ref" : "ApiGatewayRestApi" }, ".execute-api.${self:provider.region}.amazonaws.com/${self:provider.stage}" ] ]
 
 exclude:
     - build-wp.sh
@@ -106,9 +111,16 @@ functions:
     staticGenerator:
         handler: static.crawl
         DependsOn: IamPolicyLambdaExecution
-        timeout: 30
+        timeout: 300
         memorySize: 1024
-        events:
+        name: serverlesswp-${self:provider.stage}-wp_staticGen
+
+    staticGeneratorEndpoint:
+         handler: static.crawlEndpoint
+         DependsOn: IamPolicyLambdaExecution
+         timeout: 20
+         memorySize: 128
+         events:
             - http:
                 path: /serverlesswp-crawl
                 method: get
