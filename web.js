@@ -175,7 +175,6 @@ var handleStaticFile = function(staticFile, callback) {
                 var isBase64 = false;
                 if (encoding == 'base64') {
                     isBase64 = true;
-                    responseHeaders['Content-Type'] = '*/*';
                 }
                 const response = {
                     statusCode: 200,
