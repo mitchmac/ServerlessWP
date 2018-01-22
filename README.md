@@ -47,7 +47,7 @@ The backend WordPress website is crawled to generate the static website. The sta
 7. Place any other WordPress themes or plugins in the respective wp-content directories like a standard WordPress installation.
 8. Edit serverless.yml
    * The "custom" section at the top of the file has variables that should be reviewed.
-9. Run "npm init"
+9. Run "npm install"
 10. Run "severless deploy" -- may take 30-60 minutes for AWS to create the necessary resources the first time.
 11. Point your domain's DNS at the created CloudFront distribution.
 
