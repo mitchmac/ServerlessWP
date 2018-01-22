@@ -49,7 +49,9 @@ The backend WordPress website is crawled to generate the static website. The sta
    * The "custom" section at the top of the file has variables that should be reviewed.
 9. Run "npm install"
 10. Run "severless deploy" -- may take 30-60 minutes for AWS to create the necessary resources the first time.
-11. Point your domain's DNS at the created CloudFront distribution.
+11. Complete the WordPress installation by visiting the first URL in the "endpoints" output, this is the URL for the WordPress backend. It will look like endpoints: https://example.execute-api.us-east-1.amazonaws.com/dev/
+12. Login to WordPress and enable the ServerlessWP, Amazon Web Services, and WP Offload S3 Lite plugins.
+13. Point your domain's DNS at the created CloudFront distribution.
 
 ## Authors
 
