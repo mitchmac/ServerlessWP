@@ -22,7 +22,7 @@ ServerlessWP puts Basic Authentication in front of the backend WordPress install
 
 The backend WordPress website is crawled to generate the static website. The static HTML is uploaded to Amazon S3 for storage and hosting. AWS CloudFront is used to provide CDN hosting and SSL for the public-facing website.
 
-**A typical blog will cost around $1 per month to run (mainly depending on CloudFront data transfer and database uptime for content management).** The RDS-based MySQL database for WordPress will shut down automatically after 1 hour of inactivity to reduce costs, since it is not necessary for the static frontend.
+**A typical blog will cost around $1 per month to run (mainly depending on CloudFront data transfer and database uptime for content management).** The RDS-based MySQL database for WordPress will shut down automatically after 2 hours of inactivity to reduce costs, since it is not necessary for the static frontend.
 
 *Disclaimer: This is a proof of concept! Breaking changes may be made if/when Aurora Serverless becomes a preferable database option versus the current RDS usage.*
 
