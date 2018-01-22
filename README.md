@@ -22,7 +22,7 @@ ServerlessWP puts Basic Authentication in front of the backend WordPress install
 
 The backend WordPress website is crawled to generate the static website. The static HTML is uploaded to Amazon S3 for storage and hosting. AWS CloudFront is used to provide CDN hosting and SSL for the public-facing website.
 
-**A typical blog will cost around $1 per month to run (mainly depending on CloudFront data transfer and database uptime for content management).** The RDS-based MySQL database for WordPress will shut down automatically after 1 hour of inactivity to reduce costs, since it is not necessary for the static frontend.
+**A typical blog will cost around $1 per month to run (mainly depending on CloudFront data transfer and database uptime for content management).** The RDS-based MySQL database for WordPress will shut down automatically after 2 hours of inactivity to reduce costs, since it is not necessary for the static frontend.
 
 *Disclaimer: This is a proof of concept! Breaking changes may be made if/when Aurora Serverless becomes a preferable database option versus the current RDS usage.*
 
@@ -47,9 +47,11 @@ The backend WordPress website is crawled to generate the static website. The sta
 7. Place any other WordPress themes or plugins in the respective wp-content directories like a standard WordPress installation.
 8. Edit serverless.yml
    * The "custom" section at the top of the file has variables that should be reviewed.
-9. Run "npm init"
+9. Run "npm install"
 10. Run "severless deploy" -- may take 30-60 minutes for AWS to create the necessary resources the first time.
-11. Point your domain's DNS at the created CloudFront distribution.
+11. Complete the WordPress installation by visiting the first URL in the "endpoints" output, this is the URL for the WordPress backend. It will look like endpoints: https://example.execute-api.us-east-1.amazonaws.com/dev/
+12. Login to WordPress and enable the ServerlessWP, Amazon Web Services, and WP Offload S3 Lite plugins.
+13. Point your domain's DNS at the created CloudFront distribution.
 
 ## Authors
 
