@@ -158,7 +158,7 @@ resources:
           Type: "AWS::ApiGateway::RestApi"
           Properties:
             BinaryMediaTypes:
-              - "*~1*"
+              - "*/*"
     ServerlessCert:
           Type: "AWS::CertificateManager::Certificate"
           Properties:
