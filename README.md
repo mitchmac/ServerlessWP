@@ -22,6 +22,8 @@ ServerlessWP puts Basic Authentication in front of the backend WordPress install
 
 The backend WordPress website is crawled to generate the static website. The static HTML is uploaded to Amazon S3 for storage and hosting. AWS CloudFront is used to provide CDN hosting and SSL for the public-facing website.
 
+**A typical blog will cost around $1 per month to run (mainly depending on CloudFront data transfer and database uptime for content management).** The RDS-based MySQL database for WordPress will shut down automatically after 1 hour of inactivity to reduce costs, since it is not necessary for the static frontend.
+
 *Disclaimer: This is a proof of concept! Breaking changes may be made if/when Aurora Serverless becomes a preferable database option versus the current RDS usage.*
 
 ## Installation
@@ -29,15 +31,16 @@ The backend WordPress website is crawled to generate the static website. The sta
 1. Install the Serverless Framework for AWS - [Serverless installation guide](https://serverless.com/framework/docs/providers/aws/guide/installation/)
 2. Clone or download this repository
 3. Place necessary binary files in the "bin" directory.
+   * **This can be handled by running the "./build_bin.sh" script if you have Docker installed.**
    * "php-cgi" and "wget" are the currently necessary binaries. They must be compiled to run in the Lambda environment.
-   * This can be handled by running the "./build_bin.sh" script if you have Docker installed.
    * The "./bin/lib" directory requires a library noted in [bin/lib/readme.txt](bin/lib/readme.txt). It will be put in place if "./build_bin.sh" is used.
 4. Place a WordPress installation directly in the "wp" directory so that "index.php" is found in the root of "wp".
-   * This can be handled by executing the "./build_wp.sh" script.
+   * **This can be handled by executing the "./build_wp.sh" script.**
 5. Modify "wp-config.php" for ServerlessWP friendly configuration.
-   * This is handled by the "./build_wp.sh" script if used.
+   * **This is handled by the "./build_wp.sh" script if used.**
    * Otherwise, use this [wp-config-base.php](https://github.com/mitchmac/ServerlessWP-plugin/blob/master/assets/wp-config-base.php) as a guide.
-6. To handle file uploads in the WordPress backend, install the necessary WordPress plugins (also handled by the "./build_wp.sh" script):
+6. To handle file uploads in the WordPress backend, install the necessary WordPress plugins:
+   * **This is handled by the "./build_wp.sh" script if used.**
    * [ServerlessWP](https://github.com/mitchmac/ServerlessWP-plugin/)
    * [Amazon Web Services](https://en-ca.wordpress.org/plugins/amazon-web-services/)
    * [WP Offload S3 Lite](https://wordpress.org/plugins/amazon-s3-and-cloudfront/)
