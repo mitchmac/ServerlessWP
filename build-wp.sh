@@ -6,7 +6,8 @@ then
     curl -O https://wordpress.org/latest.zip
     unzip latest.zip
     rm latest.zip
-    mv wordpress wp
+    mv wordpress/* wp/
+    rm -rf wordpress
 
     curl -O https://downloads.wordpress.org/plugin/amazon-web-services.latest-stable.zip
     unzip amazon-web-services.latest-stable.zip
