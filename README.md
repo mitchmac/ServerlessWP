@@ -14,6 +14,8 @@ Why not use WordPress as a static website generator so we can still edit content
 
 :white_check_mark: Pay only for what is used
 
+Not interested in a static WordPress site? Checkout [Pressless](https://github.com/mscifo/pressless) for a tool to migrate an existing WordPress site to run on AWS.
+
 ## Learn more
 
 ServerlessWP enables hosting the backend WordPress installation, where we add and manage content, on AWS Serverless products so that we don't have to worry about maintaining a server. Serverless means we only pay for what we use, and most websites don't get edited too often. Combined with AWS free tier offerings, we can host the backend for next to nothing in cost.
