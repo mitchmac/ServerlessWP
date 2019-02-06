@@ -9,11 +9,6 @@ then
     mv wordpress/* wp/
     rm -rf wordpress
 
-    curl -O https://downloads.wordpress.org/plugin/amazon-web-services.latest-stable.zip
-    unzip amazon-web-services.latest-stable.zip
-    rm amazon-web-services.latest-stable.zip
-    mv amazon-web-services wp/wp-content/plugins/
-
     curl -O https://downloads.wordpress.org/plugin/amazon-s3-and-cloudfront.latest-stable.zip
     unzip amazon-s3-and-cloudfront.latest-stable.zip
     rm amazon-s3-and-cloudfront.latest-stable.zip
