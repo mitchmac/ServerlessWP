@@ -14,7 +14,6 @@ Why not use WordPress as a static website generator so we can still edit content
 
 :white_check_mark: Pay only for what is used
 
-Interested in a similar approach to WordPress on Serverless? Checkout [Pressless](https://github.com/mscifo/pressless) for a tool to migrate an existing WordPress site to run on AWS.
 
 ## Learn more
 
