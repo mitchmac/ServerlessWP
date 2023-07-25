@@ -1,18 +1,9 @@
 {
-  "name": "ServerlessWP",
+  "name": "serverlesswp-wordpress-starter",
   "version": "1.0.0",
-  "description": "Host WordPress with AWS Serverless technology.",
-  "main": "web.js",
+  "description": "",
+  "license": "MIT",
   "dependencies": {
-    "http-headers": "^3.0.2",
-    "http-string-parser": "^0.0.6",
-    "md5-file": "^3.2.3",
-    "mime-types": "^2.1.17",
-    "recursive-readdir": "^2.2.1"
-  },
-  "devDependencies": {
-    "aws-sdk": "^2.124.0"
-  },
-  "author": "Mitch MacKenzie",
-  "license": "MIT"
+    "serverlesswp": "^0.1.0"
+  }
 }

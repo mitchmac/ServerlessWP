@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="24" height="24" viewBox="0 0 24 24">
+  <defs>
+    <circle id="license-unchecked-a" cx="8" cy="8" r="8"/>
+  </defs>
+  <g fill="none" fill-rule="evenodd" transform="translate(4 4)">
+    <use fill="#dc3232" xlink:href="#license-unchecked-a"/>
+    <g fill="#FFF" transform="translate(4 4)">
+      <rect width="2" height="8" x="3" rx="1" transform="rotate(-45 4 4)"/>
+      <rect width="2" height="8" x="3" rx="1" transform="rotate(-135 4 4)"/>
+    </g>
+  </g>
+</svg>

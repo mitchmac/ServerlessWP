@@ -1,0 +1,72 @@
+/*
+ * Storage and Delivery Provider specific styles.
+ */
+
+#as3cf-settings {
+	&.wpome {
+		.delivery {
+			&.aws {
+				.gradient {
+					background: linear-gradient(225deg, rgba(255, 213, 213, 0.5) 0%, rgba(255, 213, 213, 0) 50%);
+				}
+			}
+
+			&.cloudflare {
+				.gradient {
+					background: linear-gradient(225deg, rgba(255, 221, 192, 0.5) 0%, rgba(255, 221, 192, 0) 50%);
+				}
+			}
+
+			&.do {
+				.gradient {
+					background: linear-gradient(225deg, rgba(205, 230, 255, 0.5) 0%, rgba(205, 230, 255, 0) 50%);
+				}
+			}
+
+			&.gcp {
+				.gradient {
+					background: linear-gradient(225deg, rgba(226, 226, 226, 0.5) 0%, rgba(226, 226, 226, 0) 50%);
+				}
+			}
+
+			&.keycdn {
+				.gradient {
+					background: linear-gradient(225deg, rgba(4, 122, 237, 0.16) 0%, rgba(4, 122, 237, 0) 50%);
+				}
+			}
+
+			&.other {
+				.gradient {
+					background: linear-gradient(225deg, rgba(228, 234, 241, 0.5) 0%, rgba(228, 234, 241, 0) 50%);
+				}
+			}
+
+			&.stackpath {
+				.gradient {
+					background: linear-gradient(225deg, rgba(226, 226, 226, 0.5) 0%, rgba(226, 226, 226, 0) 50%);
+				}
+			}
+		}
+
+		// IMPORTANT: .storage comes after .delivery so that it takes precedence when using default delivery provider.
+		.storage {
+			&.aws {
+				.gradient {
+					background: linear-gradient(225deg, rgba(255, 214, 197, 0.5) 0%, rgba(255, 214, 197, 0) 50%);
+				}
+			}
+
+			&.do {
+				.gradient {
+					background: linear-gradient(225deg, rgba(205, 230, 255, 0.5) 0%, rgba(205, 230, 255, 0) 50%);
+				}
+			}
+
+			&.gcp {
+				.gradient {
+					background: linear-gradient(225deg, rgba(226, 226, 226, 0.5) 0%, rgba(226, 226, 226, 0) 50%);
+				}
+			}
+		}
+	}
+}

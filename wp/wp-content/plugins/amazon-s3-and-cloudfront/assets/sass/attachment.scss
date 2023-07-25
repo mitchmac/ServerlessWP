@@ -1,0 +1,72 @@
+#s3-actions.postbox {
+	.inside {
+		margin: 0;
+		padding: 0;
+	}
+
+	a, a:hover {
+		text-decoration: none;
+	}
+
+	.s3-details {
+		padding: 6px 0;
+
+		.misc-pub-section {
+			clear: both;
+			-webkit-box-sizing: border-box;
+			-moz-box-sizing: border-box;
+			box-sizing: border-box;
+
+			.s3-key {
+				display: inline-block;
+				white-space: nowrap;
+			}
+
+			.s3-value {
+				display: inline-block;
+				font-weight: bold;
+
+				.more-info {
+					font-weight: lighter;
+				}
+			}
+
+			input.error {
+				color: #a00;
+			}
+		}
+
+		.not-copied {
+			color: #666;
+		}
+	}
+
+	.s3-actions {
+		padding: 10px;
+		clear: both;
+		border-top: 1px solid #ddd;
+		border-bottom: 1px solid #ddd;
+		background: #f5f5f5;
+
+		.copy-action {
+			text-align: right;
+			float: right;
+			line-height: 23px;
+		}
+
+		.remove-action {
+			line-height: 28px;
+			vertical-align: middle;
+			text-align: left;
+			float: left;
+
+			a.local-warning {
+				color: #a00;
+
+				&:hover {
+					color: #f00;
+				}
+			}
+		}
+	}
+}

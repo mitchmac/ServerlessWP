@@ -1,0 +1,7 @@
+[functions]
+  directory = "api"
+  included_files = ["wp/**"]
+[[redirects]]
+  from = "/*"
+  to = "/.netlify/functions/index/:splat"
+  status = 200

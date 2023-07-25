@@ -1,0 +1,319 @@
+// Need to combat WP Core's forms.css by adding a bit of specificity.
+#as3cf-settings {
+	&.wpome {
+		label {
+			font-size: 0.875rem;
+			color: var(--as3cf-color-gray-900);
+			cursor: pointer;
+			display: flex;
+			align-items: center;
+		}
+
+		.disabled > label {
+			cursor: default;
+		}
+
+		input[type="checkbox"], input[type="radio"] {
+			all: unset;
+			box-sizing: border-box;
+			background: var(--as3cf-color-white);
+			border: 1px solid var(--as3cf-color-gray-400);
+			width: 18px;
+			height: 18px;
+			min-width: 18px;
+			min-height: 18px;
+			margin: 0 0.85rem 0 0;
+			padding: 0;
+
+			&:disabled, &:disabled:hover {
+				box-shadow: none;
+
+				&:checked {
+					color: var(--as3cf-color-gray-400);
+					background-color: var(--as3cf-color-gray-200);
+					border: 1px solid var(--as3cf-color-gray-400);
+				}
+
+				&:not(:checked) {
+					background-color: var(--as3cf-color-gray-100);
+					border: 1px solid var(--as3cf-color-gray-300);
+				}
+			}
+		}
+
+		// Radio Button Specific Styling
+		input[type="radio"] {
+			border-radius: 100%;
+
+			&:checked {
+				border: 1px solid var(--as3cf-color-secondary-700);
+				background: var(--as3cf-color-secondary-500) url('data:image/svg+xml;utf8,<svg width="6" height="6" viewBox="0 0 6 6" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="6" height="6" rx="3" fill="white"/></svg>') no-repeat center;
+
+				&:disabled {
+					background-image: url('data:image/svg+xml;utf8,<svg width="6" height="6" viewBox="0 0 6 6" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="6" height="6" rx="3" fill="%23D0D5DD"/></svg>');
+				}
+
+				&::before {
+					content: none;
+				}
+			}
+
+			&:hover {
+				box-shadow: 0 0 0 1.5px var(--as3cf-color-white), 0 0 0 3.5px var(--as3cf-color-secondary-500);
+				outline: 0;
+
+				&:not(:checked) {
+					background-color: var(--as3cf-color-secondary-50);
+				}
+			}
+		}
+
+		// Checkbox Styling
+		input[type="checkbox"] {
+			border-radius: 3px;
+			margin-top: -2px;
+
+			&:checked {
+				background: var(--as3cf-color-secondary-500) url('data:image/svg+xml;utf8,<svg width="12" height="9" viewBox="0 0 12 9" fill="none" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" clip-rule="evenodd" d="M11.8547 1.0848L10.9136 0.146569C10.7187 -0.0477426 10.4014 -0.0490232 10.205 0.143761L4.30235 5.93454L1.80554 3.44516C1.61065 3.25085 1.29338 3.24957 1.0969 3.44231L0.148199 4.37303C-0.0482736 4.56577 -0.0495681 4.87956 0.145359 5.07391L3.93621 8.85343C4.1311 9.04774 4.44838 9.04902 4.64485 8.85624L11.8519 1.78568C12.0483 1.5929 12.0495 1.27911 11.8547 1.0848Z" fill="white"/></svg>') no-repeat center/75%;
+				border: 1px solid var(--as3cf-color-secondary-600);
+
+				&:disabled {
+					background-image: url('data:image/svg+xml;utf8,<svg width="12" height="9" viewBox="0 0 12 9" fill="none" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" clip-rule="evenodd" d="M11.8547 1.0848L10.9136 0.146569C10.7187 -0.0477426 10.4014 -0.0490232 10.205 0.143761L4.30235 5.93454L1.80554 3.44516C1.61065 3.25085 1.29338 3.24957 1.0969 3.44231L0.148199 4.37303C-0.0482736 4.56577 -0.0495681 4.87956 0.145359 5.07391L3.93621 8.85343C4.1311 9.04774 4.44838 9.04902 4.64485 8.85624L11.8519 1.78568C12.0483 1.5929 12.0495 1.27911 11.8547 1.0848Z" fill="%23D0D5DD"/></svg>');
+				}
+
+				&::before {
+					content: none;
+				}
+			}
+
+			&:hover {
+				box-shadow: 0 0 0 1.5px var(--as3cf-color-white), 0 0 0 3.5px var(--as3cf-color-secondary-500);
+				outline: 0;
+
+				&:not(:checked) {
+					background-color: var(--as3cf-color-secondary-50);
+				}
+			}
+		}
+
+		.checkbox,
+		.radio-btn {
+			display: flex;
+			flex-direction: row;
+			align-items: center;
+			margin-bottom: 0.75rem;
+
+			&:last-of-type {
+				margin-bottom: 0;
+			}
+		}
+
+		.checkbox {
+			label {
+				line-height: 1;
+				display: flex;
+				align-items: center;
+			}
+		}
+
+		// Text Input Styling
+		input[type="text"],
+		textarea {
+			background: var(--as3cf-color-white);
+			border: 1px solid var(--as3cf-color-gray-400);
+			box-shadow: 0 2px 8px 0 rgba(0, 0, 0, 0.05);
+			border-radius: 8px;
+			padding: 0.95rem 1rem;
+			font-size: 0.875rem;
+			color: var(--as3cf-color-gray-900);
+			line-height: 1.2;
+			margin: 0;
+			box-sizing: border-box;
+
+			&.licence-field {
+				width: 510px;
+				margin-right: 0.75rem !important;
+				letter-spacing: 0.75px;
+
+				&::placeholder {
+					letter-spacing: 0.25px;
+				}
+			}
+		}
+
+		textarea {
+			line-height: 1.3 !important;
+
+			/* Standards compliant scrollbar (future) */
+			/*
+			scrollbar-color: var(--as3cf-secondary-color) var(--as3cf-color-white);
+			scrollbar-width: 12px;
+			 */
+
+			/* Ye olde webkit scrollbar */
+			&::-webkit-scrollbar {
+				width: 12px;
+			}
+
+			&::-webkit-scrollbar-track {
+				background: var(--as3cf-color-white);
+				border-radius: 6px;
+			}
+
+			&::-webkit-scrollbar-corner {
+				background-color: var(--as3cf-color-white);
+				border-radius: 6px;
+			}
+
+			&::-webkit-resizer {
+				background-color: var(--as3cf-color-white);
+				border-radius: 6px;
+			}
+
+			&::-webkit-scrollbar-thumb {
+				background-color: var(--as3cf-secondary-color);
+				border: 1px solid var(--as3cf-color-white);
+				border-radius: 5px;
+			}
+		}
+
+		//Select Styling
+
+		select {
+			all: unset;
+			background: var(--as3cf-color-white) url(../img/icon/arrow.svg) no-repeat calc(100% - 18px) 50%;
+			border: 1px solid var(--as3cf-color-gray-400);
+			box-shadow: 0 2px 8px 0 rgba(0, 0, 0, 0.05);
+			border-radius: 8px;
+			padding: 0 1rem !important;
+			font-size: 0.875rem !important;
+			color: var(--as3cf-color-gray-900);
+			line-height: 1.2 !important;
+			margin: 0;
+			box-sizing: border-box;
+			cursor: pointer;
+			appearance: none;
+			height: 46px !important;
+			display: flex;
+			align-items: center;
+		}
+
+		input, textarea, select {
+			&::placeholder {
+				color: var(--as3cf-color-gray-500);
+			}
+
+			&:hover {
+				border: 1px solid var(--as3cf-color-gray-500);
+			}
+
+			&:focus, &:active {
+				box-shadow: 0 0 0 1.5px var(--as3cf-color-white), 0 0 0 3.5px var(--as3cf-color-secondary-500);
+				outline: 0;
+			}
+
+			&:disabled {
+				cursor: default;
+			}
+
+			&.disabled {
+				color: var(--as3cf-color-gray-500);
+				background-color: var(--as3cf-color-gray-100);
+				border: 1px solid var(--as3cf-color-gray-300);
+				cursor: default;
+			}
+		}
+
+		.input-label {
+			font-size: 0.78125rem;
+			color: var(--as3cf-color-gray-500);
+			margin-bottom: 0.5rem;
+			font-weight: 400;
+			text-transform: uppercase;
+			letter-spacing: 0.3px;
+		}
+
+		.input-error {
+			color: var(--as3cf-wordpress-notice-error-color);
+			font-weight: 400;
+		}
+
+		.panel {
+			div.setting {
+				.input-error {
+					margin-left: 5rem;
+					margin-right: 1.5rem;
+					margin-bottom: 1rem;
+				}
+			}
+		}
+
+		// Toggle Switch Styling
+		.toggle-switch {
+			display: flex;
+			align-items: center;
+
+			input[type="checkbox"] {
+				all: unset;
+				height: 0;
+				width: 0;
+				border: none !important;
+			}
+
+			label {
+				box-sizing: border-box;
+				cursor: pointer;
+				text-indent: -9999px;
+				width: 36px;
+				height: 20px;
+				background: var(--as3cf-color-gray-400);
+				border: none;
+				border-radius: 100px;
+				display: block;
+				position: relative;
+			}
+
+			label:after {
+				content: "";
+				position: absolute;
+				top: 2px;
+				left: 2px;
+				width: 16px;
+				height: 16px;
+				background: var(--as3cf-color-white);
+				border-radius: 100%;
+				transition: 0.3s;
+				box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.06), 0 1px 2px 0 rgba(0, 0, 0, 0.1);
+			}
+
+			input:checked + label {
+				background: var(--as3cf-complete-color);
+				transition: 0.3s;
+			}
+
+			input:checked + label:after {
+				left: calc(100% - 2px);
+				transform: translateX(-100%);
+			}
+
+			label:active:after {
+				width: 26px;
+			}
+
+			input:focus + label, input:active + label {
+				border: none;
+				box-shadow: 0 0 0 1.5px var(--as3cf-color-white), 0 0 0 3.5px var(--as3cf-color-secondary-500);
+				outline: 0;
+			}
+
+			input:disabled + label {
+				cursor: default;
+				background: var(--as3cf-color-gray-300);
+
+				&:after {
+					background: var(--as3cf-color-gray-100);
+				}
+			}
+		}
+	}
+}

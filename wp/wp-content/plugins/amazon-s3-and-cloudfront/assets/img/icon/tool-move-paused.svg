@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="42px" height="42px" viewBox="0 0 42 42" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <title>icon/tools/tool-move-paused</title>
+    <g id="icon/tools/tool-move-paused" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <circle id="Oval" fill="#E4EAF1" cx="21" cy="21" r="21"></circle>
+        <rect id="Rectangle" fill="#2E689A" x="0" y="30" width="4" height="12" rx="2"></rect>
+        <rect id="Rectangle" fill="#2E689A" x="6" y="30" width="4" height="12" rx="2"></rect>
+        <path d="M28,19 L24,19 L24,12 L18,12 L18,19 L14,19 L21,26 L28,19 Z M14,28 L14,30 L28,30 L28,28 L14,28 Z" id="Shape" fill="#87A2C2" fill-rule="nonzero" transform="translate(21.000000, 21.000000) rotate(-90.000000) translate(-21.000000, -21.000000) "></path>
+    </g>
+</svg>

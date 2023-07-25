@@ -1,0 +1,16 @@
+/**
+ * Common as3cf-notice styles.
+ */
+.as3cf-notice,
+.as3cf-compatibility-notice {
+	p {
+		max-width: 800px;
+	}
+}
+
+/**
+ * Prevent WP from adding the circular arrow icon to all P tags inside the notice html.
+ */
+.as3cf-licence-notice p:not(.as3cf-before):before {
+	display: none;
+}

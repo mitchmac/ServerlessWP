@@ -1,0 +1,345 @@
+// Need to combat WP Core's common.css by adding a bit of specificity.
+#as3cf-settings {
+	&.wpome {
+
+		//Header
+		> .header {
+			padding: 0 2rem;
+			background-color: #FFE4CD;
+			display: flex;
+			align-items: center;
+			height: 96px;
+
+			.header-wrapper {
+				width: 1110px;
+				max-width: 1110px;
+				height: 100%;
+				background-image: url("../img/brand/ome-branding-transparent.svg");
+				background-repeat: no-repeat;
+				background-size: contain;
+				background-position: center top;
+				display: flex;
+				align-items: center;
+
+				h1 {
+					font-size: 1.3125rem;
+					font-weight: 500;
+					color: #490D32;
+				}
+
+				.medallion {
+					filter: drop-shadow(0px 1px 4px rgba(0, 0, 0, 0.15));
+					margin-right: 1rem;
+					width: 52px;
+					height: 52px;
+				}
+
+				.licence {
+					display: flex;
+					flex-direction: column;
+					margin-left: auto;
+
+					.licence-type {
+						color: #EB422D;
+						display: flex;
+						align-items: center;
+						justify-content: flex-end;
+
+						a {
+							font-size: 0.825rem;
+							font-weight: 500;
+							margin-left: 0.6rem;
+							text-decoration: underline;
+							color: var(--as3cf-color-primary-500) !important;
+
+							&:hover {
+								filter: brightness(105%);
+							}
+						}
+					}
+
+					p {
+						font-size: 0.8125rem;
+						color: #4D443D;
+						margin: 0.5rem 0 0;
+					}
+				}
+
+				button, a.button {
+					text-transform: uppercase;
+				}
+			}
+		}
+
+		//Nav
+		div.nav {
+			width: 100%;
+			margin: 0 auto 2.5rem 0;
+			background: var(--as3cf-color-white);
+			border-bottom: 1px solid var(--as3cf-wordpress-border-color);
+
+			div.items {
+				max-width: 1110px;
+				display: flex;
+				flex-direction: row;
+				align-items: baseline;
+				padding: 0 2rem;
+
+				ul.nav {
+					display: flex;
+					flex-direction: row;
+					align-items: baseline;
+					margin: 0;
+					padding: 1.5rem 2rem 0 0;
+					font-size: 0.75rem;
+					font-weight: 500;
+					text-transform: uppercase;
+
+					li {
+						margin-right: 1.75rem;
+						padding: 0.6rem 0.2rem 0.65rem;
+						border-bottom: 3px solid #fff;
+
+						a {
+							color: var(--as3cf-color-gray-600);
+							text-decoration: none;
+
+							&:hover {
+								color: var(--as3cf-color-primary-600);
+							}
+
+							&:focus, &:active {
+								box-shadow: none;
+							}
+
+							&:focus-visible {
+								color: var(--as3cf-color-primary-600);
+								box-shadow: 0 0 0 1.5px var(--as3cf-color-white), 0 0 0 3.5px var(--as3cf-color-primary-400);
+								border-radius: 3px;
+								outline: none;
+							}
+						}
+
+						&.focus, &.hover {
+							border-bottom: 3px solid var(--as3cf-color-gray-600);
+						}
+
+						&.active {
+							border-bottom: 3px solid var(--as3cf-color-primary-500);
+
+							a {
+								color: var(--as3cf-active-nav-color);
+							}
+						}
+					}
+				}
+
+				.nav-status-wrapper {
+					display: flex;
+					flex-direction: row;
+					align-items: center;
+					margin-left: auto;
+					text-decoration: none;
+					gap: 0.5rem;
+					align-self: stretch;
+					min-width: 20px;
+
+					&:focus {
+						box-shadow: none;
+						outline: none;
+					}
+
+					.nav-status {
+						height: 100%;
+						display: flex;
+						flex-direction: row;
+						align-items: center;
+						gap: 0.5rem;
+						min-width: 20px;
+						cursor: pointer;
+					}
+
+					p {
+						font-size: 0.75rem;
+
+						&.status-text {
+							flex: 0 0 max-content;
+						}
+					}
+
+					& > p {
+						cursor: pointer;
+					}
+
+					.progress-bar {
+						cursor: pointer;
+						width: 200px;
+					}
+
+					button {
+						flex: 0 0 max-content;
+					}
+
+					.animation-running {
+						cursor: pointer;
+						display: none;
+
+						img {
+							height: 42px;
+						}
+					}
+
+					@media(max-width: 1120px) {
+						> button:not(.btn-expandable) {
+							display: none;
+						}
+						.animation-running {
+							display: block;
+						}
+					}
+
+					@media (max-width: 700px) {
+						.progress-bar {
+							display: none;
+						}
+					}
+
+					@media (max-width: 640px) {
+						display: none;
+					}
+
+					/* When complete there's an icon prefix that takes up more room. */
+					&.complete {
+						@media (max-width: 720px) {
+							.progress-bar {
+								display: none;
+							}
+						}
+
+						/* Remove complete icon before removing whole status. */
+						@media (max-width: 670px) {
+							img.icon.type {
+								display: none;
+							}
+						}
+					}
+
+					/* When a tool is running there is longer status text taking up room. */
+					&.tool-running {
+						@media (max-width: 800px) {
+							.progress-bar {
+								display: none;
+							}
+						}
+
+						/* Because there is an animated icon giving context we can reduce text. */
+						@media (max-width: 740px) {
+							.status-text {
+								strong {
+									font-size: 1.1rem;
+								}
+
+								span {
+									display: none;
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+
+		//Subnav
+		.subnav {
+			display: flex;
+			border-bottom: 1px solid var(--as3cf-wordpress-border-color);
+			padding: 0;
+			align-items: baseline;
+			margin: 0 0 3rem;
+
+			&.subpage {
+				display: none;
+
+				@media(max-width: 1100px) {
+					display: flex;
+				}
+			}
+
+			li {
+				font-size: 0.875rem;
+				font-weight: 500;
+				padding-bottom: 1rem;
+				margin: 0 2rem 0 0;
+
+				&.step-arrow {
+					all: unset;
+					display: flex;
+					align-self: flex-start;
+					margin: 0 2rem 0 0;
+				}
+
+				&.has-icon {
+					margin: 0 0.5625rem 0 0;
+				}
+
+				a {
+					color: var(--as3cf-color-gray-600);
+					text-decoration: none;
+
+
+					&:hover {
+						color: var(--as3cf-color-primary-600);
+					}
+
+					&:focus, &:active {
+						box-shadow: none;
+						outline: none;
+					}
+
+					&:focus-visible {
+						color: var(--as3cf-color-primary-600);
+						box-shadow: 0 0 0 1.5px var(--as3cf-wordpress-background-color), 0 0 0 3.5px var(--as3cf-color-primary-400);
+						border-radius: 3px;
+						outline: none;
+					}
+				}
+
+				&.focus, &.hover {
+					border-bottom: 3px solid var(--as3cf-color-gray-600);
+				}
+
+				&.active {
+					border-bottom: 3px solid var(--as3cf-color-primary-500);
+
+					a {
+						color: var(--as3cf-active-nav-color);
+					}
+				}
+			}
+		}
+
+		.lite-wrapper {
+			.subnav {
+				display: flex !important;
+			}
+		}
+
+		&.wpomepro {
+
+			// Header
+			> .header {
+				.header-wrapper {
+					width: 1220px;
+					max-width: 1220px;
+				}
+			}
+
+			// Nav
+			> .nav {
+				div.items {
+					max-width: 1220px;
+				}
+			}
+		}
+	}
+}

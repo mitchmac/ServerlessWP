@@ -1,0 +1,11 @@
+{
+  "name": "deliciousbrains/wp-amazon-s3-and-cloudfront",
+  "type": "wordpress-plugin",
+  "homepage": "https://github.com/deliciousbrains/wp-amazon-s3-and-cloudfront",
+  "license": "GPL-3.0-only",
+  "description": "Automatically copies media uploads to a storage provider's bucket for delivery. Optionally configure a CDN for even faster delivery.",
+  "keywords": ["plugin","amazon-web-services","s3","cloudfront","cdn","digitalocean","spaces"],
+  "require": {
+    "composer/installers": "^1.0"
+  }
+}

@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+  <g fill="none" transform="translate(4 1)">
+    <polygon fill="#922317" points="14 8.5 16 9 12 9.5 10 9"/>
+    <polyline fill="#BC3B2D" points="10 9 14 8.5 14 4.053 13.973 4 10 4.973 10 9"/>
+    <polygon fill="#F96656" points="14 8.5 14 4 16 4.974 16 9"/>
+    <polygon fill="#922317" points="2 8.5 0 9 4 9.5 6 9"/>
+    <polygon fill="#BC3B2D" points="2 8.5 2 4 0 5 0 8.995"/>
+    <polygon fill="#F96656" points="6 9 2 8.5 2 4 6 5"/>
+    <polygon fill="#922317" points="4 7.5 8 6.5 12 7.5 8 8.5"/>
+    <polygon fill="#BC3B2D" points="4 7.5 8 6.5 8 0 4 2"/>
+    <polygon fill="#F96656" points="12 7.5 8 6.5 8 0 12 2"/>
+    <polygon fill="#FF9489" points="14 12.5 16 13 12 13.5 10 13" transform="matrix(1 0 0 -1 0 26)"/>
+    <polygon fill="#BC3B2D" points="10 18 14 17.5 14 13.053 13.973 13 10 13.973 10 18" transform="matrix(1 0 0 -1 0 31)"/>
+    <polygon fill="#F96656" points="14 17.5 14 13 16 13.974 16 18" transform="matrix(1 0 0 -1 0 31)"/>
+    <polygon fill="#FF9489" points="2 12.5 0 13 4 13.5 6 13" transform="matrix(1 0 0 -1 0 26)"/>
+    <polygon fill="#BC3B2D" points="2 17.5 2 13 0 14 0 17.995" transform="matrix(1 0 0 -1 0 30.995)"/>
+    <polygon fill="#F96656" points="6 18 2 17.5 2 13 6 14" transform="matrix(1 0 0 -1 0 31)"/>
+    <polygon fill="#FF9489" points="4 14.5 8 13.5 12 14.5 8 15.5" transform="matrix(1 0 0 -1 0 29)"/>
+    <polygon fill="#BC3B2D" points="4 22 8 21 8 14.5 4 16.5" transform="matrix(1 0 0 -1 0 36.5)"/>
+    <polygon fill="#F96656" points="12 22 8 21 8 14.5 12 16.5" transform="matrix(1 0 0 -1 0 36.5)"/>
+  </g>
+</svg>

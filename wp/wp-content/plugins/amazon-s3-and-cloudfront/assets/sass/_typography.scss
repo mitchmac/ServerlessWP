@@ -1,0 +1,124 @@
+//Typography
+
+// Need to combat WP Core's common.css by adding a bit of specificity.
+#as3cf-settings {
+	&.wpome {
+
+		a,
+		button,
+		h1,
+		h2,
+		h3,
+		h4,
+		h5,
+		input,
+		li,
+		p,
+		pre,
+		select,
+		span,
+		textarea {
+			letter-spacing: 0.25px;
+			line-height: 1;
+			margin: 0;
+		}
+
+		li {
+			list-style: none;
+		}
+
+		.semibold {
+			font-weight: 600;
+		}
+
+		.bold {
+			font-weight: 700;
+		}
+
+		p {
+			font-size: 0.875rem;
+			color: var(--as3cf-color-gray-900);
+			font-weight: 400;
+		}
+
+		.page-title {
+			margin-bottom: 3rem;
+		}
+
+		/*
+		 * Add an external link icon after any link that uses "_blank" target.
+		 * There's a couple of classes where we don't want the icon too.
+	   */
+		a[target="_blank"]:not(.help):not(.licence):not(.email):not(.credits) {
+			&:after {
+				box-sizing: border-box;
+				content: "\f504";
+				display: inline-block;
+				font-family: 'dashicons', emoji;
+				font-size: larger;
+				text-decoration: none;
+				vertical-align: sub;
+				margin-left: 0.2rem;
+				margin-right: -1rem; // This stops icon from wrapping to next line on its own.
+			}
+		}
+
+		.link {
+			font-size: 0.8125rem;
+			color: #0073AA;
+
+			&:hover {
+				filter: brightness(115%);
+			}
+		}
+
+		pre, textarea.pre {
+			background: var(--as3cf-code-background);
+			border: 1px solid #D2CFCF;
+			border-radius: 6px;
+			padding: 1rem 1.2rem;
+			display: flex;
+			flex: 1;
+			font-size: 0.8125rem;
+			line-height: 1.6;
+			color: var(--as3cf-color-white);
+			font-weight: 400;
+			margin: 0 0 1.5rem;
+			box-sizing: border-box;
+			width: 100%;
+			overflow-y: scroll;
+
+			/* Standards compliant scrollbar (future) */
+			/*
+			scrollbar-color: var(--as3cf-secondary-color) var(--as3cf-code-background);
+			scrollbar-width: 12px;
+			 */
+
+			/* Ye olde webkit scrollbar */
+			&::-webkit-scrollbar {
+				width: 12px;
+			}
+
+			&::-webkit-scrollbar-track {
+				background: var(--as3cf-code-background);
+				border-radius: 6px;
+			}
+
+			&::-webkit-scrollbar-corner {
+				background-color: var(--as3cf-code-background);
+				border-radius: 6px;
+			}
+
+			&::-webkit-resizer {
+				background-color: var(--as3cf-code-background);
+				border-radius: 6px;
+			}
+
+			&::-webkit-scrollbar-thumb {
+				background-color: var(--as3cf-secondary-color);
+				border: 1px solid var(--as3cf-code-background);
+				border-radius: 5px;
+			}
+		}
+	}
+}

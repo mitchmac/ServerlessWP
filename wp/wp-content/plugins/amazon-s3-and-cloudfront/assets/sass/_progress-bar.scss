@@ -1,0 +1,57 @@
+// Need to combat WP Core's common.css by adding a bit of specificity.
+#as3cf-settings {
+	&.wpome {
+		.indicator,
+		.progress-bar {
+			height: 8px;
+			border-radius: 8px;
+		}
+
+		.progress-bar {
+			background: var(--as3cf-color-gray-300);
+
+			//Progress Bar Animation
+			&.stripe {
+				&.animate,
+				> .indicator.animate {
+					background-size: 30px 30px;
+					background-image: -moz-linear-gradient(-45deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.15) 25%, rgba(255, 255, 255, 0) 25%, rgba(255, 255, 255, 0) 50%, rgba(255, 255, 255, 0.15) 50%, rgba(255, 255, 255, 0.15) 75%, rgba(255, 255, 255, 0) 75%, rgba(255, 255, 255, 0) 100%);
+					background-image: -webkit-gradient(linear, left top, right bottom, color-stop(0%, rgba(255, 255, 255, 0.2)), color-stop(25%, rgba(255, 255, 255, 0.2)), color-stop(25%, rgba(255, 255, 255, 0)), color-stop(50%, rgba(255, 255, 255, 0)), color-stop(50%, rgba(255, 255, 255, 0.2)), color-stop(75%, rgba(255, 255, 255, 0.2)), color-stop(75%, rgba(255, 255, 255, 0)), color-stop(100%, rgba(255, 255, 255, 0)));
+					background-image: -webkit-linear-gradient(-45deg, rgba(255, 255, 255, 0.3) 0%, rgba(255, 255, 255, 0.3) 25%, rgba(255, 255, 255, 0) 25%, rgba(255, 255, 255, 0) 50%, rgba(255, 255, 255, 0.3) 50%, rgba(255, 255, 255, 0.3) 75%, rgba(255, 255, 255, 0) 75%, rgba(255, 255, 255, 0) 100%);
+					background-image: -o-linear-gradient(-45deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.15) 25%, rgba(255, 255, 255, 0) 25%, rgba(255, 255, 255, 0) 50%, rgba(255, 255, 255, 0.15) 50%, rgba(255, 255, 255, 0.15) 75%, rgba(255, 255, 255, 0) 75%, rgba(255, 255, 255, 0) 100%);
+					background-image: -ms-linear-gradient(-45deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.15) 25%, rgba(255, 255, 255, 0) 25%, rgba(255, 255, 255, 0) 50%, rgba(255, 255, 255, 0.15) 50%, rgba(255, 255, 255, 0.15) 75%, rgba(255, 255, 255, 0) 75%, rgba(255, 255, 255, 0) 100%);
+					background-image: linear-gradient(135deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.15) 25%, rgba(255, 255, 255, 0) 25%, rgba(255, 255, 255, 0) 50%, rgba(255, 255, 255, 0.15) 50%, rgba(255, 255, 255, 0.15) 75%, rgba(255, 255, 255, 0) 75%, rgba(255, 255, 255, 0) 100%);
+					animation: progress 5s linear infinite;
+				}
+
+				@keyframes progress {
+					from {
+						background-position: 0 0;
+					}
+					to {
+						background-position: -60px -60px;
+					}
+				}
+
+				&.animate {
+					background-color: var(--as3cf-secondary-color);
+				}
+			}
+
+			.indicator {
+				display: block;
+				background-color: var(--as3cf-color-primary-500);
+				width: 40%;
+
+				&.running {
+					background-color: var(--as3cf-color-secondary-500);
+				}
+
+				&.complete {
+					background-color: var(--as3cf-complete-color);
+					width: 100%;
+				}
+			}
+		}
+	}
+}

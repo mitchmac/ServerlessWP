@@ -1,0 +1,70 @@
+// Icons
+
+// Need to combat WP Core's common.css by adding a bit of specificity.
+#as3cf-settings {
+	&.wpome {
+		a.help {
+			width: 18px;
+			height: 18px;
+			min-width: 18px;
+			min-height: 18px;
+			border: none;
+			border-radius: 100%;
+
+			&:hover, &:focus, &:active {
+				filter: brightness(90%);
+				box-shadow: 0 0 0 1.5px var(--as3cf-color-white), 0 0 0 3.5px var(--as3cf-color-secondary-500);
+				outline: 0;
+			}
+
+			.icon {
+				&.help {
+					width: 18px;
+					height: 18px;
+					min-width: 18px;
+					min-height: 18px;
+					border: none;
+					border-radius: 100%;
+				}
+			}
+		}
+
+		.icon {
+			&.status {
+				width: 16px;
+				height: 16px;
+
+				&:hover {
+					filter: brightness(90%);
+				}
+			}
+
+			&.close {
+				&:hover {
+					filter: brightness(90%);
+				}
+			}
+
+			&.bucket {
+				width: 18px;
+				height: 18px;
+				margin-right: 1.4rem;
+			}
+
+			&.region {
+				width: 18px;
+				height: 18px;
+			}
+
+			&.notice-icon {
+				width: 24px;
+				height: 24px;
+				margin-right: 0.8rem;
+
+				&.assets-wizard {
+					margin-top: -2px;
+				}
+			}
+		}
+	}
+}

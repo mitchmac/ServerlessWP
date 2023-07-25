@@ -1,0 +1,330 @@
+//Notification Styling
+
+// Need to combat WP Core's common.css by adding a bit of specificity.
+#as3cf-settings {
+	&.wpome {
+		.notifications.wrapper {
+			margin: 0 0 2rem 0;
+		}
+
+		.notification {
+			box-sizing: border-box;
+			padding: 0;
+			margin: 0 0 0.5rem 0;
+			box-shadow: 0 2px 8px -5px rgba(50, 50, 93, 0.25), 0px 8px 5px -12px rgba(0, 0, 0, 0.3);
+			border-radius: 8px;
+
+			display: flex;
+			flex-direction: column;
+
+			.content {
+				box-sizing: border-box;
+				padding: 10px 14px 10px 12px;
+				margin: 0;
+
+				display: flex;
+				align-items: center;
+				gap: 14px;
+
+				div.icon.type {
+					margin: 0;
+					padding: 0;
+					width: 28px;
+					height: 28px;
+					border-radius: 6px;
+					flex: 0 0 28px;
+					align-self: flex-start;
+
+					display: flex;
+					align-items: center;
+					justify-content: center;
+
+					&.in-panel {
+						align-self: auto;
+					}
+
+					img.icon.type {
+						width: 16px;
+						height: 16px;
+					}
+				}
+
+				h3 {
+					margin: 0 0.5rem 0.5rem 0;
+					font-size: 0.8125rem;
+					line-height: 1.3rem;
+					font-weight: 600;
+					color: var(--as3cf-color-gray-900);
+					width: 100%;
+				}
+
+				p {
+					margin: 0 0.5rem 0.5rem 0;
+					font-size: 0.8125rem;
+					line-height: 1.3rem;
+					color: var(--as3cf-color-gray-900);
+
+					li {
+						list-style: disc;
+					}
+				}
+
+				p:last-of-type {
+					margin-bottom: 0;
+				}
+
+				code {
+					padding: 0.05rem 0.4rem;
+					margin: 0 0.1rem;
+					border-radius: 5px;
+					line-height: 1;
+				}
+
+				.body {
+					margin: 0;
+					padding: 0;
+					width: 100%;
+					overflow-wrap: anywhere;
+
+					display: flex;
+					flex-direction: column;
+
+					.heading {
+						display: flex;
+						flex-direction: row;
+						align-items: center;
+
+						p {
+							width: 100%;
+						}
+
+						.close {
+							flex: 0 0 16px;
+							width: 16px;
+							height: 16px;
+							min-width: 16px;
+							min-height: 16px;
+							background: url(../img/icon/close.svg) no-repeat;
+							border: none;
+							border-radius: 100%;
+							cursor: pointer;
+						}
+					}
+
+					.links a {
+						margin-right: 0.75rem;
+					}
+				}
+			}
+
+			&.multiline {
+				.content {
+					padding: 14px 14px 14px 12px;
+
+					.body {
+						.heading {
+							.close {
+								align-self: first baseline;
+							}
+						}
+					}
+
+					&.in-panel {
+						padding: .875rem 1.5rem .875rem 1.5rem;
+						gap: 16px;
+					}
+				}
+			}
+
+			// Inline's extra padding only applies if also multiline.
+			&.inline.multiline {
+				.content {
+					padding: 16px;
+					gap: 16px;
+
+					div.icon.type {
+						margin-top: 4px;
+					}
+				}
+			}
+
+			&.expandable {
+				.heading {
+					gap: 8px;
+				}
+
+				&.expanded {
+					.details {
+						max-height: 14.5rem;
+						overflow-y: auto;
+						margin: 0;
+						padding: 0;
+
+						.item {
+							margin: 0;
+							padding: 1.5rem;
+							line-height: 1.4;
+
+							display: flex;
+							flex-direction: column;
+
+							.summary {
+								margin-bottom: 0.75rem;
+								display: flex;
+								align-items: center;
+								width: 100%;
+
+								.title {
+									width: 100%;
+									font-weight: 600;
+								}
+							}
+
+							ul.detail {
+								margin: 0;
+								padding: 0;
+
+								& > li {
+									padding: 0.3rem 0 0;
+									line-height: 1.4;
+								}
+							}
+						}
+					}
+				}
+
+				button {
+					color: var(--as3cf-link-color);
+					background-color: rgba(17, 17, 17, 0.04);
+					border: 1px solid rgba(17, 17, 17, 0.08);
+
+					&.btn-expandable {
+						width: 22px;
+						height: 22px;
+						min-width: 22px;
+						min-height: 22px;
+						background-size: 11px;
+						border-radius: 11px;
+
+						// Alter SVG arrow colour.
+						filter: invert(27%) sepia(84%) saturate(1886%) hue-rotate(177deg) brightness(90%) contrast(103%);
+
+						&:hover, &:focus, &:active {
+							filter: brightness(90%);
+						}
+					}
+
+					&.dismiss {
+						box-sizing: border-box;
+						flex: 0 0 auto;
+
+						display: flex;
+						flex-direction: row;
+						align-items: center;
+						padding: 5px 10px;
+						gap: 4px;
+
+						border-radius: 6px;
+
+						&:before {
+							content: url(../img/icon/x.svg);
+							width: 7.5px;
+						}
+					}
+				}
+			}
+
+			button:not(.btn-refresh) {
+				&:focus, &:active {
+					filter: brightness(90%);
+					box-shadow: 0 0 0 1.5px var(--as3cf-color-white), 0 0 0 3.5px var(--as3cf-color-secondary-500);
+					outline: 0;
+				}
+			}
+
+			&.info {
+				background: var(--as3cf-notice-info-background-color);
+				border: 1px solid var(--as3cf-notice-info-border-color);
+
+				div.icon.type {
+					background: var(--as3cf-notice-info-color);
+				}
+
+				&.expandable.expanded .details .item {
+					border-top: 1px solid rgba(46, 107, 222, 0.16);
+				}
+			}
+
+			&.success {
+				background: var(--as3cf-notice-success-background-color);
+				border: 1px solid var(--as3cf-notice-success-border-color);
+
+				div.icon.type {
+					background: var(--as3cf-notice-success-color);
+				}
+
+				&.expandable.expanded .details .item {
+					border-top: 1px solid rgba(232, 99, 94, 0.16);
+				}
+			}
+
+			&.warning {
+				background: var(--as3cf-notice-warning-background-color);
+				border: 1px solid var(--as3cf-notice-warning-border-color);
+
+				div.icon.type {
+					background: var(--as3cf-notice-warning-color);
+				}
+
+				code {
+					background: var(--as3cf-notice-warning-code-background-color);
+				}
+
+				&.expandable.expanded .details .item {
+					border-top: 1px solid rgba(99, 185, 105, 0.16);
+				}
+			}
+
+			&.error {
+				background: var(--as3cf-notice-error-background-color);
+				border: 1px solid var(--as3cf-notice-error-border-color);
+
+				div.icon.type {
+					background: var(--as3cf-notice-error-color);
+				}
+
+				&.expandable.expanded .details .item {
+					border-top: 1px solid rgba(232, 99, 94, 0.16);
+				}
+			}
+
+			&.in-panel {
+				border-left: 0;
+				border-right: 0;
+				border-radius: 0;
+			}
+
+			/* Probably redundant now, but keeping until verified post 3.0 release. */
+			&.wordpress {
+				background: var(--as3cf-color-white);
+				border: 1px solid var(--as3cf-wordpress-border-color);
+
+				&.info {
+					border-left: 5px solid var(--as3cf-wordpress-notice-info-color);
+				}
+
+				&.success {
+					border-left: 5px solid var(--as3cf-wordpress-notice-success-color);
+				}
+
+				&.warning {
+					border-left: 5px solid var(--as3cf-wordpress-notice-warning-color);
+				}
+
+				&.error {
+					border-left: 5px solid var(--as3cf-wordpress-notice-error-color);
+				}
+			}
+		}
+	}
+}

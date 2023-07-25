@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="42px" height="42px" viewBox="0 0 42 42" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <title>icon/tools/tool-download-default</title>
+    <g id="icon/tools/tool-download-default" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <circle id="Oval" fill="#E4EAF1" cx="21" cy="21" r="21"></circle>
+        <path d="M28,19 L24,19 L24,12 L18,12 L18,19 L14,19 L21,26 L28,19 Z M14,28 L14,30 L28,30 L28,28 L14,28 Z" id="Shape" fill="#87A2C2" fill-rule="nonzero"></path>
+    </g>
+</svg>

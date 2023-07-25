@@ -1,0 +1,85 @@
+/*
+ * Our CSS variables, namespaced so they can be used anywhere.
+ */
+:root {
+	// Typography
+	--as3cf-code-type: consolas, monospace;
+
+	// Design System Colors
+	--as3cf-color-white: #FFF;
+	--as3cf-color-black: #000;
+
+	--as3cf-color-gray-50: #FCFDFD;
+	--as3cf-color-gray-100: #F9FAFB;
+	--as3cf-color-gray-200: #F2F4F7;
+	--as3cf-color-gray-300: #EAECF0;
+	--as3cf-color-gray-400: #D0D5DD;
+	--as3cf-color-gray-500: #98A2B3;
+	--as3cf-color-gray-600: #667085;
+	--as3cf-color-gray-700: #344054;
+	--as3cf-color-gray-800: #1D2939;
+	--as3cf-color-gray-900: #101828;
+
+	--as3cf-color-primary-50: #FDF1EF;
+	--as3cf-color-primary-100: #FBE2DF;
+	--as3cf-color-primary-200: #F7C6BF;
+	--as3cf-color-primary-300: #F4A99E;
+	--as3cf-color-primary-400: #F08D7E;
+	--as3cf-color-primary-500: #EC705E;
+	--as3cf-color-primary-600: #C15B4C;
+	--as3cf-color-primary-700: #96453A;
+	--as3cf-color-primary-800: #6B3027;
+	--as3cf-color-primary-900: #401A15;
+
+	--as3cf-color-secondary-50: #EFF8FF;
+	--as3cf-color-secondary-100: #D1E9FF;
+	--as3cf-color-secondary-200: #B2DDFF;
+	--as3cf-color-secondary-300: #84CAFF;
+	--as3cf-color-secondary-400: #52B1FD;
+	--as3cf-color-secondary-500: #2C90FA;
+	--as3cf-color-secondary-600: #1270EF;
+	--as3cf-color-secondary-700: #155CD3;
+	--as3cf-color-secondary-800: #1749A9;
+	--as3cf-color-secondary-900: #184185;
+
+	// UI Colors
+	--as3cf-secondary-color: #D8DDE2;
+	--as3cf-text-disabled: #98A2B3;
+	--as3cf-code-background: #102B44;
+	--as3cf-separator-color: #EBEFF3;
+	--as3cf-complete-color: #5BCB86;
+	--as3cf-active-nav-color: #4E0D34;
+	--as3cf-link-color: #0073AA;
+	--as3cf-sidebar-credits-background-color: #2E2E31;
+
+	--as3cf-wordpress-background-color: #F1F1F1;
+	--as3cf-wordpress-border-color: #D6D6D6;
+
+	// Notice colors
+	--as3cf-wordpress-notice-info-color: #02A0D2;
+	--as3cf-notice-info-color: #2D69DA;
+	--as3cf-notice-info-border-color: #2E6BDE;
+	--as3cf-notice-info-background-color: #E7EFF9;
+
+	--as3cf-wordpress-notice-success-color: #45B450;
+	--as3cf-notice-success-color: #52AA59;
+	--as3cf-notice-success-border-color: #63B969;
+	--as3cf-notice-success-background-color: #EDF7EF;
+
+	--as3cf-wordpress-notice-warning-color: #FFBA00;
+	--as3cf-notice-warning-color: #F49C53;
+	--as3cf-notice-warning-border-color: #E29936;
+	--as3cf-notice-warning-background-color: #FDF8EB;
+	--as3cf-notice-warning-code-background-color: #FCECC6;
+
+	--as3cf-wordpress-notice-error-color: #DD3232;
+	--as3cf-notice-error-color: #DA5A39;
+	--as3cf-notice-error-border-color: #E8635E;
+	--as3cf-notice-error-background-color: #F7EEEB;
+
+	// Settings Panels
+	--as3cf-settings-ctrl-width: 36px;
+	--as3cf-settings-option-indent: 1.2rem;
+	--as3cf-settings-input-indent: 0;
+	--as3cf-settings-option-indent-right: 2.25rem;
+}

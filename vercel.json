@@ -1,0 +1,16 @@
+{
+    "rewrites": [
+      { "source": "/(.*)", "destination": "/api/index.js" }
+    ],
+    "functions": {
+        "api/index.js": {
+          "memory": 1024,
+          "includeFiles": "wp/**"
+        }
+    },
+    "build": {
+      "env": {
+        "NODEJS_AWS_HANDLER_NAME": "handler"
+      }
+    }
+}

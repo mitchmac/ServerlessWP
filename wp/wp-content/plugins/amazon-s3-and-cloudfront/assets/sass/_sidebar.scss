@@ -1,0 +1,166 @@
+// Need to combat WP Core's common.css by adding a bit of specificity.
+#as3cf-settings {
+	&.wpome {
+
+		//Sidebar
+		.as3cf-sidebar {
+			width: 292px;
+			min-width: 292px;
+			height: max-content;
+			margin-left: 2.25rem;
+			margin-top: -0.5rem;
+
+			&.lite {
+				background: white;
+				border-radius: 7px;
+				border: 1px solid #D9E1EB;
+				overflow: hidden;
+				box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.1);
+			}
+
+			.block {
+				padding: 20px;
+				border: 1px solid #ccc;
+			}
+
+			.subscribe {
+				border-top: none;
+				text-align: center;
+				padding: 40px 20px;
+
+				h2 {
+					padding: 0;
+					margin: 0;
+					margin-bottom: 0.5em;
+					color: #666;
+					font-size: 17px;
+					line-height: 1.2em;
+					float: none;
+					text-transform: none;
+					font-weight: 500;
+				}
+
+				.button {
+					width: 100% !important;
+					margin: 1rem auto;
+					text-transform: uppercase;
+					display: flex;
+					justify-content: center;
+					align-items: center;
+					text-align: center !important;
+				}
+
+				p {
+					margin: 0;
+				}
+
+				.discount-applied {
+					color: rgba(0, 0, 0, 0.4);
+					font-size: 12px;
+					line-height: 1.4em;
+					margin-top: 10px;
+				}
+			}
+
+			a.credits {
+				display: block;
+				border-top: 0;
+				background: var(--as3cf-sidebar-credits-background-color);
+				padding: 1rem;
+				text-align: center;
+				text-decoration: none;
+				font-size: 12px;
+				font-weight: 300;
+				color: var(--as3cf-color-white);
+
+				span.name {
+					font-weight: 500;
+				}
+
+				&:hover {
+					color: var(--as3cf-color-white);
+				}
+			}
+
+			@media screen and (max-width: 1052px) {
+				position: relative;
+				top: auto;
+				right: auto;
+			}
+		}
+
+		/**
+		 * Misc
+		 */
+		.as3cf-active-provider, .as3cf-active-bucket {
+			font-weight: bold;
+			margin-right: 10px;
+		}
+
+		.as3cf-banner {
+			width: 292px;
+			height: 156px;
+			display: block;
+			background: #f8cfae url(../img/sidebar/os3-banner.svg) left bottom / 100% no-repeat;
+		}
+
+		.as3cf-banner:focus {
+			box-shadow: none;
+		}
+
+		.as3cf-upgrade-details {
+			background-color: #4e0d33;
+			padding: 10px 20px 20px 20px;
+			color: #eee;
+			font-size: 12.5px;
+			display: block;
+			text-decoration: none;
+
+			h1 {
+				font-size: 27px;
+				color: #f8cfae;
+				margin: 0 0 15px 0;
+				padding: 0;
+				font-weight: 300;
+				line-height: 1;
+			}
+
+			h2 {
+				font-size: 15px;
+				color: #F8CFAE;
+				margin: 0 0 30px 0;
+				font-weight: 600;
+				line-height: 20px;
+			}
+
+			p {
+				margin: 0;
+			}
+
+			a {
+				color: #eee;
+				font-weight: bold;
+				text-decoration: none;
+				font-size: 16px;
+				box-shadow: none;
+
+				&:hover {
+					color: #fff;
+				}
+			}
+
+			ul {
+				margin: 0 !important;
+				padding: 0;
+				list-style: none;
+
+				li {
+					margin-bottom: 15px;
+					line-height: 18px;
+					padding-left: 25px;
+					background: url(../img/sidebar/item-checked.svg) left center no-repeat;
+				}
+			}
+		}
+	}
+}

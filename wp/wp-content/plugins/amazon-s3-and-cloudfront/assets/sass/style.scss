@@ -1,0 +1,55 @@
+@import "buttons", "icons", "input", "navigation", "notifications", "progress-bar", "providers", "sidebar", "typography", "ui", "variables";
+
+//WordPress overrides.
+body.settings_page_amazon-s3-and-cloudfront {
+	//font-family: system-ui, sans-serif;
+	background: var(--as3cf-wordpress-background-color);
+
+	#wpcontent {
+		padding-left: 0 !important;
+
+		#wpbody {
+			#wpbody-content {
+				// Hide global notices from our settings page.
+				& > .notice {
+					display: none;
+				}
+
+				.wpome .wpome-wrapper {
+					max-width: 1220px;
+					margin: 0 2rem 3rem 2rem;
+				}
+			}
+		}
+	}
+
+	#wpfooter {
+		z-index: -2;
+	}
+}
+
+.locked {
+	opacity: 0.55;
+}
+
+.flex-row {
+	display: flex;
+	flex-direction: row;
+}
+
+.flex-column {
+	display: flex;
+	flex-direction: column;
+}
+
+.align-center {
+	align-items: center;
+}
+
+.align-center {
+	align-items: center;
+}
+
+.align-baseline {
+	align-items: baseline !important;
+}

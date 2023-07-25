@@ -1,0 +1,301 @@
+// Need to combat WP Core's common.css by adding a bit of specificity.
+#as3cf-settings {
+	&.wpome {
+
+		//Transition easing
+		button, a, input {
+			transition: all 0.3s ease;
+		}
+
+		//Buttons
+		button, a.button {
+			font-weight: 500;
+			border-radius: 6px;
+			white-space: nowrap;
+			min-width: 4rem;
+
+			&.btn-lg {
+				font-size: 0.875rem;
+				padding: 0.95rem 1.2rem;
+				min-width: 6rem;
+			}
+
+			&.btn-md {
+				font-size: 0.875rem;
+				padding: 0.75rem 1.05rem;
+			}
+
+			&.btn-sm {
+				font-size: 0.875rem;
+				padding: 0.55rem 0.9rem;
+			}
+
+			&.btn-xs {
+				font-size: 0.7rem;
+				padding: 0.4rem 0.6rem;
+				min-width: 3rem;
+			}
+
+			&.btn-primary {
+				color: var(--as3cf-color-white);
+				background: var(--as3cf-color-primary-500);
+				border: 1px solid rgba(0, 0, 0, 0.12);
+
+				&:hover {
+					background-color: var(--as3cf-color-primary-600);
+				}
+			}
+
+			&.btn-outline {
+				color: var(--as3cf-color-primary-500);
+				background: none;
+				border: 1px solid var(--as3cf-color-primary-500);
+
+				&:hover {
+					color: var(--as3cf-color-primary-600);
+					background-color: var(--as3cf-color-primary-50);
+					border: 1px solid var(--as3cf-color-primary-600);
+				}
+
+				&:focus, &:active {
+					border: 1px solid var(--as3cf-color-primary-200);
+				}
+			}
+
+			&.btn-primary, &.btn-outline {
+				&:focus, &:active {
+					box-shadow: 0 0 0 1.5px var(--as3cf-color-white), 0 0 0 3.5px var(--as3cf-color-primary-400);
+					outline: 0;
+				}
+			}
+
+			&.btn-disabled {
+				color: var(--as3cf-text-disabled);
+				border: 1px solid var(--as3cf-color-gray-400);
+				opacity: 0.5;
+				cursor: default;
+
+				&.btn-primary {
+					background: var(--as3cf-color-gray-300);
+				}
+
+				&:hover {
+					box-shadow: none !important;
+				}
+
+				&.btn-outline:hover {
+					color: var(--as3cf-text-disabled);
+					border: 1px solid var(--as3cf-color-gray-400);
+				}
+			}
+
+			&.btn-expandable {
+				all: unset;
+				box-sizing: border-box;
+				cursor: pointer;
+				flex: 0 0 auto;
+				width: 24px;
+				height: 24px;
+				min-width: 24px;
+				min-height: 24px;
+
+				background: url(../img/icon/arrow.svg) no-repeat center/18px;
+				border-radius: 12px;
+
+				transition: all .2s ease-in;
+
+				&.btn-expanded {
+					transform: rotate(180deg);
+				}
+
+				&:hover, &:focus, &:active {
+					box-shadow: 0 0 0 1.5px var(--as3cf-color-white), 0 0 0 3.5px var(--as3cf-color-secondary-500);
+					outline: 0;
+				}
+			}
+
+			&.btn-refresh {
+				all: unset;
+				display: flex;
+				align-items: center;
+				gap: 0.25rem;
+				box-sizing: border-box;
+				cursor: pointer;
+				flex: 0 0 auto;
+				font-size: 13px;
+				font-weight: 500;
+				color: var(--as3cf-link-color);
+				border-radius: 3px;
+				padding: 0.1rem;
+				margin-right: 0 -0.1rem;
+				text-decoration: underline;
+
+				img.refresh {
+					width: 12px;
+					height: 12px;
+					min-width: 12px;
+					min-height: 12px;
+
+					&.refreshing {
+						animation: spin 1s linear infinite;
+					}
+
+					@keyframes spin {
+						100% {
+							transform: rotate(360deg);
+						}
+					}
+				}
+
+				&.btn-refreshing {
+					cursor: default;
+				}
+
+				&:hover, &:active, &:focus {
+					text-decoration: none !important;
+					box-shadow: 0;
+				}
+
+				&:focus-visible {
+					text-decoration: none;
+					box-shadow: 0 0 0 1.5px var(--as3cf-color-white), 0 0 0 3.5px var(--as3cf-color-secondary-500);
+					outline: 0;
+				}
+
+				&:disabled {
+					color: var(--as3cf-color-gray-800);
+					text-decoration: none;
+				}
+			}
+		}
+
+		a,
+		button {
+			cursor: pointer;
+		}
+
+		.btn-row {
+			width: 100%;
+			display: flex;
+			flex-direction: row;
+			margin: 2.5rem 0 2.5rem 0;
+
+			.buttons-left {
+				.btn-primary {
+					margin-left: 0.85rem;
+				}
+			}
+
+			.btn-outline {
+				@extend .btn-outline;
+				margin-left: auto;
+			}
+
+			.btn-primary {
+				@extend .btn-primary;
+				margin-left: auto;
+			}
+
+			.btn-disabled {
+				@extend .btn-disabled;
+			}
+
+			.btn-outline + .btn-primary {
+				margin-left: 0.85rem;
+			}
+		}
+
+		.buttons-right {
+			margin-left: auto;
+			flex: 0 0 auto;
+
+			.pause {
+				margin-right: 0.7rem;
+			}
+		}
+
+		//Fixed Footer Buttons (Save / Cancel)
+		.fixed-cta-block {
+			width: calc(100% - 160px); // Full admin sidebar.
+			display: flex;
+			flex-direction: row;
+			background: var(--as3cf-color-white);
+			box-shadow: 0 -11px 24px 0 rgba(151, 146, 175, 0.20);
+			box-sizing: border-box;
+			z-index: 9999;
+			position: fixed;
+			bottom: 0;
+			left: 160px;
+
+			@media screen and (max-width: 960px) {
+				width: calc(100% - 36px); // Collapsed admin sidebar.
+				left: 36px;
+			}
+
+			@media screen and (max-width: 782px) {
+				width: 100%; // Removed admin sidebar.
+				left: 0;
+			}
+
+			.buttons {
+				margin: 0;
+				padding: 1rem 2rem;
+				display: flex;
+				justify-content: flex-end;
+				width: calc(1220px + 4rem); // Page's max width + margin (buttons match with padding).
+				max-width: calc(1220px + 4rem); // Page's max width + margin (buttons match with padding).
+				box-sizing: border-box;
+
+				@media screen and (max-width: 1100px) {
+					max-width: calc(780px + 4rem); // Single Panel's max width + margin (buttons match with padding).
+				}
+
+				@media screen and (max-width: 872px) {
+					max-width: 100%;
+				}
+
+				.btn-outline {
+					margin-right: 1rem;
+				}
+			}
+		}
+
+		.button-tab {
+			background: var(--as3cf-color-white);
+			border: 1px solid var(--as3cf-color-gray-400);
+			border-radius: 6px;
+			height: 3rem;
+			display: flex;
+			flex-direction: row;
+			align-items: center;
+			padding: 0 1.3rem;
+			text-decoration: none;
+			margin-right: 1.5rem;
+			position: relative;
+			transition-duration: 0.15s;
+			transition-timing-function: linear;
+
+			&.active {
+				border: 1px solid var(--as3cf-color-primary-500);
+				box-shadow: 0 2px 8px 0 rgba(0, 0, 0, 0.05), 0 2px 1px 0 rgba(0, 0, 0, 0.05);
+			}
+
+			&:hover {
+				box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.05), 0 2px 1px 0 rgba(0, 0, 0, 0.05);
+			}
+
+			&:focus, &:active {
+				box-shadow: 0 0 0 1.5px var(--as3cf-color-white), 0 0 0 3.5px var(--as3cf-color-secondary-500);
+				outline: 0;
+			}
+
+			&.btn-disabled {
+				cursor: default;
+
+				&:hover {
+					box-shadow: none;
+				}
+			}
+		}
+	}
+}

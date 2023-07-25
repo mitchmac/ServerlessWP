@@ -1,14 +1,3 @@
-# package directories
-node_modules
-jspm_packages
-
-# Serverless directories
+node_modules/
+package-lock.json
 .serverless
-
-# Project files
-wp/*
-!wp/readme.txt
-bin/*
-!bin/readme.txt
-!bin/lib/readme.txt
-.idea
