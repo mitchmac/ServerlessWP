@@ -3,7 +3,7 @@ Serverless WordPress on Vercel, Netlify, or AWS Lambda.
 
 | Netlify | Vercel |
 | --- | --- |
-| [![Deploy to Netlify](https://www.netlify.com/img/deploy/button.svg)](https://app.netlify.com/start/deploy?repository=https://github.com/mitchmac/serverlesswp) |[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fmitchmac%2Fserverlesswp) |
+| [![Deploy to Netlify](https://www.netlify.com/img/deploy/button.svg)](https://app.netlify.com/start/deploy?repository=https://github.com/mitchmac/serverlesswp) |[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fmitchmac%2Fserverlesswp&env=DATABASE,USERNAME,PASSWORD,HOST&envDescription=Database%20credentials%20from%20PlanetScale%20or%20other%20host&envLink=https%3A%2F%2Fgithub.com%2Fmitchmac%2FServerlessWP%23setup-vercel-or-netlify&project-name=serverlesswp&repository-name=serverlesswp) |
 
 ## Project Goals
 
@@ -20,8 +20,8 @@ Serverless WordPress on Vercel, Netlify, or AWS Lambda.
 ✅ A helpful community. [Share your successes, knowledge, ideas, or struggles](https://github.com/mitchmac/ServerlessWP/discussions) in the discussions
 
 ## Setup (Vercel or Netlify)
-1. Deploy this repository to Vercel or Netlify. On of the links above will get you started. You'll just need a GitHub account.
-2. Setup a MySQL database for WordPress to use. [PlanetScale](https://planetscale.com/) is a great option with a free tier.
+1. Create a MySQL database that can be accessed from Vercel or Netlify. The easiest way to do this is with [PlanetScale](https://planetscale.com/) which has a free tier to get started. When using PlanetScale, make sure your database's region matches the region that Vercel or Netlify will use. This is usually ```us-east-1```.
+2. Deploy this repository to Vercel or Netlify. One of the links above will get you started. You'll just need a GitHub account.
 3. Update the environment variables for your project in Vercel or Netlify with the database credentials. These are used by wp-config.php. The environment variables are:
 ```
 DATABASE
@@ -29,7 +29,7 @@ USERNAME
 PASSWORD
 HOST
 ```
-For more information about creating environment variables, see [here for Vercel](https://vercel.com/docs/concepts/projects/environment-variables) and [here for Netlify](https://docs.netlify.com/environment-variables/overview/). Remember to redeploy your project after updating the environment variables.
+For more information about creating environment variables, see [here for Vercel](https://vercel.com/docs/concepts/projects/environment-variables) and [here for Netlify](https://docs.netlify.com/environment-variables/overview/). Remember to redeploy your project after updating the environment variables if you update them after initially deploying your project.
 
 4. (optional) File and media uploads can be enabled using the included WP Offload Media Lite for Amazon S3 plugin. S3 setup details can be found [here](https://deliciousbrains.com/wp-offload-media/doc/amazon-s3-quick-start-guide/). The wp-config.php file is setup to use the following environment variables for use by the plugin:
 ```

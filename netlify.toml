@@ -5,3 +5,8 @@
   from = "/*"
   to = "/.netlify/functions/index/:splat"
   status = 200
+[template.environment]
+  DATABASE = "MySQL database name here"
+  USERNAME = "MySQL database username here"
+  PASSWORD = "MySQL database password here"
+  HOST = "MySQL database host here"
