@@ -1,38 +1,58 @@
-# ServerlessWP WordPress Starter
+# WordPress On Vercel, Netlify, or AWS
 Serverless WordPress on Vercel, Netlify, or AWS Lambda.
-
-World class affordable (free) hosting for your WordPress blog, portfolio or anything you can imagine.
 
 | Netlify | Vercel |
 | --- | --- |
 | [![Deploy to Netlify](https://www.netlify.com/img/deploy/button.svg)](https://app.netlify.com/start/deploy?repository=https://github.com/mitchmac/serverlesswp) |[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fmitchmac%2Fserverlesswp) |
 
+## Project Goals
+
+✅ Easy onboarding: deploy with one of the links above and then setup a database
+
+✅ Keep costs low (often free) for the majority of small WordPress websites
+
+✅ Ability to use most WordPress plugins and themes
+
+✅ Take advantage of edge caching for blazing fast page loads
+
+✅ Reduce the carbon footprint of WordPress websites
+
+✅ A helpful community. [Share your successes, knowledge, ideas, or struggles](https://github.com/mitchmac/ServerlessWP/discussions) in the discussions
+
 ## Setup (Vercel or Netlify)
-1. Deploy this repository to Vercel or Netlify. The links above will get you started.
+1. Deploy this repository to Vercel or Netlify. On of the links above will get you started. You'll just need a GitHub account.
 2. Setup a MySQL database for WordPress to use. [PlanetScale](https://planetscale.com/) is a great option with a free tier.
-3. Update environment variables for your project in Vercel or Netlify with the database credentials. These are used by wp-config.php. The environment variables are:
+3. Update the environment variables for your project in Vercel or Netlify with the database credentials. These are used by wp-config.php. The environment variables are:
 ```
 DATABASE
 USERNAME
 PASSWORD
 HOST
 ```
+For more information about creating environment variables, see [here for Vercel](https://vercel.com/docs/concepts/projects/environment-variables) and [here for Netlify](https://docs.netlify.com/environment-variables/overview/). Remember to redeploy your project after updating the environment variables.
+
 4. (optional) File and media uploads can be enabled using the included WP Offload Media Lite for Amazon S3 plugin. S3 setup details can be found [here](https://deliciousbrains.com/wp-offload-media/doc/amazon-s3-quick-start-guide/). The wp-config.php file is setup to use the following environment variables for use by the plugin:
 ```
 S3_KEY_ID
 S3_ACCESS_KEY
 ```
 
+## Customizing WordPress
+- WordPress and its files are in the ```/wp``` directory. You can add plugins or themes there in their respective directories in ```wp-content```
+
+## Project structure
+- `netlify.toml` or `vercel.json` are where we configure ```/api/index.js``` to handle all requests
+- [mitchmac/serverlesswp-node](https://github.com/mitchmac/serverlesswp-node) is used to run PHP and handle the request
+- You can modify the incoming request through the ```event``` object in api/index.js. You can also modify the WordPress ```response``` object there.
+
 ## Setup (Serverless Framework)
 1. Install and setup the serverless framework ([docs](https://www.serverless.com/framework/docs/getting-started))
-2. Run `serverless deploy` to confirm that the Lambda is created
+2. Clone the repository and run `serverless deploy` to confirm that the Lambda is created
 3. Like step 2 above, create a MySQL database and update the environment variables. They can be updated in the `serverless.yml` file and then run `serverless deploy` again.
 
-
-## Structure
-- WordPress and its files are in the ```/wp``` directory. You can add plugins or themes there in their respective directories in ```wp-content```
-- `netlify.toml` or `vercel.json` are what directs all requests to be served by the file in `api/index.js`
-
+## How can you help?
+- Just using ServerlessWP and [reporting any problems you experience](https://github.com/mitchmac/ServerlessWP/issues) is a fantastic way to help!
+- Share the word! Let's try to make WordPress hosting better.
 
 ## License
 GNU General Public License v3.0
