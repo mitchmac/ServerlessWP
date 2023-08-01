@@ -1,5 +1,5 @@
-# WordPress On Vercel, Netlify, or AWS
-Serverless WordPress on Vercel, Netlify, or AWS Lambda.
+# Run WordPress On Vercel, Netlify, or AWS
+Serverless WordPress on Vercel, Netlify, or AWS Lambda because WordPress hosting is silly.
 
 | Vercel (recommended) | Netlify |
 | --- | --- |
@@ -7,19 +7,24 @@ Serverless WordPress on Vercel, Netlify, or AWS Lambda.
 
 ## Project Goals
 
-✅ Easy onboarding: deploy with one of the links above and then setup a database
+✅ Maintaining servers for WordPress can be a pain. Serverless hosting should be less work.
 
-✅ Keep costs low (often free) for the majority of small WordPress websites
+✅ Small WordPress sites shouldn't cost much (or anything) to host.
 
-✅ Ability to use most WordPress plugins and themes
+✅ Deploying WordPress should be easy. Setup a database and try one of the links above.
 
-✅ Take advantage of edge caching for blazing fast page loads
+✅ WordPress plugins and themes save time and should be extensively supported.
 
-✅ Reduce the carbon footprint of WordPress websites
+✅ Edge caching can give us blazing fast websites.
 
-✅ A helpful community. [Share your successes, knowledge, ideas, or struggles](https://github.com/mitchmac/ServerlessWP/discussions) in the discussions
+✅ We can reduce the carbon footprint of WordPress websites.
+
+✅ We can create a helpful community. [Share your successes, knowledge, ideas, or struggles](https://github.com/mitchmac/ServerlessWP/discussions) in the discussions.
 
 ## Setup (Vercel or Netlify)
+
+**Please note this is currently an experimental project and shouldn't be used for websites with considerable security or stability requirements.**
+
 1. Create a MySQL database that can be accessed from Vercel or Netlify. The easiest way to do this is with [PlanetScale](https://planetscale.com/) which has a free tier to get started. When using PlanetScale, make sure your database's region matches the region that Vercel or Netlify will use. This is usually ```us-east-1```.
 2. Deploy this repository to Vercel or Netlify. One of the links above will get you started. You'll just need a GitHub account.
 3. Update the environment variables for your project in Vercel or Netlify with the database credentials. These are used by wp-config.php. The environment variables are:
@@ -49,6 +54,9 @@ S3_ACCESS_KEY
 1. Install and setup the serverless framework ([docs](https://www.serverless.com/framework/docs/getting-started))
 2. Clone the repository and run `serverless deploy` to confirm that the Lambda is created
 3. Like step 2 above, create a MySQL database and update the environment variables. They can be updated in the `serverless.yml` file and then run `serverless deploy` again.
+
+## Getting help
+Need help getting ServerlessWP installed? [Start a discussion](https://github.com/mitchmac/ServerlessWP/discussions) or [e-mail me](mailto:wp@mitchmac.dev)
 
 ## How can you help?
 - Just using ServerlessWP and [reporting any problems you experience](https://github.com/mitchmac/ServerlessWP/issues) is a fantastic way to help!
