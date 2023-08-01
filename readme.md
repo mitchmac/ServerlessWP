@@ -1,5 +1,5 @@
 # Run WordPress On Vercel, Netlify, or AWS
-Serverless WordPress on Vercel, Netlify, or AWS Lambda because WordPress hosting is silly.
+WordPress hosting is silly. Serverless WordPress on Vercel, Netlify, or AWS Lambda.
 
 | Vercel (recommended) | Netlify |
 | --- | --- |
@@ -23,24 +23,21 @@ Serverless WordPress on Vercel, Netlify, or AWS Lambda because WordPress hosting
 
 ## Setup (Vercel or Netlify)
 
-**Please note this is currently an experimental project and shouldn't be used for websites with considerable security or stability requirements.**
+**This is currently an experimental project and shouldn't be used when considerable security or stability is required, yet**
 
 1. **Create a MySQL database** that can be accessed from Vercel or Netlify. The easiest way to do this is with [PlanetScale](https://planetscale.com/) which has a free tier to get started. When using PlanetScale, make sure your database's region matches the region that Vercel or Netlify will use. This is usually ```us-east-1```.
 2. **Deploy this repository to Vercel or Netlify.** One of the links above will get you started. You'll just need a GitHub account.
 3. **Update the environment variables** for your project in Vercel or Netlify with the database credentials. These are used by wp-config.php. The environment variables are:
-```
-DATABASE
-USERNAME
-PASSWORD
-HOST
-```
+- DATABASE
+- USERNAME
+- PASSWORD
+- HOST
+
 For more information about creating environment variables, see [here for Vercel](https://vercel.com/docs/concepts/projects/environment-variables) and [here for Netlify](https://docs.netlify.com/environment-variables/overview/). Remember to redeploy your project after updating the environment variables if you update them after initially deploying your project.
 
 4. (optional, can be done later) File and media uploads can be enabled using the included WP Offload Media Lite for Amazon S3 plugin. S3 setup details can be found [here](https://deliciousbrains.com/wp-offload-media/doc/amazon-s3-quick-start-guide/). The wp-config.php file is setup to use the following environment variables for use by the plugin:
-```
-S3_KEY_ID
-S3_ACCESS_KEY
-```
+- S3_KEY_ID
+- S3_ACCESS_KEY
 
 ## Customizing WordPress
 - WordPress and its files are in the ```/wp``` directory. You can add plugins or themes there in their respective directories in ```wp-content```
