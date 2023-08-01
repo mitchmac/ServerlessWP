@@ -21,6 +21,9 @@ WordPress hosting is silly. Serverless WordPress on Vercel, Netlify, or AWS Lamb
 
 ✅ We can create a helpful community. [Share your successes, knowledge, ideas, or struggles](https://github.com/mitchmac/ServerlessWP/discussions) in the discussions.
 
+## Install video
+<iframe width="267" height="150" src="https://www.youtube.com/embed/A1HZB2OqpCY" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+
 ## Setup (Vercel or Netlify)
 
 **This is currently an experimental project and shouldn't be used when considerable security or stability is required, yet**
