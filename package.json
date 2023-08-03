@@ -4,6 +4,6 @@
   "description": "",
   "license": "MIT",
   "dependencies": {
-    "serverlesswp": "^0.1.0"
+    "serverlesswp": "^0.1.1"
   }
 }
