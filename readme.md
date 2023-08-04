@@ -1,17 +1,19 @@
-# Run WordPress On Vercel, Netlify, or AWS
+# Host WordPress On Vercel, Netlify, or AWS
 WordPress hosting is silly. Serverless WordPress on Vercel, Netlify, or AWS Lambda.
 
 | Vercel (recommended) | Netlify |
 | --- | --- |
 | [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fmitchmac%2Fserverlesswp&env=DATABASE,USERNAME,PASSWORD,HOST&envDescription=Database%20credentials%20from%20PlanetScale%20or%20other%20host&envLink=https%3A%2F%2Fgithub.com%2Fmitchmac%2FServerlessWP%23setup-vercel-or-netlify&project-name=serverlesswp&repository-name=serverlesswp) |  [![Deploy to Netlify](https://www.netlify.com/img/deploy/button.svg)](https://app.netlify.com/start/deploy?repository=https://github.com/mitchmac/serverlesswp) |
 
-## Project Goals
+### Quick install video
+
+[![](https://markdown-videos.vercel.app/youtube/A1HZB2OqpCY)](https://youtu.be/A1HZB2OqpCY)
+
+## Project goals
 
 ✅ Maintaining servers for WordPress can be a pain. Serverless hosting should be less work.
 
 ✅ Small WordPress sites shouldn't cost much (or anything) to host.
-
-✅ Deploying WordPress should be easy. Setup a database and try one of the links above.
 
 ✅ WordPress plugins and themes save time and should be extensively supported.
 
@@ -21,17 +23,13 @@ WordPress hosting is silly. Serverless WordPress on Vercel, Netlify, or AWS Lamb
 
 ✅ We can create a helpful community. [Share your successes, knowledge, ideas, or struggles](https://github.com/mitchmac/ServerlessWP/discussions) in the discussions.
 
-## Install video
-
-[![](https://markdown-videos.vercel.app/youtube/A1HZB2OqpCY)](https://youtu.be/A1HZB2OqpCY)
-
 ## Setup (Vercel or Netlify)
 
 **This is currently an experimental project and shouldn't be used when considerable security or stability is required, yet**
 
 1. **Create a MySQL database** that can be accessed from Vercel or Netlify. The easiest way to do this is with [PlanetScale](https://planetscale.com/) which has a free tier to get started. When using PlanetScale, make sure your database's region matches the region that Vercel or Netlify will use. This is usually ```us-east-1```.
 2. **Deploy this repository to Vercel or Netlify.** One of the links above will get you started. You'll just need a GitHub account.
-3. **Update the environment variables** for your project in Vercel or Netlify with the database credentials. These are used by wp-config.php. The environment variables are:
+3. **Update the environment variables** for your project in Vercel or Netlify with the database credentials from PlanetScale or wherever you host the MySQL database. The WordPress config file ```wp-config.php``` uses these values to connect to the database. The environment variables are:
 - DATABASE
 - USERNAME
 - PASSWORD
