@@ -27,8 +27,14 @@ WordPress hosting is silly. Serverless WordPress on Vercel, Netlify, or AWS Lamb
 
 **This is currently an experimental project and shouldn't be used when considerable security or stability is required, yet**
 
-1. **Create a MySQL database** that can be accessed from Vercel or Netlify. The easiest way to do this is with [PlanetScale](https://planetscale.com/) which has a free tier to get started. When using PlanetScale, make sure your database's region matches the region that Vercel or Netlify will use. This is usually ```us-east-1```.
-2. **Deploy this repository to Vercel, Netlify, or AWS.** One of the links above will get you started. You'll just need a GitHub account. If deploying to AWS with the Serverless Framework for the first time, check the [Serverless Framework docs](https://www.serverless.com/framework/docs/getting-started) to get up to speed and run ```serverless deploy``` when ready.
+1. **Create a MySQL database** that can be accessed from Vercel or Netlify.
+
+The easiest way to do this is with [PlanetScale](https://planetscale.com/) which has a free tier to get started. When using PlanetScale, make sure your database's region matches the region that Vercel or Netlify will use. This is usually ```us-east-1```.
+
+2. **Deploy this repository to Vercel, Netlify, or AWS.** One of the links above will get you started. You'll just need a GitHub account.
+
+If deploying to AWS with the Serverless Framework for the first time, check the [Serverless Framework docs](https://www.serverless.com/framework/docs/getting-started) to get up to speed and run ```serverless deploy``` when ready.
+
 3. **Update the environment variables** for your project in Vercel or Netlify with the database credentials from PlanetScale or wherever you host the MySQL database. The WordPress config file ```wp-config.php``` uses these values to connect to the database. The environment variables are:
 - DATABASE
 - USERNAME
