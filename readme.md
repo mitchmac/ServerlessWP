@@ -1,9 +1,9 @@
 # Host WordPress On Vercel, Netlify, or AWS
 WordPress hosting is silly. Serverless WordPress on Vercel, Netlify, or AWS Lambda.
 
-| Vercel (recommended) | Netlify |
-| --- | --- |
-| [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fmitchmac%2Fserverlesswp&env=DATABASE,USERNAME,PASSWORD,HOST&envDescription=Database%20credentials%20from%20PlanetScale%20or%20other%20host&envLink=https%3A%2F%2Fgithub.com%2Fmitchmac%2FServerlessWP%23setup-vercel-or-netlify&project-name=serverlesswp&repository-name=serverlesswp) |  [![Deploy to Netlify](https://www.netlify.com/img/deploy/button.svg)](https://app.netlify.com/start/deploy?repository=https://github.com/mitchmac/serverlesswp) |
+| Vercel (recommended) | Netlify | AWS with Serverless Framework |
+| --- | --- | --- |
+| [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fmitchmac%2Fserverlesswp&env=DATABASE,USERNAME,PASSWORD,HOST&envDescription=Database%20credentials%20from%20PlanetScale%20or%20other%20host&envLink=https%3A%2F%2Fgithub.com%2Fmitchmac%2FServerlessWP%23setup-vercel-or-netlify&project-name=serverlesswp&repository-name=serverlesswp) |  [![Deploy to Netlify](https://www.netlify.com/img/deploy/button.svg)](https://app.netlify.com/start/deploy?repository=https://github.com/mitchmac/serverlesswp) | ```npm install && serverless deploy```
 
 ### Quick install video
 
@@ -13,7 +13,7 @@ WordPress hosting is silly. Serverless WordPress on Vercel, Netlify, or AWS Lamb
 
 ✅ Maintaining servers for WordPress can be a pain. Serverless hosting should be less work.
 
-✅ Small WordPress sites shouldn't cost much (or anything) to host.
+✅ Small WordPress sites shouldn't cost much (or anything) to host. **Vercel, Netlify, AWS, & PlanetScale have free tiers**.
 
 ✅ WordPress plugins and themes save time and should be extensively supported.
 
@@ -23,12 +23,12 @@ WordPress hosting is silly. Serverless WordPress on Vercel, Netlify, or AWS Lamb
 
 ✅ We can create a helpful community. [Share your successes, knowledge, ideas, or struggles](https://github.com/mitchmac/ServerlessWP/discussions) in the discussions.
 
-## Setup (Vercel or Netlify)
+## Deploying ServerlessWP
 
 **This is currently an experimental project and shouldn't be used when considerable security or stability is required, yet**
 
 1. **Create a MySQL database** that can be accessed from Vercel or Netlify. The easiest way to do this is with [PlanetScale](https://planetscale.com/) which has a free tier to get started. When using PlanetScale, make sure your database's region matches the region that Vercel or Netlify will use. This is usually ```us-east-1```.
-2. **Deploy this repository to Vercel or Netlify.** One of the links above will get you started. You'll just need a GitHub account.
+2. **Deploy this repository to Vercel, Netlify, or AWS.** One of the links above will get you started. You'll just need a GitHub account. If deploying to AWS with the Serverless Framework for the first time, check the [Serverless Framework docs](https://www.serverless.com/framework/docs/getting-started) to get up to speed and run ```serverless deploy``` when ready.
 3. **Update the environment variables** for your project in Vercel or Netlify with the database credentials from PlanetScale or wherever you host the MySQL database. The WordPress config file ```wp-config.php``` uses these values to connect to the database. The environment variables are:
 - DATABASE
 - USERNAME
@@ -43,16 +43,12 @@ For more information about creating environment variables, see [here for Vercel]
 
 ## Customizing WordPress
 - WordPress and its files are in the ```/wp``` directory. You can add plugins or themes there in their respective directories in ```wp-content```
+- Plugins like [Cache-Control](https://wordpress.org/plugins/cache-control/) can enable CDN caching with the s-maxage directive and make your site super fast. Refer to [Vercel Edge Caching](https://vercel.com/docs/concepts/edge-network/caching) or [Netlfiy Cache Headers](https://docs.netlify.com/edge-functions/optional-configuration/#supported-headers)
 
 ## Project structure
 - `netlify.toml` or `vercel.json` are where we configure ```/api/index.js``` to handle all requests
 - [mitchmac/serverlesswp-node](https://github.com/mitchmac/serverlesswp-node) is used to run PHP and handle the request
 - You can modify the incoming request through the ```event``` object in api/index.js. You can also modify the WordPress ```response``` object there.
-
-## Setup (Serverless Framework)
-1. Install and setup the serverless framework ([docs](https://www.serverless.com/framework/docs/getting-started))
-2. Clone the repository and run `serverless deploy` to confirm that the Lambda is created
-3. Like step 2 above, create a MySQL database and update the environment variables. They can be updated in the `serverless.yml` file and then run `serverless deploy` again.
 
 ## Getting help
 Need help getting ServerlessWP installed? [Start a discussion](https://github.com/mitchmac/ServerlessWP/discussions) or [e-mail Mitch](mailto:wp@mitchmac.dev)
