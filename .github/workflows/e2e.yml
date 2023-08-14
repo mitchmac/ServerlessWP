@@ -10,4 +10,4 @@ jobs:
         uses: actions/checkout@v3
       
       - run: ./run.sh
-        working-directory: ./test/e2e
+        working-directory: ./test
