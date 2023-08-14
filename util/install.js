@@ -1,9 +1,10 @@
 exports.validate = function(response) {
     if (
-        !process.env['DATABASE'] || 
+        !process.env['FQDBDIR'] && 
+        (!process.env['DATABASE'] || 
         !process.env['USERNAME'] ||
         !process.env['PASSWORD'] ||
-        !process.env['HOST']
+        !process.env['HOST'])
     ) {
 
         if (process.env['SITE_NAME']) {
