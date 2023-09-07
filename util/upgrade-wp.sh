@@ -5,6 +5,9 @@ mkdir temp
 cd temp
 wget https://wordpress.org/latest.zip
 unzip latest.zip
+rm wordpress/license.txt
+rm wordpress/readme.html
+rm wordpress/wp-config-sample.php
 cp ../wp/wp-config.php wordpress/
 mkdir wordpress/wp-content/mu-plugins
 cp ../wp/wp-content/mu-plugins/serverlesswp.php wordpress/wp-content/mu-plugins/
