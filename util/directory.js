@@ -5,7 +5,7 @@ exports.setup = function() {
     if (!fs.existsSync('/tmp/wp')) {
         fs.mkdirSync('/tmp/wp');
         try {
-            execSync('cp -R /var/task/wp/* /tmp/wp/');
+            execSync('mv /var/task/wp /tmp/');
         }
         catch (err) {
             console.log(err);
