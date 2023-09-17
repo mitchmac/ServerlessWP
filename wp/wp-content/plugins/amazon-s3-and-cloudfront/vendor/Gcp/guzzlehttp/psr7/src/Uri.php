@@ -25,13 +25,13 @@ class Uri implements UriInterface, \JsonSerializable
     /**
      * Unreserved characters for use in a regex.
      *
-     * @link https://tools.ietf.org/html/rfc3986#section-2.3
+     * @see https://tools.ietf.org/html/rfc3986#section-2.3
      */
     private const CHAR_UNRESERVED = 'a-zA-Z0-9_\\-\\.~';
     /**
      * Sub-delims for use in a regex.
      *
-     * @link https://tools.ietf.org/html/rfc3986#section-2.2
+     * @see https://tools.ietf.org/html/rfc3986#section-2.2
      */
     private const CHAR_SUB_DELIMS = '!\\$&\'\\(\\)\\*\\+,;=';
     private const QUERY_SEPARATORS_REPLACEMENT = ['=' => '%3D', '&' => '%26'];
@@ -118,7 +118,7 @@ class Uri implements UriInterface, \JsonSerializable
      * `file:///` is the more common syntax for the file scheme anyway (Chrome for example redirects to
      * that format).
      *
-     * @link https://tools.ietf.org/html/rfc3986#section-5.3
+     * @see https://tools.ietf.org/html/rfc3986#section-5.3
      */
     public static function composeComponents(?string $scheme, ?string $authority, string $path, ?string $query, ?string $fragment) : string
     {
@@ -165,7 +165,7 @@ class Uri implements UriInterface, \JsonSerializable
      * @see Uri::isNetworkPathReference
      * @see Uri::isAbsolutePathReference
      * @see Uri::isRelativePathReference
-     * @link https://tools.ietf.org/html/rfc3986#section-4
+     * @see https://tools.ietf.org/html/rfc3986#section-4
      */
     public static function isAbsolute(UriInterface $uri) : bool
     {
@@ -176,7 +176,7 @@ class Uri implements UriInterface, \JsonSerializable
      *
      * A relative reference that begins with two slash characters is termed an network-path reference.
      *
-     * @link https://tools.ietf.org/html/rfc3986#section-4.2
+     * @see https://tools.ietf.org/html/rfc3986#section-4.2
      */
     public static function isNetworkPathReference(UriInterface $uri) : bool
     {
@@ -187,7 +187,7 @@ class Uri implements UriInterface, \JsonSerializable
      *
      * A relative reference that begins with a single slash character is termed an absolute-path reference.
      *
-     * @link https://tools.ietf.org/html/rfc3986#section-4.2
+     * @see https://tools.ietf.org/html/rfc3986#section-4.2
      */
     public static function isAbsolutePathReference(UriInterface $uri) : bool
     {
@@ -198,7 +198,7 @@ class Uri implements UriInterface, \JsonSerializable
      *
      * A relative reference that does not begin with a slash character is termed a relative-path reference.
      *
-     * @link https://tools.ietf.org/html/rfc3986#section-4.2
+     * @see https://tools.ietf.org/html/rfc3986#section-4.2
      */
     public static function isRelativePathReference(UriInterface $uri) : bool
     {
@@ -214,7 +214,7 @@ class Uri implements UriInterface, \JsonSerializable
      * @param UriInterface      $uri  The URI to check
      * @param UriInterface|null $base An optional base URI to compare against
      *
-     * @link https://tools.ietf.org/html/rfc3986#section-4.4
+     * @see https://tools.ietf.org/html/rfc3986#section-4.4
      */
     public static function isSameDocumentReference(UriInterface $uri, UriInterface $base = null) : bool
     {
@@ -276,7 +276,7 @@ class Uri implements UriInterface, \JsonSerializable
     /**
      * Creates a URI from a hash of `parse_url` components.
      *
-     * @link http://php.net/manual/en/function.parse-url.php
+     * @see http://php.net/manual/en/function.parse-url.php
      *
      * @throws MalformedUriException If the components do not form a valid URI.
      */

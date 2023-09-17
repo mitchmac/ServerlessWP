@@ -1766,7 +1766,7 @@ abstract class Item {
 			$sql .= ' ORDER BY items.source_id LIMIT 1';
 		}
 
-		return array_map( 'static::create', $wpdb->get_results( $sql ) );
+		return array_map( static::class . '::create', $wpdb->get_results( $sql ) );
 	}
 
 	/**

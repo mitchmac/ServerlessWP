@@ -81,7 +81,7 @@ class CookieJar implements CookieJarInterface
         return null;
     }
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public function toArray() : array
     {
@@ -90,7 +90,7 @@ class CookieJar implements CookieJarInterface
         }, $this->getIterator()->getArrayCopy());
     }
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public function clear(?string $domain = null, ?string $path = null, ?string $name = null) : void
     {
@@ -112,7 +112,7 @@ class CookieJar implements CookieJarInterface
         }
     }
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public function clearSessionCookies() : void
     {
@@ -121,7 +121,7 @@ class CookieJar implements CookieJarInterface
         });
     }
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public function setCookie(SetCookie $cookie) : bool
     {
@@ -204,7 +204,7 @@ class CookieJar implements CookieJarInterface
     /**
      * Computes cookie path following RFC 6265 section 5.1.4
      *
-     * @link https://tools.ietf.org/html/rfc6265#section-5.1.4
+     * @see https://tools.ietf.org/html/rfc6265#section-5.1.4
      */
     private function getCookiePathFromRequest(RequestInterface $request) : string
     {

@@ -7,6 +7,7 @@ use DeliciousBrains\WP_Offload_Media\Aws3\Aws\Api\DocModel;
 use DeliciousBrains\WP_Offload_Media\Aws3\Aws\Api\Service;
 use DeliciousBrains\WP_Offload_Media\Aws3\Aws\EndpointDiscovery\EndpointDiscoveryMiddleware;
 use DeliciousBrains\WP_Offload_Media\Aws3\Aws\EndpointV2\EndpointProviderV2;
+use DeliciousBrains\WP_Offload_Media\Aws3\Aws\Exception\AwsException;
 use DeliciousBrains\WP_Offload_Media\Aws3\Aws\Signature\SignatureProvider;
 use DeliciousBrains\WP_Offload_Media\Aws3\GuzzleHttp\Psr7\Uri;
 /**
@@ -219,13 +220,11 @@ class AwsClient implements AwsClientInterface
         $this->addInvocationId();
         $this->addEndpointParameterMiddleware($args);
         $this->addEndpointDiscoveryMiddleware($config, $args);
+        $this->addRequestCompressionMiddleware($config);
         $this->loadAliases();
         $this->addStreamRequestPayload();
         $this->addRecursionDetection();
         $this->addRequestBuilder();
-        if (!$config['suppress_php_deprecation_warning']) {
-            $this->emitDeprecationWarning();
-        }
         if (isset($args['with_resolved'])) {
             $args['with_resolved']($config);
         }
@@ -318,7 +317,7 @@ class AwsClient implements AwsClientInterface
     {
         $klass = \get_class($this);
         if ($klass === __CLASS__) {
-            return ['', 'DeliciousBrains\\WP_Offload_Media\\Aws3\\Aws\\Exception\\AwsException'];
+            return ['', AwsException::class];
         }
         $service = \substr($klass, \strrpos($klass, '\\') + 1, -6);
         return [\strtolower($service), "DeliciousBrains\\WP_Offload_Media\\Aws3\\Aws\\{$service}\\Exception\\{$service}Exception"];
@@ -376,6 +375,13 @@ class AwsClient implements AwsClientInterface
             return SignatureProvider::resolve($provider, $version, $name, $region);
         };
         $this->handlerList->appendSign(Middleware::signer($this->credentialProvider, $resolver, $this->tokenProvider), 'signer');
+    }
+    private function addRequestCompressionMiddleware($config)
+    {
+        if (empty($config['disable_request_compression'])) {
+            $list = $this->getHandlerList();
+            $list->appendBuild(RequestCompressionMiddleware::wrap($config), 'request-compression');
+        }
     }
     private function addInvocationId()
     {

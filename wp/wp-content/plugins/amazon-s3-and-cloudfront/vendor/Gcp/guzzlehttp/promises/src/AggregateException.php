@@ -1,5 +1,6 @@
 <?php
 
+declare (strict_types=1);
 namespace DeliciousBrains\WP_Offload_Media\Gcp\GuzzleHttp\Promise;
 
 /**
@@ -7,7 +8,7 @@ namespace DeliciousBrains\WP_Offload_Media\Gcp\GuzzleHttp\Promise;
  */
 class AggregateException extends RejectionException
 {
-    public function __construct($msg, array $reasons)
+    public function __construct(string $msg, array $reasons)
     {
         parent::__construct($reasons, \sprintf('%s; %d rejected promises', $msg, \count($reasons)));
     }

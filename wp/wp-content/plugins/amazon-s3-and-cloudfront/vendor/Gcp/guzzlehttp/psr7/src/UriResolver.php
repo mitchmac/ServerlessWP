@@ -9,14 +9,14 @@ use DeliciousBrains\WP_Offload_Media\Gcp\Psr\Http\Message\UriInterface;
  *
  * @author Tobias Schultze
  *
- * @link https://tools.ietf.org/html/rfc3986#section-5
+ * @see https://tools.ietf.org/html/rfc3986#section-5
  */
 final class UriResolver
 {
     /**
      * Removes dot segments from a path and returns the new path.
      *
-     * @link http://tools.ietf.org/html/rfc3986#section-5.2.4
+     * @see http://tools.ietf.org/html/rfc3986#section-5.2.4
      */
     public static function removeDotSegments(string $path) : string
     {
@@ -46,7 +46,7 @@ final class UriResolver
     /**
      * Converts the relative URI into a new URI that is resolved against the base URI.
      *
-     * @link http://tools.ietf.org/html/rfc3986#section-5.2
+     * @see http://tools.ietf.org/html/rfc3986#section-5.2
      */
     public static function resolve(UriInterface $base, UriInterface $rel) : UriInterface
     {

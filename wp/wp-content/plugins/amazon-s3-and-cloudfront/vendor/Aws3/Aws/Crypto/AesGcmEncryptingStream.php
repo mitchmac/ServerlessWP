@@ -80,7 +80,7 @@ class AesGcmEncryptingStream implements AesStreamInterface, AesStreamInterfaceV2
     {
         return $this->tag;
     }
-    public function isWritable()
+    public function isWritable() : bool
     {
         return \false;
     }

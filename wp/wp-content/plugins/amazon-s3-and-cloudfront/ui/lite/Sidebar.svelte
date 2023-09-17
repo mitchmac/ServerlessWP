@@ -22,7 +22,4 @@
 		<a href={$urls.sidebar_discount} class="button btn-lg btn-primary">Get the discount</a>
 		<p class="discount-applied">* Discount applied automatically.</p>
 	</div>
-	<a href={$urls.sidebar_dbi} class="credits" target="_blank">
-		Developed and maintained by <span class="name">WP Engine</span>
-	</a>
 </div>

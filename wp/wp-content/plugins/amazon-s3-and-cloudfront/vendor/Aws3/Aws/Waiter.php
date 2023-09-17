@@ -4,6 +4,7 @@ namespace DeliciousBrains\WP_Offload_Media\Aws3\Aws;
 
 use DeliciousBrains\WP_Offload_Media\Aws3\Aws\Exception\AwsException;
 use DeliciousBrains\WP_Offload_Media\Aws3\GuzzleHttp\Promise\Coroutine;
+use DeliciousBrains\WP_Offload_Media\Aws3\GuzzleHttp\Promise\PromiseInterface;
 use DeliciousBrains\WP_Offload_Media\Aws3\GuzzleHttp\Promise\PromisorInterface;
 use DeliciousBrains\WP_Offload_Media\Aws3\GuzzleHttp\Promise\RejectedPromise;
 /**
@@ -66,7 +67,7 @@ class Waiter implements PromisorInterface
     /**
      * @return Coroutine
      */
-    public function promise()
+    public function promise() : PromiseInterface
     {
         return Coroutine::of(function () {
             $name = $this->config['operation'];

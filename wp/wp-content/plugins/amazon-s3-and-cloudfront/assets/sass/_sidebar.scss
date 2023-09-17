@@ -62,26 +62,6 @@
 				}
 			}
 
-			a.credits {
-				display: block;
-				border-top: 0;
-				background: var(--as3cf-sidebar-credits-background-color);
-				padding: 1rem;
-				text-align: center;
-				text-decoration: none;
-				font-size: 12px;
-				font-weight: 300;
-				color: var(--as3cf-color-white);
-
-				span.name {
-					font-weight: 500;
-				}
-
-				&:hover {
-					color: var(--as3cf-color-white);
-				}
-			}
-
 			@media screen and (max-width: 1052px) {
 				position: relative;
 				top: auto;

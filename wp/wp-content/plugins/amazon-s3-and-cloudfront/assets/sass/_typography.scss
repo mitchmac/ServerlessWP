@@ -49,7 +49,7 @@
 		 * Add an external link icon after any link that uses "_blank" target.
 		 * There's a couple of classes where we don't want the icon too.
 	   */
-		a[target="_blank"]:not(.help):not(.licence):not(.email):not(.credits) {
+		a[target="_blank"]:not(.help):not(.licence):not(.email) {
 			&:after {
 				box-sizing: border-box;
 				content: "\f504";

@@ -3,6 +3,7 @@
 namespace DeliciousBrains\WP_Offload_Media\Aws3\Aws;
 
 use DeliciousBrains\WP_Offload_Media\Aws3\Aws\Api\Parser\Exception\ParserException;
+use DeliciousBrains\WP_Offload_Media\Aws3\Aws\Exception\AwsException;
 use DeliciousBrains\WP_Offload_Media\Aws3\GuzzleHttp\Promise;
 use DeliciousBrains\WP_Offload_Media\Aws3\Psr\Http\Message\RequestInterface;
 use DeliciousBrains\WP_Offload_Media\Aws3\Psr\Http\Message\ResponseInterface;
@@ -42,7 +43,7 @@ class WrappedHttpHandler
      * @param bool     $collectStats   Whether to collect HTTP transfer
      *                                 information.
      */
-    public function __construct(callable $httpHandler, callable $parser, callable $errorParser, $exceptionClass = 'DeliciousBrains\\WP_Offload_Media\\Aws3\\Aws\\Exception\\AwsException', $collectStats = \false)
+    public function __construct(callable $httpHandler, callable $parser, callable $errorParser, $exceptionClass = AwsException::class, $collectStats = \false)
     {
         $this->httpHandler = $httpHandler;
         $this->parser = $parser;

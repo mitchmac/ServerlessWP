@@ -706,8 +706,8 @@ abstract class Delivery_Provider extends Provider implements Validator_Interface
 		// Ensure the storage provider client is initiated before BAPA/OOE tests.
 		$storage_provider->get_client( array( 'region' => $region ) );
 
-		// Is storage BAPA setting is enabled, validate that it's supported by delivery provider.
-		if ( ! static::block_public_access_supported() && $storage_provider->public_access_blocked( $bucket ) ) {
+		// If storage BAPA setting is enabled, validate that it's supported by delivery provider.
+		if ( ! static::block_public_access_supported() && $storage_provider->block_public_access_supported() && $storage_provider->public_access_blocked( $bucket ) ) {
 			return new AS3CF_Result(
 				Validator_Interface::AS3CF_STATUS_MESSAGE_ERROR,
 				sprintf(
@@ -722,7 +722,7 @@ abstract class Delivery_Provider extends Provider implements Validator_Interface
 		}
 
 		// Object Ownership Policies enabled?
-		if ( ! static::object_ownership_supported() && $storage_provider->object_ownership_enforced( $bucket ) ) {
+		if ( ! static::object_ownership_supported() && $storage_provider->object_ownership_supported() && $storage_provider->object_ownership_enforced( $bucket ) ) {
 			return new AS3CF_Result(
 				Validator_Interface::AS3CF_STATUS_MESSAGE_ERROR,
 				sprintf(

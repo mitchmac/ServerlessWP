@@ -1,6 +1,5 @@
 <?php
 
-declare (strict_types=1);
 namespace DeliciousBrains\WP_Offload_Media\Gcp\Psr\Http\Message;
 
 /**
@@ -52,7 +51,7 @@ interface ServerRequestInterface extends RequestInterface
      *
      * @return array
      */
-    public function getServerParams();
+    public function getServerParams() : array;
     /**
      * Retrieve cookies.
      *
@@ -63,7 +62,7 @@ interface ServerRequestInterface extends RequestInterface
      *
      * @return array
      */
-    public function getCookieParams();
+    public function getCookieParams() : array;
     /**
      * Return an instance with the specified cookies.
      *
@@ -81,7 +80,7 @@ interface ServerRequestInterface extends RequestInterface
      * @param array $cookies Array of key/value pairs representing cookies.
      * @return static
      */
-    public function withCookieParams(array $cookies);
+    public function withCookieParams(array $cookies) : ServerRequestInterface;
     /**
      * Retrieve query string arguments.
      *
@@ -94,7 +93,7 @@ interface ServerRequestInterface extends RequestInterface
      *
      * @return array
      */
-    public function getQueryParams();
+    public function getQueryParams() : array;
     /**
      * Return an instance with the specified query string arguments.
      *
@@ -117,7 +116,7 @@ interface ServerRequestInterface extends RequestInterface
      *     $_GET.
      * @return static
      */
-    public function withQueryParams(array $query);
+    public function withQueryParams(array $query) : ServerRequestInterface;
     /**
      * Retrieve normalized file upload data.
      *
@@ -130,7 +129,7 @@ interface ServerRequestInterface extends RequestInterface
      * @return array An array tree of UploadedFileInterface instances; an empty
      *     array MUST be returned if no data is present.
      */
-    public function getUploadedFiles();
+    public function getUploadedFiles() : array;
     /**
      * Create a new instance with the specified uploaded files.
      *
@@ -142,7 +141,7 @@ interface ServerRequestInterface extends RequestInterface
      * @return static
      * @throws \InvalidArgumentException if an invalid structure is provided.
      */
-    public function withUploadedFiles(array $uploadedFiles);
+    public function withUploadedFiles(array $uploadedFiles) : ServerRequestInterface;
     /**
      * Retrieve any parameters provided in the request body.
      *
@@ -187,7 +186,7 @@ interface ServerRequestInterface extends RequestInterface
      * @throws \InvalidArgumentException if an unsupported argument type is
      *     provided.
      */
-    public function withParsedBody($data);
+    public function withParsedBody($data) : ServerRequestInterface;
     /**
      * Retrieve attributes derived from the request.
      *
@@ -199,7 +198,7 @@ interface ServerRequestInterface extends RequestInterface
      *
      * @return array Attributes derived from the request.
      */
-    public function getAttributes();
+    public function getAttributes() : array;
     /**
      * Retrieve a single derived request attribute.
      *
@@ -231,7 +230,7 @@ interface ServerRequestInterface extends RequestInterface
      * @param mixed $value The value of the attribute.
      * @return static
      */
-    public function withAttribute(string $name, $value);
+    public function withAttribute(string $name, $value) : ServerRequestInterface;
     /**
      * Return an instance that removes the specified derived request attribute.
      *
@@ -246,5 +245,5 @@ interface ServerRequestInterface extends RequestInterface
      * @param string $name The attribute name.
      * @return static
      */
-    public function withoutAttribute(string $name);
+    public function withoutAttribute(string $name) : ServerRequestInterface;
 }

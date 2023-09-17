@@ -8,13 +8,13 @@ namespace DeliciousBrains\WP_Offload_Media\Aws3\Aws\EndpointV2;
  */
 class EndpointDefinitionProvider
 {
-    public static function getEndpointRuleset($service, $apiVersion)
+    public static function getEndpointRuleset($service, $apiVersion, $baseDir = null)
     {
-        return self::getData($service, $apiVersion, 'ruleset');
+        return self::getData($service, $apiVersion, 'ruleset', $baseDir);
     }
-    public static function getEndpointTests($service, $apiVersion)
+    public static function getEndpointTests($service, $apiVersion, $baseDir = null)
     {
-        return self::getData($service, $apiVersion, 'tests');
+        return self::getData($service, $apiVersion, 'tests', $baseDir);
     }
     public static function getPartitions()
     {
@@ -26,9 +26,9 @@ class EndpointDefinitionProvider
             return \json_decode(\file_get_contents($basePath . $file));
         }
     }
-    private static function getData($service, $apiVersion, $type)
+    private static function getData($service, $apiVersion, $type, $baseDir)
     {
-        $basePath = __DIR__ . '/../data';
+        $basePath = $baseDir ? $baseDir : __DIR__ . '/../data';
         $serviceDir = $basePath . "/{$service}";
         if (!\is_dir($serviceDir)) {
             throw new \InvalidArgumentException('Invalid service name.');
@@ -43,8 +43,10 @@ class EndpointDefinitionProvider
         $fileName = $type === 'tests' ? '/endpoint-tests-1' : '/endpoint-rule-set-1';
         if (\file_exists($rulesetPath . $fileName . '.json.php')) {
             return require $rulesetPath . $fileName . '.json.php';
-        } else {
+        } elseif (\file_exists($rulesetPath . $fileName . '.json')) {
             return \json_decode(\file_get_contents($rulesetPath . $fileName . '.json'), \true);
+        } else {
+            throw new \InvalidArgumentException('Specified ' . $type . ' endpoint file for ' . $service . ' with api version ' . $apiVersion . ' does not exist.');
         }
     }
     private static function getLatest($service)

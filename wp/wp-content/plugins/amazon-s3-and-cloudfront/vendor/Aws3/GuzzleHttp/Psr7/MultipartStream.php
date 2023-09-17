@@ -1,18 +1,20 @@
 <?php
 
+declare (strict_types=1);
 namespace DeliciousBrains\WP_Offload_Media\Aws3\GuzzleHttp\Psr7;
 
 use DeliciousBrains\WP_Offload_Media\Aws3\Psr\Http\Message\StreamInterface;
 /**
  * Stream that when read returns bytes for a streaming multipart or
  * multipart/form-data stream.
- *
- * @final
  */
-class MultipartStream implements StreamInterface
+final class MultipartStream implements StreamInterface
 {
     use StreamDecoratorTrait;
+    /** @var string */
     private $boundary;
+    /** @var StreamInterface */
+    private $stream;
     /**
      * @param array  $elements Array of associative arrays, each containing a
      *                         required "name" key mapping to the form field,
@@ -25,28 +27,25 @@ class MultipartStream implements StreamInterface
      *
      * @throws \InvalidArgumentException
      */
-    public function __construct(array $elements = [], $boundary = null)
+    public function __construct(array $elements = [], string $boundary = null)
     {
-        $this->boundary = $boundary ?: \sha1(\uniqid('', \true));
+        $this->boundary = $boundary ?: \bin2hex(\random_bytes(20));
         $this->stream = $this->createStream($elements);
     }
-    /**
-     * Get the boundary
-     *
-     * @return string
-     */
-    public function getBoundary()
+    public function getBoundary() : string
     {
         return $this->boundary;
     }
-    public function isWritable()
+    public function isWritable() : bool
     {
         return \false;
     }
     /**
      * Get the headers needed before transferring the content of a POST file
+     *
+     * @param array<string, string> $headers
      */
-    private function getHeaders(array $headers)
+    private function getHeaders(array $headers) : string
     {
         $str = '';
         foreach ($headers as $key => $value) {
@@ -57,17 +56,20 @@ class MultipartStream implements StreamInterface
     /**
      * Create the aggregate stream that will be used to upload the POST data
      */
-    protected function createStream(array $elements)
+    protected function createStream(array $elements = []) : StreamInterface
     {
         $stream = new AppendStream();
         foreach ($elements as $element) {
+            if (!\is_array($element)) {
+                throw new \UnexpectedValueException('An array is expected');
+            }
             $this->addElement($stream, $element);
         }
         // Add the trailing boundary with CRLF
         $stream->addStream(Utils::streamFor("--{$this->boundary}--\r\n"));
         return $stream;
     }
-    private function addElement(AppendStream $stream, array $element)
+    private function addElement(AppendStream $stream, array $element) : void
     {
         foreach (['contents', 'name'] as $key) {
             if (!\array_key_exists($key, $element)) {
@@ -77,19 +79,16 @@ class MultipartStream implements StreamInterface
         $element['contents'] = Utils::streamFor($element['contents']);
         if (empty($element['filename'])) {
             $uri = $element['contents']->getMetadata('uri');
-            if (\substr($uri, 0, 6) !== 'php://') {
+            if ($uri && \is_string($uri) && \substr($uri, 0, 6) !== 'php://' && \substr($uri, 0, 7) !== 'data://') {
                 $element['filename'] = $uri;
             }
         }
-        list($body, $headers) = $this->createElement($element['name'], $element['contents'], isset($element['filename']) ? $element['filename'] : null, isset($element['headers']) ? $element['headers'] : []);
+        [$body, $headers] = $this->createElement($element['name'], $element['contents'], $element['filename'] ?? null, $element['headers'] ?? []);
         $stream->addStream(Utils::streamFor($this->getHeaders($headers)));
         $stream->addStream($body);
         $stream->addStream(Utils::streamFor("\r\n"));
     }
-    /**
-     * @return array
-     */
-    private function createElement($name, StreamInterface $stream, $filename, array $headers)
+    private function createElement(string $name, StreamInterface $stream, ?string $filename, array $headers) : array
     {
         // Set a default content-disposition header if one was no provided
         $disposition = $this->getHeader($headers, 'content-disposition');
@@ -106,13 +105,11 @@ class MultipartStream implements StreamInterface
         // Set a default Content-Type if one was not supplied
         $type = $this->getHeader($headers, 'content-type');
         if (!$type && ($filename === '0' || $filename)) {
-            if ($type = MimeType::fromFilename($filename)) {
-                $headers['Content-Type'] = $type;
-            }
+            $headers['Content-Type'] = MimeType::fromFilename($filename) ?? 'application/octet-stream';
         }
         return [$stream, $headers];
     }
-    private function getHeader(array $headers, $key)
+    private function getHeader(array $headers, string $key)
     {
         $lowercaseHeader = \strtolower($key);
         foreach ($headers as $k => $v) {

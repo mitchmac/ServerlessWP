@@ -53,7 +53,7 @@ class AesEncryptingStream implements AesStreamInterface
     {
         return $this->cipherMethod->getCurrentIv();
     }
-    public function getSize()
+    public function getSize() : ?int
     {
         $plainTextSize = $this->stream->getSize();
         if ($this->cipherMethod->requiresPadding() && $plainTextSize !== null) {
@@ -64,11 +64,11 @@ class AesEncryptingStream implements AesStreamInterface
         }
         return $plainTextSize;
     }
-    public function isWritable()
+    public function isWritable() : bool
     {
         return \false;
     }
-    public function read($length)
+    public function read($length) : string
     {
         if ($length > \strlen($this->buffer)) {
             $this->buffer .= $this->encryptBlock((int) self::BLOCK_SIZE * \ceil(($length - \strlen($this->buffer)) / self::BLOCK_SIZE));
@@ -77,7 +77,7 @@ class AesEncryptingStream implements AesStreamInterface
         $this->buffer = \substr($this->buffer, $length);
         return $data ? $data : '';
     }
-    public function seek($offset, $whence = \SEEK_SET)
+    public function seek($offset, $whence = \SEEK_SET) : void
     {
         if ($whence === \SEEK_CUR) {
             $offset = $this->tell() + $offset;
