@@ -64,7 +64,7 @@ class AesGcmDecryptingStream implements AesStreamInterface
             return Psr7\Utils::streamFor($result);
         }
     }
-    public function isWritable()
+    public function isWritable() : bool
     {
         return \false;
     }

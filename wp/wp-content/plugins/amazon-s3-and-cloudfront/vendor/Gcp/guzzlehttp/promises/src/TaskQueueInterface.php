@@ -1,22 +1,21 @@
 <?php
 
+declare (strict_types=1);
 namespace DeliciousBrains\WP_Offload_Media\Gcp\GuzzleHttp\Promise;
 
 interface TaskQueueInterface
 {
     /**
      * Returns true if the queue is empty.
-     *
-     * @return bool
      */
-    public function isEmpty();
+    public function isEmpty() : bool;
     /**
      * Adds a task to the queue that will be executed the next time run is
      * called.
      */
-    public function add(callable $task);
+    public function add(callable $task) : void;
     /**
      * Execute all of the pending task in the queue.
      */
-    public function run();
+    public function run() : void;
 }

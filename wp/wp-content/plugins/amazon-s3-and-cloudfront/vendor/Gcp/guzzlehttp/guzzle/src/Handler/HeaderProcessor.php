@@ -13,9 +13,9 @@ final class HeaderProcessor
      *
      * @param string[] $headers
      *
-     * @throws \RuntimeException
-     *
      * @return array{0:string, 1:int, 2:?string, 3:array}
+     *
+     * @throws \RuntimeException
      */
     public static function parseHeaders(array $headers) : array
     {

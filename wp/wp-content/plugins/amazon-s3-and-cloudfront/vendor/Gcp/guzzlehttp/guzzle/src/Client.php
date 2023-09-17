@@ -109,7 +109,7 @@ class Client implements ClientInterface, \DeliciousBrains\WP_Offload_Media\Gcp\P
     /**
      * The HttpClient PSR (PSR-18) specify this method.
      *
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public function sendRequest(RequestInterface $request) : ResponseInterface
     {
@@ -366,6 +366,9 @@ class Client implements ClientInterface, \DeliciousBrains\WP_Offload_Media\Gcp\P
             if (\is_bool($options['sink'])) {
                 throw new InvalidArgumentException('sink must not be a boolean');
             }
+        }
+        if (isset($options['version'])) {
+            $modify['version'] = $options['version'];
         }
         $request = Psr7\Utils::modifyRequest($request, $modify);
         if ($request->getBody() instanceof Psr7\MultipartStream) {

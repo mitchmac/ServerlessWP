@@ -8,6 +8,7 @@ use DeliciousBrains\WP_Offload_Media\Aws3\Aws\Exception\MultipartUploadException
 use DeliciousBrains\WP_Offload_Media\Aws3\Aws\Result;
 use DeliciousBrains\WP_Offload_Media\Aws3\Aws\S3\Exception\S3Exception;
 use DeliciousBrains\WP_Offload_Media\Aws3\GuzzleHttp\Promise\Coroutine;
+use DeliciousBrains\WP_Offload_Media\Aws3\GuzzleHttp\Promise\PromiseInterface;
 use DeliciousBrains\WP_Offload_Media\Aws3\GuzzleHttp\Promise\PromisorInterface;
 use InvalidArgumentException;
 /**
@@ -61,7 +62,7 @@ class ObjectCopier implements PromisorInterface
      *
      * @return Coroutine
      */
-    public function promise()
+    public function promise() : PromiseInterface
     {
         return Coroutine::of(function () {
             $headObjectCommand = $this->client->getCommand('HeadObject', $this->options['params'] + $this->source);

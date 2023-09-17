@@ -4,30 +4,41 @@ namespace DeliciousBrains\WP_Offload_Media\Aws3\GuzzleHttp\Handler;
 
 use DeliciousBrains\WP_Offload_Media\Aws3\GuzzleHttp\Exception\ConnectException;
 use DeliciousBrains\WP_Offload_Media\Aws3\GuzzleHttp\Exception\RequestException;
+use DeliciousBrains\WP_Offload_Media\Aws3\GuzzleHttp\Promise as P;
 use DeliciousBrains\WP_Offload_Media\Aws3\GuzzleHttp\Promise\FulfilledPromise;
-use DeliciousBrains\WP_Offload_Media\Aws3\GuzzleHttp\Psr7;
+use DeliciousBrains\WP_Offload_Media\Aws3\GuzzleHttp\Promise\PromiseInterface;
 use DeliciousBrains\WP_Offload_Media\Aws3\GuzzleHttp\Psr7\LazyOpenStream;
 use DeliciousBrains\WP_Offload_Media\Aws3\GuzzleHttp\TransferStats;
+use DeliciousBrains\WP_Offload_Media\Aws3\GuzzleHttp\Utils;
 use DeliciousBrains\WP_Offload_Media\Aws3\Psr\Http\Message\RequestInterface;
 /**
  * Creates curl resources from a request
+ *
+ * @final
  */
 class CurlFactory implements CurlFactoryInterface
 {
-    const CURL_VERSION_STR = 'curl_version';
-    const LOW_CURL_VERSION_NUMBER = '7.21.2';
-    /** @var array */
+    public const CURL_VERSION_STR = 'curl_version';
+    /**
+     * @deprecated
+     */
+    public const LOW_CURL_VERSION_NUMBER = '7.21.2';
+    /**
+     * @var resource[]|\CurlHandle[]
+     */
     private $handles = [];
-    /** @var int Total number of idle handles to keep in cache */
+    /**
+     * @var int Total number of idle handles to keep in cache
+     */
     private $maxHandles;
     /**
      * @param int $maxHandles Maximum number of idle handles.
      */
-    public function __construct($maxHandles)
+    public function __construct(int $maxHandles)
     {
         $this->maxHandles = $maxHandles;
     }
-    public function create(RequestInterface $request, array $options)
+    public function create(RequestInterface $request, array $options) : EasyHandle
     {
         if (isset($options['curl']['body_as_string'])) {
             $options['_body_as_string'] = $options['curl']['body_as_string'];
@@ -50,7 +61,7 @@ class CurlFactory implements CurlFactoryInterface
         \curl_setopt_array($easy->handle, $conf);
         return $easy;
     }
-    public function release(EasyHandle $easy)
+    public function release(EasyHandle $easy) : void
     {
         $resource = $easy->handle;
         unset($easy->handle);
@@ -73,13 +84,10 @@ class CurlFactory implements CurlFactoryInterface
      * Completes a cURL transaction, either returning a response promise or a
      * rejected promise.
      *
-     * @param callable             $handler
-     * @param EasyHandle           $easy
-     * @param CurlFactoryInterface $factory Dictates how the handle is released
-     *
-     * @return \GuzzleHttp\Promise\PromiseInterface
+     * @param callable(RequestInterface, array): PromiseInterface $handler
+     * @param CurlFactoryInterface                                $factory Dictates how the handle is released
      */
-    public static function finish(callable $handler, EasyHandle $easy, CurlFactoryInterface $factory)
+    public static function finish(callable $handler, EasyHandle $easy, CurlFactoryInterface $factory) : PromiseInterface
     {
         if (isset($easy->options['on_stats'])) {
             self::invokeStats($easy);
@@ -96,14 +104,17 @@ class CurlFactory implements CurlFactoryInterface
         }
         return new FulfilledPromise($easy->response);
     }
-    private static function invokeStats(EasyHandle $easy)
+    private static function invokeStats(EasyHandle $easy) : void
     {
         $curlStats = \curl_getinfo($easy->handle);
         $curlStats['appconnect_time'] = \curl_getinfo($easy->handle, \CURLINFO_APPCONNECT_TIME);
         $stats = new TransferStats($easy->request, $easy->response, $curlStats['total_time'], $easy->errno, $curlStats);
-        \call_user_func($easy->options['on_stats'], $stats);
+        $easy->options['on_stats']($stats);
     }
-    private static function finishError(callable $handler, EasyHandle $easy, CurlFactoryInterface $factory)
+    /**
+     * @param callable(RequestInterface, array): PromiseInterface $handler
+     */
+    private static function finishError(callable $handler, EasyHandle $easy, CurlFactoryInterface $factory) : PromiseInterface
     {
         // Get error information and release the handle to the factory.
         $ctx = ['errno' => $easy->errno, 'error' => \curl_error($easy->handle), 'appconnect_time' => \curl_getinfo($easy->handle, \CURLINFO_APPCONNECT_TIME)] + \curl_getinfo($easy->handle);
@@ -115,26 +126,32 @@ class CurlFactory implements CurlFactoryInterface
         }
         return self::createRejection($easy, $ctx);
     }
-    private static function createRejection(EasyHandle $easy, array $ctx)
+    private static function createRejection(EasyHandle $easy, array $ctx) : PromiseInterface
     {
         static $connectionErrors = [\CURLE_OPERATION_TIMEOUTED => \true, \CURLE_COULDNT_RESOLVE_HOST => \true, \CURLE_COULDNT_CONNECT => \true, \CURLE_SSL_CONNECT_ERROR => \true, \CURLE_GOT_NOTHING => \true];
+        if ($easy->createResponseException) {
+            return P\Create::rejectionFor(new RequestException('An error was encountered while creating the response', $easy->request, $easy->response, $easy->createResponseException, $ctx));
+        }
         // If an exception was encountered during the onHeaders event, then
         // return a rejected promise that wraps that exception.
         if ($easy->onHeadersException) {
-            return \DeliciousBrains\WP_Offload_Media\Aws3\GuzzleHttp\Promise\rejection_for(new RequestException('An error was encountered during the on_headers event', $easy->request, $easy->response, $easy->onHeadersException, $ctx));
+            return P\Create::rejectionFor(new RequestException('An error was encountered during the on_headers event', $easy->request, $easy->response, $easy->onHeadersException, $ctx));
         }
-        if (\version_compare($ctx[self::CURL_VERSION_STR], self::LOW_CURL_VERSION_NUMBER)) {
-            $message = \sprintf('cURL error %s: %s (%s)', $ctx['errno'], $ctx['error'], 'see https://curl.haxx.se/libcurl/c/libcurl-errors.html');
-        } else {
-            $message = \sprintf('cURL error %s: %s (%s) for %s', $ctx['errno'], $ctx['error'], 'see https://curl.haxx.se/libcurl/c/libcurl-errors.html', $easy->request->getUri());
+        $message = \sprintf('cURL error %s: %s (%s)', $ctx['errno'], $ctx['error'], 'see https://curl.haxx.se/libcurl/c/libcurl-errors.html');
+        $uriString = (string) $easy->request->getUri();
+        if ($uriString !== '' && \false === \strpos($ctx['error'], $uriString)) {
+            $message .= \sprintf(' for %s', $uriString);
         }
         // Create a connection exception if it was a specific error code.
         $error = isset($connectionErrors[$easy->errno]) ? new ConnectException($message, $easy->request, null, $ctx) : new RequestException($message, $easy->request, $easy->response, null, $ctx);
-        return \DeliciousBrains\WP_Offload_Media\Aws3\GuzzleHttp\Promise\rejection_for($error);
+        return P\Create::rejectionFor($error);
     }
-    private function getDefaultConf(EasyHandle $easy)
+    /**
+     * @return array<int|string, mixed>
+     */
+    private function getDefaultConf(EasyHandle $easy) : array
     {
-        $conf = ['_headers' => $easy->request->getHeaders(), \CURLOPT_CUSTOMREQUEST => $easy->request->getMethod(), \CURLOPT_URL => (string) $easy->request->getUri()->withFragment(''), \CURLOPT_RETURNTRANSFER => \false, \CURLOPT_HEADER => \false, \CURLOPT_CONNECTTIMEOUT => 150];
+        $conf = ['_headers' => $easy->request->getHeaders(), \CURLOPT_CUSTOMREQUEST => $easy->request->getMethod(), \CURLOPT_URL => (string) $easy->request->getUri()->withFragment(''), \CURLOPT_RETURNTRANSFER => \false, \CURLOPT_HEADER => \false, \CURLOPT_CONNECTTIMEOUT => 300];
         if (\defined('CURLOPT_PROTOCOLS')) {
             $conf[\CURLOPT_PROTOCOLS] = \CURLPROTO_HTTP | \CURLPROTO_HTTPS;
         }
@@ -148,7 +165,7 @@ class CurlFactory implements CurlFactoryInterface
         }
         return $conf;
     }
-    private function applyMethod(EasyHandle $easy, array &$conf)
+    private function applyMethod(EasyHandle $easy, array &$conf) : void
     {
         $body = $easy->request->getBody();
         $size = $body->getSize();
@@ -158,7 +175,7 @@ class CurlFactory implements CurlFactoryInterface
         }
         $method = $easy->request->getMethod();
         if ($method === 'PUT' || $method === 'POST') {
-            // See http://tools.ietf.org/html/rfc7230#section-3.3.2
+            // See https://tools.ietf.org/html/rfc7230#section-3.3.2
             if (!$easy->request->hasHeader('Content-Length')) {
                 $conf[\CURLOPT_HTTPHEADER][] = 'Content-Length: 0';
             }
@@ -167,7 +184,7 @@ class CurlFactory implements CurlFactoryInterface
             unset($conf[\CURLOPT_WRITEFUNCTION], $conf[\CURLOPT_READFUNCTION], $conf[\CURLOPT_FILE], $conf[\CURLOPT_INFILE]);
         }
     }
-    private function applyBody(RequestInterface $request, array $options, array &$conf)
+    private function applyBody(RequestInterface $request, array $options, array &$conf) : void
     {
         $size = $request->hasHeader('Content-Length') ? (int) $request->getHeaderLine('Content-Length') : null;
         // Send the body as a string if the size is less than 1MB OR if the
@@ -187,7 +204,7 @@ class CurlFactory implements CurlFactoryInterface
             if ($body->isSeekable()) {
                 $body->rewind();
             }
-            $conf[\CURLOPT_READFUNCTION] = function ($ch, $fd, $length) use($body) {
+            $conf[\CURLOPT_READFUNCTION] = static function ($ch, $fd, $length) use($body) {
                 return $body->read($length);
             };
         }
@@ -200,7 +217,7 @@ class CurlFactory implements CurlFactoryInterface
             $conf[\CURLOPT_HTTPHEADER][] = 'Content-Type:';
         }
     }
-    private function applyHeaders(EasyHandle $easy, array &$conf)
+    private function applyHeaders(EasyHandle $easy, array &$conf) : void
     {
         foreach ($conf['_headers'] as $name => $values) {
             foreach ($values as $value) {
@@ -225,7 +242,7 @@ class CurlFactory implements CurlFactoryInterface
      * @param string $name    Case-insensitive header to remove
      * @param array  $options Array of options to modify
      */
-    private function removeHeader($name, array &$options)
+    private function removeHeader(string $name, array &$options) : void
     {
         foreach (\array_keys($options['_headers']) as $key) {
             if (!\strcasecmp($key, $name)) {
@@ -234,7 +251,7 @@ class CurlFactory implements CurlFactoryInterface
             }
         }
     }
-    private function applyHandlerOptions(EasyHandle $easy, array &$conf)
+    private function applyHandlerOptions(EasyHandle $easy, array &$conf) : void
     {
         $options = $easy->options;
         if (isset($options['verify'])) {
@@ -252,7 +269,7 @@ class CurlFactory implements CurlFactoryInterface
                     }
                     // If it's a directory or a link to a directory use CURLOPT_CAPATH.
                     // If not, it's probably a file, or a link to a file, so use CURLOPT_CAINFO.
-                    if (\is_dir($options['verify']) || \is_link($options['verify']) && \is_dir(\readlink($options['verify']))) {
+                    if (\is_dir($options['verify']) || \is_link($options['verify']) === \true && ($verifyLink = \readlink($options['verify'])) !== \false && \is_dir($verifyLink)) {
                         $conf[\CURLOPT_CAPATH] = $options['verify'];
                     } else {
                         $conf[\CURLOPT_CAINFO] = $options['verify'];
@@ -260,35 +277,36 @@ class CurlFactory implements CurlFactoryInterface
                 }
             }
         }
-        if (!empty($options['decode_content'])) {
+        if (!isset($options['curl'][\CURLOPT_ENCODING]) && !empty($options['decode_content'])) {
             $accept = $easy->request->getHeaderLine('Accept-Encoding');
             if ($accept) {
                 $conf[\CURLOPT_ENCODING] = $accept;
             } else {
+                // The empty string enables all available decoders and implicitly
+                // sets a matching 'Accept-Encoding' header.
                 $conf[\CURLOPT_ENCODING] = '';
-                // Don't let curl send the header over the wire
+                // But as the user did not specify any acceptable encodings we need
+                // to overwrite this implicit header with an empty one.
                 $conf[\CURLOPT_HTTPHEADER][] = 'Accept-Encoding:';
             }
         }
-        if (isset($options['sink'])) {
-            $sink = $options['sink'];
-            if (!\is_string($sink)) {
-                $sink = \DeliciousBrains\WP_Offload_Media\Aws3\GuzzleHttp\Psr7\stream_for($sink);
-            } elseif (!\is_dir(\dirname($sink))) {
-                // Ensure that the directory exists before failing in curl.
-                throw new \RuntimeException(\sprintf('Directory %s does not exist for sink value of %s', \dirname($sink), $sink));
-            } else {
-                $sink = new LazyOpenStream($sink, 'w+');
-            }
-            $easy->sink = $sink;
-            $conf[\CURLOPT_WRITEFUNCTION] = function ($ch, $write) use($sink) {
-                return $sink->write($write);
-            };
-        } else {
+        if (!isset($options['sink'])) {
             // Use a default temp stream if no sink was set.
-            $conf[\CURLOPT_FILE] = \fopen('php://temp', 'w+');
-            $easy->sink = Psr7\stream_for($conf[\CURLOPT_FILE]);
+            $options['sink'] = \DeliciousBrains\WP_Offload_Media\Aws3\GuzzleHttp\Psr7\Utils::tryFopen('php://temp', 'w+');
         }
+        $sink = $options['sink'];
+        if (!\is_string($sink)) {
+            $sink = \DeliciousBrains\WP_Offload_Media\Aws3\GuzzleHttp\Psr7\Utils::streamFor($sink);
+        } elseif (!\is_dir(\dirname($sink))) {
+            // Ensure that the directory exists before failing in curl.
+            throw new \RuntimeException(\sprintf('Directory %s does not exist for sink value of %s', \dirname($sink), $sink));
+        } else {
+            $sink = new LazyOpenStream($sink, 'w+');
+        }
+        $easy->sink = $sink;
+        $conf[\CURLOPT_WRITEFUNCTION] = static function ($ch, $write) use($sink) : int {
+            return $sink->write($write);
+        };
         $timeoutRequiresNoSignal = \false;
         if (isset($options['timeout'])) {
             $timeoutRequiresNoSignal |= $options['timeout'] < 1;
@@ -316,10 +334,37 @@ class CurlFactory implements CurlFactoryInterface
                 $scheme = $easy->request->getUri()->getScheme();
                 if (isset($options['proxy'][$scheme])) {
                     $host = $easy->request->getUri()->getHost();
-                    if (!isset($options['proxy']['no']) || !\DeliciousBrains\WP_Offload_Media\Aws3\GuzzleHttp\is_host_in_noproxy($host, $options['proxy']['no'])) {
+                    if (isset($options['proxy']['no']) && Utils::isHostInNoProxy($host, $options['proxy']['no'])) {
+                        unset($conf[\CURLOPT_PROXY]);
+                    } else {
                         $conf[\CURLOPT_PROXY] = $options['proxy'][$scheme];
                     }
                 }
+            }
+        }
+        if (isset($options['crypto_method'])) {
+            if (\STREAM_CRYPTO_METHOD_TLSv1_0_CLIENT === $options['crypto_method']) {
+                if (!\defined('CURL_SSLVERSION_TLSv1_0')) {
+                    throw new \InvalidArgumentException('Invalid crypto_method request option: TLS 1.0 not supported by your version of cURL');
+                }
+                $conf[\CURLOPT_SSLVERSION] = \CURL_SSLVERSION_TLSv1_0;
+            } elseif (\STREAM_CRYPTO_METHOD_TLSv1_1_CLIENT === $options['crypto_method']) {
+                if (!\defined('CURL_SSLVERSION_TLSv1_1')) {
+                    throw new \InvalidArgumentException('Invalid crypto_method request option: TLS 1.1 not supported by your version of cURL');
+                }
+                $conf[\CURLOPT_SSLVERSION] = \CURL_SSLVERSION_TLSv1_1;
+            } elseif (\STREAM_CRYPTO_METHOD_TLSv1_2_CLIENT === $options['crypto_method']) {
+                if (!\defined('CURL_SSLVERSION_TLSv1_2')) {
+                    throw new \InvalidArgumentException('Invalid crypto_method request option: TLS 1.2 not supported by your version of cURL');
+                }
+                $conf[\CURLOPT_SSLVERSION] = \CURL_SSLVERSION_TLSv1_2;
+            } elseif (\defined('STREAM_CRYPTO_METHOD_TLSv1_3_CLIENT') && \STREAM_CRYPTO_METHOD_TLSv1_3_CLIENT === $options['crypto_method']) {
+                if (!\defined('CURL_SSLVERSION_TLSv1_3')) {
+                    throw new \InvalidArgumentException('Invalid crypto_method request option: TLS 1.3 not supported by your version of cURL');
+                }
+                $conf[\CURLOPT_SSLVERSION] = \CURL_SSLVERSION_TLSv1_3;
+            } else {
+                throw new \InvalidArgumentException('Invalid crypto_method request option: unknown version provided');
             }
         }
         if (isset($options['cert'])) {
@@ -331,17 +376,23 @@ class CurlFactory implements CurlFactoryInterface
             if (!\file_exists($cert)) {
                 throw new \InvalidArgumentException("SSL certificate not found: {$cert}");
             }
+            // OpenSSL (versions 0.9.3 and later) also support "P12" for PKCS#12-encoded files.
+            // see https://curl.se/libcurl/c/CURLOPT_SSLCERTTYPE.html
+            $ext = \pathinfo($cert, \PATHINFO_EXTENSION);
+            if (\preg_match('#^(der|p12)$#i', $ext)) {
+                $conf[\CURLOPT_SSLCERTTYPE] = \strtoupper($ext);
+            }
             $conf[\CURLOPT_SSLCERT] = $cert;
         }
         if (isset($options['ssl_key'])) {
             if (\is_array($options['ssl_key'])) {
                 if (\count($options['ssl_key']) === 2) {
-                    list($sslKey, $conf[\CURLOPT_SSLKEYPASSWD]) = $options['ssl_key'];
+                    [$sslKey, $conf[\CURLOPT_SSLKEYPASSWD]] = $options['ssl_key'];
                 } else {
-                    list($sslKey) = $options['ssl_key'];
+                    [$sslKey] = $options['ssl_key'];
                 }
             }
-            $sslKey = isset($sslKey) ? $sslKey : $options['ssl_key'];
+            $sslKey = $sslKey ?? $options['ssl_key'];
             if (!\file_exists($sslKey)) {
                 throw new \InvalidArgumentException("SSL private key not found: {$sslKey}");
             }
@@ -353,17 +404,12 @@ class CurlFactory implements CurlFactoryInterface
                 throw new \InvalidArgumentException('progress client option must be callable');
             }
             $conf[\CURLOPT_NOPROGRESS] = \false;
-            $conf[\CURLOPT_PROGRESSFUNCTION] = function () use($progress) {
-                $args = \func_get_args();
-                // PHP 5.5 pushed the handle onto the start of the args
-                if (\is_resource($args[0])) {
-                    \array_shift($args);
-                }
-                \call_user_func_array($progress, $args);
+            $conf[\CURLOPT_PROGRESSFUNCTION] = static function ($resource, int $downloadSize, int $downloaded, int $uploadSize, int $uploaded) use($progress) {
+                $progress($downloadSize, $downloaded, $uploadSize, $uploaded);
             };
         }
         if (!empty($options['debug'])) {
-            $conf[\CURLOPT_STDERR] = \DeliciousBrains\WP_Offload_Media\Aws3\GuzzleHttp\debug_resource($options['debug']);
+            $conf[\CURLOPT_STDERR] = Utils::debugResource($options['debug']);
             $conf[\CURLOPT_VERBOSE] = \true;
         }
     }
@@ -375,8 +421,10 @@ class CurlFactory implements CurlFactoryInterface
      * stream, and then encountered a "necessary data rewind wasn't possible"
      * error, causing the request to be sent through curl_multi_info_read()
      * without an error status.
+     *
+     * @param callable(RequestInterface, array): PromiseInterface $handler
      */
-    private static function retryFailedRewind(callable $handler, EasyHandle $easy, array $ctx)
+    private static function retryFailedRewind(callable $handler, EasyHandle $easy, array $ctx) : PromiseInterface
     {
         try {
             // Only rewind if the body has been read from.
@@ -395,11 +443,11 @@ class CurlFactory implements CurlFactoryInterface
             $ctx['error'] = 'The cURL request was retried 3 times ' . 'and did not succeed. The most likely reason for the failure ' . 'is that cURL was unable to rewind the body of the request ' . 'and subsequent retries resulted in the same error. Turn on ' . 'the debug option to see what went wrong. See ' . 'https://bugs.php.net/bug.php?id=47204 for more information.';
             return self::createRejection($easy, $ctx);
         } else {
-            $easy->options['_curl_retries']++;
+            ++$easy->options['_curl_retries'];
         }
         return $handler($easy->request, $easy->options);
     }
-    private function createHeaderFn(EasyHandle $easy)
+    private function createHeaderFn(EasyHandle $easy) : callable
     {
         if (isset($easy->options['on_headers'])) {
             $onHeaders = $easy->options['on_headers'];
@@ -409,11 +457,16 @@ class CurlFactory implements CurlFactoryInterface
         } else {
             $onHeaders = null;
         }
-        return function ($ch, $h) use($onHeaders, $easy, &$startingResponse) {
+        return static function ($ch, $h) use($onHeaders, $easy, &$startingResponse) {
             $value = \trim($h);
             if ($value === '') {
                 $startingResponse = \true;
-                $easy->createResponse();
+                try {
+                    $easy->createResponse();
+                } catch (\Exception $e) {
+                    $easy->createResponseException = $e;
+                    return -1;
+                }
                 if ($onHeaders !== null) {
                     try {
                         $onHeaders($easy->response);

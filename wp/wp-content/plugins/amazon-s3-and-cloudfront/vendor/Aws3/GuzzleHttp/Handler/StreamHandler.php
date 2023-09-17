@@ -4,6 +4,7 @@ namespace DeliciousBrains\WP_Offload_Media\Aws3\GuzzleHttp\Handler;
 
 use DeliciousBrains\WP_Offload_Media\Aws3\GuzzleHttp\Exception\ConnectException;
 use DeliciousBrains\WP_Offload_Media\Aws3\GuzzleHttp\Exception\RequestException;
+use DeliciousBrains\WP_Offload_Media\Aws3\GuzzleHttp\Promise as P;
 use DeliciousBrains\WP_Offload_Media\Aws3\GuzzleHttp\Promise\FulfilledPromise;
 use DeliciousBrains\WP_Offload_Media\Aws3\GuzzleHttp\Promise\PromiseInterface;
 use DeliciousBrains\WP_Offload_Media\Aws3\GuzzleHttp\Psr7;
@@ -12,21 +13,25 @@ use DeliciousBrains\WP_Offload_Media\Aws3\GuzzleHttp\Utils;
 use DeliciousBrains\WP_Offload_Media\Aws3\Psr\Http\Message\RequestInterface;
 use DeliciousBrains\WP_Offload_Media\Aws3\Psr\Http\Message\ResponseInterface;
 use DeliciousBrains\WP_Offload_Media\Aws3\Psr\Http\Message\StreamInterface;
+use DeliciousBrains\WP_Offload_Media\Aws3\Psr\Http\Message\UriInterface;
 /**
  * HTTP handler that uses PHP's HTTP stream wrapper.
+ *
+ * @final
  */
 class StreamHandler
 {
+    /**
+     * @var array
+     */
     private $lastHeaders = [];
     /**
      * Sends an HTTP request.
      *
      * @param RequestInterface $request Request to send.
      * @param array            $options Request transfer options.
-     *
-     * @return PromiseInterface
      */
-    public function __invoke(RequestInterface $request, array $options)
+    public function __invoke(RequestInterface $request, array $options) : PromiseInterface
     {
         // Sleep if there is a delay specified.
         if (isset($options['delay'])) {
@@ -48,44 +53,50 @@ class StreamHandler
             // Determine if the error was a networking error.
             $message = $e->getMessage();
             // This list can probably get more comprehensive.
-            if (\strpos($message, 'getaddrinfo') || \strpos($message, 'Connection refused') || \strpos($message, "couldn't connect to host") || \strpos($message, "connection attempt failed")) {
+            if (\false !== \strpos($message, 'getaddrinfo') || \false !== \strpos($message, 'Connection refused') || \false !== \strpos($message, "couldn't connect to host") || \false !== \strpos($message, 'connection attempt failed')) {
                 $e = new ConnectException($e->getMessage(), $request, $e);
+            } else {
+                $e = RequestException::wrapException($request, $e);
             }
-            $e = RequestException::wrapException($request, $e);
             $this->invokeStats($options, $request, $startTime, null, $e);
-            return \DeliciousBrains\WP_Offload_Media\Aws3\GuzzleHttp\Promise\rejection_for($e);
+            return P\Create::rejectionFor($e);
         }
     }
-    private function invokeStats(array $options, RequestInterface $request, $startTime, ResponseInterface $response = null, $error = null)
+    private function invokeStats(array $options, RequestInterface $request, ?float $startTime, ResponseInterface $response = null, \Throwable $error = null) : void
     {
         if (isset($options['on_stats'])) {
             $stats = new TransferStats($request, $response, Utils::currentTime() - $startTime, $error, []);
-            \call_user_func($options['on_stats'], $stats);
+            $options['on_stats']($stats);
         }
     }
-    private function createResponse(RequestInterface $request, array $options, $stream, $startTime)
+    /**
+     * @param resource $stream
+     */
+    private function createResponse(RequestInterface $request, array $options, $stream, ?float $startTime) : PromiseInterface
     {
         $hdrs = $this->lastHeaders;
         $this->lastHeaders = [];
-        $parts = \explode(' ', \array_shift($hdrs), 3);
-        $ver = \explode('/', $parts[0])[1];
-        $status = $parts[1];
-        $reason = isset($parts[2]) ? $parts[2] : null;
-        $headers = \DeliciousBrains\WP_Offload_Media\Aws3\GuzzleHttp\headers_from_lines($hdrs);
-        list($stream, $headers) = $this->checkDecode($options, $headers, $stream);
-        $stream = Psr7\stream_for($stream);
+        try {
+            [$ver, $status, $reason, $headers] = HeaderProcessor::parseHeaders($hdrs);
+        } catch (\Exception $e) {
+            return P\Create::rejectionFor(new RequestException('An error was encountered while creating the response', $request, null, $e));
+        }
+        [$stream, $headers] = $this->checkDecode($options, $headers, $stream);
+        $stream = Psr7\Utils::streamFor($stream);
         $sink = $stream;
         if (\strcasecmp('HEAD', $request->getMethod())) {
             $sink = $this->createSink($stream, $options);
         }
-        $response = new Psr7\Response($status, $headers, $sink, $ver, $reason);
+        try {
+            $response = new Psr7\Response($status, $headers, $sink, $ver, $reason);
+        } catch (\Exception $e) {
+            return P\Create::rejectionFor(new RequestException('An error was encountered while creating the response', $request, null, $e));
+        }
         if (isset($options['on_headers'])) {
             try {
                 $options['on_headers']($response);
             } catch (\Exception $e) {
-                $msg = 'An error was encountered during the on_headers event';
-                $ex = new RequestException($msg, $request, $response, $e);
-                return \DeliciousBrains\WP_Offload_Media\Aws3\GuzzleHttp\Promise\rejection_for($ex);
+                return P\Create::rejectionFor(new RequestException('An error was encountered during the on_headers event', $request, $response, $e));
             }
         }
         // Do not drain when the request is a HEAD request because they have
@@ -96,23 +107,26 @@ class StreamHandler
         $this->invokeStats($options, $request, $startTime, $response, null);
         return new FulfilledPromise($response);
     }
-    private function createSink(StreamInterface $stream, array $options)
+    private function createSink(StreamInterface $stream, array $options) : StreamInterface
     {
         if (!empty($options['stream'])) {
             return $stream;
         }
-        $sink = isset($options['sink']) ? $options['sink'] : \fopen('php://temp', 'r+');
-        return \is_string($sink) ? new Psr7\LazyOpenStream($sink, 'w+') : Psr7\stream_for($sink);
+        $sink = $options['sink'] ?? Psr7\Utils::tryFopen('php://temp', 'r+');
+        return \is_string($sink) ? new Psr7\LazyOpenStream($sink, 'w+') : Psr7\Utils::streamFor($sink);
     }
-    private function checkDecode(array $options, array $headers, $stream)
+    /**
+     * @param resource $stream
+     */
+    private function checkDecode(array $options, array $headers, $stream) : array
     {
         // Automatically decode responses when instructed.
         if (!empty($options['decode_content'])) {
-            $normalizedKeys = \DeliciousBrains\WP_Offload_Media\Aws3\GuzzleHttp\normalize_header_keys($headers);
+            $normalizedKeys = Utils::normalizeHeaderKeys($headers);
             if (isset($normalizedKeys['content-encoding'])) {
                 $encoding = $headers[$normalizedKeys['content-encoding']];
                 if ($encoding[0] === 'gzip' || $encoding[0] === 'deflate') {
-                    $stream = new Psr7\InflateStream(Psr7\stream_for($stream));
+                    $stream = new Psr7\InflateStream(Psr7\Utils::streamFor($stream));
                     $headers['x-encoded-content-encoding'] = $headers[$normalizedKeys['content-encoding']];
                     // Remove content-encoding header
                     unset($headers[$normalizedKeys['content-encoding']]);
@@ -134,21 +148,18 @@ class StreamHandler
     /**
      * Drains the source stream into the "sink" client option.
      *
-     * @param StreamInterface $source
-     * @param StreamInterface $sink
-     * @param string          $contentLength Header specifying the amount of
-     *                                       data to read.
+     * @param string $contentLength Header specifying the amount of
+     *                              data to read.
      *
-     * @return StreamInterface
      * @throws \RuntimeException when the sink option is invalid.
      */
-    private function drain(StreamInterface $source, StreamInterface $sink, $contentLength)
+    private function drain(StreamInterface $source, StreamInterface $sink, string $contentLength) : StreamInterface
     {
         // If a content-length header is provided, then stop reading once
         // that number of bytes has been read. This can prevent infinitely
         // reading from a stream when dealing with servers that do not honor
         // Connection: Close headers.
-        Psr7\copy_to_stream($source, $sink, \strlen($contentLength) > 0 && (int) $contentLength > 0 ? (int) $contentLength : -1);
+        Psr7\Utils::copyToStream($source, $sink, \strlen($contentLength) > 0 && (int) $contentLength > 0 ? (int) $contentLength : -1);
         $sink->seek(0);
         $source->close();
         return $sink;
@@ -159,17 +170,21 @@ class StreamHandler
      * @param callable $callback Callable that returns stream resource
      *
      * @return resource
+     *
      * @throws \RuntimeException on error
      */
     private function createResource(callable $callback)
     {
-        $errors = null;
-        \set_error_handler(function ($_, $msg, $file, $line) use(&$errors) {
+        $errors = [];
+        \set_error_handler(static function ($_, $msg, $file, $line) use(&$errors) : bool {
             $errors[] = ['message' => $msg, 'file' => $file, 'line' => $line];
             return \true;
         });
-        $resource = $callback();
-        \restore_error_handler();
+        try {
+            $resource = $callback();
+        } finally {
+            \restore_error_handler();
+        }
         if (!$resource) {
             $message = 'Error creating resource: ';
             foreach ($errors as $err) {
@@ -181,11 +196,17 @@ class StreamHandler
         }
         return $resource;
     }
+    /**
+     * @return resource
+     */
     private function createStream(RequestInterface $request, array $options)
     {
         static $methods;
         if (!$methods) {
             $methods = \array_flip(\get_class_methods(__CLASS__));
+        }
+        if (!\in_array($request->getUri()->getScheme(), ['http', 'https'])) {
+            throw new RequestException(\sprintf("The scheme '%s' is not supported.", $request->getUri()->getScheme()), $request);
         }
         // HTTP/1.1 streams using the PHP stream wrapper require a
         // Connection: close header
@@ -216,16 +237,19 @@ class StreamHandler
             $context = \array_replace_recursive($context, $options['stream_context']);
         }
         // Microsoft NTLM authentication only supported with curl handler
-        if (isset($options['auth']) && \is_array($options['auth']) && isset($options['auth'][2]) && 'ntlm' == $options['auth'][2]) {
+        if (isset($options['auth'][2]) && 'ntlm' === $options['auth'][2]) {
             throw new \InvalidArgumentException('Microsoft NTLM authentication only supported with curl handler');
         }
         $uri = $this->resolveHost($request, $options);
-        $context = $this->createResource(function () use($context, $params) {
+        $contextResource = $this->createResource(static function () use($context, $params) {
             return \stream_context_create($context, $params);
         });
-        return $this->createResource(function () use($uri, &$http_response_header, $context, $options) {
-            $resource = \fopen((string) $uri, 'r', null, $context);
-            $this->lastHeaders = $http_response_header;
+        return $this->createResource(function () use($uri, &$http_response_header, $contextResource, $context, $options, $request) {
+            $resource = @\fopen((string) $uri, 'r', \false, $contextResource);
+            $this->lastHeaders = $http_response_header ?? [];
+            if (\false === $resource) {
+                throw new ConnectException(\sprintf('Connection refused for URI %s', $uri), $request, null, $context);
+            }
             if (isset($options['read_timeout'])) {
                 $readTimeout = $options['read_timeout'];
                 $sec = (int) $readTimeout;
@@ -235,27 +259,28 @@ class StreamHandler
             return $resource;
         });
     }
-    private function resolveHost(RequestInterface $request, array $options)
+    private function resolveHost(RequestInterface $request, array $options) : UriInterface
     {
         $uri = $request->getUri();
         if (isset($options['force_ip_resolve']) && !\filter_var($uri->getHost(), \FILTER_VALIDATE_IP)) {
             if ('v4' === $options['force_ip_resolve']) {
                 $records = \dns_get_record($uri->getHost(), \DNS_A);
-                if (!isset($records[0]['ip'])) {
+                if (\false === $records || !isset($records[0]['ip'])) {
                     throw new ConnectException(\sprintf("Could not resolve IPv4 address for host '%s'", $uri->getHost()), $request);
                 }
-                $uri = $uri->withHost($records[0]['ip']);
-            } elseif ('v6' === $options['force_ip_resolve']) {
+                return $uri->withHost($records[0]['ip']);
+            }
+            if ('v6' === $options['force_ip_resolve']) {
                 $records = \dns_get_record($uri->getHost(), \DNS_AAAA);
-                if (!isset($records[0]['ipv6'])) {
+                if (\false === $records || !isset($records[0]['ipv6'])) {
                     throw new ConnectException(\sprintf("Could not resolve IPv6 address for host '%s'", $uri->getHost()), $request);
                 }
-                $uri = $uri->withHost('[' . $records[0]['ipv6'] . ']');
+                return $uri->withHost('[' . $records[0]['ipv6'] . ']');
             }
         }
         return $uri;
     }
-    private function getDefaultContext(RequestInterface $request)
+    private function getDefaultContext(RequestInterface $request) : array
     {
         $headers = '';
         foreach ($request->getHeaders() as $name => $value) {
@@ -263,9 +288,9 @@ class StreamHandler
                 $headers .= "{$name}: {$val}\r\n";
             }
         }
-        $context = ['http' => ['method' => $request->getMethod(), 'header' => $headers, 'protocol_version' => $request->getProtocolVersion(), 'ignore_errors' => \true, 'follow_location' => 0]];
+        $context = ['http' => ['method' => $request->getMethod(), 'header' => $headers, 'protocol_version' => $request->getProtocolVersion(), 'ignore_errors' => \true, 'follow_location' => 0], 'ssl' => ['peer_name' => $request->getUri()->getHost()]];
         $body = (string) $request->getBody();
-        if (!empty($body)) {
+        if ('' !== $body) {
             $context['http']['content'] = $body;
             // Prevent the HTTP handler from adding a Content-Type header.
             if (!$request->hasHeader('Content-Type')) {
@@ -275,50 +300,98 @@ class StreamHandler
         $context['http']['header'] = \rtrim($context['http']['header']);
         return $context;
     }
-    private function add_proxy(RequestInterface $request, &$options, $value, &$params)
+    /**
+     * @param mixed $value as passed via Request transfer options.
+     */
+    private function add_proxy(RequestInterface $request, array &$options, $value, array &$params) : void
     {
+        $uri = null;
         if (!\is_array($value)) {
-            $options['http']['proxy'] = $value;
+            $uri = $value;
         } else {
             $scheme = $request->getUri()->getScheme();
             if (isset($value[$scheme])) {
-                if (!isset($value['no']) || !\DeliciousBrains\WP_Offload_Media\Aws3\GuzzleHttp\is_host_in_noproxy($request->getUri()->getHost(), $value['no'])) {
-                    $options['http']['proxy'] = $value[$scheme];
+                if (!isset($value['no']) || !Utils::isHostInNoProxy($request->getUri()->getHost(), $value['no'])) {
+                    $uri = $value[$scheme];
                 }
             }
         }
+        if (!$uri) {
+            return;
+        }
+        $parsed = $this->parse_proxy($uri);
+        $options['http']['proxy'] = $parsed['proxy'];
+        if ($parsed['auth']) {
+            if (!isset($options['http']['header'])) {
+                $options['http']['header'] = [];
+            }
+            $options['http']['header'] .= "\r\nProxy-Authorization: {$parsed['auth']}";
+        }
     }
-    private function add_timeout(RequestInterface $request, &$options, $value, &$params)
+    /**
+     * Parses the given proxy URL to make it compatible with the format PHP's stream context expects.
+     */
+    private function parse_proxy(string $url) : array
+    {
+        $parsed = \parse_url($url);
+        if ($parsed !== \false && isset($parsed['scheme']) && $parsed['scheme'] === 'http') {
+            if (isset($parsed['host']) && isset($parsed['port'])) {
+                $auth = null;
+                if (isset($parsed['user']) && isset($parsed['pass'])) {
+                    $auth = \base64_encode("{$parsed['user']}:{$parsed['pass']}");
+                }
+                return ['proxy' => "tcp://{$parsed['host']}:{$parsed['port']}", 'auth' => $auth ? "Basic {$auth}" : null];
+            }
+        }
+        // Return proxy as-is.
+        return ['proxy' => $url, 'auth' => null];
+    }
+    /**
+     * @param mixed $value as passed via Request transfer options.
+     */
+    private function add_timeout(RequestInterface $request, array &$options, $value, array &$params) : void
     {
         if ($value > 0) {
             $options['http']['timeout'] = $value;
         }
     }
-    private function add_verify(RequestInterface $request, &$options, $value, &$params)
+    /**
+     * @param mixed $value as passed via Request transfer options.
+     */
+    private function add_crypto_method(RequestInterface $request, array &$options, $value, array &$params) : void
     {
-        if ($value === \true) {
-            // PHP 5.6 or greater will find the system cert by default. When
-            // < 5.6, use the Guzzle bundled cacert.
-            if (\PHP_VERSION_ID < 50600) {
-                $options['ssl']['cafile'] = \DeliciousBrains\WP_Offload_Media\Aws3\GuzzleHttp\default_ca_bundle();
-            }
-        } elseif (\is_string($value)) {
+        if ($value === \STREAM_CRYPTO_METHOD_TLSv1_0_CLIENT || $value === \STREAM_CRYPTO_METHOD_TLSv1_1_CLIENT || $value === \STREAM_CRYPTO_METHOD_TLSv1_2_CLIENT || \defined('STREAM_CRYPTO_METHOD_TLSv1_3_CLIENT') && $value === \STREAM_CRYPTO_METHOD_TLSv1_3_CLIENT) {
+            $options['http']['crypto_method'] = $value;
+            return;
+        }
+        throw new \InvalidArgumentException('Invalid crypto_method request option: unknown version provided');
+    }
+    /**
+     * @param mixed $value as passed via Request transfer options.
+     */
+    private function add_verify(RequestInterface $request, array &$options, $value, array &$params) : void
+    {
+        if ($value === \false) {
+            $options['ssl']['verify_peer'] = \false;
+            $options['ssl']['verify_peer_name'] = \false;
+            return;
+        }
+        if (\is_string($value)) {
             $options['ssl']['cafile'] = $value;
             if (!\file_exists($value)) {
                 throw new \RuntimeException("SSL CA bundle not found: {$value}");
             }
-        } elseif ($value === \false) {
-            $options['ssl']['verify_peer'] = \false;
-            $options['ssl']['verify_peer_name'] = \false;
-            return;
-        } else {
+        } elseif ($value !== \true) {
             throw new \InvalidArgumentException('Invalid verify request option');
         }
         $options['ssl']['verify_peer'] = \true;
         $options['ssl']['verify_peer_name'] = \true;
         $options['ssl']['allow_self_signed'] = \false;
     }
-    private function add_cert(RequestInterface $request, &$options, $value, &$params)
+    /**
+     * @param mixed $value as passed via Request transfer options.
+     */
+    private function add_cert(RequestInterface $request, array &$options, $value, array &$params) : void
     {
         if (\is_array($value)) {
             $options['ssl']['passphrase'] = $value[1];
@@ -329,26 +402,32 @@ class StreamHandler
         }
         $options['ssl']['local_cert'] = $value;
     }
-    private function add_progress(RequestInterface $request, &$options, $value, &$params)
+    /**
+     * @param mixed $value as passed via Request transfer options.
+     */
+    private function add_progress(RequestInterface $request, array &$options, $value, array &$params) : void
     {
-        $this->addNotification($params, function ($code, $a, $b, $c, $transferred, $total) use($value) {
+        self::addNotification($params, static function ($code, $a, $b, $c, $transferred, $total) use($value) {
             if ($code == \STREAM_NOTIFY_PROGRESS) {
-                $value($total, $transferred, null, null);
+                // The upload progress cannot be determined. Use 0 for cURL compatibility:
+                // https://curl.se/libcurl/c/CURLOPT_PROGRESSFUNCTION.html
+                $value($total, $transferred, 0, 0);
             }
         });
     }
-    private function add_debug(RequestInterface $request, &$options, $value, &$params)
+    /**
+     * @param mixed $value as passed via Request transfer options.
+     */
+    private function add_debug(RequestInterface $request, array &$options, $value, array &$params) : void
     {
         if ($value === \false) {
             return;
         }
         static $map = [\STREAM_NOTIFY_CONNECT => 'CONNECT', \STREAM_NOTIFY_AUTH_REQUIRED => 'AUTH_REQUIRED', \STREAM_NOTIFY_AUTH_RESULT => 'AUTH_RESULT', \STREAM_NOTIFY_MIME_TYPE_IS => 'MIME_TYPE_IS', \STREAM_NOTIFY_FILE_SIZE_IS => 'FILE_SIZE_IS', \STREAM_NOTIFY_REDIRECTED => 'REDIRECTED', \STREAM_NOTIFY_PROGRESS => 'PROGRESS', \STREAM_NOTIFY_FAILURE => 'FAILURE', \STREAM_NOTIFY_COMPLETED => 'COMPLETED', \STREAM_NOTIFY_RESOLVE => 'RESOLVE'];
         static $args = ['severity', 'message', 'message_code', 'bytes_transferred', 'bytes_max'];
-        $value = \DeliciousBrains\WP_Offload_Media\Aws3\GuzzleHttp\debug_resource($value);
+        $value = Utils::debugResource($value);
         $ident = $request->getMethod() . ' ' . $request->getUri()->withFragment('');
-        $this->addNotification($params, function () use($ident, $value, $map, $args) {
-            $passed = \func_get_args();
-            $code = \array_shift($passed);
+        self::addNotification($params, static function (int $code, ...$passed) use($ident, $value, $map, $args) : void {
             \fprintf($value, '<%s> [%s] ', $ident, $map[$code]);
             foreach (\array_filter($passed) as $i => $v) {
                 \fwrite($value, $args[$i] . ': "' . $v . '" ');
@@ -356,21 +435,20 @@ class StreamHandler
             \fwrite($value, "\n");
         });
     }
-    private function addNotification(array &$params, callable $notify)
+    private static function addNotification(array &$params, callable $notify) : void
     {
         // Wrap the existing function if needed.
         if (!isset($params['notification'])) {
             $params['notification'] = $notify;
         } else {
-            $params['notification'] = $this->callArray([$params['notification'], $notify]);
+            $params['notification'] = self::callArray([$params['notification'], $notify]);
         }
     }
-    private function callArray(array $functions)
+    private static function callArray(array $functions) : callable
     {
-        return function () use($functions) {
-            $args = \func_get_args();
+        return static function (...$args) use($functions) {
             foreach ($functions as $fn) {
-                \call_user_func_array($fn, $args);
+                $fn(...$args);
             }
         };
     }

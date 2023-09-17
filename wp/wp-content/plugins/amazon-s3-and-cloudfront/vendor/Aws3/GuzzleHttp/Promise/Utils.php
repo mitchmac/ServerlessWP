@@ -1,5 +1,6 @@
 <?php
 
+declare (strict_types=1);
 namespace DeliciousBrains\WP_Offload_Media\Aws3\GuzzleHttp\Promise;
 
 final class Utils
@@ -17,11 +18,9 @@ final class Utils
      * }
      * </code>
      *
-     * @param TaskQueueInterface $assign Optionally specify a new queue instance.
-     *
-     * @return TaskQueueInterface
+     * @param TaskQueueInterface|null $assign Optionally specify a new queue instance.
      */
-    public static function queue(TaskQueueInterface $assign = null)
+    public static function queue(TaskQueueInterface $assign = null) : TaskQueueInterface
     {
         static $queue;
         if ($assign) {
@@ -36,21 +35,17 @@ final class Utils
      * returns a promise that is fulfilled or rejected with the result.
      *
      * @param callable $task Task function to run.
-     *
-     * @return PromiseInterface
      */
-    public static function task(callable $task)
+    public static function task(callable $task) : PromiseInterface
     {
         $queue = self::queue();
         $promise = new Promise([$queue, 'run']);
-        $queue->add(function () use($task, $promise) {
+        $queue->add(function () use($task, $promise) : void {
             try {
                 if (Is::pending($promise)) {
                     $promise->resolve($task());
                 }
             } catch (\Throwable $e) {
-                $promise->reject($e);
-            } catch (\Exception $e) {
                 $promise->reject($e);
             }
         });
@@ -67,18 +62,14 @@ final class Utils
      * key mapping to the rejection reason of the promise.
      *
      * @param PromiseInterface $promise Promise or value.
-     *
-     * @return array
      */
-    public static function inspect(PromiseInterface $promise)
+    public static function inspect(PromiseInterface $promise) : array
     {
         try {
             return ['state' => PromiseInterface::FULFILLED, 'value' => $promise->wait()];
         } catch (RejectionException $e) {
             return ['state' => PromiseInterface::REJECTED, 'reason' => $e->getReason()];
         } catch (\Throwable $e) {
-            return ['state' => PromiseInterface::REJECTED, 'reason' => $e];
-        } catch (\Exception $e) {
             return ['state' => PromiseInterface::REJECTED, 'reason' => $e];
         }
     }
@@ -91,14 +82,12 @@ final class Utils
      * @see inspect for the inspection state array format.
      *
      * @param PromiseInterface[] $promises Traversable of promises to wait upon.
-     *
-     * @return array
      */
-    public static function inspectAll($promises)
+    public static function inspectAll($promises) : array
     {
         $results = [];
         foreach ($promises as $key => $promise) {
-            $results[$key] = inspect($promise);
+            $results[$key] = self::inspect($promise);
         }
         return $results;
     }
@@ -111,12 +100,9 @@ final class Utils
      *
      * @param iterable<PromiseInterface> $promises Iterable of PromiseInterface objects to wait on.
      *
-     * @return array
-     *
-     * @throws \Exception on error
-     * @throws \Throwable on error in PHP >=7
+     * @throws \Throwable on error
      */
-    public static function unwrap($promises)
+    public static function unwrap($promises) : array
     {
         $results = [];
         foreach ($promises as $key => $promise) {
@@ -134,15 +120,13 @@ final class Utils
      *
      * @param mixed $promises  Promises or values.
      * @param bool  $recursive If true, resolves new promises that might have been added to the stack during its own resolution.
-     *
-     * @return PromiseInterface
      */
-    public static function all($promises, $recursive = \false)
+    public static function all($promises, bool $recursive = \false) : PromiseInterface
     {
         $results = [];
-        $promise = Each::of($promises, function ($value, $idx) use(&$results) {
+        $promise = Each::of($promises, function ($value, $idx) use(&$results) : void {
             $results[$idx] = $value;
-        }, function ($reason, $idx, Promise $aggregate) {
+        }, function ($reason, $idx, Promise $aggregate) : void {
             $aggregate->reject($reason);
         })->then(function () use(&$results) {
             \ksort($results);
@@ -173,14 +157,12 @@ final class Utils
      *
      * @param int   $count    Total number of promises.
      * @param mixed $promises Promises or values.
-     *
-     * @return PromiseInterface
      */
-    public static function some($count, $promises)
+    public static function some(int $count, $promises) : PromiseInterface
     {
         $results = [];
         $rejections = [];
-        return Each::of($promises, function ($value, $idx, PromiseInterface $p) use(&$results, $count) {
+        return Each::of($promises, function ($value, $idx, PromiseInterface $p) use(&$results, $count) : void {
             if (Is::settled($p)) {
                 return;
             }
@@ -188,7 +170,7 @@ final class Utils
             if (\count($results) >= $count) {
                 $p->resolve(null);
             }
-        }, function ($reason) use(&$rejections) {
+        }, function ($reason) use(&$rejections) : void {
             $rejections[] = $reason;
         })->then(function () use(&$results, &$rejections, $count) {
             if (\count($results) !== $count) {
@@ -203,10 +185,8 @@ final class Utils
      * fulfillment value is not an array of 1 but the value directly.
      *
      * @param mixed $promises Promises or values.
-     *
-     * @return PromiseInterface
      */
-    public static function any($promises)
+    public static function any($promises) : PromiseInterface
     {
         return self::some(1, $promises)->then(function ($values) {
             return $values[0];
@@ -221,15 +201,13 @@ final class Utils
      * @see inspect for the inspection state array format.
      *
      * @param mixed $promises Promises or values.
-     *
-     * @return PromiseInterface
      */
-    public static function settle($promises)
+    public static function settle($promises) : PromiseInterface
     {
         $results = [];
-        return Each::of($promises, function ($value, $idx) use(&$results) {
+        return Each::of($promises, function ($value, $idx) use(&$results) : void {
             $results[$idx] = ['state' => PromiseInterface::FULFILLED, 'value' => $value];
-        }, function ($reason, $idx) use(&$results) {
+        }, function ($reason, $idx) use(&$results) : void {
             $results[$idx] = ['state' => PromiseInterface::REJECTED, 'reason' => $reason];
         })->then(function () use(&$results) {
             \ksort($results);

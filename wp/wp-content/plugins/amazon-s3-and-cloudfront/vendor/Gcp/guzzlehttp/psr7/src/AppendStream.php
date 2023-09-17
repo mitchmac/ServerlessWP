@@ -164,7 +164,7 @@ final class AppendStream implements StreamInterface
                 if ($this->current === $total) {
                     break;
                 }
-                $this->current++;
+                ++$this->current;
             }
             $result = $this->streams[$this->current]->read($remaining);
             if ($result === '') {

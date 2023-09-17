@@ -3,7 +3,6 @@
 namespace DeliciousBrains\WP_Offload_Media\Aws3\Aws\Endpoint\UseFipsEndpoint;
 
 use DeliciousBrains\WP_Offload_Media\Aws3\Aws;
-use DeliciousBrains\WP_Offload_Media\Aws3\Aws\ClientResolver;
 use DeliciousBrains\WP_Offload_Media\Aws3\Aws\Endpoint\UseFipsEndpoint\Exception\ConfigurationException;
 class Configuration implements ConfigurationInterface
 {

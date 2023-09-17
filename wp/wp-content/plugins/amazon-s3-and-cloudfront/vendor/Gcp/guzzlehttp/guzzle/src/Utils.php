@@ -71,9 +71,9 @@ final class Utils
      *
      * The returned handler is not wrapped by any default middlewares.
      *
-     * @throws \RuntimeException if no viable Handler is available.
-     *
      * @return callable(\Psr\Http\Message\RequestInterface, array): \GuzzleHttp\Promise\PromiseInterface Returns the best handler for the given system.
+     *
+     * @throws \RuntimeException if no viable Handler is available.
      */
     public static function chooseHandler() : callable
     {
@@ -239,7 +239,7 @@ EOT
      *
      * @throws InvalidArgumentException if the JSON cannot be decoded.
      *
-     * @link https://www.php.net/manual/en/function.json-decode.php
+     * @see https://www.php.net/manual/en/function.json-decode.php
      */
     public static function jsonDecode(string $json, bool $assoc = \false, int $depth = 512, int $options = 0)
     {
@@ -258,7 +258,7 @@ EOT
      *
      * @throws InvalidArgumentException if the JSON cannot be encoded.
      *
-     * @link https://www.php.net/manual/en/function.json-encode.php
+     * @see https://www.php.net/manual/en/function.json-encode.php
      */
     public static function jsonEncode($value, int $options = 0, int $depth = 512) : string
     {

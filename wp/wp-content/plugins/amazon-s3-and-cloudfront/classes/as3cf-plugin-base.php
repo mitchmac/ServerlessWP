@@ -7,6 +7,7 @@ abstract class AS3CF_Plugin_Base implements Settings_Interface {
 	use Settings_Trait;
 
 	const DBRAINS_URL = 'https://deliciousbrains.com';
+	const WPE_URL     = 'https://wpengine.com';
 
 	const SETTINGS_KEY = '';
 
@@ -393,7 +394,7 @@ abstract class AS3CF_Plugin_Base implements Settings_Interface {
 	}
 
 	/**
-	 * Generate site URL with correct UTM tags.
+	 * Generate Delicious Brains site URL with correct UTM tags.
 	 *
 	 * @param string $path
 	 * @param array  $args
@@ -418,12 +419,49 @@ abstract class AS3CF_Plugin_Base implements Settings_Interface {
 	}
 
 	/**
+	 * Generate WP Engine site URL with correct UTM tags.
+	 *
+	 * @param string $path
+	 * @param array  $args
+	 * @param string $hash
+	 *
+	 * @return string
+	 */
+	public static function wpe_url( $path = '', $args = array(), $hash = '' ) {
+		$args = wp_parse_args( $args, array(
+			'utm_medium'   => 'referral',
+			'utm_source'   => 'ome_plugin',
+			'utm_campaign' => 'bx_prod_referral',
+		) );
+		$args = array_map( 'urlencode', $args );
+		$url  = trailingslashit( self::WPE_URL ) . ltrim( $path, '/' );
+		$url  = add_query_arg( $args, $url );
+
+		if ( $hash ) {
+			$url .= '#' . $hash;
+		}
+
+		return $url;
+	}
+
+	/**
 	 * Get UTM source for plugin.
 	 *
 	 * @return string
 	 */
 	protected static function get_utm_source() {
 		return 'AWS';
+	}
+
+	/**
+	 * Get UTM content for WP Engine URL.
+	 *
+	 * @param string $content
+	 *
+	 * @return string
+	 */
+	protected static function get_wpe_url_utm_content( $content = 'plugin_footer_text' ) {
+		return $content;
 	}
 
 	/**
@@ -436,5 +474,85 @@ abstract class AS3CF_Plugin_Base implements Settings_Interface {
 	 */
 	public function get_my_account_url( $args = array(), $hash = '' ) {
 		return $this->dbrains_url( '/my-account/', $args, $hash );
+	}
+
+	/**
+	 * Sets up hooks to alter the footer of our admin pages.
+	 *
+	 * @return void
+	 */
+	protected function init_admin_footer() {
+		add_filter( 'admin_footer_text', array( $this, 'filter_admin_footer_text' ) );
+		add_filter( 'update_footer', array( $this, 'filter_update_footer' ) );
+	}
+
+	/**
+	 * Filters the admin footer text to add our own links.
+	 *
+	 * @param string $text
+	 *
+	 * @return string
+	 */
+	public function filter_admin_footer_text( $text ) {
+		$product_link = AS3CF_Utils::dbrains_link(
+			static::dbrains_url(
+				'/wp-offload-media/',
+				array( 'utm_campaign' => 'plugin_footer', 'utm_content' => 'footer_colophon' )
+			),
+			$this->plugin_name
+		);
+
+		$wpe_link = AS3CF_Utils::dbrains_link(
+			static::wpe_url(
+				'',
+				array( 'utm_content' => static::get_wpe_url_utm_content() )
+			),
+			'WP Engine'
+		);
+
+		return sprintf(
+		/* translators: %1$s is a link to WP Offload Media's website, and %2$s is a link to WP Engine's website. */
+			__( '%1$s is developed and maintained by %2$s.', 'amazon-s3-and-cloudfront' ),
+			$product_link,
+			$wpe_link
+		);
+	}
+
+	/**
+	 * Filters the admin footer's WordPress version text to add our own links.
+	 *
+	 * @param string $content
+	 *
+	 * @return string
+	 */
+	public function filter_update_footer( $content ) {
+		$links[] = AS3CF_Utils::dbrains_link(
+			static::dbrains_url(
+				'/wp-offload-media/docs/',
+				array( 'utm_campaign' => 'plugin_footer', 'utm_content' => 'footer_navigation' )
+			),
+			__( 'Documentation', 'amazon-s3-and-cloudfront' )
+		);
+
+		$links[] = '<a href="' . static::get_plugin_page_url( array( 'hash' => '/support' ) ) . '">' . __( 'Support', 'amazon-s3-and-cloudfront' ) . '</a>';
+
+		$links[] = AS3CF_Utils::dbrains_link(
+			static::dbrains_url(
+				'/wp-offload-media/feedback/',
+				array( 'utm_campaign' => 'plugin_footer', 'utm_content' => 'footer_navigation' )
+			),
+			__( 'Feedback', 'amazon-s3-and-cloudfront' )
+		);
+
+		$links[] = AS3CF_Utils::dbrains_link(
+			static::dbrains_url(
+				'/wp-offload-media/whats-new/',
+				array( 'utm_campaign' => 'plugin_footer', 'utm_content' => 'footer_navigation' )
+			),
+			$this->plugin_name . ' ' . $this->plugin_version,
+			'whats-new'
+		);
+
+		return join( ' &#8729; ', $links );
 	}
 }

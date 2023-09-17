@@ -31503,11 +31503,6 @@
     	let a1_href_value;
     	let t20;
     	let p;
-    	let t22;
-    	let a2;
-    	let t23;
-    	let span;
-    	let a2_href_value;
 
     	const block = {
     		c: function create() {
@@ -31549,11 +31544,6 @@
     			t20 = space();
     			p = element("p");
     			p.textContent = "* Discount applied automatically.";
-    			t22 = space();
-    			a2 = element("a");
-    			t23 = text("Developed and maintained by ");
-    			span = element("span");
-    			span.textContent = "WP Engine";
     			attr_dev(a0, "class", "as3cf-banner");
     			attr_dev(a0, "href", a0_href_value = /*$urls*/ ctx[0].sidebar_plugin);
     			add_location(a0, file, 5, 1, 90);
@@ -31576,12 +31566,6 @@
     			add_location(p, file, 22, 2, 841);
     			attr_dev(div1, "class", "subscribe");
     			add_location(div1, file, 19, 1, 659);
-    			attr_dev(span, "class", "name");
-    			add_location(span, file, 25, 30, 1007);
-    			attr_dev(a2, "href", a2_href_value = /*$urls*/ ctx[0].sidebar_dbi);
-    			attr_dev(a2, "class", "credits");
-    			attr_dev(a2, "target", "_blank");
-    			add_location(a2, file, 24, 1, 916);
     			attr_dev(div2, "class", "as3cf-sidebar lite");
     			add_location(div2, file, 4, 0, 56);
     		},
@@ -31617,10 +31601,6 @@
     			append_dev(a1, t19);
     			append_dev(div1, t20);
     			append_dev(div1, p);
-    			append_dev(div2, t22);
-    			append_dev(div2, a2);
-    			append_dev(a2, t23);
-    			append_dev(a2, span);
     		},
     		p: function update(ctx, [dirty]) {
     			if (dirty & /*$urls*/ 1 && a0_href_value !== (a0_href_value = /*$urls*/ ctx[0].sidebar_plugin)) {
@@ -31629,10 +31609,6 @@
 
     			if (dirty & /*$urls*/ 1 && a1_href_value !== (a1_href_value = /*$urls*/ ctx[0].sidebar_discount)) {
     				attr_dev(a1, "href", a1_href_value);
-    			}
-
-    			if (dirty & /*$urls*/ 1 && a2_href_value !== (a2_href_value = /*$urls*/ ctx[0].sidebar_dbi)) {
-    				attr_dev(a2, "href", a2_href_value);
     			}
     		},
     		i: noop,

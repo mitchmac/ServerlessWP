@@ -1199,23 +1199,6 @@
   line-height: 1.4em;
   margin-top: 10px;
 }
-#as3cf-settings.wpome .as3cf-sidebar a.credits {
-  display: block;
-  border-top: 0;
-  background: var(--as3cf-sidebar-credits-background-color);
-  padding: 1rem;
-  text-align: center;
-  text-decoration: none;
-  font-size: 12px;
-  font-weight: 300;
-  color: var(--as3cf-color-white);
-}
-#as3cf-settings.wpome .as3cf-sidebar a.credits span.name {
-  font-weight: 500;
-}
-#as3cf-settings.wpome .as3cf-sidebar a.credits:hover {
-  color: var(--as3cf-color-white);
-}
 @media screen and (max-width: 1052px) {
   #as3cf-settings.wpome .as3cf-sidebar {
     position: relative;
@@ -1325,7 +1308,7 @@
 #as3cf-settings.wpome .page-title {
   margin-bottom: 3rem;
 }
-#as3cf-settings.wpome a[target=_blank]:not(.help):not(.licence):not(.email):not(.credits):after {
+#as3cf-settings.wpome a[target=_blank]:not(.help):not(.licence):not(.email):after {
   box-sizing: border-box;
   content: "\f504";
   display: inline-block;
@@ -2374,7 +2357,6 @@
   --as3cf-complete-color: #5BCB86;
   --as3cf-active-nav-color: #4E0D34;
   --as3cf-link-color: #0073AA;
-  --as3cf-sidebar-credits-background-color: #2E2E31;
   --as3cf-wordpress-background-color: #F1F1F1;
   --as3cf-wordpress-border-color: #D6D6D6;
   --as3cf-wordpress-notice-info-color: #02A0D2;
@@ -2414,7 +2396,7 @@ body.settings_page_amazon-s3-and-cloudfront #wpcontent #wpbody #wpbody-content .
   margin: 0 2rem 3rem 2rem;
 }
 body.settings_page_amazon-s3-and-cloudfront #wpfooter {
-  z-index: -2;
+  font-style: italic;
 }
 
 .locked {

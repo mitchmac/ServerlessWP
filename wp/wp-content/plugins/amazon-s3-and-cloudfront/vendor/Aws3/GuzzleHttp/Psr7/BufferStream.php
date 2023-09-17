@@ -1,5 +1,6 @@
 <?php
 
+declare (strict_types=1);
 namespace DeliciousBrains\WP_Offload_Media\Aws3\GuzzleHttp\Psr7;
 
 use DeliciousBrains\WP_Offload_Media\Aws3\Psr\Http\Message\StreamInterface;
@@ -10,35 +11,35 @@ use DeliciousBrains\WP_Offload_Media\Aws3\Psr\Http\Message\StreamInterface;
  * This stream returns a "hwm" metadata value that tells upstream consumers
  * what the configured high water mark of the stream is, or the maximum
  * preferred size of the buffer.
- *
- * @final
  */
-class BufferStream implements StreamInterface
+final class BufferStream implements StreamInterface
 {
+    /** @var int */
     private $hwm;
+    /** @var string */
     private $buffer = '';
     /**
      * @param int $hwm High water mark, representing the preferred maximum
      *                 buffer size. If the size of the buffer exceeds the high
      *                 water mark, then calls to write will continue to succeed
-     *                 but will return false to inform writers to slow down
+     *                 but will return 0 to inform writers to slow down
      *                 until the buffer has been drained by reading from it.
      */
-    public function __construct($hwm = 16384)
+    public function __construct(int $hwm = 16384)
     {
         $this->hwm = $hwm;
     }
-    public function __toString()
+    public function __toString() : string
     {
         return $this->getContents();
     }
-    public function getContents()
+    public function getContents() : string
     {
         $buffer = $this->buffer;
         $this->buffer = '';
         return $buffer;
     }
-    public function close()
+    public function close() : void
     {
         $this->buffer = '';
     }
@@ -47,42 +48,42 @@ class BufferStream implements StreamInterface
         $this->close();
         return null;
     }
-    public function getSize()
+    public function getSize() : ?int
     {
         return \strlen($this->buffer);
     }
-    public function isReadable()
+    public function isReadable() : bool
     {
         return \true;
     }
-    public function isWritable()
+    public function isWritable() : bool
     {
         return \true;
     }
-    public function isSeekable()
+    public function isSeekable() : bool
     {
         return \false;
     }
-    public function rewind()
+    public function rewind() : void
     {
         $this->seek(0);
     }
-    public function seek($offset, $whence = \SEEK_SET)
+    public function seek($offset, $whence = \SEEK_SET) : void
     {
         throw new \RuntimeException('Cannot seek a BufferStream');
     }
-    public function eof()
+    public function eof() : bool
     {
         return \strlen($this->buffer) === 0;
     }
-    public function tell()
+    public function tell() : int
     {
         throw new \RuntimeException('Cannot determine the position of a BufferStream');
     }
     /**
      * Reads data from the buffer.
      */
-    public function read($length)
+    public function read($length) : string
     {
         $currentLength = \strlen($this->buffer);
         if ($length >= $currentLength) {
@@ -99,18 +100,22 @@ class BufferStream implements StreamInterface
     /**
      * Writes data to the buffer.
      */
-    public function write($string)
+    public function write($string) : int
     {
         $this->buffer .= $string;
-        // TODO: What should happen here?
         if (\strlen($this->buffer) >= $this->hwm) {
-            return \false;
+            return 0;
         }
         return \strlen($string);
     }
+    /**
+     * {@inheritdoc}
+     *
+     * @return mixed
+     */
     public function getMetadata($key = null)
     {
-        if ($key == 'hwm') {
+        if ($key === 'hwm') {
             return $this->hwm;
         }
         return $key ? null : [];

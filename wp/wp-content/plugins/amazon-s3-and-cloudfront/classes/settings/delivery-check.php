@@ -228,7 +228,6 @@ class Delivery_Check extends Domain_Check {
 
 		if ( true !== $upload_result ) {
 			$this->remove_test_files();
-			$this->as3cf_item = null;
 
 			return false;
 		}
@@ -264,6 +263,7 @@ class Delivery_Check extends Domain_Check {
 		if ( ! is_null( $this->as3cf_item ) ) {
 			$item_remover = new Remove_Provider_Handler( $this->as3cf );
 			$item_remover->handle( $this->as3cf_item );
+			$this->as3cf_item = null;
 		}
 	}
 

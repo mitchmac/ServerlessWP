@@ -1,5 +1,6 @@
 <?php
 
+declare (strict_types=1);
 namespace DeliciousBrains\WP_Offload_Media\Aws3\GuzzleHttp\Psr7;
 
 use DeliciousBrains\WP_Offload_Media\Aws3\Psr\Http\Message\RequestInterface;
@@ -11,18 +12,16 @@ final class Utils
     /**
      * Remove the items given by the keys, case insensitively from the data.
      *
-     * @param iterable<string> $keys
-     *
-     * @return array
+     * @param string[] $keys
      */
-    public static function caselessRemove($keys, array $data)
+    public static function caselessRemove(array $keys, array $data) : array
     {
         $result = [];
         foreach ($keys as &$key) {
             $key = \strtolower($key);
         }
         foreach ($data as $k => $v) {
-            if (!\in_array(\strtolower($k), $keys)) {
+            if (!\is_string($k) || !\in_array(\strtolower($k), $keys)) {
                 $result[$k] = $v;
             }
         }
@@ -39,7 +38,7 @@ final class Utils
      *
      * @throws \RuntimeException on error.
      */
-    public static function copyToStream(StreamInterface $source, StreamInterface $dest, $maxLen = -1)
+    public static function copyToStream(StreamInterface $source, StreamInterface $dest, int $maxLen = -1) : void
     {
         $bufferSize = 8192;
         if ($maxLen === -1) {
@@ -69,18 +68,15 @@ final class Utils
      * @param int             $maxLen Maximum number of bytes to read. Pass -1
      *                                to read the entire stream.
      *
-     * @return string
-     *
      * @throws \RuntimeException on error.
      */
-    public static function copyToString(StreamInterface $stream, $maxLen = -1)
+    public static function copyToString(StreamInterface $stream, int $maxLen = -1) : string
     {
         $buffer = '';
         if ($maxLen === -1) {
             while (!$stream->eof()) {
                 $buf = $stream->read(1048576);
-                // Using a loose equality here to match on '' and false.
-                if ($buf == null) {
+                if ($buf === '') {
                     break;
                 }
                 $buffer .= $buf;
@@ -90,8 +86,7 @@ final class Utils
         $len = 0;
         while (!$stream->eof() && $len < $maxLen) {
             $buf = $stream->read($maxLen - $len);
-            // Using a loose equality here to match on '' and false.
-            if ($buf == null) {
+            if ($buf === '') {
                 break;
             }
             $buffer .= $buf;
@@ -109,11 +104,9 @@ final class Utils
      * @param string          $algo      Hash algorithm (e.g. md5, crc32, etc)
      * @param bool            $rawOutput Whether or not to use raw output
      *
-     * @return string Returns the hash of the stream
-     *
      * @throws \RuntimeException on error.
      */
-    public static function hash(StreamInterface $stream, $algo, $rawOutput = \false)
+    public static function hash(StreamInterface $stream, string $algo, bool $rawOutput = \false) : string
     {
         $pos = $stream->tell();
         if ($pos > 0) {
@@ -123,7 +116,7 @@ final class Utils
         while (!$stream->eof()) {
             \hash_update($ctx, $stream->read(1048576));
         }
-        $out = \hash_final($ctx, (bool) $rawOutput);
+        $out = \hash_final($ctx, $rawOutput);
         $stream->seek($pos);
         return $out;
     }
@@ -144,10 +137,8 @@ final class Utils
      *
      * @param RequestInterface $request Request to clone and modify.
      * @param array            $changes Changes to apply.
-     *
-     * @return RequestInterface
      */
-    public static function modifyRequest(RequestInterface $request, array $changes)
+    public static function modifyRequest(RequestInterface $request, array $changes) : RequestInterface
     {
         if (!$changes) {
             return $request;
@@ -180,29 +171,26 @@ final class Utils
             $uri = $uri->withQuery($changes['query']);
         }
         if ($request instanceof ServerRequestInterface) {
-            $new = (new ServerRequest(isset($changes['method']) ? $changes['method'] : $request->getMethod(), $uri, $headers, isset($changes['body']) ? $changes['body'] : $request->getBody(), isset($changes['version']) ? $changes['version'] : $request->getProtocolVersion(), $request->getServerParams()))->withParsedBody($request->getParsedBody())->withQueryParams($request->getQueryParams())->withCookieParams($request->getCookieParams())->withUploadedFiles($request->getUploadedFiles());
+            $new = (new ServerRequest($changes['method'] ?? $request->getMethod(), $uri, $headers, $changes['body'] ?? $request->getBody(), $changes['version'] ?? $request->getProtocolVersion(), $request->getServerParams()))->withParsedBody($request->getParsedBody())->withQueryParams($request->getQueryParams())->withCookieParams($request->getCookieParams())->withUploadedFiles($request->getUploadedFiles());
             foreach ($request->getAttributes() as $key => $value) {
                 $new = $new->withAttribute($key, $value);
             }
             return $new;
         }
-        return new Request(isset($changes['method']) ? $changes['method'] : $request->getMethod(), $uri, $headers, isset($changes['body']) ? $changes['body'] : $request->getBody(), isset($changes['version']) ? $changes['version'] : $request->getProtocolVersion());
+        return new Request($changes['method'] ?? $request->getMethod(), $uri, $headers, $changes['body'] ?? $request->getBody(), $changes['version'] ?? $request->getProtocolVersion());
     }
     /**
      * Read a line from the stream up to the maximum allowed buffer length.
      *
      * @param StreamInterface $stream    Stream to read from
      * @param int|null        $maxLength Maximum buffer length
-     *
-     * @return string
      */
-    public static function readLine(StreamInterface $stream, $maxLength = null)
+    public static function readLine(StreamInterface $stream, ?int $maxLength = null) : string
     {
         $buffer = '';
         $size = 0;
         while (!$stream->eof()) {
-            // Using a loose equality here to match on '' and false.
-            if (null == ($byte = $stream->read(1))) {
+            if ('' === ($byte = $stream->read(1))) {
                 return $buffer;
             }
             $buffer .= $byte;
@@ -243,18 +231,16 @@ final class Utils
      *   buffered and used in subsequent reads.
      *
      * @param resource|string|int|float|bool|StreamInterface|callable|\Iterator|null $resource Entity body data
-     * @param array                                                                  $options  Additional options
-     *
-     * @return StreamInterface
+     * @param array{size?: int, metadata?: array}                                    $options  Additional options
      *
      * @throws \InvalidArgumentException if the $resource arg is not valid.
      */
-    public static function streamFor($resource = '', array $options = [])
+    public static function streamFor($resource = '', array $options = []) : StreamInterface
     {
         if (\is_scalar($resource)) {
             $stream = self::tryFopen('php://temp', 'r+');
             if ($resource !== '') {
-                \fwrite($stream, $resource);
+                \fwrite($stream, (string) $resource);
                 \fseek($stream, 0);
             }
             return new Stream($stream, $options);
@@ -265,15 +251,16 @@ final class Utils
                  * The 'php://input' is a special stream with quirks and inconsistencies.
                  * We avoid using that stream by reading it into php://temp
                  */
-                $metaData = \stream_get_meta_data($resource);
-                if (isset($metaData['uri']) && $metaData['uri'] === 'php://input') {
+                /** @var resource $resource */
+                if ((\stream_get_meta_data($resource)['uri'] ?? '') === 'php://input') {
                     $stream = self::tryFopen('php://temp', 'w+');
-                    \fwrite($stream, \stream_get_contents($resource));
+                    \stream_copy_to_stream($resource, $stream);
                     \fseek($stream, 0);
                     $resource = $stream;
                 }
                 return new Stream($resource, $options);
             case 'object':
+                /** @var object $resource */
                 if ($resource instanceof StreamInterface) {
                     return $resource;
                 } elseif ($resource instanceof \Iterator) {
@@ -286,7 +273,7 @@ final class Utils
                         return $result;
                     }, $options);
                 } elseif (\method_exists($resource, '__toString')) {
-                    return Utils::streamFor((string) $resource, $options);
+                    return self::streamFor((string) $resource, $options);
                 }
                 break;
             case 'NULL':
@@ -310,14 +297,15 @@ final class Utils
      *
      * @throws \RuntimeException if the file cannot be opened
      */
-    public static function tryFopen($filename, $mode)
+    public static function tryFopen(string $filename, string $mode)
     {
         $ex = null;
-        \set_error_handler(function () use($filename, $mode, &$ex) {
-            $ex = new \RuntimeException(\sprintf('Unable to open "%s" using mode "%s": %s', $filename, $mode, \func_get_args()[1]));
+        \set_error_handler(static function (int $errno, string $errstr) use($filename, $mode, &$ex) : bool {
+            $ex = new \RuntimeException(\sprintf('Unable to open "%s" using mode "%s": %s', $filename, $mode, $errstr));
             return \true;
         });
         try {
+            /** @var resource $handle */
             $handle = \fopen($filename, $mode);
         } catch (\Throwable $e) {
             $ex = new \RuntimeException(\sprintf('Unable to open "%s" using mode "%s": %s', $filename, $mode, $e->getMessage()), 0, $e);
@@ -330,6 +318,40 @@ final class Utils
         return $handle;
     }
     /**
+     * Safely gets the contents of a given stream.
+     *
+     * When stream_get_contents fails, PHP normally raises a warning. This
+     * function adds an error handler that checks for errors and throws an
+     * exception instead.
+     *
+     * @param resource $stream
+     *
+     * @throws \RuntimeException if the stream cannot be read
+     */
+    public static function tryGetContents($stream) : string
+    {
+        $ex = null;
+        \set_error_handler(static function (int $errno, string $errstr) use(&$ex) : bool {
+            $ex = new \RuntimeException(\sprintf('Unable to read stream contents: %s', $errstr));
+            return \true;
+        });
+        try {
+            /** @var string|false $contents */
+            $contents = \stream_get_contents($stream);
+            if ($contents === \false) {
+                $ex = new \RuntimeException('Unable to read stream contents');
+            }
+        } catch (\Throwable $e) {
+            $ex = new \RuntimeException(\sprintf('Unable to read stream contents: %s', $e->getMessage()), 0, $e);
+        }
+        \restore_error_handler();
+        if ($ex) {
+            /** @var $ex \RuntimeException */
+            throw $ex;
+        }
+        return $contents;
+    }
+    /**
      * Returns a UriInterface for the given value.
      *
      * This function accepts a string or UriInterface and returns a
@@ -338,11 +360,9 @@ final class Utils
      *
      * @param string|UriInterface $uri
      *
-     * @return UriInterface
-     *
      * @throws \InvalidArgumentException
      */
-    public static function uriFor($uri)
+    public static function uriFor($uri) : UriInterface
     {
         if ($uri instanceof UriInterface) {
             return $uri;
