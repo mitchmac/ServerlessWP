@@ -1,0 +1,21 @@
+name: Update WordPress
+on:
+  schedule:
+  - cron: "0 0 * * *"
+jobs:
+  update:
+    name: Update WordPress
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - run: ./util/upgrade-wp.sh
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v5
+        with:
+          commit-message: Automated WordPress version update
+          title: WordPress version update
+          committer: "Mitch MacKenzie <mitchmac@gmail.com>"
+          assignees: mitchmac
+          delete-branch: true
+          branch: 'wordpress-version-update'
