@@ -2,6 +2,7 @@ name: Update WordPress
 on:
   schedule:
   - cron: "0 0 * * *"
+  workflow_dispatch:
 jobs:
   update:
     name: Update WordPress
