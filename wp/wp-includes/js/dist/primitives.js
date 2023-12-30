@@ -144,20 +144,20 @@ __webpack_require__.r(__webpack_exports__);
 
 // EXPORTS
 __webpack_require__.d(__webpack_exports__, {
-  "BlockQuotation": function() { return /* reexport */ BlockQuotation; },
-  "Circle": function() { return /* reexport */ Circle; },
-  "Defs": function() { return /* reexport */ Defs; },
-  "G": function() { return /* reexport */ G; },
-  "HorizontalRule": function() { return /* reexport */ HorizontalRule; },
-  "Line": function() { return /* reexport */ Line; },
-  "LinearGradient": function() { return /* reexport */ LinearGradient; },
-  "Path": function() { return /* reexport */ Path; },
-  "Polygon": function() { return /* reexport */ Polygon; },
-  "RadialGradient": function() { return /* reexport */ RadialGradient; },
-  "Rect": function() { return /* reexport */ Rect; },
-  "SVG": function() { return /* reexport */ SVG; },
-  "Stop": function() { return /* reexport */ Stop; },
-  "View": function() { return /* reexport */ View; }
+  BlockQuotation: function() { return /* reexport */ BlockQuotation; },
+  Circle: function() { return /* reexport */ Circle; },
+  Defs: function() { return /* reexport */ Defs; },
+  G: function() { return /* reexport */ G; },
+  HorizontalRule: function() { return /* reexport */ HorizontalRule; },
+  Line: function() { return /* reexport */ Line; },
+  LinearGradient: function() { return /* reexport */ LinearGradient; },
+  Path: function() { return /* reexport */ Path; },
+  Polygon: function() { return /* reexport */ Polygon; },
+  RadialGradient: function() { return /* reexport */ RadialGradient; },
+  Rect: function() { return /* reexport */ Rect; },
+  SVG: function() { return /* reexport */ SVG; },
+  Stop: function() { return /* reexport */ Stop; },
+  View: function() { return /* reexport */ View; }
 });
 
 // EXTERNAL MODULE: ./node_modules/classnames/index.js
@@ -169,6 +169,7 @@ var external_wp_element_namespaceObject = window["wp"]["element"];
 /**
  * External dependencies
  */
+
 
 /**
  * WordPress dependencies
@@ -182,96 +183,100 @@ var external_wp_element_namespaceObject = window["wp"]["element"];
  *
  * @return {JSX.Element} Circle component
  */
-
 const Circle = props => (0,external_wp_element_namespaceObject.createElement)('circle', props);
+
 /**
  * @param {import('react').ComponentPropsWithoutRef<'g'>} props
  *
  * @return {JSX.Element} G component
  */
-
 const G = props => (0,external_wp_element_namespaceObject.createElement)('g', props);
+
 /**
  * @param {import('react').ComponentPropsWithoutRef<'line'>} props
  *
  * @return {JSX.Element} Path component
  */
-
 const Line = props => (0,external_wp_element_namespaceObject.createElement)('line', props);
+
 /**
  * @param {import('react').ComponentPropsWithoutRef<'path'>} props
  *
  * @return {JSX.Element} Path component
  */
-
 const Path = props => (0,external_wp_element_namespaceObject.createElement)('path', props);
+
 /**
  * @param {import('react').ComponentPropsWithoutRef<'polygon'>} props
  *
  * @return {JSX.Element} Polygon component
  */
-
 const Polygon = props => (0,external_wp_element_namespaceObject.createElement)('polygon', props);
+
 /**
  * @param {import('react').ComponentPropsWithoutRef<'rect'>} props
  *
  * @return {JSX.Element} Rect component
  */
-
 const Rect = props => (0,external_wp_element_namespaceObject.createElement)('rect', props);
+
 /**
  * @param {import('react').ComponentPropsWithoutRef<'defs'>} props
  *
  * @return {JSX.Element} Defs component
  */
-
 const Defs = props => (0,external_wp_element_namespaceObject.createElement)('defs', props);
+
 /**
  * @param {import('react').ComponentPropsWithoutRef<'radialGradient'>} props
  *
  * @return {JSX.Element} RadialGradient component
  */
-
 const RadialGradient = props => (0,external_wp_element_namespaceObject.createElement)('radialGradient', props);
+
 /**
  * @param {import('react').ComponentPropsWithoutRef<'linearGradient'>} props
  *
  * @return {JSX.Element} LinearGradient component
  */
-
 const LinearGradient = props => (0,external_wp_element_namespaceObject.createElement)('linearGradient', props);
+
 /**
  * @param {import('react').ComponentPropsWithoutRef<'stop'>} props
  *
  * @return {JSX.Element} Stop component
  */
-
 const Stop = props => (0,external_wp_element_namespaceObject.createElement)('stop', props);
+const SVG = (0,external_wp_element_namespaceObject.forwardRef)(
 /**
- *
- * @param {SVGProps} props isPressed indicates whether the SVG should appear as pressed.
- *                         Other props will be passed through to svg component.
+ * @param {SVGProps}                                    props isPressed indicates whether the SVG should appear as pressed.
+ *                                                            Other props will be passed through to svg component.
+ * @param {import('react').ForwardedRef<SVGSVGElement>} ref   The forwarded ref to the SVG element.
  *
  * @return {JSX.Element} Stop component
  */
-
-const SVG = ({
+({
   className,
   isPressed,
   ...props
-}) => {
-  const appliedProps = { ...props,
+}, ref) => {
+  const appliedProps = {
+    ...props,
     className: classnames_default()(className, {
       'is-pressed': isPressed
     }) || undefined,
     'aria-hidden': true,
     focusable: false
-  }; // Disable reason: We need to have a way to render HTML tag for web.
-  // eslint-disable-next-line react/forbid-elements
+  };
 
-  return (0,external_wp_element_namespaceObject.createElement)("svg", { ...appliedProps
+  // Disable reason: We need to have a way to render HTML tag for web.
+  // eslint-disable-next-line react/forbid-elements
+  return (0,external_wp_element_namespaceObject.createElement)("svg", {
+    ...appliedProps,
+    ref: ref
   });
-};
+});
+SVG.displayName = 'SVG';
 
 ;// CONCATENATED MODULE: ./node_modules/@wordpress/primitives/build-module/horizontal-rule/index.js
 const HorizontalRule = 'hr';
