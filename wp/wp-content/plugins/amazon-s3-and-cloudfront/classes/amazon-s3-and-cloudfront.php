@@ -4277,9 +4277,13 @@ class Amazon_S3_And_CloudFront extends AS3CF_Plugin_Base {
 	 *
 	 * @param string $url
 	 *
-	 * @return string
+	 * @return string|WP_Error
 	 */
 	public function maybe_remove_query_string( $url ) {
+		if ( ! is_string( $url ) ) {
+			return $url;
+		}
+
 		$parts = explode( '?', $url );
 
 		return reset( $parts );

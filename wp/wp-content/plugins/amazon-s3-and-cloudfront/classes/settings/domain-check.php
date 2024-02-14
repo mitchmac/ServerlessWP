@@ -282,8 +282,12 @@ class Domain_Check {
 			 */
 			'sslverify' => apply_filters( 'as3cf_assets_pull_test_endpoint_sslverify', true, $this->domain ),
 
-			// Make sure WordPress knows this is a REST-API request.
-			'headers'   => array( 'content-type' => 'application/json' ),
+			// Make sure headers work for various services.
+			'headers'   => array(
+				'accept'     => '*/*',
+				'user-agent' => 'wp-offload-media',
+				'referer'    => home_url(),
+			),
 		) );
 
 		if ( is_wp_error( $response ) ) {

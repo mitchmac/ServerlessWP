@@ -589,6 +589,30 @@ class Media_Library_Item extends Item {
 	}
 
 	/**
+	 * Returns filesize from metadata, if we have it, so that file or stream
+	 * wrapper does not need to be hit.
+	 *
+	 * @return false|int
+	 */
+	public function get_filesize() {
+		// Prefer the canonical attachment filesize.
+		$metadata = get_post_meta( $this->source_id(), '_wp_attachment_metadata', true );
+
+		if ( ! empty( $metadata['filesize'] ) && is_int( $metadata['filesize'] ) ) {
+			return $metadata['filesize'];
+		}
+
+		// If offloaded and removed, we should have squirreled away the filesize.
+		$filesize = get_post_meta( $this->source_id(), 'as3cf_filesize_total', true );
+
+		if ( ! empty( $filesize ) && is_int( $filesize ) ) {
+			return $filesize;
+		}
+
+		return false;
+	}
+
+	/**
 	 * Update filesize and as3cf_filesize_total metadata on the underlying media library item
 	 * after removing the local file.
 	 *

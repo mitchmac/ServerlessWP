@@ -10,9 +10,9 @@ use DeliciousBrains\WP_Offload_Media\Aws3\Psr\Http\Message\StreamInterface;
  */
 trait MessageTrait
 {
-    /** @var array<string, string[]> Map of all registered headers, as original name => array of values */
+    /** @var string[][] Map of all registered headers, as original name => array of values */
     private $headers = [];
-    /** @var array<string, string> Map of lowercase header name => original name at registration */
+    /** @var string[] Map of lowercase header name => original name at registration */
     private $headerNames = [];
     /** @var string */
     private $protocol = '1.1';
@@ -108,7 +108,7 @@ trait MessageTrait
         return $new;
     }
     /**
-     * @param array<string|int, string|string[]> $headers
+     * @param (string|string[])[] $headers
      */
     private function setHeaders(array $headers) : void
     {
@@ -155,7 +155,7 @@ trait MessageTrait
      *
      * @return string[] Trimmed header values
      *
-     * @see https://tools.ietf.org/html/rfc7230#section-3.2.4
+     * @see https://datatracker.ietf.org/doc/html/rfc7230#section-3.2.4
      */
     private function trimAndValidateHeaderValues(array $values) : array
     {
@@ -169,7 +169,7 @@ trait MessageTrait
         }, \array_values($values));
     }
     /**
-     * @see https://tools.ietf.org/html/rfc7230#section-3.2
+     * @see https://datatracker.ietf.org/doc/html/rfc7230#section-3.2
      *
      * @param mixed $header
      */
@@ -183,7 +183,7 @@ trait MessageTrait
         }
     }
     /**
-     * @see https://tools.ietf.org/html/rfc7230#section-3.2
+     * @see https://datatracker.ietf.org/doc/html/rfc7230#section-3.2
      *
      * field-value    = *( field-content / obs-fold )
      * field-content  = field-vchar [ 1*( SP / HTAB ) field-vchar ]

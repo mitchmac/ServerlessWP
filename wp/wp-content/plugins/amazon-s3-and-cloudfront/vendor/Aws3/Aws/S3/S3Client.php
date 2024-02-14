@@ -9,21 +9,22 @@ use DeliciousBrains\WP_Offload_Media\Aws3\Aws\AwsClient;
 use DeliciousBrains\WP_Offload_Media\Aws3\Aws\CacheInterface;
 use DeliciousBrains\WP_Offload_Media\Aws3\Aws\ClientResolver;
 use DeliciousBrains\WP_Offload_Media\Aws3\Aws\Command;
+use DeliciousBrains\WP_Offload_Media\Aws3\Aws\CommandInterface;
+use DeliciousBrains\WP_Offload_Media\Aws3\Aws\Configuration\ConfigurationResolver;
 use DeliciousBrains\WP_Offload_Media\Aws3\Aws\Exception\AwsException;
 use DeliciousBrains\WP_Offload_Media\Aws3\Aws\HandlerList;
+use DeliciousBrains\WP_Offload_Media\Aws3\Aws\Identity\S3\S3ExpressIdentityProvider;
 use DeliciousBrains\WP_Offload_Media\Aws3\Aws\InputValidationMiddleware;
 use DeliciousBrains\WP_Offload_Media\Aws3\Aws\Middleware;
+use DeliciousBrains\WP_Offload_Media\Aws3\Aws\ResultInterface;
 use DeliciousBrains\WP_Offload_Media\Aws3\Aws\Retry\QuotaManager;
 use DeliciousBrains\WP_Offload_Media\Aws3\Aws\RetryMiddleware;
-use DeliciousBrains\WP_Offload_Media\Aws3\Aws\ResultInterface;
-use DeliciousBrains\WP_Offload_Media\Aws3\Aws\CommandInterface;
 use DeliciousBrains\WP_Offload_Media\Aws3\Aws\RetryMiddlewareV2;
+use DeliciousBrains\WP_Offload_Media\Aws3\Aws\S3\RegionalEndpoint\ConfigurationProvider;
 use DeliciousBrains\WP_Offload_Media\Aws3\Aws\S3\UseArnRegion\Configuration;
 use DeliciousBrains\WP_Offload_Media\Aws3\Aws\S3\UseArnRegion\ConfigurationInterface;
 use DeliciousBrains\WP_Offload_Media\Aws3\Aws\S3\UseArnRegion\ConfigurationProvider as UseArnRegionConfigurationProvider;
-use DeliciousBrains\WP_Offload_Media\Aws3\Aws\S3\RegionalEndpoint\ConfigurationProvider;
 use DeliciousBrains\WP_Offload_Media\Aws3\GuzzleHttp\Exception\RequestException;
-use DeliciousBrains\WP_Offload_Media\Aws3\GuzzleHttp\Promise\Promise;
 use DeliciousBrains\WP_Offload_Media\Aws3\GuzzleHttp\Promise\PromiseInterface;
 use DeliciousBrains\WP_Offload_Media\Aws3\Psr\Http\Message\RequestInterface;
 /**
@@ -39,6 +40,8 @@ use DeliciousBrains\WP_Offload_Media\Aws3\Psr\Http\Message\RequestInterface;
  * @method \GuzzleHttp\Promise\Promise createBucketAsync(array $args = [])
  * @method \Aws\Result createMultipartUpload(array $args = [])
  * @method \GuzzleHttp\Promise\Promise createMultipartUploadAsync(array $args = [])
+ * @method \Aws\Result createSession(array $args = [])
+ * @method \GuzzleHttp\Promise\Promise createSessionAsync(array $args = [])
  * @method \Aws\Result deleteBucket(array $args = [])
  * @method \GuzzleHttp\Promise\Promise deleteBucketAsync(array $args = [])
  * @method \Aws\Result deleteBucketAnalyticsConfiguration(array $args = [])
@@ -149,6 +152,8 @@ use DeliciousBrains\WP_Offload_Media\Aws3\Psr\Http\Message\RequestInterface;
  * @method \GuzzleHttp\Promise\Promise listBucketMetricsConfigurationsAsync(array $args = [])
  * @method \Aws\Result listBuckets(array $args = [])
  * @method \GuzzleHttp\Promise\Promise listBucketsAsync(array $args = [])
+ * @method \Aws\Result listDirectoryBuckets(array $args = [])
+ * @method \GuzzleHttp\Promise\Promise listDirectoryBucketsAsync(array $args = [])
  * @method \Aws\Result listMultipartUploads(array $args = [])
  * @method \GuzzleHttp\Promise\Promise listMultipartUploadsAsync(array $args = [])
  * @method \Aws\Result listObjectVersions(array $args = [])
@@ -234,7 +239,7 @@ class S3Client extends AwsClient implements S3ClientInterface
         $args = parent::getArguments();
         $args['retries']['fn'] = [__CLASS__, '_applyRetryConfig'];
         $args['api_provider']['fn'] = [__CLASS__, '_applyApiProvider'];
-        return $args + ['bucket_endpoint' => ['type' => 'config', 'valid' => ['bool'], 'doc' => 'Set to true to send requests to a hardcoded ' . 'bucket endpoint rather than create an endpoint as a ' . 'result of injecting the bucket into the URL. This ' . 'option is useful for interacting with CNAME endpoints.'], 'use_arn_region' => ['type' => 'config', 'valid' => ['bool', Configuration::class, CacheInterface::class, 'callable'], 'doc' => 'Set to true to allow passed in ARNs to override' . ' client region. Accepts...', 'fn' => [__CLASS__, '_apply_use_arn_region'], 'default' => [UseArnRegionConfigurationProvider::class, 'defaultProvider']], 'use_accelerate_endpoint' => ['type' => 'config', 'valid' => ['bool'], 'doc' => 'Set to true to send requests to an S3 Accelerate' . ' endpoint by default. Can be enabled or disabled on' . ' individual operations by setting' . ' \'@use_accelerate_endpoint\' to true or false. Note:' . ' you must enable S3 Accelerate on a bucket before it can' . ' be accessed via an Accelerate endpoint.', 'default' => \false], 'use_path_style_endpoint' => ['type' => 'config', 'valid' => ['bool'], 'doc' => 'Set to true to send requests to an S3 path style' . ' endpoint by default.' . ' Can be enabled or disabled on individual operations by setting' . ' \'@use_path_style_endpoint\' to true or false.', 'default' => \false], 'disable_multiregion_access_points' => ['type' => 'config', 'valid' => ['bool'], 'doc' => 'Set to true to disable the usage of' . ' multi region access points. These are enabled by default.' . ' Can be enabled or disabled on individual operations by setting' . ' \'@disable_multiregion_access_points\' to true or false.', 'default' => \false]];
+        return $args + ['bucket_endpoint' => ['type' => 'config', 'valid' => ['bool'], 'doc' => 'Set to true to send requests to a hardcoded ' . 'bucket endpoint rather than create an endpoint as a ' . 'result of injecting the bucket into the URL. This ' . 'option is useful for interacting with CNAME endpoints.'], 'use_arn_region' => ['type' => 'config', 'valid' => ['bool', Configuration::class, CacheInterface::class, 'callable'], 'doc' => 'Set to true to allow passed in ARNs to override' . ' client region. Accepts...', 'fn' => [__CLASS__, '_apply_use_arn_region'], 'default' => [UseArnRegionConfigurationProvider::class, 'defaultProvider']], 'use_accelerate_endpoint' => ['type' => 'config', 'valid' => ['bool'], 'doc' => 'Set to true to send requests to an S3 Accelerate' . ' endpoint by default. Can be enabled or disabled on' . ' individual operations by setting' . ' \'@use_accelerate_endpoint\' to true or false. Note:' . ' you must enable S3 Accelerate on a bucket before it can' . ' be accessed via an Accelerate endpoint.', 'default' => \false], 'use_path_style_endpoint' => ['type' => 'config', 'valid' => ['bool'], 'doc' => 'Set to true to send requests to an S3 path style' . ' endpoint by default.' . ' Can be enabled or disabled on individual operations by setting' . ' \'@use_path_style_endpoint\' to true or false.', 'default' => \false], 'disable_multiregion_access_points' => ['type' => 'config', 'valid' => ['bool'], 'doc' => 'Set to true to disable the usage of' . ' multi region access points. These are enabled by default.' . ' Can be enabled or disabled on individual operations by setting' . ' \'@disable_multiregion_access_points\' to true or false.', 'default' => \false], 'disable_express_session_auth' => ['type' => 'config', 'valid' => ['bool'], 'doc' => 'Set to true to disable the usage of' . ' s3 express session authentication. This is enabled by default.', 'default' => [__CLASS__, '_default_disable_express_session_auth']], 's3_express_identity_provider' => ['type' => 'config', 'valid' => ['bool', 'callable'], 'doc' => 'Specifies the provider used to generate identities to sign s3 express requests.  ' . 'Set to `false` to disable s3 express auth, or a callable provider used to create s3 express ' . 'identities or return null.', 'default' => [__CLASS__, '_default_s3_express_identity_provider']]];
     }
     /**
      * {@inheritdoc}
@@ -308,6 +313,9 @@ class S3Client extends AwsClient implements S3ClientInterface
             $stack->appendBuild(S3EndpointMiddleware::wrap($this->getRegion(), $this->getConfig('endpoint_provider'), ['accelerate' => $this->getConfig('use_accelerate_endpoint'), 'path_style' => $this->getConfig('use_path_style_endpoint'), 'use_fips_endpoint' => $this->getConfig('use_fips_endpoint'), 'dual_stack' => $this->getConfig('use_dual_stack_endpoint')->isUseDualStackEndpoint()]), 's3.endpoint_middleware');
         }
         $stack->appendBuild(BucketEndpointArnMiddleware::wrap($this->getApi(), $this->getRegion(), ['use_arn_region' => $this->getConfig('use_arn_region'), 'accelerate' => $this->getConfig('use_accelerate_endpoint'), 'path_style' => $this->getConfig('use_path_style_endpoint'), 'dual_stack' => $this->getConfig('use_dual_stack_endpoint')->isUseDualStackEndpoint(), 'use_fips_endpoint' => $this->getConfig('use_fips_endpoint'), 'disable_multiregion_access_points' => $this->getConfig('disable_multiregion_access_points'), 'endpoint' => isset($args['endpoint']) ? $args['endpoint'] : null], $this->isUseEndpointV2()), 's3.bucket_endpoint_arn');
+        if ($this->getConfig('disable_express_session_auth')) {
+            $stack->prependSign($this->getDisableExpressSessionAuthMiddleware(), 's3.disable_express_session_auth');
+        }
         $stack->appendValidate(InputValidationMiddleware::wrap($this->getApi(), self::$mandatoryAttributes), 'input_validation_middleware');
         $stack->appendSign(PutObjectUrlMiddleware::wrap(), 's3.put_object_url');
         $stack->appendSign(PermanentRedirectMiddleware::wrap(), 's3.permanent_redirect');
@@ -318,7 +326,7 @@ class S3Client extends AwsClient implements S3ClientInterface
         $stack->appendInit($this->getHeadObjectMiddleware(), 's3.head_object');
         if ($this->isUseEndpointV2()) {
             $this->processEndpointV2Model();
-            $stack->after('builderV2', 's3.check_empty_path_with_query', $this->getEmptyPathWithQuery());
+            $stack->after('builder', 's3.check_empty_path_with_query', $this->getEmptyPathWithQuery());
         }
     }
     /**
@@ -364,10 +372,16 @@ class S3Client extends AwsClient implements S3ClientInterface
         $command->getHandlerList()->remove('signer');
         $request = \DeliciousBrains\WP_Offload_Media\Aws3\Aws\serialize($command);
         $signing_name = empty($command->getAuthSchemes()) ? $this->getSigningName($request->getUri()->getHost()) : $command->getAuthSchemes()['name'];
-        $signature_version = empty($command->getAuthSchemes()) ? $this->getConfig('signature_version') : $command->getAuthSchemes()['version'];
+        $signature_version = $this->getSignatureVersionFromCommand($command);
         /** @var \Aws\Signature\SignatureInterface $signer */
         $signer = \call_user_func($this->getSignatureProvider(), $signature_version, $signing_name, $this->getConfig('signing_region'));
-        return $signer->presign($request, $this->getCredentials()->wait(), $expires, $options);
+        if ($signature_version == 'v4-s3express') {
+            $provider = $this->getConfig('s3_express_identity_provider');
+            $credentials = $provider($command)->wait();
+        } else {
+            $credentials = $this->getCredentials()->wait();
+        }
+        return $signer->presign($request, $credentials, $expires, $options);
     }
     /**
      * Returns the URL to an object identified by its bucket and key.
@@ -513,6 +527,25 @@ class S3Client extends AwsClient implements S3ClientInterface
         };
     }
     /**
+     * Provides a middleware that disables express session auth when
+     * customers opt out of it.
+     *
+     * @return \Closure
+     */
+    private function getDisableExpressSessionAuthMiddleware()
+    {
+        return function (callable $handler) {
+            return function (CommandInterface $command, RequestInterface $request = null) use($handler) {
+                if (!empty($command->getAuthSchemes()['version']) && $command->getAuthSchemes()['version'] == 'v4-s3express') {
+                    $authScheme = $command->getAuthSchemes();
+                    $authScheme['version'] = 's3v4';
+                    $command->setAuthSchemes($authScheme);
+                }
+                return $handler($command, $request);
+            };
+        };
+    }
+    /**
      * Special handling for when the service name is s3-object-lambda.
      * So, if the host contains s3-object-lambda, then the service name
      * returned is s3-object-lambda, otherwise the default signing service is returned.
@@ -525,6 +558,17 @@ class S3Client extends AwsClient implements S3ClientInterface
             return 's3-object-lambda';
         }
         return $this->getConfig('signing_name');
+    }
+    public static function _default_disable_express_session_auth(array &$args)
+    {
+        return ConfigurationResolver::resolve('s3_disable_express_session_auth', \false, 'bool', $args);
+    }
+    public static function _default_s3_express_identity_provider(array $args)
+    {
+        if ($args['config']['disable_express_session_auth']) {
+            return \false;
+        }
+        return new S3ExpressIdentityProvider($args['region']);
     }
     /**
      * Modifies API definition to remove `Bucket` from request URIs.
@@ -710,5 +754,14 @@ class S3Client extends AwsClient implements S3ClientInterface
             $examples['PutObject'] = [$putObjectExample];
         }
         return $examples;
+    }
+    /**
+     * @param CommandInterface $command
+     * @return array|mixed|null
+     */
+    private function getSignatureVersionFromCommand(CommandInterface $command)
+    {
+        $signatureVersion = empty($command->getAuthSchemes()) ? $this->getConfig('signature_version') : $command->getAuthSchemes()['version'];
+        return $signatureVersion;
     }
 }

@@ -967,7 +967,7 @@ if ( ! class_exists( 'AS3CF_Utils' ) ) {
 			$broken = false;
 
 			if ( is_serialized( $data ) ) {
-				$value = @unserialize( $data ); // @phpcs:ignore
+				$value = self::maybe_unserialize( $data );
 
 				if ( false === $value && serialize( false ) !== $data ) {
 					$broken = true;
@@ -995,7 +995,7 @@ if ( ! class_exists( 'AS3CF_Utils' ) ) {
 				return false;
 			}
 
-			$pattern    = '/\\\";(s|a|o|i|b|d|})./';
+			$pattern    = '/\\\";(s|a|o|i|b|d|N|})./';
 			$end_quotes = preg_match_all( $pattern, $data, $matches );
 			if ( $end_quotes == 0 ) {
 				return false;
@@ -1044,6 +1044,21 @@ if ( ! class_exists( 'AS3CF_Utils' ) ) {
 			}
 
 			return $is_json;
+		}
+
+		/**
+		 * Maybe unserialize data, but not if an object.
+		 *
+		 * @param mixed $data
+		 *
+		 * @return mixed
+		 */
+		public static function maybe_unserialize( $data ) {
+			if ( is_serialized( $data ) ) {
+				return @unserialize( $data, array( 'allowed_classes' => false ) ); // @phpcs:ignore
+			}
+
+			return $data;
 		}
 	}
 }

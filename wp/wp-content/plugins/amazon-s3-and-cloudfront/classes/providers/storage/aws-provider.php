@@ -118,6 +118,7 @@ class AWS_Provider extends Storage_Provider {
 		'us-west-1'      => 'US West (N. California)',
 		'us-west-2'      => 'US West (Oregon)',
 		'ca-central-1'   => 'Canada (Central)',
+		'ca-west-1'      => 'Canada West (Calgary)',
 		'af-south-1'     => 'Africa (Cape Town)',
 		'ap-east-1'      => 'Asia Pacific (Hong Kong)',
 		'ap-south-1'     => 'Asia Pacific (Mumbai)',
@@ -127,6 +128,7 @@ class AWS_Provider extends Storage_Provider {
 		'ap-southeast-1' => 'Asia Pacific (Singapore)',
 		'ap-southeast-2' => 'Asia Pacific (Sydney)',
 		'ap-southeast-3' => 'Asia Pacific (Jakarta)',
+		'ap-southeast-4' => 'Asia Pacific (Melbourne)',
 		'ap-northeast-1' => 'Asia Pacific (Tokyo)',
 		'cn-north-1'     => 'China (Beijing)',
 		'cn-northwest-1' => 'China (Ningxia)',
@@ -134,10 +136,11 @@ class AWS_Provider extends Storage_Provider {
 		'eu-central-2'   => 'EU (Zurich)',
 		'eu-west-1'      => 'EU (Ireland)',
 		'eu-west-2'      => 'EU (London)',
+		'eu-west-3'      => 'EU (Paris)',
 		'eu-south-1'     => 'EU (Milan)',
 		'eu-south-2'     => 'EU (Spain)',
-		'eu-west-3'      => 'EU (Paris)',
 		'eu-north-1'     => 'EU (Stockholm)',
+		'il-central-1'   => 'Israel (Tel Aviv)',
 		'me-south-1'     => 'Middle East (Bahrain)',
 		'me-central-1'   => 'Middle East (UAE)',
 		'sa-east-1'      => 'South America (São Paulo)',
@@ -812,11 +815,15 @@ class AWS_Provider extends Storage_Provider {
 	public function can_write( $bucket, $key, $file_contents ) {
 		try {
 			// Attempt to create the test file.
-			$this->upload_object( array(
-				'Bucket' => $bucket,
-				'Key'    => $key,
-				'Body'   => $file_contents,
-			) );
+			$this->upload_object(
+				static::filter_object_meta(
+					array(
+						'Bucket' => $bucket,
+						'Key'    => $key,
+						'Body'   => $file_contents,
+					)
+				)
+			);
 
 			// delete it straight away if created
 			$this->delete_object( array(

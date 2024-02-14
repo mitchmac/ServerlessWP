@@ -2,16 +2,16 @@
 # # This file is distributed under the same license as the amazon-s3-and-cloudfront package.
 msgid ""
 msgstr ""
-"Project-Id-Version: amazon-s3-and-cloudfront 3.2.5\n"
+"Project-Id-Version: amazon-s3-and-cloudfront 3.2.7\n"
 "Report-Msgid-Bugs-To: mailto:nom@deliciousbrains.com\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2023-08-24T10:27:02+00:00\n"
+"POT-Creation-Date: 2024-02-13T11:02:13+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
-"X-Generator: WP-CLI 2.8.1\n"
+"X-Generator: WP-CLI 2.9.0\n"
 "X-Domain: amazon-s3-and-cloudfront\n"
 
 #. Plugin Name of the plugin
@@ -41,7 +41,7 @@ msgstr ""
 
 #: classes/amazon-s3-and-cloudfront.php:570
 #: classes/amazon-s3-and-cloudfront.php:587
-#: classes/amazon-s3-and-cloudfront.php:4628
+#: classes/amazon-s3-and-cloudfront.php:4632
 msgid "Unknown"
 msgstr ""
 
@@ -952,19 +952,19 @@ msgstr ""
 msgid "You had the \"Always non-SSL\" option selected in your settings, but we've removed this option in version 1.3. We'll now use HTTPS when the request is HTTPS and regular HTTP when the request is HTTP. This should work fine for your site, but please take a poke around and make sure things are working ok. See %s for more details on why we did this and how you can revert back to the old behavior."
 msgstr ""
 
-#: classes/amazon-s3-and-cloudfront.php:4434
+#: classes/amazon-s3-and-cloudfront.php:4438
 msgid "<strong>Amazon Web Services Plugin No Longer Required</strong> &mdash; As of version 1.6 of WP Offload Media, the <a href=\"%1$s\">Amazon Web Services</a> plugin is no longer required. We have removed the dependency by bundling a small portion of the AWS SDK into WP Offload Media. As long as none of your other active plugins or themes depend on the Amazon Web Services plugin, it should be safe to deactivate and delete it. %2$s"
 msgstr ""
 
-#: classes/amazon-s3-and-cloudfront.php:4466
+#: classes/amazon-s3-and-cloudfront.php:4470
 msgid "<strong>WP Offload Media Settings Moved</strong> &mdash; You now define your AWS keys for WP Offload Media in the new <a href=\"%1$s\">Settings tab</a>. Saving settings in the form below will have no effect on WP Offload Media. %2$s"
 msgstr ""
 
-#: classes/amazon-s3-and-cloudfront.php:4779
+#: classes/amazon-s3-and-cloudfront.php:4783
 msgid "Upgrade to offload %d remaining media item"
 msgstr ""
 
-#: classes/amazon-s3-and-cloudfront.php:4781
+#: classes/amazon-s3-and-cloudfront.php:4785
 msgid "Upgrade to offload %d remaining media items"
 msgstr ""
 
@@ -1148,53 +1148,53 @@ msgstr ""
 msgid "<strong>Warning:</strong> This site is using PHP %1$s, in a future update WP Offload Media will require PHP %2$s or later. %3$s"
 msgstr ""
 
-#: classes/integrations/media-library.php:256
+#: classes/integrations/media-library.php:261
 msgid "Can't create item from media library item %d"
 msgstr ""
 
-#: classes/integrations/media-library.php:541
+#: classes/integrations/media-library.php:546
 msgid "Offload"
 msgstr ""
 
-#: classes/integrations/media-library.php:968
+#: classes/integrations/media-library.php:973
 msgid "No"
 msgstr ""
 
-#: classes/integrations/media-library.php:978
+#: classes/integrations/media-library.php:983
 msgctxt "Storage provider key name"
 msgid "Storage Provider"
 msgstr ""
 
-#: classes/integrations/media-library.php:979
+#: classes/integrations/media-library.php:984
 msgctxt "Storage provider name"
 msgid "Storage Provider"
 msgstr ""
 
-#: classes/integrations/media-library.php:980
+#: classes/integrations/media-library.php:985
 msgctxt "Bucket name"
 msgid "Bucket"
 msgstr ""
 
-#: classes/integrations/media-library.php:981
+#: classes/integrations/media-library.php:986
 msgctxt "Path to file in bucket"
 msgid "Path"
 msgstr ""
 
-#: classes/integrations/media-library.php:982
+#: classes/integrations/media-library.php:987
 msgctxt "Location of bucket"
 msgid "Region"
 msgstr ""
 
-#: classes/integrations/media-library.php:983
+#: classes/integrations/media-library.php:988
 msgctxt "Access control list of the file in bucket"
 msgid "Access"
 msgstr ""
 
-#: classes/integrations/media-library.php:984
+#: classes/integrations/media-library.php:989
 msgid "URL"
 msgstr ""
 
-#: classes/integrations/media-library.php:985
+#: classes/integrations/media-library.php:990
 msgctxt "Whether or not metadata has been verified"
 msgid "Verified"
 msgstr ""
@@ -1256,43 +1256,43 @@ msgstr ""
 msgid "Error removing files from bucket: %s"
 msgstr ""
 
-#: classes/items/upload-handler.php:49
+#: classes/items/upload-handler.php:50
 msgid "%1$s with id %2$d does not have a valid file path"
 msgstr ""
 
-#: classes/items/upload-handler.php:56
+#: classes/items/upload-handler.php:57
 msgid "%1$s with id %2$d. Provided path is not a string"
 msgstr ""
 
-#: classes/items/upload-handler.php:63
+#: classes/items/upload-handler.php:64
 msgid "Primary file %1$s for %2$s with id %3$s does not exist"
 msgstr ""
 
-#: classes/items/upload-handler.php:75
+#: classes/items/upload-handler.php:76
 msgid "Mime type \"%1$s\" is not allowed (%2$s with id %3$s)"
 msgstr ""
 
-#: classes/items/upload-handler.php:175
+#: classes/items/upload-handler.php:158
 msgid "Bucket name \"%1$s\" is invalid, using \"%2$s\" instead."
 msgstr ""
 
-#: classes/items/upload-handler.php:190
+#: classes/items/upload-handler.php:173
 msgid "The bucket may not be changed via filters for a previously offloaded item."
 msgstr ""
 
-#: classes/items/upload-handler.php:208
+#: classes/items/upload-handler.php:191
 msgid "The offloaded filename must not be changed, \"%1$s\" has been used instead of \"%2$s\"."
 msgstr ""
 
-#: classes/items/upload-handler.php:216
+#: classes/items/upload-handler.php:199
 msgid "The key may not be changed via filters for a previously offloaded item."
 msgstr ""
 
-#: classes/items/upload-handler.php:289
+#: classes/items/upload-handler.php:272
 msgid "File %1$s does not exist (%2$s with id %3$s)"
 msgstr ""
 
-#: classes/items/upload-handler.php:310
+#: classes/items/upload-handler.php:293
 msgid "Error offloading %1$s to provider: %2$s (%3$s with id %4$s)"
 msgstr ""
 
@@ -1431,7 +1431,7 @@ msgid "Offloaded media URLs may be broken due to an invalid delivery domain. %1$
 msgstr ""
 
 #: classes/providers/delivery/digitalocean-spaces-cdn.php:100
-#: classes/providers/storage/digitalocean-provider.php:244
+#: classes/providers/storage/digitalocean-provider.php:245
 msgctxt "Provider console link text"
 msgid "Control Panel"
 msgstr ""
@@ -1478,250 +1478,250 @@ msgctxt "Default provider console link text"
 msgid "Provider Console"
 msgstr ""
 
-#: classes/providers/storage/aws-provider.php:248
+#: classes/providers/storage/aws-provider.php:251
 msgid "Media cannot be offloaded due to an invalid Access Key ID. <a href=\"%1$s\">Update access keys</a>"
 msgstr ""
 
-#: classes/providers/storage/aws-provider.php:255
+#: classes/providers/storage/aws-provider.php:258
 msgid "Media cannot be offloaded due to an invalid Secret Access Key. <a href=\"%1$s\">Update access keys</a>"
 msgstr ""
 
-#: classes/providers/storage/aws-provider.php:264
+#: classes/providers/storage/aws-provider.php:267
 msgid "The bucket name already exists in your account. To confirm you'd like to use it, please select \"Use Existing Bucket\". Alternatively, enter a different bucket name."
 msgstr ""
 
-#: classes/providers/storage/aws-provider.php:271
+#: classes/providers/storage/aws-provider.php:274
 msgid "The bucket name already exists in another account. Please enter a different bucket name."
 msgstr ""
 
-#: classes/providers/storage/aws-provider.php:279
-#: classes/providers/storage/gcp-provider.php:854
+#: classes/providers/storage/aws-provider.php:282
+#: classes/providers/storage/gcp-provider.php:862
 msgid "Media cannot be offloaded because a bucket with the configured name does not exist. <a href=\"%1$s\">Enter a different bucket</a>"
 msgstr ""
 
-#: classes/providers/storage/aws-provider.php:289
+#: classes/providers/storage/aws-provider.php:292
 msgid "Media cannot be offloaded because the bucket name is not valid. <a href=\"%1$s\">Enter a different bucket name</a>."
 msgstr ""
 
-#: classes/providers/storage/aws-provider.php:907
+#: classes/providers/storage/aws-provider.php:914
 msgid "If you're following our documentation on <a href=\"%1$s\">setting up Amazon CloudFront</a> for delivery, you can ignore this warning and continue.<br> If you're not planning on using Amazon CloudFront for delivery, you need to <a href=\"%2$s\">disable Block All Public Access</a>."
 msgstr ""
 
-#: classes/providers/storage/aws-provider.php:913
-#: classes/providers/storage/storage-provider.php:791
+#: classes/providers/storage/aws-provider.php:920
+#: classes/providers/storage/storage-provider.php:792
 msgctxt "warning heading"
 msgid "Block All Public Access is Enabled"
 msgstr ""
 
-#: classes/providers/storage/aws-provider.php:926
+#: classes/providers/storage/aws-provider.php:933
 msgid "Block All Public Access should only been enabled when Amazon CloudFront is configured for delivery."
 msgstr ""
 
-#: classes/providers/storage/aws-provider.php:952
+#: classes/providers/storage/aws-provider.php:959
 msgid "If you're following our documentation on <a href=\"%1$s\">setting up Amazon CloudFront</a> for delivery, you can ignore this warning and continue. If you're not planning on using Amazon CloudFront for delivery, you need to <a href=\"%2$s\">disable Block All Public Access</a>."
 msgstr ""
 
-#: classes/providers/storage/aws-provider.php:966
+#: classes/providers/storage/aws-provider.php:973
 msgid "Since you're not using Amazon CloudFront for delivery, we recommend you keep Block All Public Access disabled unless you have a very good reason to enable it."
 msgstr ""
 
-#: classes/providers/storage/aws-provider.php:989
+#: classes/providers/storage/aws-provider.php:996
 msgid "If you're following our documentation on <a href=\"%1$s\">setting up Amazon CloudFront</a> for delivery, you can ignore this warning and continue.<br>If you're not planning on using Amazon CloudFront for delivery, you need to <a href=\"%2$s\">turn off Object Ownership enforcement</a>."
 msgstr ""
 
-#: classes/providers/storage/aws-provider.php:995
-#: classes/providers/storage/storage-provider.php:805
+#: classes/providers/storage/aws-provider.php:1002
+#: classes/providers/storage/storage-provider.php:806
 msgctxt "warning heading"
 msgid "Object Ownership is Enforced"
 msgstr ""
 
-#: classes/providers/storage/aws-provider.php:1008
+#: classes/providers/storage/aws-provider.php:1015
 msgid "Object Ownership should only been enforced when Amazon CloudFront is configured for delivery."
 msgstr ""
 
-#: classes/providers/storage/aws-provider.php:1034
+#: classes/providers/storage/aws-provider.php:1041
 msgid "If you're following our documentation on <a href=\"%1$s\">setting up Amazon CloudFront</a> for delivery, you can ignore this warning and continue.<br>If you're not planning on using Amazon CloudFront for delivery, you need to edit the bucket's Object Ownership setting and <a href=\"%2$s\">enable ACLs</a> or add a <a href=\"%3$s\">Bucket Policy</a>."
 msgstr ""
 
-#: classes/providers/storage/aws-provider.php:1049
+#: classes/providers/storage/aws-provider.php:1056
 msgid "Since you're not using Amazon CloudFront for delivery, we recommend you do not enforce Object Ownership unless you have a very good reason to do so."
 msgstr ""
 
-#: classes/providers/storage/gcp-provider.php:748
+#: classes/providers/storage/gcp-provider.php:756
 msgid "Media cannot be offloaded due to invalid JSON in the key file."
 msgstr ""
 
-#: classes/providers/storage/gcp-provider.php:778
+#: classes/providers/storage/gcp-provider.php:786
 msgid "Media cannot be offloaded due to a missing <code>project_id</code> field which may be the result of an old or obsolete key file. <a href=\"%1$s\" target=\"_blank\">Create a new key file</a>"
 msgstr ""
 
-#: classes/providers/storage/gcp-provider.php:790
+#: classes/providers/storage/gcp-provider.php:798
 msgid "Media cannot be offloaded due to a missing <code>private_key</code> field in the key file. <a href=\"%1$s\" target=\"_blank\"\">Create a new key file</a>"
 msgstr ""
 
-#: classes/providers/storage/gcp-provider.php:802
+#: classes/providers/storage/gcp-provider.php:810
 msgid "Media cannot be offloaded due to a missing <code>type</code> field in the key file. <a href=\"%1$s\" target=\"_blank\">Create a new key file</a>"
 msgstr ""
 
-#: classes/providers/storage/gcp-provider.php:814
+#: classes/providers/storage/gcp-provider.php:822
 msgid "Media cannot be offloaded due to a missing <code>client_email</code> field in the key file. <a href=\"%1$s\" target=\"_blank\">Create a new key file</a>"
 msgstr ""
 
-#: classes/providers/storage/gcp-provider.php:837
+#: classes/providers/storage/gcp-provider.php:845
 msgid "Media cannot be offloaded due to an invalid OpenSSL Private Key. <a href=\"%1$s\" target=\"_blank\">Update the key file</a>"
 msgstr ""
 
-#: classes/providers/storage/gcp-provider.php:847
+#: classes/providers/storage/gcp-provider.php:855
 msgid "Media cannot be offloaded using the provided service account. <a href=\"%1$s\" target=\"_blank\">Read more</a>"
 msgstr ""
 
-#: classes/providers/storage/storage-provider.php:371
+#: classes/providers/storage/storage-provider.php:372
 msgid "Media cannot be offloaded due to an invalid key file path."
 msgstr ""
 
-#: classes/providers/storage/storage-provider.php:381
-#: classes/providers/storage/storage-provider.php:386
+#: classes/providers/storage/storage-provider.php:382
+#: classes/providers/storage/storage-provider.php:387
 msgid "Media cannot be offloaded due to an unreadable key file."
 msgstr ""
 
-#: classes/providers/storage/storage-provider.php:757
+#: classes/providers/storage/storage-provider.php:758
 msgid "Media cannot be offloaded due to missing access keys. <a href=\"%s\">Update access keys</a>"
 msgstr ""
 
-#: classes/providers/storage/storage-provider.php:768
+#: classes/providers/storage/storage-provider.php:769
 msgid "Media cannot be offloaded due to a missing Access Key ID. <a href=\"%s\">Update access keys</a>"
 msgstr ""
 
-#: classes/providers/storage/storage-provider.php:779
+#: classes/providers/storage/storage-provider.php:780
 msgid "Media cannot be offloaded due to a missing Secret Access Key. <a href=\"%s\">Update access keys</a>"
 msgstr ""
 
-#: classes/providers/storage/storage-provider.php:792
+#: classes/providers/storage/storage-provider.php:793
 msgid "The current Delivery Provider does not support Block All Public Access."
 msgstr ""
 
-#: classes/providers/storage/storage-provider.php:806
+#: classes/providers/storage/storage-provider.php:807
 msgid "The current Delivery Provider does not support Object Ownership enforcement."
 msgstr ""
 
-#: classes/providers/storage/storage-provider.php:826
+#: classes/providers/storage/storage-provider.php:827
 msgid "You should remove them from the bucket before changing storage provider."
 msgstr ""
 
-#: classes/providers/storage/storage-provider.php:829
+#: classes/providers/storage/storage-provider.php:830
 msgid "<strong>Warning:</strong> You have %d offloaded media item."
 msgstr ""
 
-#: classes/providers/storage/storage-provider.php:830
+#: classes/providers/storage/storage-provider.php:831
 msgid "You should remove it from the bucket before changing storage provider."
 msgstr ""
 
-#: classes/providers/storage/storage-provider.php:832
+#: classes/providers/storage/storage-provider.php:833
 msgid "<strong>Warning:</strong> You have %d offloaded media items."
 msgstr ""
 
-#: classes/providers/storage/storage-provider.php:834
+#: classes/providers/storage/storage-provider.php:835
 msgid "<strong>Warning:</strong> You have offloaded media items."
 msgstr ""
 
-#: classes/providers/storage/storage-provider.php:850
+#: classes/providers/storage/storage-provider.php:851
 msgid "My server is on %s and I'd like to use IAM Roles"
 msgstr ""
 
-#: classes/providers/storage/storage-provider.php:861
+#: classes/providers/storage/storage-provider.php:862
 msgid "Copy the following snippet to <strong>near the top</strong> of your wp-config.php and replace the stars with the keys."
 msgstr ""
 
-#: classes/providers/storage/storage-provider.php:892
+#: classes/providers/storage/storage-provider.php:893
 msgid "Storing your access keys in the database is less secure than the other options, but if you're ok with that, go ahead and enter your keys in the form below."
 msgstr ""
 
-#: classes/providers/storage/storage-provider.php:908
+#: classes/providers/storage/storage-provider.php:909
 msgid "Need help configuring your chosen storage provider? <a href=\"%s\" target=\"_blank\">View the Quick Start Guide</a>"
 msgstr ""
 
-#: classes/providers/storage/storage-provider.php:926
+#: classes/providers/storage/storage-provider.php:927
 msgid "Copy the following snippet to <strong>near the top</strong> of your wp-config.php and replace \"<strong>/path/to/key/file.json</strong>\"."
 msgstr ""
 
-#: classes/providers/storage/storage-provider.php:956
+#: classes/providers/storage/storage-provider.php:957
 msgid "Storing your key file's contents in the database is less secure than the other options, but if you're ok with that, go ahead and enter your key file's JSON data in the field below."
 msgstr ""
 
-#: classes/providers/storage/storage-provider.php:972
+#: classes/providers/storage/storage-provider.php:973
 msgid "If you host your WordPress site on %s, click the <strong>Next</strong> button to make use of IAM Roles."
 msgstr ""
 
-#: classes/providers/storage/storage-provider.php:976
+#: classes/providers/storage/storage-provider.php:977
 msgid "Optionally, copy the following snippet to <strong>near the top</strong> of your wp-config.php."
 msgstr ""
 
-#: classes/providers/storage/storage-provider.php:1095
+#: classes/providers/storage/storage-provider.php:1096
 msgid "You've defined your access keys in your wp-config.php."
 msgstr ""
 
-#: classes/providers/storage/storage-provider.php:1099
+#: classes/providers/storage/storage-provider.php:1100
 msgctxt "Access Keys defined in multiple defines."
 msgid "To select a different option here, simply comment out or remove the \"%1$s\" defines in your wp-config.php."
 msgstr ""
 
-#: classes/providers/storage/storage-provider.php:1101
+#: classes/providers/storage/storage-provider.php:1102
 msgctxt "Access Keys defined in single define."
 msgid "To select a different option here, simply comment out or remove the \"%1$s\" define in your wp-config.php."
 msgstr ""
 
-#: classes/providers/storage/storage-provider.php:1104
-#: classes/providers/storage/storage-provider.php:1125
-#: classes/providers/storage/storage-provider.php:1148
+#: classes/providers/storage/storage-provider.php:1105
+#: classes/providers/storage/storage-provider.php:1126
+#: classes/providers/storage/storage-provider.php:1149
 msgctxt "joins multiple define keys in notice"
 msgid "\" & \""
 msgstr ""
 
-#: classes/providers/storage/storage-provider.php:1116
+#: classes/providers/storage/storage-provider.php:1117
 msgid "You've defined your key file path in your wp-config.php."
 msgstr ""
 
-#: classes/providers/storage/storage-provider.php:1120
-#: classes/providers/storage/storage-provider.php:1143
+#: classes/providers/storage/storage-provider.php:1121
+#: classes/providers/storage/storage-provider.php:1144
 msgctxt "Key File Path defined in multiple defines."
 msgid "To select a different option here, simply comment out or remove the \"%1$s\" defines in your wp-config.php."
 msgstr ""
 
-#: classes/providers/storage/storage-provider.php:1122
-#: classes/providers/storage/storage-provider.php:1145
+#: classes/providers/storage/storage-provider.php:1123
+#: classes/providers/storage/storage-provider.php:1146
 msgctxt "Key File Path defined in single define."
 msgid "To select a different option here, simply comment out or remove the \"%1$s\" define in your wp-config.php."
 msgstr ""
 
-#: classes/providers/storage/storage-provider.php:1139
+#: classes/providers/storage/storage-provider.php:1140
 msgid "You've chosen this option in your wp-config.php."
 msgstr ""
 
-#: classes/providers/storage/storage-provider.php:1213
+#: classes/providers/storage/storage-provider.php:1214
 msgid "How to set permissions"
 msgstr ""
 
-#: classes/providers/storage/storage-provider.php:1215
+#: classes/providers/storage/storage-provider.php:1216
 msgid "Media cannot be offloaded due to access restrictions on the provided bucket. The provided credentials may not have the correct permissions. %s"
 msgstr ""
 
-#: classes/providers/storage/storage-provider.php:1217
+#: classes/providers/storage/storage-provider.php:1218
 msgid "Media cannot be offloaded due to access restrictions on the provided buckets. The provided credentials may not have the correct permissions. %s"
 msgstr ""
 
-#: classes/providers/storage/storage-provider.php:1237
+#: classes/providers/storage/storage-provider.php:1238
 msgid "An invalid storage provider has been defined. Please use %s."
 msgstr ""
 
-#: classes/providers/storage/storage-provider.php:1290
+#: classes/providers/storage/storage-provider.php:1291
 msgid "Media cannot be offloaded due to a missing bucket name."
 msgstr ""
 
-#: classes/providers/storage/storage-provider.php:1317
+#: classes/providers/storage/storage-provider.php:1318
 msgid "Storage provider is successfully connected, but new media will not be offloaded until <strong>Offload Media</strong> is enabled."
 msgstr ""
 
-#: classes/providers/storage/storage-provider.php:1323
+#: classes/providers/storage/storage-provider.php:1324
 msgid "Storage provider is successfully connected and ready to offload new media."
 msgstr ""
 
@@ -1734,16 +1734,16 @@ msgid "Public"
 msgstr ""
 
 #: classes/settings/delivery-check.php:104
-#: classes/settings/delivery-check.php:132
-#: classes/settings/delivery-check.php:167
+#: classes/settings/delivery-check.php:137
+#: classes/settings/delivery-check.php:171
 msgid "Internal error"
 msgstr ""
 
-#: classes/settings/delivery-check.php:183
+#: classes/settings/delivery-check.php:192
 msgid "Private file accessible using an unsigned URL."
 msgstr ""
 
-#: classes/settings/delivery-check.php:287
+#: classes/settings/delivery-check.php:296
 msgid "This is a test file to check delivery. Delete me if found."
 msgstr ""
 
@@ -1775,15 +1775,15 @@ msgstr ""
 msgid "An error was encountered while testing the domain: <code>Invalid response type: %s</code>."
 msgstr ""
 
-#: classes/settings/domain-check.php:309
+#: classes/settings/domain-check.php:313
 msgid "An error was encountered while testing the domain: <code>Malformed response from endpoint</code>."
 msgstr ""
 
-#: classes/settings/domain-check.php:315
+#: classes/settings/domain-check.php:319
 msgid "An error was encountered while testing the domain: <code>Query string missing \"ver\" parameter</code>."
 msgstr ""
 
-#: classes/settings/domain-check.php:330
+#: classes/settings/domain-check.php:334
 msgid "An error was encountered while testing the domain: <code>S3 bucket set as CDN origin</code>."
 msgstr ""
 
@@ -1810,15 +1810,15 @@ msgstr ""
 msgid "and clear old post meta cache items."
 msgstr ""
 
-#: classes/upgrades/upgrade-content-replace-urls.php:36
+#: classes/upgrades/upgrade-content-replace-urls.php:38
 msgid "and ensuring that only the local URL exists in post content."
 msgstr ""
 
-#: classes/upgrades/upgrade-content-replace-urls.php:45
+#: classes/upgrades/upgrade-content-replace-urls.php:47
 msgid "<strong>Running Content Upgrade%1$s</strong><br>A find &amp; replace is running in the background to update URLs in your post content. %2$s"
 msgstr ""
 
-#: classes/upgrades/upgrade-edd-replace-urls.php:38
+#: classes/upgrades/upgrade-edd-replace-urls.php:39
 msgid "and ensuring that only the local URL exists in EDD post meta."
 msgstr ""
 

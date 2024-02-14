@@ -3,9 +3,9 @@
 **Contributors:** wpengine, deliciousbrains, ianmjones, eriktorsner, kevinwhoffman, tysonreeder, dalewilliams, lewisia32, mattshaw, aaemnnosttv, a5hleyrich, polevaultweb, bradt, joetan \
 **Tags:** uploads, amazon, s3, amazon s3, digitalocean, digitalocean spaces, google cloud storage, gcs, mirror, admin, media, cdn, cloudfront \
 **Requires at least:** 5.5 \
-**Tested up to:** 6.3 \
+**Tested up to:** 6.4 \
 **Requires PHP:** 7.2 \
-**Stable tag:** 3.2.5 \
+**Stable tag:** 3.2.7 \
 **License:** GPLv3
 
 Copies files to Amazon S3, DigitalOcean Spaces or Google Cloud Storage as they are uploaded to the Media Library. Optionally configure Amazon CloudFront or another CDN for faster delivery.
@@ -102,6 +102,27 @@ This is a major change, which ensures S3 URLs are no longer saved in post conten
 This version requires PHP 5.3.3+ and the Amazon Web Services plugin
 
 ## Changelog
+
+### WP Offload Media Lite 3.2.7 - 2024-02-13
+
+* New: Amazon S3 regions Canada West (Calgary), Asia Pacific (Melbourne) and Israel (Tel Aviv) are now selectable
+* New: DigitalOcean region Bangalore (BLR1) is now selectable
+* New: Google Cloud Storage regions Europe (Berlin), Europe (Turin), Middle East (Doha) and Middle East (Dammam, Saudi Arabia) are now selectable
+* Improvement: The as3cf_object_meta filter now also runs during storage settings validation
+* Bug fix: Private media URLs now work as expected in audio and video shortcodes
+* Bug fix: Performance improved for ACF image fields when filesize metadata is missing for offloaded and removed files
+* Bug fix: URLs for offloaded media in ACF URL and link fields are now properly rewritten
+* Bug fix: Media library files with apostrophes in their filenames no longer cause database errors
+* Bug fix: URL rewriting no longer breaks slashed serialized data with NULL values
+* Bug fix: URL rewriting on a dev site now works without a bucket being set
+
+### WP Offload Media Lite 3.2.6 - 2024-01-11
+
+* New: WordPress 6.4 compatible
+* New: AWS PHP SDK has been updated to v3.295.8
+* Improvement: Delivery settings check request headers updated to avoid provider's erroneous hot-link protection
+* Bug fix: Corrupted amazonS3_cache records no longer cause a fatal error
+* Bug fix: Safety improved when handling serialized content
 
 ### WP Offload Media Lite 3.2.5 - 2023-08-24
 

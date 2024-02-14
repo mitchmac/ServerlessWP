@@ -621,8 +621,9 @@ abstract class AS3CF_Filter {
 			$cache = get_post_meta( $post_id, self::CACHE_KEY, true );
 		}
 
-		if ( empty( $cache ) ) {
-			$cache = array();
+		// Data's not what we expected, reset.
+		if ( empty( $cache ) || ! is_array( $cache ) ) {
+			return array();
 		}
 
 		if ( ! $transform_ints ) {
@@ -687,7 +688,8 @@ abstract class AS3CF_Filter {
 	protected function maybe_update_post_cache( $to_cache, $post_id = false ) {
 		$post_id = AS3CF_Utils::get_post_id( $post_id );
 
-		if ( ! $post_id || empty( $to_cache ) ) {
+		// Data's not what we expected, skip it.
+		if ( ! $post_id || empty( $to_cache ) || ! is_array( $to_cache ) ) {
 			return;
 		}
 
@@ -711,8 +713,9 @@ abstract class AS3CF_Filter {
 			$cache = get_option( self::CACHE_KEY, array() );
 		}
 
-		if ( empty( $cache ) ) {
-			$cache = array();
+		// Data's not what we expected, reset.
+		if ( empty( $cache ) || ! is_array( $cache ) ) {
+			return array();
 		}
 
 		return $cache;
@@ -724,7 +727,8 @@ abstract class AS3CF_Filter {
 	 * @param array $to_cache
 	 */
 	protected function maybe_update_option_cache( $to_cache ) {
-		if ( empty( $to_cache ) ) {
+		// Data's not what we expected, skip it.
+		if ( empty( $to_cache ) || ! is_array( $to_cache ) ) {
 			return;
 		}
 
@@ -797,7 +801,7 @@ abstract class AS3CF_Filter {
 	 * @return bool
 	 */
 	protected function should_filter_content() {
-		if ( $this->as3cf->is_plugin_setup() && $this->as3cf->get_setting( 'serve-from-s3' ) ) {
+		if ( $this->as3cf->get_setting( 'serve-from-s3' ) ) {
 			return true;
 		}
 

@@ -6,6 +6,7 @@ use DeliciousBrains\WP_Offload_Media\Aws3\Aws\Api\Service;
 use DeliciousBrains\WP_Offload_Media\Aws3\Aws\CommandInterface;
 use DeliciousBrains\WP_Offload_Media\Aws3\Aws\EndpointV2\EndpointProviderV2;
 use DeliciousBrains\WP_Offload_Media\Aws3\Aws\EndpointV2\EndpointV2SerializerTrait;
+use DeliciousBrains\WP_Offload_Media\Aws3\Aws\EndpointV2\Ruleset\RulesetEndpoint;
 use DeliciousBrains\WP_Offload_Media\Aws3\GuzzleHttp\Psr7\Request;
 use DeliciousBrains\WP_Offload_Media\Aws3\Psr\Http\Message\RequestInterface;
 /**
@@ -34,7 +35,7 @@ class QuerySerializer
      *
      * @return RequestInterface
      */
-    public function __invoke(CommandInterface $command, $endpointProvider = null, $clientArgs = null)
+    public function __invoke(CommandInterface $command, $endpoint = null)
     {
         $operation = $this->api->getOperation($command->getName());
         $body = ['Action' => $command->getName(), 'Version' => $this->api->getMetadata('apiVersion')];
@@ -45,8 +46,8 @@ class QuerySerializer
         }
         $body = \http_build_query($body, '', '&', \PHP_QUERY_RFC3986);
         $headers = ['Content-Length' => \strlen($body), 'Content-Type' => 'application/x-www-form-urlencoded'];
-        if ($endpointProvider instanceof EndpointProviderV2) {
-            $this->setRequestOptions($endpointProvider, $command, $operation, $commandArgs, $clientArgs, $headers);
+        if ($endpoint instanceof RulesetEndpoint) {
+            $this->setEndpointV2RequestOptions($endpoint, $headers);
         }
         return new Request('POST', $this->endpoint, $headers, $body);
     }

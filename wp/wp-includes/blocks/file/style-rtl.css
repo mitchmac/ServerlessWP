@@ -1,3 +1,6 @@
+.wp-block-file{
+  box-sizing:border-box;
+}
 .wp-block-file:not(.wp-element-button){
   font-size:.8em;
 }
