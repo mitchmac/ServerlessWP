@@ -5,5 +5,8 @@
   "license": "MIT",
   "dependencies": {
     "serverlesswp": "^0.1.2"
+  },
+  "engines": {
+    "node": "18.x"
   }
 }
