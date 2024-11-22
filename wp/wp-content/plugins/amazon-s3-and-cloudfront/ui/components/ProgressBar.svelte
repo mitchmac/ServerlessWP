@@ -36,6 +36,9 @@
 	$: complete = percentComplete >= 100;
 </script>
 
+<!-- TODO: Fix a11y. -->
+<!-- svelte-ignore a11y-no-static-element-interactions -->
+<!-- svelte-ignore a11y-click-events-have-key-events -->
 <div
 	class="progress-bar"
 	class:stripe={running && ! paused}

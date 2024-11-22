@@ -3940,8 +3940,14 @@ class Amazon_S3_And_CloudFront extends AS3CF_Plugin_Base {
 					}
 				}
 
+				// Let other parts of the plugin add/update the media counts on a per-blog basis.
+				$attachment_counts = apply_filters( 'as3cf_media_counts_for_blog', $attachment_counts, $blog_id, $table_prefix );
+
 				$this->restore_current_blog();
 			}
+
+			// Let other parts of the plugin add/update the complete media counts.
+			$attachment_counts = apply_filters( 'as3cf_media_counts', $attachment_counts );
 
 			ksort( $attachment_counts );
 
@@ -4277,9 +4283,13 @@ class Amazon_S3_And_CloudFront extends AS3CF_Plugin_Base {
 	 *
 	 * @param string $url
 	 *
-	 * @return string
+	 * @return string|WP_Error
 	 */
 	public function maybe_remove_query_string( $url ) {
+		if ( ! is_string( $url ) ) {
+			return $url;
+		}
+
 		$parts = explode( '?', $url );
 
 		return reset( $parts );

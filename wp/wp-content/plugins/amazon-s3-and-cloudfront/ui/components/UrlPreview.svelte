@@ -48,7 +48,7 @@
 		<PanelRow class="body flex-row">
 			<dl>
 				{#each parts as part (part.title)}
-					<div data-key={part.key} transition:scale|local>
+					<div data-key={part.key} transition:scale>
 						<dt>{part.title}</dt>
 						<dd>{part.example}</dd>
 					</div>

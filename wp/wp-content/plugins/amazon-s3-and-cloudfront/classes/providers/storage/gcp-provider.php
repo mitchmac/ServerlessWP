@@ -115,8 +115,9 @@ class GCP_Provider extends Storage_Provider {
 		'europe-west6'            => 'Europe (Zürich)',
 		'europe-west8'            => 'Europe (Milan)',
 		'europe-west9'            => 'Europe (Paris)',
+		'europe-west10'           => 'Europe (Berlin)',
+		'europe-west12'           => 'Europe (Turin)',
 		'europe-southwest1'       => 'Europe (Madrid)',
-		'me-west1'                => 'Middle East (Tel Aviv)',
 		'asia-east1'              => 'Asia (Taiwan)',
 		'asia-east2'              => 'Asia (Hong Kong)',
 		'asia-northeast1'         => 'Asia (Tokyo)',
@@ -126,6 +127,9 @@ class GCP_Provider extends Storage_Provider {
 		'asia-south1'             => 'India (Mumbai)',
 		'asia-south2'             => 'India (Dehli)',
 		'asia-southeast2'         => 'Indonesia (Jakarta)',
+		'me-central1'             => 'Middle East (Doha)',
+		'me-central2'             => 'Middle East (Dammam, Saudi Arabia)',
+		'me-west1'                => 'Middle East (Tel Aviv)',
 		'australia-southeast1'    => 'Australia (Sydney)',
 		'australia-southeast2'    => 'Australia (Melbourne)',
 		'asia1'                   => 'Dual-Region (Tokyo/Osaka)',
@@ -617,11 +621,15 @@ class GCP_Provider extends Storage_Provider {
 	public function can_write( $bucket, $key, $file_contents ) {
 		try {
 			// Attempt to create the test file.
-			$this->upload_object( array(
-				'Bucket' => $bucket,
-				'Key'    => $key,
-				'Body'   => $file_contents,
-			) );
+			$this->upload_object(
+				static::filter_object_meta(
+					array(
+						'Bucket' => $bucket,
+						'Key'    => $key,
+						'Body'   => $file_contents,
+					)
+				)
+			);
 
 			// delete it straight away if created
 			$this->delete_object( array(

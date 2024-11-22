@@ -2,6 +2,8 @@
 
 namespace DeliciousBrains\WP_Offload_Media\Upgrades;
 
+use AS3CF_Utils;
+
 /**
  * Upgrade_Content_Replace_URLs Class
  *
@@ -65,7 +67,7 @@ class Upgrade_Content_Replace_URLs extends Upgrade_Filter_Post {
 		$mods = $wpdb->get_results( "SELECT * FROM `{$wpdb->options}` WHERE option_name LIKE 'theme_mods_%'" );
 
 		foreach ( $mods as $mod ) {
-			$value = maybe_unserialize( $mod->option_value );
+			$value = AS3CF_Utils::maybe_unserialize( $mod->option_value );
 
 			if ( isset( $value['background_image'] ) ) {
 				$value['background_image'] = $this->as3cf->filter_provider->filter_customizer_image( $value['background_image'] );

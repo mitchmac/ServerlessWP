@@ -67,12 +67,14 @@
 	}
 </script>
 
+<!-- TODO: Fix a11y. -->
+<!-- svelte-ignore a11y-no-static-element-interactions -->
 <div
 	class="panel {name}"
 	class:multi
 	class:flyout
 	class:locked
-	transition:fade|local={{duration: flyout ? 200 : 0}}
+	transition:fade={{duration: flyout ? 200 : 0}}
 	bind:this={ref}
 	on:focusout
 	on:mouseenter
@@ -99,6 +101,9 @@
 					<ToggleSwitch name={toggleName} bind:checked={toggle} disabled={toggleDisabled}>
 						{heading}
 					</ToggleSwitch>
+					<!-- TODO: Fix a11y. -->
+					<!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
+					<!-- svelte-ignore a11y-click-events-have-key-events -->
 					<h3 on:click={headingClickHandler} class="toggler" class:toggleDisabled>{heading}</h3>
 				{:else}
 					<h3>{heading}</h3>

@@ -5,6 +5,7 @@ namespace DeliciousBrains\WP_Offload_Media\Providers\Storage;
 use Amazon_S3_And_CloudFront;
 use AS3CF_Error;
 use AS3CF_Utils;
+use DeliciousBrains\WP_Offload_Media\Items\Item;
 use DeliciousBrains\WP_Offload_Media\Settings_Validator_Trait;
 use DeliciousBrains\WP_Offload_Media\Providers\Provider;
 use DeliciousBrains\WP_Offload_Media\Settings\Validator_Interface;
@@ -1332,6 +1333,53 @@ abstract class Storage_Provider extends Provider implements Validator_Interface 
 	 */
 	public function post_save_settings_actions(): array {
 		return array( 'as3cf_post_save_settings' );
+	}
+
+	/**
+	 * Apply the as3cf_object_meta filter on upload args, filling in the blanks if need be.
+	 *
+	 * @param array       $args       Information to be sent to storage provider during offload (e.g. PutObject)
+	 * @param Item|null   $as3cf_item The item being uploaded, optional
+	 * @param string|null $object_key A unique file identifier for a composite item, e.g. image's "size" such as full, small, medium, large, optional
+	 * @param bool        $copy       True if the object is being copied between buckets
+	 *
+	 * @return array
+	 */
+	public static function filter_object_meta( array $args, Item $as3cf_item = null, string $object_key = null, bool $copy = false ) {
+		$source_id   = 0;
+		$item_source = array(
+			'id'          => $source_id,
+			'source_type' => Item::source_type(),
+		);
+
+		if ( ! empty( $as3cf_item ) ) {
+			$source_id   = $as3cf_item->source_id();
+			$item_source = $as3cf_item->get_item_source_array();
+		}
+
+		if ( empty( $object_key ) ) {
+			$object_key = Item::primary_object_key();
+		}
+
+		/**
+		 * This filter allows you to change the arguments passed to the cloud storage SDK client when
+		 * offloading a file to the bucket.
+		 *
+		 * Note: It is possible to change the destination 'Bucket' only while processing the primary object_key.
+		 *       All other object_keys will use the same bucket as the item's primary object.
+		 *       The 'Key' should be the "public" Key path. If a private prefix is configured
+		 *       for use with signed CloudFront URLs or similar, that prefix will be added later.
+		 *       A change to the 'Key' will only be handled when processing the primary object key.
+		 *
+		 * @param array  $args        Information to be sent to storage provider during offload (e.g. PutObject)
+		 * @param int    $source_id   Original file's unique ID for its source type
+		 * @param string $object_key  A unique file identifier for a composite item, e.g. image's "size" such as full, small, medium, large
+		 * @param bool   $copy        True if the object is being copied between buckets
+		 * @param array  $item_source Item source array containing source type and id
+		 *
+		 * @return array
+		 */
+		return apply_filters( 'as3cf_object_meta', $args, $source_id, $object_key, $copy, $item_source );
 	}
 
 	/**

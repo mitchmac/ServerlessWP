@@ -8,6 +8,7 @@
   --wp-admin-border-width-focus:2px;
   --wp-block-synced-color:#7a00df;
   --wp-block-synced-color--rgb:122, 0, 223;
+  --wp-bound-block-color:var(--wp-block-synced-color);
 }
 @media (min-resolution:192dpi){
   :root{
@@ -63,25 +64,32 @@
 }
 
 .block-directory-downloadable-block-list-item{
+  appearance:none;
+  background:none;
+  border:0;
   display:grid;
   grid-template-columns:auto 1fr;
   height:auto;
+  margin:0;
   padding:12px;
+  position:relative;
   text-align:left;
+  transition:box-shadow .1s linear;
   width:100%;
 }
-.block-directory-downloadable-block-list-item:hover{
+.block-directory-downloadable-block-list-item+.block-directory-downloadable-block-list-item{
+  margin-top:4px;
+}
+.block-directory-downloadable-block-list-item:not([aria-disabled=true]){
+  cursor:pointer;
+}
+.block-directory-downloadable-block-list-item:hover,.block-directory-downloadable-block-list-item[data-focus-visible]{
   box-shadow:0 0 0 var(--wp-admin-border-width-focus) var(--wp-admin-theme-color);
-  outline:2px solid transparent;
+  outline:2px solid #0000;
 }
-.block-directory-downloadable-block-list-item.is-busy{
-  background:transparent;
-}
-.block-directory-downloadable-block-list-item.is-busy .block-directory-downloadable-block-list-item__author{
-  clip:rect(1px, 1px, 1px, 1px);
-  word-wrap:normal !important;
+.block-directory-downloadable-block-list-item.is-installing .block-directory-downloadable-block-list-item__author{
   border:0;
-  -webkit-clip-path:inset(50%);
+  clip:rect(1px, 1px, 1px, 1px);
   clip-path:inset(50%);
   height:1px;
   margin:-1px;
@@ -89,9 +97,7 @@
   padding:0;
   position:absolute;
   width:1px;
-}
-.block-directory-downloadable-block-list-item:disabled,.block-directory-downloadable-block-list-item[aria-disabled]{
-  opacity:1;
+  word-wrap:normal !important;
 }
 
 .block-directory-downloadable-block-list-item__icon{
@@ -101,7 +107,7 @@
 }
 .block-directory-downloadable-block-list-item__icon .block-directory-downloadable-block-list-item__spinner{
   align-items:center;
-  background:hsla(0,0%,100%,.75);
+  background:#ffffffbf;
   bottom:0;
   display:flex;
   justify-content:center;
@@ -109,6 +115,9 @@
   position:absolute;
   right:0;
   top:0;
+}
+.is-installing .block-directory-downloadable-block-list-item__icon{
+  margin-right:22px;
 }
 
 .block-directory-block-ratings{
@@ -172,14 +181,6 @@
   margin:0 0 4px;
 }
 
-.block-directory-downloadable-blocks-panel__description{
-  margin-top:0;
-}
-
-.block-directory-downloadable-blocks-panel button{
-  margin-top:4px;
-}
-
-.installed-blocks-pre-publish-panel__copy{
+.block-directory-downloadable-blocks-panel__description,.installed-blocks-pre-publish-panel__copy{
   margin-top:0;
 }
