@@ -1,149 +1,6 @@
-/******/ (function() { // webpackBootstrap
-/******/ 	var __webpack_modules__ = ({
-
-/***/ 8670:
-/***/ (function(module) {
-
-// The scores are arranged so that a continuous match of characters will
-// result in a total score of 1.
-//
-// The best case, this character is a match, and either this is the start
-// of the string, or the previous character was also a match.
-var SCORE_CONTINUE_MATCH = 1,
-
-    // A new match at the start of a word scores better than a new match
-    // elsewhere as it's more likely that the user will type the starts
-    // of fragments.
-    // (Our notion of word includes CamelCase and hypen-separated, etc.)
-    SCORE_WORD_JUMP = 0.9,
-
-    // Any other match isn't ideal, but we include it for completeness.
-    SCORE_CHARACTER_JUMP = 0.3,
-
-    // If the user transposed two letters, it should be signficantly penalized.
-    //
-    // i.e. "ouch" is more likely than "curtain" when "uc" is typed.
-    SCORE_TRANSPOSITION = 0.1,
-
-    // If the user jumped to half-way through a subsequent word, it should be
-    // very significantly penalized.
-    //
-    // i.e. "loes" is very unlikely to match "loch ness".
-    // NOTE: this is set to 0 for superhuman right now, but we may want to revisit.
-    SCORE_LONG_JUMP = 0,
-
-    // The goodness of a match should decay slightly with each missing
-    // character.
-    //
-    // i.e. "bad" is more likely than "bard" when "bd" is typed.
-    //
-    // This will not change the order of suggestions based on SCORE_* until
-    // 100 characters are inserted between matches.
-    PENALTY_SKIPPED = 0.999,
-
-    // The goodness of an exact-case match should be higher than a
-    // case-insensitive match by a small amount.
-    //
-    // i.e. "HTML" is more likely than "haml" when "HM" is typed.
-    //
-    // This will not change the order of suggestions based on SCORE_* until
-    // 1000 characters are inserted between matches.
-    PENALTY_CASE_MISMATCH = 0.9999,
-
-    // If the word has more characters than the user typed, it should
-    // be penalised slightly.
-    //
-    // i.e. "html" is more likely than "html5" if I type "html".
-    //
-    // However, it may well be the case that there's a sensible secondary
-    // ordering (like alphabetical) that it makes sense to rely on when
-    // there are many prefix matches, so we don't make the penalty increase
-    // with the number of tokens.
-    PENALTY_NOT_COMPLETE = 0.99;
-
-var IS_GAP_REGEXP = /[\\\/\-_+.# \t"@\[\(\{&]/,
-    COUNT_GAPS_REGEXP = /[\\\/\-_+.# \t"@\[\(\{&]/g;
-
-function commandScoreInner(string, abbreviation, lowerString, lowerAbbreviation, stringIndex, abbreviationIndex) {
-
-    if (abbreviationIndex === abbreviation.length) {
-        if (stringIndex === string.length) {
-            return SCORE_CONTINUE_MATCH;
-
-        }
-        return PENALTY_NOT_COMPLETE;
-    }
-
-    var abbreviationChar = lowerAbbreviation.charAt(abbreviationIndex);
-    var index = lowerString.indexOf(abbreviationChar, stringIndex);
-    var highScore = 0;
-
-    var score, transposedScore, wordBreaks;
-
-    while (index >= 0) {
-
-        score = commandScoreInner(string, abbreviation, lowerString, lowerAbbreviation, index + 1, abbreviationIndex + 1);
-        if (score > highScore) {
-            if (index === stringIndex) {
-                score *= SCORE_CONTINUE_MATCH;
-            } else if (IS_GAP_REGEXP.test(string.charAt(index - 1))) {
-                score *= SCORE_WORD_JUMP;
-                wordBreaks = string.slice(stringIndex, index - 1).match(COUNT_GAPS_REGEXP);
-                if (wordBreaks && stringIndex > 0) {
-                    score *= Math.pow(PENALTY_SKIPPED, wordBreaks.length);
-                }
-            } else if (IS_GAP_REGEXP.test(string.slice(stringIndex, index - 1))) {
-                score *= SCORE_LONG_JUMP;
-                if (stringIndex > 0) {
-                    score *= Math.pow(PENALTY_SKIPPED, index - stringIndex);
-                }
-            } else {
-                score *= SCORE_CHARACTER_JUMP;
-                if (stringIndex > 0) {
-                    score *= Math.pow(PENALTY_SKIPPED, index - stringIndex);
-                }
-            }
-
-            if (string.charAt(index) !== abbreviation.charAt(abbreviationIndex)) {
-                score *= PENALTY_CASE_MISMATCH;
-            }
-
-        }
-
-        if (score < SCORE_TRANSPOSITION &&
-                lowerString.charAt(index - 1) === lowerAbbreviation.charAt(abbreviationIndex + 1) &&
-                lowerString.charAt(index - 1) !== lowerAbbreviation.charAt(abbreviationIndex)) {
-            transposedScore = commandScoreInner(string, abbreviation, lowerString, lowerAbbreviation, index + 1, abbreviationIndex + 2);
-
-            if (transposedScore * SCORE_TRANSPOSITION > score) {
-                score = transposedScore * SCORE_TRANSPOSITION;
-            }
-        }
-
-        if (score > highScore) {
-            highScore = score;
-        }
-
-        index = lowerString.indexOf(abbreviationChar, index + 1);
-    }
-
-    return highScore;
-}
-
-function commandScore(string, abbreviation) {
-    /* NOTE:
-     * in the original, we used to do the lower-casing on each recursive call, but this meant that toLowerCase()
-     * was the dominating cost in the algorithm, passing both is a little ugly, but considerably faster.
-     */
-    return commandScoreInner(string, abbreviation, string.toLowerCase(), abbreviation.toLowerCase(), 0, 0);
-}
-
-module.exports = commandScore;
-
-
-/***/ })
-
-/******/ 	});
+/******/ (() => { // webpackBootstrap
+/******/ 	"use strict";
+/******/ 	var __webpack_modules__ = ({});
 /************************************************************************/
 /******/ 	// The module cache
 /******/ 	var __webpack_module_cache__ = {};
@@ -170,99 +27,115 @@ module.exports = commandScore;
 /******/ 	}
 /******/ 	
 /************************************************************************/
-/******/ 	/* webpack/runtime/compat get default export */
-/******/ 	!function() {
-/******/ 		// getDefaultExport function for compatibility with non-harmony modules
-/******/ 		__webpack_require__.n = function(module) {
-/******/ 			var getter = module && module.__esModule ?
-/******/ 				function() { return module['default']; } :
-/******/ 				function() { return module; };
-/******/ 			__webpack_require__.d(getter, { a: getter });
-/******/ 			return getter;
+/******/ 	/* webpack/runtime/create fake namespace object */
+/******/ 	(() => {
+/******/ 		var getProto = Object.getPrototypeOf ? (obj) => (Object.getPrototypeOf(obj)) : (obj) => (obj.__proto__);
+/******/ 		var leafPrototypes;
+/******/ 		// create a fake namespace object
+/******/ 		// mode & 1: value is a module id, require it
+/******/ 		// mode & 2: merge all properties of value into the ns
+/******/ 		// mode & 4: return value when already ns object
+/******/ 		// mode & 16: return value when it's Promise-like
+/******/ 		// mode & 8|1: behave like require
+/******/ 		__webpack_require__.t = function(value, mode) {
+/******/ 			if(mode & 1) value = this(value);
+/******/ 			if(mode & 8) return value;
+/******/ 			if(typeof value === 'object' && value) {
+/******/ 				if((mode & 4) && value.__esModule) return value;
+/******/ 				if((mode & 16) && typeof value.then === 'function') return value;
+/******/ 			}
+/******/ 			var ns = Object.create(null);
+/******/ 			__webpack_require__.r(ns);
+/******/ 			var def = {};
+/******/ 			leafPrototypes = leafPrototypes || [null, getProto({}), getProto([]), getProto(getProto)];
+/******/ 			for(var current = mode & 2 && value; typeof current == 'object' && !~leafPrototypes.indexOf(current); current = getProto(current)) {
+/******/ 				Object.getOwnPropertyNames(current).forEach((key) => (def[key] = () => (value[key])));
+/******/ 			}
+/******/ 			def['default'] = () => (value);
+/******/ 			__webpack_require__.d(ns, def);
+/******/ 			return ns;
 /******/ 		};
-/******/ 	}();
+/******/ 	})();
 /******/ 	
 /******/ 	/* webpack/runtime/define property getters */
-/******/ 	!function() {
+/******/ 	(() => {
 /******/ 		// define getter functions for harmony exports
-/******/ 		__webpack_require__.d = function(exports, definition) {
+/******/ 		__webpack_require__.d = (exports, definition) => {
 /******/ 			for(var key in definition) {
 /******/ 				if(__webpack_require__.o(definition, key) && !__webpack_require__.o(exports, key)) {
 /******/ 					Object.defineProperty(exports, key, { enumerable: true, get: definition[key] });
 /******/ 				}
 /******/ 			}
 /******/ 		};
-/******/ 	}();
+/******/ 	})();
 /******/ 	
 /******/ 	/* webpack/runtime/hasOwnProperty shorthand */
-/******/ 	!function() {
-/******/ 		__webpack_require__.o = function(obj, prop) { return Object.prototype.hasOwnProperty.call(obj, prop); }
-/******/ 	}();
+/******/ 	(() => {
+/******/ 		__webpack_require__.o = (obj, prop) => (Object.prototype.hasOwnProperty.call(obj, prop))
+/******/ 	})();
 /******/ 	
 /******/ 	/* webpack/runtime/make namespace object */
-/******/ 	!function() {
+/******/ 	(() => {
 /******/ 		// define __esModule on exports
-/******/ 		__webpack_require__.r = function(exports) {
+/******/ 		__webpack_require__.r = (exports) => {
 /******/ 			if(typeof Symbol !== 'undefined' && Symbol.toStringTag) {
 /******/ 				Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 /******/ 			}
 /******/ 			Object.defineProperty(exports, '__esModule', { value: true });
 /******/ 		};
-/******/ 	}();
+/******/ 	})();
 /******/ 	
 /******/ 	/* webpack/runtime/nonce */
-/******/ 	!function() {
+/******/ 	(() => {
 /******/ 		__webpack_require__.nc = undefined;
-/******/ 	}();
+/******/ 	})();
 /******/ 	
 /************************************************************************/
 var __webpack_exports__ = {};
-// This entry need to be wrapped in an IIFE because it need to be in strict mode.
-!function() {
-"use strict";
 // ESM COMPAT FLAG
 __webpack_require__.r(__webpack_exports__);
 
 // EXPORTS
 __webpack_require__.d(__webpack_exports__, {
-  "CommandMenu": function() { return /* reexport */ CommandMenu; },
-  "privateApis": function() { return /* reexport */ privateApis; },
-  "store": function() { return /* reexport */ store; },
-  "useCommand": function() { return /* reexport */ useCommand; },
-  "useCommandLoader": function() { return /* reexport */ useCommandLoader; }
+  CommandMenu: () => (/* reexport */ CommandMenu),
+  privateApis: () => (/* reexport */ privateApis),
+  store: () => (/* reexport */ store),
+  useCommand: () => (/* reexport */ useCommand),
+  useCommandLoader: () => (/* reexport */ useCommandLoader)
 });
 
 // NAMESPACE OBJECT: ./node_modules/@wordpress/commands/build-module/store/actions.js
 var actions_namespaceObject = {};
 __webpack_require__.r(actions_namespaceObject);
 __webpack_require__.d(actions_namespaceObject, {
-  "close": function() { return actions_close; },
-  "open": function() { return actions_open; },
-  "registerCommand": function() { return registerCommand; },
-  "registerCommandLoader": function() { return registerCommandLoader; },
-  "unregisterCommand": function() { return unregisterCommand; },
-  "unregisterCommandLoader": function() { return unregisterCommandLoader; }
+  close: () => (actions_close),
+  open: () => (actions_open),
+  registerCommand: () => (registerCommand),
+  registerCommandLoader: () => (registerCommandLoader),
+  unregisterCommand: () => (unregisterCommand),
+  unregisterCommandLoader: () => (unregisterCommandLoader)
 });
 
 // NAMESPACE OBJECT: ./node_modules/@wordpress/commands/build-module/store/selectors.js
 var selectors_namespaceObject = {};
 __webpack_require__.r(selectors_namespaceObject);
 __webpack_require__.d(selectors_namespaceObject, {
-  "getCommandLoaders": function() { return getCommandLoaders; },
-  "getCommands": function() { return getCommands; },
-  "getContext": function() { return getContext; },
-  "isOpen": function() { return selectors_isOpen; }
+  getCommandLoaders: () => (getCommandLoaders),
+  getCommands: () => (getCommands),
+  getContext: () => (getContext),
+  isOpen: () => (selectors_isOpen)
 });
 
 // NAMESPACE OBJECT: ./node_modules/@wordpress/commands/build-module/store/private-actions.js
 var private_actions_namespaceObject = {};
 __webpack_require__.r(private_actions_namespaceObject);
 __webpack_require__.d(private_actions_namespaceObject, {
-  "setContext": function() { return setContext; }
+  setContext: () => (setContext)
 });
 
-;// CONCATENATED MODULE: external ["wp","element"]
-var external_wp_element_namespaceObject = window["wp"]["element"];
+;// CONCATENATED MODULE: ./node_modules/cmdk/dist/chunk-NZJY6EH4.mjs
+var U=1,Y=.9,H=.8,J=.17,p=.1,u=.999,$=.9999;var k=.99,m=/[\\\/_+.#"@\[\(\{&]/,B=/[\\\/_+.#"@\[\(\{&]/g,K=/[\s-]/,X=/[\s-]/g;function G(_,C,h,P,A,f,O){if(f===C.length)return A===_.length?U:k;var T=`${A},${f}`;if(O[T]!==void 0)return O[T];for(var L=P.charAt(f),c=h.indexOf(L,A),S=0,E,N,R,M;c>=0;)E=G(_,C,h,P,c+1,f+1,O),E>S&&(c===A?E*=U:m.test(_.charAt(c-1))?(E*=H,R=_.slice(A,c-1).match(B),R&&A>0&&(E*=Math.pow(u,R.length))):K.test(_.charAt(c-1))?(E*=Y,M=_.slice(A,c-1).match(X),M&&A>0&&(E*=Math.pow(u,M.length))):(E*=J,A>0&&(E*=Math.pow(u,c-A))),_.charAt(c)!==C.charAt(f)&&(E*=$)),(E<p&&h.charAt(c-1)===P.charAt(f+1)||P.charAt(f+1)===P.charAt(f)&&h.charAt(c-1)!==P.charAt(f))&&(N=G(_,C,h,P,c+1,f+2,O),N*p>E&&(E=N*p)),E>S&&(S=E),c=h.indexOf(L,c+1);return O[T]=S,S}function D(_){return _.toLowerCase().replace(X," ")}function W(_,C,h){return _=h&&h.length>0?`${_+" "+h.join(" ")}`:_,G(_,C,D(_),D(C),0,0,{})}
+
 ;// CONCATENATED MODULE: ./node_modules/@babel/runtime/helpers/esm/extends.js
 function _extends() {
   _extends = Object.assign ? Object.assign.bind() : function (target) {
@@ -279,8 +152,9 @@ function _extends() {
   return _extends.apply(this, arguments);
 }
 ;// CONCATENATED MODULE: external "React"
-var external_React_namespaceObject = window["React"];
-;// CONCATENATED MODULE: ./node_modules/@radix-ui/primitive/dist/index.module.js
+const external_React_namespaceObject = window["React"];
+var external_React_namespaceObject_0 = /*#__PURE__*/__webpack_require__.t(external_React_namespaceObject, 2);
+;// CONCATENATED MODULE: ./node_modules/@radix-ui/primitive/dist/index.mjs
 function $e42e1063c40fb3ef$export$b9ecd428b558ff10(originalEventHandler, ourEventHandler, { checkForDefaultPrevented: checkForDefaultPrevented = true  } = {}) {
     return function handleEvent(event) {
         originalEventHandler === null || originalEventHandler === void 0 || originalEventHandler(event);
@@ -292,8 +166,7 @@ function $e42e1063c40fb3ef$export$b9ecd428b558ff10(originalEventHandler, ourEven
 
 
 
-
-;// CONCATENATED MODULE: ./node_modules/@radix-ui/react-compose-refs/dist/index.module.js
+;// CONCATENATED MODULE: ./node_modules/@radix-ui/react-compose-refs/dist/index.mjs
 
 
 
@@ -324,8 +197,7 @@ function $e42e1063c40fb3ef$export$b9ecd428b558ff10(originalEventHandler, ourEven
 
 
 
-
-;// CONCATENATED MODULE: ./node_modules/@radix-ui/react-context/dist/index.module.js
+;// CONCATENATED MODULE: ./node_modules/@radix-ui/react-context/dist/index.mjs
 
 
 
@@ -453,8 +325,7 @@ function $c512c27ab02ef895$export$fd42f52fd3ae1109(rootComponentName, defaultCon
 
 
 
-
-;// CONCATENATED MODULE: ./node_modules/@radix-ui/react-use-layout-effect/dist/index.module.js
+;// CONCATENATED MODULE: ./node_modules/@radix-ui/react-use-layout-effect/dist/index.mjs
 
 
 
@@ -470,14 +341,13 @@ function $c512c27ab02ef895$export$fd42f52fd3ae1109(rootComponentName, defaultCon
 
 
 
-
-;// CONCATENATED MODULE: ./node_modules/@radix-ui/react-id/dist/index.module.js
-
+;// CONCATENATED MODULE: ./node_modules/@radix-ui/react-id/dist/index.mjs
 
 
 
 
-const $1746a345f3d73bb7$var$useReactId = external_React_namespaceObject['useId'.toString()] || (()=>undefined
+
+const $1746a345f3d73bb7$var$useReactId = external_React_namespaceObject_0['useId'.toString()] || (()=>undefined
 );
 let $1746a345f3d73bb7$var$count = 0;
 function $1746a345f3d73bb7$export$f680877a34711e37(deterministicId) {
@@ -495,8 +365,7 @@ function $1746a345f3d73bb7$export$f680877a34711e37(deterministicId) {
 
 
 
-
-;// CONCATENATED MODULE: ./node_modules/@radix-ui/react-use-callback-ref/dist/index.module.js
+;// CONCATENATED MODULE: ./node_modules/@radix-ui/react-use-callback-ref/dist/index.mjs
 
 
 
@@ -519,8 +388,7 @@ function $1746a345f3d73bb7$export$f680877a34711e37(deterministicId) {
 
 
 
-
-;// CONCATENATED MODULE: ./node_modules/@radix-ui/react-use-controllable-state/dist/index.module.js
+;// CONCATENATED MODULE: ./node_modules/@radix-ui/react-use-controllable-state/dist/index.mjs
 
 
 
@@ -573,11 +441,9 @@ function $71cd76cc60e0454e$var$useUncontrolledState({ defaultProp: defaultProp ,
 
 
 
-
 ;// CONCATENATED MODULE: external "ReactDOM"
-var external_ReactDOM_namespaceObject = window["ReactDOM"];
-var external_ReactDOM_default = /*#__PURE__*/__webpack_require__.n(external_ReactDOM_namespaceObject);
-;// CONCATENATED MODULE: ./node_modules/@radix-ui/react-dialog/node_modules/@radix-ui/react-slot/dist/index.module.js
+const external_ReactDOM_namespaceObject = window["ReactDOM"];
+;// CONCATENATED MODULE: ./node_modules/@radix-ui/react-slot/dist/index.mjs
 
 
 
@@ -617,7 +483,7 @@ $5e63c961fc1ce211$export$8c6ed5c666ac1360.displayName = 'Slot';
     const { children: children , ...slotProps } = props;
     if (/*#__PURE__*/ (0,external_React_namespaceObject.isValidElement)(children)) return /*#__PURE__*/ (0,external_React_namespaceObject.cloneElement)(children, {
         ...$5e63c961fc1ce211$var$mergeProps(slotProps, children.props),
-        ref: $6ed0406888f73fc4$export$43e446d32b3d21af(forwardedRef, children.ref)
+        ref: forwardedRef ? $6ed0406888f73fc4$export$43e446d32b3d21af(forwardedRef, children.ref) : children.ref
     });
     return external_React_namespaceObject.Children.count(children) > 1 ? external_React_namespaceObject.Children.only(null) : null;
 });
@@ -638,12 +504,15 @@ function $5e63c961fc1ce211$var$mergeProps(slotProps, childProps) {
     for(const propName in childProps){
         const slotPropValue = slotProps[propName];
         const childPropValue = childProps[propName];
-        const isHandler = /^on[A-Z]/.test(propName); // if it's a handler, modify the override by composing the base handler
-        if (isHandler) overrideProps[propName] = (...args)=>{
-            childPropValue === null || childPropValue === void 0 || childPropValue(...args);
-            slotPropValue === null || slotPropValue === void 0 || slotPropValue(...args);
-        };
-        else if (propName === 'style') overrideProps[propName] = {
+        const isHandler = /^on[A-Z]/.test(propName);
+        if (isHandler) {
+            // if the handler exists on both, we compose them
+            if (slotPropValue && childPropValue) overrideProps[propName] = (...args)=>{
+                childPropValue(...args);
+                slotPropValue(...args);
+            };
+            else if (slotPropValue) overrideProps[propName] = slotPropValue;
+        } else if (propName === 'style') overrideProps[propName] = {
             ...slotPropValue,
             ...childPropValue
         };
@@ -663,8 +532,7 @@ const $5e63c961fc1ce211$export$be92b6f5f03c0fe9 = (/* unused pure expression or 
 
 
 
-
-;// CONCATENATED MODULE: ./node_modules/@radix-ui/react-dialog/node_modules/@radix-ui/react-primitive/dist/index.module.js
+;// CONCATENATED MODULE: ./node_modules/@radix-ui/react-primitive/dist/index.mjs
 
 
 
@@ -678,9 +546,12 @@ const $8927f6f2acc4f386$var$NODES = [
     'a',
     'button',
     'div',
+    'form',
     'h2',
     'h3',
     'img',
+    'input',
+    'label',
     'li',
     'nav',
     'ol',
@@ -757,8 +628,7 @@ const $8927f6f2acc4f386$var$NODES = [
 
 
 
-
-;// CONCATENATED MODULE: ./node_modules/@radix-ui/react-dialog/node_modules/@radix-ui/react-use-escape-keydown/dist/index.module.js
+;// CONCATENATED MODULE: ./node_modules/@radix-ui/react-use-escape-keydown/dist/index.mjs
 
 
 
@@ -766,17 +636,18 @@ const $8927f6f2acc4f386$var$NODES = [
 
 /**
  * Listens for when the escape key is down
- */ function $addc16e1bbe58fd0$export$3a72a57244d6e765(onEscapeKeyDownProp) {
+ */ function $addc16e1bbe58fd0$export$3a72a57244d6e765(onEscapeKeyDownProp, ownerDocument = globalThis === null || globalThis === void 0 ? void 0 : globalThis.document) {
     const onEscapeKeyDown = $b1b2314f5f9a1d84$export$25bec8c6f54ee79a(onEscapeKeyDownProp);
     (0,external_React_namespaceObject.useEffect)(()=>{
         const handleKeyDown = (event)=>{
             if (event.key === 'Escape') onEscapeKeyDown(event);
         };
-        document.addEventListener('keydown', handleKeyDown);
-        return ()=>document.removeEventListener('keydown', handleKeyDown)
+        ownerDocument.addEventListener('keydown', handleKeyDown);
+        return ()=>ownerDocument.removeEventListener('keydown', handleKeyDown)
         ;
     }, [
-        onEscapeKeyDown
+        onEscapeKeyDown,
+        ownerDocument
     ]);
 }
 
@@ -784,8 +655,7 @@ const $8927f6f2acc4f386$var$NODES = [
 
 
 
-
-;// CONCATENATED MODULE: ./node_modules/@radix-ui/react-dialog/node_modules/@radix-ui/react-dismissable-layer/dist/index.module.js
+;// CONCATENATED MODULE: ./node_modules/@radix-ui/react-dismissable-layer/dist/index.mjs
 
 
 
@@ -814,9 +684,11 @@ const $5cb92bef7577960e$var$DismissableLayerContext = /*#__PURE__*/ (0,external_
     branches: new Set()
 });
 const $5cb92bef7577960e$export$177fb62ff3ec1f22 = /*#__PURE__*/ (0,external_React_namespaceObject.forwardRef)((props, forwardedRef)=>{
+    var _node$ownerDocument;
     const { disableOutsidePointerEvents: disableOutsidePointerEvents = false , onEscapeKeyDown: onEscapeKeyDown , onPointerDownOutside: onPointerDownOutside , onFocusOutside: onFocusOutside , onInteractOutside: onInteractOutside , onDismiss: onDismiss , ...layerProps } = props;
     const context = (0,external_React_namespaceObject.useContext)($5cb92bef7577960e$var$DismissableLayerContext);
     const [node1, setNode] = (0,external_React_namespaceObject.useState)(null);
+    const ownerDocument = (_node$ownerDocument = node1 === null || node1 === void 0 ? void 0 : node1.ownerDocument) !== null && _node$ownerDocument !== void 0 ? _node$ownerDocument : globalThis === null || globalThis === void 0 ? void 0 : globalThis.document;
     const [, force] = (0,external_React_namespaceObject.useState)({});
     const composedRefs = $6ed0406888f73fc4$export$c7b2cbe3552a0d05(forwardedRef, (node)=>setNode(node)
     );
@@ -838,7 +710,7 @@ const $5cb92bef7577960e$export$177fb62ff3ec1f22 = /*#__PURE__*/ (0,external_Reac
         onPointerDownOutside === null || onPointerDownOutside === void 0 || onPointerDownOutside(event);
         onInteractOutside === null || onInteractOutside === void 0 || onInteractOutside(event);
         if (!event.defaultPrevented) onDismiss === null || onDismiss === void 0 || onDismiss();
-    });
+    }, ownerDocument);
     const focusOutside = $5cb92bef7577960e$var$useFocusOutside((event)=>{
         const target = event.target;
         const isFocusInBranch = [
@@ -849,7 +721,7 @@ const $5cb92bef7577960e$export$177fb62ff3ec1f22 = /*#__PURE__*/ (0,external_Reac
         onFocusOutside === null || onFocusOutside === void 0 || onFocusOutside(event);
         onInteractOutside === null || onInteractOutside === void 0 || onInteractOutside(event);
         if (!event.defaultPrevented) onDismiss === null || onDismiss === void 0 || onDismiss();
-    });
+    }, ownerDocument);
     $addc16e1bbe58fd0$export$3a72a57244d6e765((event)=>{
         const isHighestLayer = index === context.layers.size - 1;
         if (!isHighestLayer) return;
@@ -858,23 +730,24 @@ const $5cb92bef7577960e$export$177fb62ff3ec1f22 = /*#__PURE__*/ (0,external_Reac
             event.preventDefault();
             onDismiss();
         }
-    });
+    }, ownerDocument);
     (0,external_React_namespaceObject.useEffect)(()=>{
         if (!node1) return;
         if (disableOutsidePointerEvents) {
             if (context.layersWithOutsidePointerEventsDisabled.size === 0) {
-                $5cb92bef7577960e$var$originalBodyPointerEvents = document.body.style.pointerEvents;
-                document.body.style.pointerEvents = 'none';
+                $5cb92bef7577960e$var$originalBodyPointerEvents = ownerDocument.body.style.pointerEvents;
+                ownerDocument.body.style.pointerEvents = 'none';
             }
             context.layersWithOutsidePointerEventsDisabled.add(node1);
         }
         context.layers.add(node1);
         $5cb92bef7577960e$var$dispatchUpdate();
         return ()=>{
-            if (disableOutsidePointerEvents && context.layersWithOutsidePointerEventsDisabled.size === 1) document.body.style.pointerEvents = $5cb92bef7577960e$var$originalBodyPointerEvents;
+            if (disableOutsidePointerEvents && context.layersWithOutsidePointerEventsDisabled.size === 1) ownerDocument.body.style.pointerEvents = $5cb92bef7577960e$var$originalBodyPointerEvents;
         };
     }, [
         node1,
+        ownerDocument,
         disableOutsidePointerEvents,
         context
     ]);
@@ -944,7 +817,7 @@ const $5cb92bef7577960e$export$4d5eb2109db14228 = /*#__PURE__*/ (0,external_Reac
  * Listens for `pointerdown` outside a react subtree. We use `pointerdown` rather than `pointerup`
  * to mimic layer dismissing behaviour present in OS.
  * Returns props to pass to the node we want to check for outside events.
- */ function $5cb92bef7577960e$var$usePointerDownOutside(onPointerDownOutside) {
+ */ function $5cb92bef7577960e$var$usePointerDownOutside(onPointerDownOutside, ownerDocument = globalThis === null || globalThis === void 0 ? void 0 : globalThis.document) {
     const handlePointerDownOutside = $b1b2314f5f9a1d84$export$25bec8c6f54ee79a(onPointerDownOutside);
     const isPointerInsideReactTreeRef = (0,external_React_namespaceObject.useRef)(false);
     const handleClickRef = (0,external_React_namespaceObject.useRef)(()=>{});
@@ -971,13 +844,15 @@ const $5cb92bef7577960e$export$4d5eb2109db14228 = /*#__PURE__*/ (0,external_Reac
          * This is why we also continuously remove the previous listener, because we cannot be
          * certain that it was raised, and therefore cleaned-up.
          */ if (event.pointerType === 'touch') {
-                    document.removeEventListener('click', handleClickRef.current);
+                    ownerDocument.removeEventListener('click', handleClickRef.current);
                     handleClickRef.current = handleAndDispatchPointerDownOutsideEvent;
-                    document.addEventListener('click', handleClickRef.current, {
+                    ownerDocument.addEventListener('click', handleClickRef.current, {
                         once: true
                     });
                 } else handleAndDispatchPointerDownOutsideEvent();
-            }
+            } else // We need to remove the event listener in case the outside click has been canceled.
+            // See: https://github.com/radix-ui/primitives/issues/2171
+            ownerDocument.removeEventListener('click', handleClickRef.current);
             isPointerInsideReactTreeRef.current = false;
         };
         /**
@@ -993,14 +868,15 @@ const $5cb92bef7577960e$export$4d5eb2109db14228 = /*#__PURE__*/ (0,external_Reac
      *   })
      * });
      */ const timerId = window.setTimeout(()=>{
-            document.addEventListener('pointerdown', handlePointerDown);
+            ownerDocument.addEventListener('pointerdown', handlePointerDown);
         }, 0);
         return ()=>{
             window.clearTimeout(timerId);
-            document.removeEventListener('pointerdown', handlePointerDown);
-            document.removeEventListener('click', handleClickRef.current);
+            ownerDocument.removeEventListener('pointerdown', handlePointerDown);
+            ownerDocument.removeEventListener('click', handleClickRef.current);
         };
     }, [
+        ownerDocument,
         handlePointerDownOutside
     ]);
     return {
@@ -1011,7 +887,7 @@ const $5cb92bef7577960e$export$4d5eb2109db14228 = /*#__PURE__*/ (0,external_Reac
 /**
  * Listens for when focus happens outside a react subtree.
  * Returns props to pass to the root (node) of the subtree we want to check.
- */ function $5cb92bef7577960e$var$useFocusOutside(onFocusOutside) {
+ */ function $5cb92bef7577960e$var$useFocusOutside(onFocusOutside, ownerDocument = globalThis === null || globalThis === void 0 ? void 0 : globalThis.document) {
     const handleFocusOutside = $b1b2314f5f9a1d84$export$25bec8c6f54ee79a(onFocusOutside);
     const isFocusInsideReactTreeRef = (0,external_React_namespaceObject.useRef)(false);
     (0,external_React_namespaceObject.useEffect)(()=>{
@@ -1025,10 +901,11 @@ const $5cb92bef7577960e$export$4d5eb2109db14228 = /*#__PURE__*/ (0,external_Reac
                 });
             }
         };
-        document.addEventListener('focusin', handleFocus);
-        return ()=>document.removeEventListener('focusin', handleFocus)
+        ownerDocument.addEventListener('focusin', handleFocus);
+        return ()=>ownerDocument.removeEventListener('focusin', handleFocus)
         ;
     }, [
+        ownerDocument,
         handleFocusOutside
     ]);
     return {
@@ -1061,8 +938,7 @@ const $5cb92bef7577960e$export$aecb2ddcb55c95be = (/* unused pure expression or 
 
 
 
-
-;// CONCATENATED MODULE: ./node_modules/@radix-ui/react-dialog/node_modules/@radix-ui/react-focus-scope/dist/index.module.js
+;// CONCATENATED MODULE: ./node_modules/@radix-ui/react-focus-scope/dist/index.mjs
 
 
 
@@ -1112,15 +988,40 @@ const $d3863c46a17e8a28$export$20e40289641fbbb6 = /*#__PURE__*/ (0,external_Reac
             }
             function handleFocusOut(event) {
                 if (focusScope.paused || !container1) return;
-                if (!container1.contains(event.relatedTarget)) $d3863c46a17e8a28$var$focus(lastFocusedElementRef.current, {
+                const relatedTarget = event.relatedTarget; // A `focusout` event with a `null` `relatedTarget` will happen in at least two cases:
+                //
+                // 1. When the user switches app/tabs/windows/the browser itself loses focus.
+                // 2. In Google Chrome, when the focused element is removed from the DOM.
+                //
+                // We let the browser do its thing here because:
+                //
+                // 1. The browser already keeps a memory of what's focused for when the page gets refocused.
+                // 2. In Google Chrome, if we try to focus the deleted focused element (as per below), it
+                //    throws the CPU to 100%, so we avoid doing anything for this reason here too.
+                if (relatedTarget === null) return; // If the focus has moved to an actual legitimate element (`relatedTarget !== null`)
+                // that is outside the container, we move focus to the last valid focused element inside.
+                if (!container1.contains(relatedTarget)) $d3863c46a17e8a28$var$focus(lastFocusedElementRef.current, {
                     select: true
                 });
+            } // When the focused element gets removed from the DOM, browsers move focus
+            // back to the document.body. In this case, we move focus to the container
+            // to keep focus trapped correctly.
+            function handleMutations(mutations) {
+                const focusedElement = document.activeElement;
+                if (focusedElement !== document.body) return;
+                for (const mutation of mutations)if (mutation.removedNodes.length > 0) $d3863c46a17e8a28$var$focus(container1);
             }
             document.addEventListener('focusin', handleFocusIn);
             document.addEventListener('focusout', handleFocusOut);
+            const mutationObserver = new MutationObserver(handleMutations);
+            if (container1) mutationObserver.observe(container1, {
+                childList: true,
+                subtree: true
+            });
             return ()=>{
                 document.removeEventListener('focusin', handleFocusIn);
                 document.removeEventListener('focusout', handleFocusOut);
+                mutationObserver.disconnect();
             };
         }
     }, [
@@ -1329,8 +1230,7 @@ const $d3863c46a17e8a28$export$be92b6f5f03c0fe9 = (/* unused pure expression or 
 
 
 
-
-;// CONCATENATED MODULE: ./node_modules/@radix-ui/react-dialog/node_modules/@radix-ui/react-portal/dist/index.module.js
+;// CONCATENATED MODULE: ./node_modules/@radix-ui/react-portal/dist/index.mjs
 
 
 
@@ -1346,7 +1246,7 @@ const $d3863c46a17e8a28$export$be92b6f5f03c0fe9 = (/* unused pure expression or 
 const $f1701beae083dbae$export$602eac185826482c = /*#__PURE__*/ (0,external_React_namespaceObject.forwardRef)((props, forwardedRef)=>{
     var _globalThis$document;
     const { container: container = globalThis === null || globalThis === void 0 ? void 0 : (_globalThis$document = globalThis.document) === null || _globalThis$document === void 0 ? void 0 : _globalThis$document.body , ...portalProps } = props;
-    return container ? /*#__PURE__*/ external_ReactDOM_default().createPortal(/*#__PURE__*/ (0,external_React_namespaceObject.createElement)($8927f6f2acc4f386$export$250ffa63cdc0d034.div, _extends({}, portalProps, {
+    return container ? /*#__PURE__*/ external_ReactDOM_namespaceObject.createPortal(/*#__PURE__*/ (0,external_React_namespaceObject.createElement)($8927f6f2acc4f386$export$250ffa63cdc0d034.div, _extends({}, portalProps, {
         ref: forwardedRef
     })), container) : null;
 });
@@ -1359,8 +1259,7 @@ const $f1701beae083dbae$export$602eac185826482c = /*#__PURE__*/ (0,external_Reac
 
 
 
-
-;// CONCATENATED MODULE: ./node_modules/@radix-ui/react-presence/dist/index.module.js
+;// CONCATENATED MODULE: ./node_modules/@radix-ui/react-presence/dist/index.mjs
 
 
 
@@ -1499,8 +1398,7 @@ $921a889cee6df7e8$export$99c2b779aa4e8b8b.displayName = 'Presence';
 
 
 
-
-;// CONCATENATED MODULE: ./node_modules/@radix-ui/react-focus-guards/dist/index.module.js
+;// CONCATENATED MODULE: ./node_modules/@radix-ui/react-focus-guards/dist/index.mjs
 
 
 
@@ -1539,7 +1437,6 @@ const $3db38b7d1fb3fe6a$export$be92b6f5f03c0fe9 = (/* unused pure expression or 
 
 
 
-
 ;// CONCATENATED MODULE: ./node_modules/tslib/tslib.es6.mjs
 /******************************************************************************
 Copyright (c) Microsoft Corporation.
@@ -1555,7 +1452,7 @@ LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR
 OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
 PERFORMANCE OF THIS SOFTWARE.
 ***************************************************************************** */
-/* global Reflect, Promise, SuppressedError, Symbol */
+/* global Reflect, Promise, SuppressedError, Symbol, Iterator */
 
 var extendStatics = function(d, b) {
   extendStatics = Object.setPrototypeOf ||
@@ -1666,8 +1563,8 @@ function __awaiter(thisArg, _arguments, P, generator) {
 }
 
 function __generator(thisArg, body) {
-  var _ = { label: 0, sent: function() { if (t[0] & 1) throw t[1]; return t[1]; }, trys: [], ops: [] }, f, y, t, g;
-  return g = { next: verb(0), "throw": verb(1), "return": verb(2) }, typeof Symbol === "function" && (g[Symbol.iterator] = function() { return this; }), g;
+  var _ = { label: 0, sent: function() { if (t[0] & 1) throw t[1]; return t[1]; }, trys: [], ops: [] }, f, y, t, g = Object.create((typeof Iterator === "function" ? Iterator : Object).prototype);
+  return g.next = verb(0), g["throw"] = verb(1), g["return"] = verb(2), typeof Symbol === "function" && (g[Symbol.iterator] = function() { return this; }), g;
   function verb(n) { return function (v) { return step([n, v]); }; }
   function step(op) {
       if (f) throw new TypeError("Generator is already executing.");
@@ -1771,8 +1668,9 @@ function __await(v) {
 function __asyncGenerator(thisArg, _arguments, generator) {
   if (!Symbol.asyncIterator) throw new TypeError("Symbol.asyncIterator is not defined.");
   var g = generator.apply(thisArg, _arguments || []), i, q = [];
-  return i = {}, verb("next"), verb("throw"), verb("return"), i[Symbol.asyncIterator] = function () { return this; }, i;
-  function verb(n) { if (g[n]) i[n] = function (v) { return new Promise(function (a, b) { q.push([n, v, a, b]) > 1 || resume(n, v); }); }; }
+  return i = Object.create((typeof AsyncIterator === "function" ? AsyncIterator : Object).prototype), verb("next"), verb("throw"), verb("return", awaitReturn), i[Symbol.asyncIterator] = function () { return this; }, i;
+  function awaitReturn(f) { return function (v) { return Promise.resolve(v).then(f, reject); }; }
+  function verb(n, f) { if (g[n]) { i[n] = function (v) { return new Promise(function (a, b) { q.push([n, v, a, b]) > 1 || resume(n, v); }); }; if (f) i[n] = f(i[n]); } }
   function resume(n, v) { try { step(g[n](v)); } catch (e) { settle(q[0][3], e); } }
   function step(r) { r.value instanceof __await ? Promise.resolve(r.value.v).then(fulfill, reject) : settle(q[0][2], r); }
   function fulfill(value) { resume("next", value); }
@@ -1837,17 +1735,19 @@ function __classPrivateFieldIn(state, receiver) {
 
 function __addDisposableResource(env, value, async) {
   if (value !== null && value !== void 0) {
-    if (typeof value !== "object") throw new TypeError("Object expected.");
-    var dispose;
+    if (typeof value !== "object" && typeof value !== "function") throw new TypeError("Object expected.");
+    var dispose, inner;
     if (async) {
-        if (!Symbol.asyncDispose) throw new TypeError("Symbol.asyncDispose is not defined.");
-        dispose = value[Symbol.asyncDispose];
+      if (!Symbol.asyncDispose) throw new TypeError("Symbol.asyncDispose is not defined.");
+      dispose = value[Symbol.asyncDispose];
     }
     if (dispose === void 0) {
-        if (!Symbol.dispose) throw new TypeError("Symbol.dispose is not defined.");
-        dispose = value[Symbol.dispose];
+      if (!Symbol.dispose) throw new TypeError("Symbol.dispose is not defined.");
+      dispose = value[Symbol.dispose];
+      if (async) inner = dispose;
     }
     if (typeof dispose !== "function") throw new TypeError("Object not disposable.");
+    if (inner) dispose = function() { try { inner.call(this); } catch (e) { return Promise.reject(e); } };
     env.stack.push({ value: value, dispose: dispose, async: async });
   }
   else if (async) {
@@ -1866,23 +1766,28 @@ function __disposeResources(env) {
     env.error = env.hasError ? new _SuppressedError(e, env.error, "An error was suppressed during disposal.") : e;
     env.hasError = true;
   }
+  var r, s = 0;
   function next() {
-    while (env.stack.length) {
-      var rec = env.stack.pop();
+    while (r = env.stack.pop()) {
       try {
-        var result = rec.dispose && rec.dispose.call(rec.value);
-        if (rec.async) return Promise.resolve(result).then(next, function(e) { fail(e); return next(); });
+        if (!r.async && s === 1) return s = 0, env.stack.push(r), Promise.resolve().then(next);
+        if (r.dispose) {
+          var result = r.dispose.call(r.value);
+          if (r.async) return s |= 2, Promise.resolve(result).then(next, function(e) { fail(e); return next(); });
+        }
+        else s |= 1;
       }
       catch (e) {
-          fail(e);
+        fail(e);
       }
     }
+    if (s === 1) return env.hasError ? Promise.reject(env.error) : Promise.resolve();
     if (env.hasError) throw env.error;
   }
   return next();
 }
 
-/* harmony default export */ var tslib_es6 = ({
+/* harmony default export */ const tslib_es6 = ({
   __extends,
   __assign,
   __rest,
@@ -1990,6 +1895,9 @@ function useCallbackRef(initialValue, callback) {
 ;// CONCATENATED MODULE: ./node_modules/use-callback-ref/dist/es2015/useMergeRef.js
 
 
+
+var useIsomorphicLayoutEffect = typeof window !== 'undefined' ? external_React_namespaceObject.useLayoutEffect : external_React_namespaceObject.useEffect;
+var currentValues = new WeakMap();
 /**
  * Merges two or more refs together providing a single interface to set their value
  * @param {RefObject|Ref} refs
@@ -2005,7 +1913,30 @@ function useCallbackRef(initialValue, callback) {
  * }
  */
 function useMergeRefs(refs, defaultValue) {
-    return useCallbackRef(defaultValue || null, function (newValue) { return refs.forEach(function (ref) { return assignRef(ref, newValue); }); });
+    var callbackRef = useCallbackRef(defaultValue || null, function (newValue) {
+        return refs.forEach(function (ref) { return assignRef(ref, newValue); });
+    });
+    // handle refs changes - added or removed
+    useIsomorphicLayoutEffect(function () {
+        var oldValue = currentValues.get(callbackRef);
+        if (oldValue) {
+            var prevRefs_1 = new Set(oldValue);
+            var nextRefs_1 = new Set(refs);
+            var current_1 = callbackRef.current;
+            prevRefs_1.forEach(function (ref) {
+                if (!nextRefs_1.has(ref)) {
+                    assignRef(ref, null);
+                }
+            });
+            nextRefs_1.forEach(function (ref) {
+                if (!prevRefs_1.has(ref)) {
+                    assignRef(ref, current_1);
+                }
+            });
+        }
+        currentValues.set(callbackRef, refs);
+    }, [refs]);
+    return callbackRef;
 }
 
 ;// CONCATENATED MODULE: ./node_modules/use-sidecar/dist/es2015/medium.js
@@ -2088,11 +2019,11 @@ function createSidecarMedium(options) {
     return medium;
 }
 
-;// CONCATENATED MODULE: ./node_modules/@radix-ui/react-dialog/node_modules/react-remove-scroll/dist/es2015/medium.js
+;// CONCATENATED MODULE: ./node_modules/react-remove-scroll/dist/es2015/medium.js
 
 var effectCar = createSidecarMedium();
 
-;// CONCATENATED MODULE: ./node_modules/@radix-ui/react-dialog/node_modules/react-remove-scroll/dist/es2015/UI.js
+;// CONCATENATED MODULE: ./node_modules/react-remove-scroll/dist/es2015/UI.js
 
 
 
@@ -2299,26 +2230,46 @@ var getGapWidth = function (gapMode) {
 
 
 var Style = styleSingleton();
+var lockAttribute = 'data-scroll-locked';
 // important tip - once we measure scrollBar width and remove them
 // we could not repeat this operation
 // thus we are using style-singleton - only the first "yet correct" style will be applied.
 var getStyles = function (_a, allowRelative, gapMode, important) {
     var left = _a.left, top = _a.top, right = _a.right, gap = _a.gap;
     if (gapMode === void 0) { gapMode = 'margin'; }
-    return "\n  .".concat(noScrollbarsClassName, " {\n   overflow: hidden ").concat(important, ";\n   padding-right: ").concat(gap, "px ").concat(important, ";\n  }\n  body {\n    overflow: hidden ").concat(important, ";\n    overscroll-behavior: contain;\n    ").concat([
+    return "\n  .".concat(noScrollbarsClassName, " {\n   overflow: hidden ").concat(important, ";\n   padding-right: ").concat(gap, "px ").concat(important, ";\n  }\n  body[").concat(lockAttribute, "] {\n    overflow: hidden ").concat(important, ";\n    overscroll-behavior: contain;\n    ").concat([
         allowRelative && "position: relative ".concat(important, ";"),
         gapMode === 'margin' &&
             "\n    padding-left: ".concat(left, "px;\n    padding-top: ").concat(top, "px;\n    padding-right: ").concat(right, "px;\n    margin-left:0;\n    margin-top:0;\n    margin-right: ").concat(gap, "px ").concat(important, ";\n    "),
         gapMode === 'padding' && "padding-right: ".concat(gap, "px ").concat(important, ";"),
     ]
         .filter(Boolean)
-        .join(''), "\n  }\n  \n  .").concat(zeroRightClassName, " {\n    right: ").concat(gap, "px ").concat(important, ";\n  }\n  \n  .").concat(fullWidthClassName, " {\n    margin-right: ").concat(gap, "px ").concat(important, ";\n  }\n  \n  .").concat(zeroRightClassName, " .").concat(zeroRightClassName, " {\n    right: 0 ").concat(important, ";\n  }\n  \n  .").concat(fullWidthClassName, " .").concat(fullWidthClassName, " {\n    margin-right: 0 ").concat(important, ";\n  }\n  \n  body {\n    ").concat(removedBarSizeVariable, ": ").concat(gap, "px;\n  }\n");
+        .join(''), "\n  }\n  \n  .").concat(zeroRightClassName, " {\n    right: ").concat(gap, "px ").concat(important, ";\n  }\n  \n  .").concat(fullWidthClassName, " {\n    margin-right: ").concat(gap, "px ").concat(important, ";\n  }\n  \n  .").concat(zeroRightClassName, " .").concat(zeroRightClassName, " {\n    right: 0 ").concat(important, ";\n  }\n  \n  .").concat(fullWidthClassName, " .").concat(fullWidthClassName, " {\n    margin-right: 0 ").concat(important, ";\n  }\n  \n  body[").concat(lockAttribute, "] {\n    ").concat(removedBarSizeVariable, ": ").concat(gap, "px;\n  }\n");
+};
+var getCurrentUseCounter = function () {
+    var counter = parseInt(document.body.getAttribute(lockAttribute) || '0', 10);
+    return isFinite(counter) ? counter : 0;
+};
+var useLockAttribute = function () {
+    external_React_namespaceObject.useEffect(function () {
+        document.body.setAttribute(lockAttribute, (getCurrentUseCounter() + 1).toString());
+        return function () {
+            var newCounter = getCurrentUseCounter() - 1;
+            if (newCounter <= 0) {
+                document.body.removeAttribute(lockAttribute);
+            }
+            else {
+                document.body.setAttribute(lockAttribute, newCounter.toString());
+            }
+        };
+    }, []);
 };
 /**
  * Removes page scrollbar and blocks page scroll when mounted
  */
-var RemoveScrollBar = function (props) {
-    var noRelative = props.noRelative, noImportant = props.noImportant, _a = props.gapMode, gapMode = _a === void 0 ? 'margin' : _a;
+var RemoveScrollBar = function (_a) {
+    var noRelative = _a.noRelative, noImportant = _a.noImportant, _b = _a.gapMode, gapMode = _b === void 0 ? 'margin' : _b;
+    useLockAttribute();
     /*
      gap will be measured on every component mount
      however it will be used only by the "first" invocation
@@ -2334,7 +2285,7 @@ var RemoveScrollBar = function (props) {
 
 
 
-;// CONCATENATED MODULE: ./node_modules/@radix-ui/react-dialog/node_modules/react-remove-scroll/dist/es2015/aggresiveCapture.js
+;// CONCATENATED MODULE: ./node_modules/react-remove-scroll/dist/es2015/aggresiveCapture.js
 var passiveSupported = false;
 if (typeof window !== 'undefined') {
     try {
@@ -2355,19 +2306,21 @@ if (typeof window !== 'undefined') {
 }
 var nonPassive = passiveSupported ? { passive: false } : false;
 
-;// CONCATENATED MODULE: ./node_modules/@radix-ui/react-dialog/node_modules/react-remove-scroll/dist/es2015/handleScroll.js
-var elementCouldBeVScrolled = function (node) {
-    var styles = window.getComputedStyle(node);
-    return (styles.overflowY !== 'hidden' && // not-not-scrollable
-        !(styles.overflowY === styles.overflowX && styles.overflowY === 'visible') // scrollable
-    );
+;// CONCATENATED MODULE: ./node_modules/react-remove-scroll/dist/es2015/handleScroll.js
+var alwaysContainsScroll = function (node) {
+    // textarea will always _contain_ scroll inside self. It only can be hidden
+    return node.tagName === 'TEXTAREA';
 };
-var elementCouldBeHScrolled = function (node) {
+var elementCanBeScrolled = function (node, overflow) {
     var styles = window.getComputedStyle(node);
-    return (styles.overflowX !== 'hidden' && // not-not-scrollable
-        !(styles.overflowY === styles.overflowX && styles.overflowX === 'visible') // scrollable
-    );
+    return (
+    // not-not-scrollable
+    styles[overflow] !== 'hidden' &&
+        // contains scroll inside self
+        !(styles.overflowY === styles.overflowX && !alwaysContainsScroll(node) && styles[overflow] === 'visible'));
 };
+var elementCouldBeVScrolled = function (node) { return elementCanBeScrolled(node, 'overflowY'); };
+var elementCouldBeHScrolled = function (node) { return elementCanBeScrolled(node, 'overflowX'); };
 var locationCouldBeScrolled = function (axis, node) {
     var current = node;
     do {
@@ -2451,7 +2404,7 @@ var handleScroll = function (axis, endTarget, event, sourceDelta, noOverscroll) 
     return shouldCancelScroll;
 };
 
-;// CONCATENATED MODULE: ./node_modules/@radix-ui/react-dialog/node_modules/react-remove-scroll/dist/es2015/SideEffect.js
+;// CONCATENATED MODULE: ./node_modules/react-remove-scroll/dist/es2015/SideEffect.js
 
 
 
@@ -2540,7 +2493,9 @@ function RemoveScrollSideCar(props) {
         var sourceEvent = shouldPreventQueue.current.filter(function (e) { return e.name === event.type && e.target === event.target && deltaCompare(e.delta, delta); })[0];
         // self event, and should be canceled
         if (sourceEvent && sourceEvent.should) {
-            event.preventDefault();
+            if (event.cancelable) {
+                event.preventDefault();
+            }
             return;
         }
         // outside or shard event
@@ -2551,7 +2506,9 @@ function RemoveScrollSideCar(props) {
                 .filter(function (node) { return node.contains(event.target); });
             var shouldStop = shardNodes.length > 0 ? shouldCancelEvent(event, shardNodes[0]) : !lastProps.current.noIsolation;
             if (shouldStop) {
-                event.preventDefault();
+                if (event.cancelable) {
+                    event.preventDefault();
+                }
             }
         }
     }, []);
@@ -2595,20 +2552,20 @@ function RemoveScrollSideCar(props) {
         removeScrollBar ? external_React_namespaceObject.createElement(RemoveScrollBar, { gapMode: "margin" }) : null));
 }
 
-;// CONCATENATED MODULE: ./node_modules/@radix-ui/react-dialog/node_modules/react-remove-scroll/dist/es2015/sidecar.js
+;// CONCATENATED MODULE: ./node_modules/react-remove-scroll/dist/es2015/sidecar.js
 
 
 
-/* harmony default export */ var sidecar = (exportSidecar(effectCar, RemoveScrollSideCar));
+/* harmony default export */ const sidecar = (exportSidecar(effectCar, RemoveScrollSideCar));
 
-;// CONCATENATED MODULE: ./node_modules/@radix-ui/react-dialog/node_modules/react-remove-scroll/dist/es2015/Combination.js
+;// CONCATENATED MODULE: ./node_modules/react-remove-scroll/dist/es2015/Combination.js
 
 
 
 
 var ReactRemoveScroll = external_React_namespaceObject.forwardRef(function (props, ref) { return (external_React_namespaceObject.createElement(RemoveScroll, __assign({}, props, { ref: ref, sideCar: sidecar }))); });
 ReactRemoveScroll.classNames = RemoveScroll.classNames;
-/* harmony default export */ var Combination = (ReactRemoveScroll);
+/* harmony default export */ const Combination = (ReactRemoveScroll);
 
 ;// CONCATENATED MODULE: ./node_modules/aria-hidden/dist/es2015/index.js
 var getDefaultParent = function (originalTarget) {
@@ -2674,21 +2631,26 @@ var applyAttributeToOthers = function (originalTarget, parentNode, markerName, c
                 deep(node);
             }
             else {
-                var attr = node.getAttribute(controlAttribute);
-                var alreadyHidden = attr !== null && attr !== 'false';
-                var counterValue = (counterMap.get(node) || 0) + 1;
-                var markerValue = (markerCounter.get(node) || 0) + 1;
-                counterMap.set(node, counterValue);
-                markerCounter.set(node, markerValue);
-                hiddenNodes.push(node);
-                if (counterValue === 1 && alreadyHidden) {
-                    uncontrolledNodes.set(node, true);
+                try {
+                    var attr = node.getAttribute(controlAttribute);
+                    var alreadyHidden = attr !== null && attr !== 'false';
+                    var counterValue = (counterMap.get(node) || 0) + 1;
+                    var markerValue = (markerCounter.get(node) || 0) + 1;
+                    counterMap.set(node, counterValue);
+                    markerCounter.set(node, markerValue);
+                    hiddenNodes.push(node);
+                    if (counterValue === 1 && alreadyHidden) {
+                        uncontrolledNodes.set(node, true);
+                    }
+                    if (markerValue === 1) {
+                        node.setAttribute(markerName, 'true');
+                    }
+                    if (!alreadyHidden) {
+                        node.setAttribute(controlAttribute, 'true');
+                    }
                 }
-                if (markerValue === 1) {
-                    node.setAttribute(markerName, 'true');
-                }
-                if (!alreadyHidden) {
-                    node.setAttribute(controlAttribute, 'true');
+                catch (e) {
+                    console.error('aria-hidden: cannot operate on ', node, e);
                 }
             }
         });
@@ -2773,7 +2735,7 @@ var suppressOthers = function (originalTarget, parentNode, markerName) {
     return (supportsInert() ? inertOthers : hideOthers)(originalTarget, parentNode, markerName);
 };
 
-;// CONCATENATED MODULE: ./node_modules/@radix-ui/react-dialog/dist/index.module.js
+;// CONCATENATED MODULE: ./node_modules/@radix-ui/react-dialog/dist/index.mjs
 
 
 
@@ -2974,6 +2936,7 @@ const $5d3850c4d0b4e6c7$export$b6d9565de1e068cf = /*#__PURE__*/ (0,external_Reac
 /* -----------------------------------------------------------------------------------------------*/ const $5d3850c4d0b4e6c7$var$DialogContentNonModal = /*#__PURE__*/ (0,external_React_namespaceObject.forwardRef)((props, forwardedRef)=>{
     const context = $5d3850c4d0b4e6c7$var$useDialogContext($5d3850c4d0b4e6c7$var$CONTENT_NAME, props.__scopeDialog);
     const hasInteractedOutsideRef = (0,external_React_namespaceObject.useRef)(false);
+    const hasPointerDownOutsideRef = (0,external_React_namespaceObject.useRef)(false);
     return /*#__PURE__*/ (0,external_React_namespaceObject.createElement)($5d3850c4d0b4e6c7$var$DialogContentImpl, _extends({}, props, {
         ref: forwardedRef,
         trapFocus: false,
@@ -2987,19 +2950,24 @@ const $5d3850c4d0b4e6c7$export$b6d9565de1e068cf = /*#__PURE__*/ (0,external_Reac
                 event.preventDefault();
             }
             hasInteractedOutsideRef.current = false;
+            hasPointerDownOutsideRef.current = false;
         },
         onInteractOutside: (event)=>{
             var _props$onInteractOuts, _context$triggerRef$c3;
             (_props$onInteractOuts = props.onInteractOutside) === null || _props$onInteractOuts === void 0 || _props$onInteractOuts.call(props, event);
-            if (!event.defaultPrevented) hasInteractedOutsideRef.current = true; // Prevent dismissing when clicking the trigger.
+            if (!event.defaultPrevented) {
+                hasInteractedOutsideRef.current = true;
+                if (event.detail.originalEvent.type === 'pointerdown') hasPointerDownOutsideRef.current = true;
+            } // Prevent dismissing when clicking the trigger.
             // As the trigger is already setup to close, without doing so would
             // cause it to close and immediately open.
-            //
-            // We use `onInteractOutside` as some browsers also
-            // focus on pointer down, creating the same issue.
             const target = event.target;
             const targetIsTrigger = (_context$triggerRef$c3 = context.triggerRef.current) === null || _context$triggerRef$c3 === void 0 ? void 0 : _context$triggerRef$c3.contains(target);
-            if (targetIsTrigger) event.preventDefault();
+            if (targetIsTrigger) event.preventDefault(); // On Safari if the trigger is inside a container with tabIndex={0}, when clicked
+            // we will get the pointer down outside event on the trigger, but then a subsequent
+            // focus outside event on the container, we ignore any focus outside event when we've
+            // already had a pointer down outside event.
+            if (event.detail.originalEvent.type === 'focusin' && hasPointerDownOutsideRef.current) event.preventDefault();
         }
     }));
 });
@@ -3132,55 +3100,77 @@ const $5d3850c4d0b4e6c7$export$f39c2d165cd861fe = (/* unused pure expression or 
 
 
 
-
-// EXTERNAL MODULE: ./node_modules/command-score/index.js
-var command_score = __webpack_require__(8670);
 ;// CONCATENATED MODULE: ./node_modules/cmdk/dist/index.mjs
-var ue='[cmdk-list-sizer=""]',M='[cmdk-group=""]',N='[cmdk-group-items=""]',de='[cmdk-group-heading=""]',ee='[cmdk-item=""]',Z=`${ee}:not([aria-disabled="true"])`,z="cmdk-item-select",S="data-value",fe=(n,a)=>command_score(n,a),te=external_React_namespaceObject.createContext(void 0),k=()=>external_React_namespaceObject.useContext(te),re=external_React_namespaceObject.createContext(void 0),U=()=>external_React_namespaceObject.useContext(re),ne=external_React_namespaceObject.createContext(void 0),oe=external_React_namespaceObject.forwardRef((n,a)=>{let r=external_React_namespaceObject.useRef(null),o=x(()=>({search:"",value:"",filtered:{count:0,items:new Map,groups:new Set}})),u=x(()=>new Set),l=x(()=>new Map),p=x(()=>new Map),f=x(()=>new Set),d=ae(n),{label:v,children:E,value:R,onValueChange:w,filter:O,shouldFilter:ie,...D}=n,F=external_React_namespaceObject.useId(),g=external_React_namespaceObject.useId(),A=external_React_namespaceObject.useId(),y=ye();L(()=>{if(R!==void 0){let e=R.trim().toLowerCase();o.current.value=e,y(6,W),h.emit()}},[R]);let h=external_React_namespaceObject.useMemo(()=>({subscribe:e=>(f.current.add(e),()=>f.current.delete(e)),snapshot:()=>o.current,setState:(e,c,i)=>{var s,m,b;if(!Object.is(o.current[e],c)){if(o.current[e]=c,e==="search")j(),G(),y(1,V);else if(e==="value")if(((s=d.current)==null?void 0:s.value)!==void 0){(b=(m=d.current).onValueChange)==null||b.call(m,c);return}else i||y(5,W);h.emit()}},emit:()=>{f.current.forEach(e=>e())}}),[]),K=external_React_namespaceObject.useMemo(()=>({value:(e,c)=>{c!==p.current.get(e)&&(p.current.set(e,c),o.current.filtered.items.set(e,B(c)),y(2,()=>{G(),h.emit()}))},item:(e,c)=>(u.current.add(e),c&&(l.current.has(c)?l.current.get(c).add(e):l.current.set(c,new Set([e]))),y(3,()=>{j(),G(),o.current.value||V(),h.emit()}),()=>{p.current.delete(e),u.current.delete(e),o.current.filtered.items.delete(e),y(4,()=>{j(),V(),h.emit()})}),group:e=>(l.current.has(e)||l.current.set(e,new Set),()=>{p.current.delete(e),l.current.delete(e)}),filter:()=>d.current.shouldFilter,label:v||n["aria-label"],listId:F,inputId:A,labelId:g}),[]);function B(e){var i;let c=((i=d.current)==null?void 0:i.filter)??fe;return e?c(e,o.current.search):0}function G(){if(!r.current||!o.current.search||d.current.shouldFilter===!1)return;let e=o.current.filtered.items,c=[];o.current.filtered.groups.forEach(s=>{let m=l.current.get(s),b=0;m.forEach(P=>{let ce=e.get(P);b=Math.max(ce,b)}),c.push([s,b])});let i=r.current.querySelector(ue);I().sort((s,m)=>{let b=s.getAttribute(S),P=m.getAttribute(S);return(e.get(P)??0)-(e.get(b)??0)}).forEach(s=>{let m=s.closest(N);m?m.appendChild(s.parentElement===m?s:s.closest(`${N} > *`)):i.appendChild(s.parentElement===i?s:s.closest(`${N} > *`))}),c.sort((s,m)=>m[1]-s[1]).forEach(s=>{let m=r.current.querySelector(`${M}[${S}="${s[0]}"]`);m==null||m.parentElement.appendChild(m)})}function V(){let e=I().find(i=>!i.ariaDisabled),c=e==null?void 0:e.getAttribute(S);h.setState("value",c||void 0)}function j(){if(!o.current.search||d.current.shouldFilter===!1){o.current.filtered.count=u.current.size;return}o.current.filtered.groups=new Set;let e=0;for(let c of u.current){let i=p.current.get(c),s=B(i);o.current.filtered.items.set(c,s),s>0&&e++}for(let[c,i]of l.current)for(let s of i)if(o.current.filtered.items.get(s)>0){o.current.filtered.groups.add(c);break}o.current.filtered.count=e}function W(){var c,i,s;let e=_();e&&(((c=e.parentElement)==null?void 0:c.firstChild)===e&&((s=(i=e.closest(M))==null?void 0:i.querySelector(de))==null||s.scrollIntoView({block:"nearest"})),e.scrollIntoView({block:"nearest"}))}function _(){return r.current.querySelector(`${ee}[aria-selected="true"]`)}function I(){return Array.from(r.current.querySelectorAll(Z))}function q(e){let i=I()[e];i&&h.setState("value",i.getAttribute(S))}function $(e){var b;let c=_(),i=I(),s=i.findIndex(P=>P===c),m=i[s+e];(b=d.current)!=null&&b.loop&&(m=s+e<0?i[i.length-1]:s+e===i.length?i[0]:i[s+e]),m&&h.setState("value",m.getAttribute(S))}function J(e){let c=_(),i=c==null?void 0:c.closest(M),s;for(;i&&!s;)i=e>0?Se(i,M):Ce(i,M),s=i==null?void 0:i.querySelector(Z);s?h.setState("value",s.getAttribute(S)):$(e)}let Q=()=>q(I().length-1),X=e=>{e.preventDefault(),e.metaKey?Q():e.altKey?J(1):$(1)},Y=e=>{e.preventDefault(),e.metaKey?q(0):e.altKey?J(-1):$(-1)};return external_React_namespaceObject.createElement("div",{ref:H([r,a]),...D,"cmdk-root":"",onKeyDown:e=>{var c;if((c=D.onKeyDown)==null||c.call(D,e),!e.defaultPrevented)switch(e.key){case"n":case"j":{e.ctrlKey&&X(e);break}case"ArrowDown":{X(e);break}case"p":case"k":{e.ctrlKey&&Y(e);break}case"ArrowUp":{Y(e);break}case"Home":{e.preventDefault(),q(0);break}case"End":{e.preventDefault(),Q();break}case"Enter":{e.preventDefault();let i=_();if(i){let s=new Event(z);i.dispatchEvent(s)}}}}},external_React_namespaceObject.createElement("label",{"cmdk-label":"",htmlFor:K.inputId,id:K.labelId,style:xe},v),external_React_namespaceObject.createElement(re.Provider,{value:h},external_React_namespaceObject.createElement(te.Provider,{value:K},E)))}),me=external_React_namespaceObject.forwardRef((n,a)=>{let r=external_React_namespaceObject.useId(),o=external_React_namespaceObject.useRef(null),u=external_React_namespaceObject.useContext(ne),l=k(),p=ae(n);L(()=>l.item(r,u),[]);let f=se(r,o,[n.value,n.children,o]),d=U(),v=T(g=>g.value&&g.value===f.current),E=T(g=>l.filter()===!1?!0:g.search?g.filtered.items.get(r)>0:!0);external_React_namespaceObject.useEffect(()=>{let g=o.current;if(!(!g||n.disabled))return g.addEventListener(z,R),()=>g.removeEventListener(z,R)},[E,n.onSelect,n.disabled]);function R(){var g,A;(A=(g=p.current).onSelect)==null||A.call(g,f.current)}function w(){d.setState("value",f.current,!0)}if(!E)return null;let{disabled:O,value:ie,onSelect:D,...F}=n;return external_React_namespaceObject.createElement("div",{ref:H([o,a]),...F,"cmdk-item":"",role:"option","aria-disabled":O||void 0,"aria-selected":v||void 0,"data-selected":v||void 0,onPointerMove:O?void 0:w,onClick:O?void 0:R},n.children)}),pe=external_React_namespaceObject.forwardRef((n,a)=>{let{heading:r,children:o,...u}=n,l=external_React_namespaceObject.useId(),p=external_React_namespaceObject.useRef(null),f=external_React_namespaceObject.useRef(null),d=external_React_namespaceObject.useId(),v=k(),E=T(w=>v.filter()===!1?!0:w.search?w.filtered.groups.has(l):!0);L(()=>v.group(l),[]),se(l,p,[n.value,n.heading,f]);let R=external_React_namespaceObject.createElement(ne.Provider,{value:l},o);return external_React_namespaceObject.createElement("div",{ref:H([p,a]),...u,"cmdk-group":"",role:"presentation",hidden:E?void 0:!0},r&&external_React_namespaceObject.createElement("div",{ref:f,"cmdk-group-heading":"","aria-hidden":!0,id:d},r),external_React_namespaceObject.createElement("div",{"cmdk-group-items":"",role:"group","aria-labelledby":r?d:void 0},R))}),ge=external_React_namespaceObject.forwardRef((n,a)=>{let{alwaysRender:r,...o}=n,u=external_React_namespaceObject.useRef(null),l=T(p=>!p.search);return!r&&!l?null:external_React_namespaceObject.createElement("div",{ref:H([u,a]),...o,"cmdk-separator":"",role:"separator"})}),ve=external_React_namespaceObject.forwardRef((n,a)=>{let{onValueChange:r,...o}=n,u=n.value!=null,l=U(),p=T(d=>d.search),f=k();return external_React_namespaceObject.useEffect(()=>{n.value!=null&&l.setState("search",n.value)},[n.value]),external_React_namespaceObject.createElement("input",{ref:a,...o,"cmdk-input":"",autoComplete:"off",autoCorrect:"off",spellCheck:!1,"aria-autocomplete":"list",role:"combobox","aria-expanded":!0,"aria-controls":f.listId,"aria-labelledby":f.labelId,id:f.inputId,type:"text",value:u?n.value:p,onChange:d=>{u||l.setState("search",d.target.value),r==null||r(d.target.value)}})}),Re=external_React_namespaceObject.forwardRef((n,a)=>{let{children:r,...o}=n,u=external_React_namespaceObject.useRef(null),l=external_React_namespaceObject.useRef(null),p=k();return external_React_namespaceObject.useEffect(()=>{if(l.current&&u.current){let f=l.current,d=u.current,v,E=new ResizeObserver(()=>{v=requestAnimationFrame(()=>{let R=f.getBoundingClientRect().height;d.style.setProperty("--cmdk-list-height",R.toFixed(1)+"px")})});return E.observe(f),()=>{cancelAnimationFrame(v),E.unobserve(f)}}},[]),external_React_namespaceObject.createElement("div",{ref:H([u,a]),...o,"cmdk-list":"",role:"listbox","aria-label":"Suggestions",id:p.listId,"aria-labelledby":p.inputId},external_React_namespaceObject.createElement("div",{ref:l,"cmdk-list-sizer":""},r))}),be=external_React_namespaceObject.forwardRef((n,a)=>{let{open:r,onOpenChange:o,container:u,...l}=n;return external_React_namespaceObject.createElement($5d3850c4d0b4e6c7$export$be92b6f5f03c0fe9,{open:r,onOpenChange:o},external_React_namespaceObject.createElement($5d3850c4d0b4e6c7$export$602eac185826482c,{container:u},external_React_namespaceObject.createElement($5d3850c4d0b4e6c7$export$c6fdb837b070b4ff,{"cmdk-overlay":""}),external_React_namespaceObject.createElement($5d3850c4d0b4e6c7$export$7c6e2c02157bb7d2,{"aria-label":n.label,"cmdk-dialog":""},external_React_namespaceObject.createElement(oe,{ref:a,...l}))))}),he=external_React_namespaceObject.forwardRef((n,a)=>{let r=external_React_namespaceObject.useRef(!0),o=T(u=>u.filtered.count===0);return external_React_namespaceObject.useEffect(()=>{r.current=!1},[]),r.current||!o?null:external_React_namespaceObject.createElement("div",{ref:a,...n,"cmdk-empty":"",role:"presentation"})}),Ee=external_React_namespaceObject.forwardRef((n,a)=>{let{progress:r,children:o,...u}=n;return external_React_namespaceObject.createElement("div",{ref:a,...u,"cmdk-loading":"",role:"progressbar","aria-valuenow":r,"aria-valuemin":0,"aria-valuemax":100,"aria-label":"Loading..."},external_React_namespaceObject.createElement("div",{"aria-hidden":!0},o))}),Le=Object.assign(oe,{List:Re,Item:me,Input:ve,Group:pe,Separator:ge,Dialog:be,Empty:he,Loading:Ee});function Se(n,a){let r=n.nextElementSibling;for(;r;){if(r.matches(a))return r;r=r.nextElementSibling}}function Ce(n,a){let r=n.previousElementSibling;for(;r;){if(r.matches(a))return r;r=r.previousElementSibling}}function ae(n){let a=external_React_namespaceObject.useRef(n);return L(()=>{a.current=n}),a}var L=typeof window>"u"?external_React_namespaceObject.useEffect:external_React_namespaceObject.useLayoutEffect;function x(n){let a=external_React_namespaceObject.useRef();return a.current===void 0&&(a.current=n()),a}function H(n){return a=>{n.forEach(r=>{typeof r=="function"?r(a):r!=null&&(r.current=a)})}}function T(n){let a=U(),r=()=>n(a.snapshot());return external_React_namespaceObject.useSyncExternalStore(a.subscribe,r,r)}function se(n,a,r){let o=external_React_namespaceObject.useRef(),u=k();return L(()=>{var p;let l=(()=>{var f;for(let d of r){if(typeof d=="string")return d.trim().toLowerCase();if(typeof d=="object"&&"current"in d&&d.current)return(f=d.current.textContent)==null?void 0:f.trim().toLowerCase()}})();u.value(n,l),(p=a.current)==null||p.setAttribute(S,l),o.current=l}),o}var ye=()=>{let[n,a]=external_React_namespaceObject.useState(),r=x(()=>new Map);return L(()=>{r.current.forEach(o=>o()),r.current=new Map},[n]),(o,u)=>{r.current.set(o,u),a({})}},xe={position:"absolute",width:"1px",height:"1px",padding:"0",margin:"-1px",overflow:"hidden",clip:"rect(0, 0, 0, 0)",whiteSpace:"nowrap",borderWidth:"0"};
+var V='[cmdk-group=""]',dist_X='[cmdk-group-items=""]',ge='[cmdk-group-heading=""]',dist_Y='[cmdk-item=""]',le=`${dist_Y}:not([aria-disabled="true"])`,Q="cmdk-item-select",M="data-value",Re=(r,o,n)=>W(r,o,n),ue=external_React_namespaceObject.createContext(void 0),dist_G=()=>external_React_namespaceObject.useContext(ue),de=external_React_namespaceObject.createContext(void 0),Z=()=>external_React_namespaceObject.useContext(de),fe=external_React_namespaceObject.createContext(void 0),me=external_React_namespaceObject.forwardRef((r,o)=>{let n=dist_k(()=>{var e,s;return{search:"",value:(s=(e=r.value)!=null?e:r.defaultValue)!=null?s:"",filtered:{count:0,items:new Map,groups:new Set}}}),u=dist_k(()=>new Set),c=dist_k(()=>new Map),d=dist_k(()=>new Map),f=dist_k(()=>new Set),p=pe(r),{label:v,children:b,value:l,onValueChange:y,filter:S,shouldFilter:C,loop:L,disablePointerSelection:ee=!1,vimBindings:j=!0,...H}=r,te=external_React_namespaceObject.useId(),$=external_React_namespaceObject.useId(),K=external_React_namespaceObject.useId(),x=external_React_namespaceObject.useRef(null),g=Me();T(()=>{if(l!==void 0){let e=l.trim();n.current.value=e,h.emit()}},[l]),T(()=>{g(6,re)},[]);let h=external_React_namespaceObject.useMemo(()=>({subscribe:e=>(f.current.add(e),()=>f.current.delete(e)),snapshot:()=>n.current,setState:(e,s,i)=>{var a,m,R;if(!Object.is(n.current[e],s)){if(n.current[e]=s,e==="search")z(),q(),g(1,U);else if(e==="value"&&(i||g(5,re),((a=p.current)==null?void 0:a.value)!==void 0)){let E=s!=null?s:"";(R=(m=p.current).onValueChange)==null||R.call(m,E);return}h.emit()}},emit:()=>{f.current.forEach(e=>e())}}),[]),B=external_React_namespaceObject.useMemo(()=>({value:(e,s,i)=>{var a;s!==((a=d.current.get(e))==null?void 0:a.value)&&(d.current.set(e,{value:s,keywords:i}),n.current.filtered.items.set(e,ne(s,i)),g(2,()=>{q(),h.emit()}))},item:(e,s)=>(u.current.add(e),s&&(c.current.has(s)?c.current.get(s).add(e):c.current.set(s,new Set([e]))),g(3,()=>{z(),q(),n.current.value||U(),h.emit()}),()=>{d.current.delete(e),u.current.delete(e),n.current.filtered.items.delete(e);let i=O();g(4,()=>{z(),(i==null?void 0:i.getAttribute("id"))===e&&U(),h.emit()})}),group:e=>(c.current.has(e)||c.current.set(e,new Set),()=>{d.current.delete(e),c.current.delete(e)}),filter:()=>p.current.shouldFilter,label:v||r["aria-label"],disablePointerSelection:ee,listId:te,inputId:K,labelId:$,listInnerRef:x}),[]);function ne(e,s){var a,m;let i=(m=(a=p.current)==null?void 0:a.filter)!=null?m:Re;return e?i(e,n.current.search,s):0}function q(){if(!n.current.search||p.current.shouldFilter===!1)return;let e=n.current.filtered.items,s=[];n.current.filtered.groups.forEach(a=>{let m=c.current.get(a),R=0;m.forEach(E=>{let P=e.get(E);R=Math.max(P,R)}),s.push([a,R])});let i=x.current;A().sort((a,m)=>{var P,_;let R=a.getAttribute("id"),E=m.getAttribute("id");return((P=e.get(E))!=null?P:0)-((_=e.get(R))!=null?_:0)}).forEach(a=>{let m=a.closest(dist_X);m?m.appendChild(a.parentElement===m?a:a.closest(`${dist_X} > *`)):i.appendChild(a.parentElement===i?a:a.closest(`${dist_X} > *`))}),s.sort((a,m)=>m[1]-a[1]).forEach(a=>{let m=x.current.querySelector(`${V}[${M}="${encodeURIComponent(a[0])}"]`);m==null||m.parentElement.appendChild(m)})}function U(){let e=A().find(i=>i.getAttribute("aria-disabled")!=="true"),s=e==null?void 0:e.getAttribute(M);h.setState("value",s||void 0)}function z(){var s,i,a,m;if(!n.current.search||p.current.shouldFilter===!1){n.current.filtered.count=u.current.size;return}n.current.filtered.groups=new Set;let e=0;for(let R of u.current){let E=(i=(s=d.current.get(R))==null?void 0:s.value)!=null?i:"",P=(m=(a=d.current.get(R))==null?void 0:a.keywords)!=null?m:[],_=ne(E,P);n.current.filtered.items.set(R,_),_>0&&e++}for(let[R,E]of c.current)for(let P of E)if(n.current.filtered.items.get(P)>0){n.current.filtered.groups.add(R);break}n.current.filtered.count=e}function re(){var s,i,a;let e=O();e&&(((s=e.parentElement)==null?void 0:s.firstChild)===e&&((a=(i=e.closest(V))==null?void 0:i.querySelector(ge))==null||a.scrollIntoView({block:"nearest"})),e.scrollIntoView({block:"nearest"}))}function O(){var e;return(e=x.current)==null?void 0:e.querySelector(`${dist_Y}[aria-selected="true"]`)}function A(){var e;return Array.from((e=x.current)==null?void 0:e.querySelectorAll(le))}function W(e){let i=A()[e];i&&h.setState("value",i.getAttribute(M))}function J(e){var R;let s=O(),i=A(),a=i.findIndex(E=>E===s),m=i[a+e];(R=p.current)!=null&&R.loop&&(m=a+e<0?i[i.length-1]:a+e===i.length?i[0]:i[a+e]),m&&h.setState("value",m.getAttribute(M))}function oe(e){let s=O(),i=s==null?void 0:s.closest(V),a;for(;i&&!a;)i=e>0?we(i,V):Ie(i,V),a=i==null?void 0:i.querySelector(le);a?h.setState("value",a.getAttribute(M)):J(e)}let ie=()=>W(A().length-1),ae=e=>{e.preventDefault(),e.metaKey?ie():e.altKey?oe(1):J(1)},se=e=>{e.preventDefault(),e.metaKey?W(0):e.altKey?oe(-1):J(-1)};return external_React_namespaceObject.createElement($8927f6f2acc4f386$export$250ffa63cdc0d034.div,{ref:o,tabIndex:-1,...H,"cmdk-root":"",onKeyDown:e=>{var s;if((s=H.onKeyDown)==null||s.call(H,e),!e.defaultPrevented)switch(e.key){case"n":case"j":{j&&e.ctrlKey&&ae(e);break}case"ArrowDown":{ae(e);break}case"p":case"k":{j&&e.ctrlKey&&se(e);break}case"ArrowUp":{se(e);break}case"Home":{e.preventDefault(),W(0);break}case"End":{e.preventDefault(),ie();break}case"Enter":if(!e.nativeEvent.isComposing&&e.keyCode!==229){e.preventDefault();let i=O();if(i){let a=new Event(Q);i.dispatchEvent(a)}}}}},external_React_namespaceObject.createElement("label",{"cmdk-label":"",htmlFor:B.inputId,id:B.labelId,style:De},v),F(r,e=>external_React_namespaceObject.createElement(de.Provider,{value:h},external_React_namespaceObject.createElement(ue.Provider,{value:B},e))))}),be=external_React_namespaceObject.forwardRef((r,o)=>{var K,x;let n=external_React_namespaceObject.useId(),u=external_React_namespaceObject.useRef(null),c=external_React_namespaceObject.useContext(fe),d=dist_G(),f=pe(r),p=(x=(K=f.current)==null?void 0:K.forceMount)!=null?x:c==null?void 0:c.forceMount;T(()=>{if(!p)return d.item(n,c==null?void 0:c.id)},[p]);let v=ve(n,u,[r.value,r.children,u],r.keywords),b=Z(),l=dist_D(g=>g.value&&g.value===v.current),y=dist_D(g=>p||d.filter()===!1?!0:g.search?g.filtered.items.get(n)>0:!0);external_React_namespaceObject.useEffect(()=>{let g=u.current;if(!(!g||r.disabled))return g.addEventListener(Q,S),()=>g.removeEventListener(Q,S)},[y,r.onSelect,r.disabled]);function S(){var g,h;C(),(h=(g=f.current).onSelect)==null||h.call(g,v.current)}function C(){b.setState("value",v.current,!0)}if(!y)return null;let{disabled:L,value:ee,onSelect:j,forceMount:H,keywords:te,...$}=r;return external_React_namespaceObject.createElement($8927f6f2acc4f386$export$250ffa63cdc0d034.div,{ref:N([u,o]),...$,id:n,"cmdk-item":"",role:"option","aria-disabled":!!L,"aria-selected":!!l,"data-disabled":!!L,"data-selected":!!l,onPointerMove:L||d.disablePointerSelection?void 0:C,onClick:L?void 0:S},r.children)}),he=external_React_namespaceObject.forwardRef((r,o)=>{let{heading:n,children:u,forceMount:c,...d}=r,f=external_React_namespaceObject.useId(),p=external_React_namespaceObject.useRef(null),v=external_React_namespaceObject.useRef(null),b=external_React_namespaceObject.useId(),l=dist_G(),y=dist_D(C=>c||l.filter()===!1?!0:C.search?C.filtered.groups.has(f):!0);T(()=>l.group(f),[]),ve(f,p,[r.value,r.heading,v]);let S=external_React_namespaceObject.useMemo(()=>({id:f,forceMount:c}),[c]);return external_React_namespaceObject.createElement($8927f6f2acc4f386$export$250ffa63cdc0d034.div,{ref:N([p,o]),...d,"cmdk-group":"",role:"presentation",hidden:y?void 0:!0},n&&external_React_namespaceObject.createElement("div",{ref:v,"cmdk-group-heading":"","aria-hidden":!0,id:b},n),F(r,C=>external_React_namespaceObject.createElement("div",{"cmdk-group-items":"",role:"group","aria-labelledby":n?b:void 0},external_React_namespaceObject.createElement(fe.Provider,{value:S},C))))}),ye=external_React_namespaceObject.forwardRef((r,o)=>{let{alwaysRender:n,...u}=r,c=external_React_namespaceObject.useRef(null),d=dist_D(f=>!f.search);return!n&&!d?null:external_React_namespaceObject.createElement($8927f6f2acc4f386$export$250ffa63cdc0d034.div,{ref:N([c,o]),...u,"cmdk-separator":"",role:"separator"})}),Ee=external_React_namespaceObject.forwardRef((r,o)=>{let{onValueChange:n,...u}=r,c=r.value!=null,d=Z(),f=dist_D(l=>l.search),p=dist_D(l=>l.value),v=dist_G(),b=external_React_namespaceObject.useMemo(()=>{var y;let l=(y=v.listInnerRef.current)==null?void 0:y.querySelector(`${dist_Y}[${M}="${encodeURIComponent(p)}"]`);return l==null?void 0:l.getAttribute("id")},[]);return external_React_namespaceObject.useEffect(()=>{r.value!=null&&d.setState("search",r.value)},[r.value]),external_React_namespaceObject.createElement($8927f6f2acc4f386$export$250ffa63cdc0d034.input,{ref:o,...u,"cmdk-input":"",autoComplete:"off",autoCorrect:"off",spellCheck:!1,"aria-autocomplete":"list",role:"combobox","aria-expanded":!0,"aria-controls":v.listId,"aria-labelledby":v.labelId,"aria-activedescendant":b,id:v.inputId,type:"text",value:c?r.value:f,onChange:l=>{c||d.setState("search",l.target.value),n==null||n(l.target.value)}})}),Se=external_React_namespaceObject.forwardRef((r,o)=>{let{children:n,label:u="Suggestions",...c}=r,d=external_React_namespaceObject.useRef(null),f=external_React_namespaceObject.useRef(null),p=dist_G();return external_React_namespaceObject.useEffect(()=>{if(f.current&&d.current){let v=f.current,b=d.current,l,y=new ResizeObserver(()=>{l=requestAnimationFrame(()=>{let S=v.offsetHeight;b.style.setProperty("--cmdk-list-height",S.toFixed(1)+"px")})});return y.observe(v),()=>{cancelAnimationFrame(l),y.unobserve(v)}}},[]),external_React_namespaceObject.createElement($8927f6f2acc4f386$export$250ffa63cdc0d034.div,{ref:N([d,o]),...c,"cmdk-list":"",role:"listbox","aria-label":u,id:p.listId},F(r,v=>external_React_namespaceObject.createElement("div",{ref:N([f,p.listInnerRef]),"cmdk-list-sizer":""},v)))}),Ce=external_React_namespaceObject.forwardRef((r,o)=>{let{open:n,onOpenChange:u,overlayClassName:c,contentClassName:d,container:f,...p}=r;return external_React_namespaceObject.createElement($5d3850c4d0b4e6c7$export$be92b6f5f03c0fe9,{open:n,onOpenChange:u},external_React_namespaceObject.createElement($5d3850c4d0b4e6c7$export$602eac185826482c,{container:f},external_React_namespaceObject.createElement($5d3850c4d0b4e6c7$export$c6fdb837b070b4ff,{"cmdk-overlay":"",className:c}),external_React_namespaceObject.createElement($5d3850c4d0b4e6c7$export$7c6e2c02157bb7d2,{"aria-label":r.label,"cmdk-dialog":"",className:d},external_React_namespaceObject.createElement(me,{ref:o,...p}))))}),xe=external_React_namespaceObject.forwardRef((r,o)=>dist_D(u=>u.filtered.count===0)?external_React_namespaceObject.createElement($8927f6f2acc4f386$export$250ffa63cdc0d034.div,{ref:o,...r,"cmdk-empty":"",role:"presentation"}):null),Pe=external_React_namespaceObject.forwardRef((r,o)=>{let{progress:n,children:u,label:c="Loading...",...d}=r;return external_React_namespaceObject.createElement($8927f6f2acc4f386$export$250ffa63cdc0d034.div,{ref:o,...d,"cmdk-loading":"",role:"progressbar","aria-valuenow":n,"aria-valuemin":0,"aria-valuemax":100,"aria-label":c},F(r,f=>external_React_namespaceObject.createElement("div",{"aria-hidden":!0},f)))}),He=Object.assign(me,{List:Se,Item:be,Input:Ee,Group:he,Separator:ye,Dialog:Ce,Empty:xe,Loading:Pe});function we(r,o){let n=r.nextElementSibling;for(;n;){if(n.matches(o))return n;n=n.nextElementSibling}}function Ie(r,o){let n=r.previousElementSibling;for(;n;){if(n.matches(o))return n;n=n.previousElementSibling}}function pe(r){let o=external_React_namespaceObject.useRef(r);return T(()=>{o.current=r}),o}var T=typeof window=="undefined"?external_React_namespaceObject.useEffect:external_React_namespaceObject.useLayoutEffect;function dist_k(r){let o=external_React_namespaceObject.useRef();return o.current===void 0&&(o.current=r()),o}function N(r){return o=>{r.forEach(n=>{typeof n=="function"?n(o):n!=null&&(n.current=o)})}}function dist_D(r){let o=Z(),n=()=>r(o.snapshot());return external_React_namespaceObject.useSyncExternalStore(o.subscribe,n,n)}function ve(r,o,n,u=[]){let c=external_React_namespaceObject.useRef(),d=dist_G();return T(()=>{var v;let f=(()=>{var b;for(let l of n){if(typeof l=="string")return l.trim();if(typeof l=="object"&&"current"in l)return l.current?(b=l.current.textContent)==null?void 0:b.trim():c.current}})(),p=u.map(b=>b.trim());d.value(r,f,p),(v=o.current)==null||v.setAttribute(M,f),c.current=f}),c}var Me=()=>{let[r,o]=external_React_namespaceObject.useState(),n=dist_k(()=>new Map);return T(()=>{n.current.forEach(u=>u()),n.current=new Map},[r]),(u,c)=>{n.current.set(u,c),o({})}};function Te(r){let o=r.type;return typeof o=="function"?o(r.props):"render"in o?o.render(r.props):r}function F({asChild:r,children:o},n){return r&&external_React_namespaceObject.isValidElement(o)?external_React_namespaceObject.cloneElement(Te(o),{ref:o.ref},n(o.props.children)):n(o)}var De={position:"absolute",width:"1px",height:"1px",padding:"0",margin:"-1px",overflow:"hidden",clip:"rect(0, 0, 0, 0)",whiteSpace:"nowrap",borderWidth:"0"};
 
+;// CONCATENATED MODULE: ./node_modules/clsx/dist/clsx.mjs
+function r(e){var t,f,n="";if("string"==typeof e||"number"==typeof e)n+=e;else if("object"==typeof e)if(Array.isArray(e)){var o=e.length;for(t=0;t<o;t++)e[t]&&(f=r(e[t]))&&(n&&(n+=" "),n+=f)}else for(f in e)e[f]&&(n&&(n+=" "),n+=f);return n}function clsx(){for(var e,t,f=0,n="",o=arguments.length;f<o;f++)(e=arguments[f])&&(t=r(e))&&(n&&(n+=" "),n+=t);return n}/* harmony default export */ const dist_clsx = (clsx);
 ;// CONCATENATED MODULE: external ["wp","data"]
-var external_wp_data_namespaceObject = window["wp"]["data"];
+const external_wp_data_namespaceObject = window["wp"]["data"];
+;// CONCATENATED MODULE: external ["wp","element"]
+const external_wp_element_namespaceObject = window["wp"]["element"];
 ;// CONCATENATED MODULE: external ["wp","i18n"]
-var external_wp_i18n_namespaceObject = window["wp"]["i18n"];
+const external_wp_i18n_namespaceObject = window["wp"]["i18n"];
 ;// CONCATENATED MODULE: external ["wp","components"]
-var external_wp_components_namespaceObject = window["wp"]["components"];
+const external_wp_components_namespaceObject = window["wp"]["components"];
 ;// CONCATENATED MODULE: external ["wp","keyboardShortcuts"]
-var external_wp_keyboardShortcuts_namespaceObject = window["wp"]["keyboardShortcuts"];
+const external_wp_keyboardShortcuts_namespaceObject = window["wp"]["keyboardShortcuts"];
 ;// CONCATENATED MODULE: ./node_modules/@wordpress/icons/build-module/icon/index.js
 /**
  * WordPress dependencies
  */
+
 
 /** @typedef {{icon: JSX.Element, size?: number} & import('@wordpress/primitives').SVGProps} IconProps */
 
 /**
  * Return an SVG icon.
  *
- * @param {IconProps} props icon is the SVG component to render
- *                          size is a number specifiying the icon size in pixels
- *                          Other props will be passed to wrapped SVG component
+ * @param {IconProps}                                 props icon is the SVG component to render
+ *                                                          size is a number specifiying the icon size in pixels
+ *                                                          Other props will be passed to wrapped SVG component
+ * @param {import('react').ForwardedRef<HTMLElement>} ref   The forwarded ref to the SVG element.
  *
  * @return {JSX.Element}  Icon component
  */
-
 function Icon({
   icon,
   size = 24,
   ...props
-}) {
+}, ref) {
   return (0,external_wp_element_namespaceObject.cloneElement)(icon, {
     width: size,
     height: size,
-    ...props
+    ...props,
+    ref
   });
 }
+/* harmony default export */ const icon = ((0,external_wp_element_namespaceObject.forwardRef)(Icon));
 
-/* harmony default export */ var icon = (Icon);
+;// CONCATENATED MODULE: external ["wp","primitives"]
+const external_wp_primitives_namespaceObject = window["wp"]["primitives"];
+;// CONCATENATED MODULE: external "ReactJSXRuntime"
+const external_ReactJSXRuntime_namespaceObject = window["ReactJSXRuntime"];
+;// CONCATENATED MODULE: ./node_modules/@wordpress/icons/build-module/library/search.js
+/**
+ * WordPress dependencies
+ */
+
+
+const search = /*#__PURE__*/(0,external_ReactJSXRuntime_namespaceObject.jsx)(external_wp_primitives_namespaceObject.SVG, {
+  xmlns: "http://www.w3.org/2000/svg",
+  viewBox: "0 0 24 24",
+  children: /*#__PURE__*/(0,external_ReactJSXRuntime_namespaceObject.jsx)(external_wp_primitives_namespaceObject.Path, {
+    d: "M13 5c-3.3 0-6 2.7-6 6 0 1.4.5 2.7 1.3 3.7l-3.8 3.8 1.1 1.1 3.8-3.8c1 .8 2.3 1.3 3.7 1.3 3.3 0 6-2.7 6-6S16.3 5 13 5zm0 10.5c-2.5 0-4.5-2-4.5-4.5s2-4.5 4.5-4.5 4.5 2 4.5 4.5-2 4.5-4.5 4.5z"
+  })
+});
+/* harmony default export */ const library_search = (search);
 
 ;// CONCATENATED MODULE: ./node_modules/@wordpress/commands/build-module/store/reducer.js
 /**
  * WordPress dependencies
  */
+
 
 /**
  * Reducer returning the registered commands
@@ -3190,11 +3180,11 @@ function Icon({
  *
  * @return {Object} Updated state.
  */
-
 function commands(state = {}, action) {
   switch (action.type) {
     case 'REGISTER_COMMAND':
-      return { ...state,
+      return {
+        ...state,
         [action.name]: {
           name: action.name,
           label: action.label,
@@ -3204,7 +3194,6 @@ function commands(state = {}, action) {
           icon: action.icon
         }
       };
-
     case 'UNREGISTER_COMMAND':
       {
         const {
@@ -3214,9 +3203,9 @@ function commands(state = {}, action) {
         return remainingState;
       }
   }
-
   return state;
 }
+
 /**
  * Reducer returning the command loaders
  *
@@ -3225,19 +3214,17 @@ function commands(state = {}, action) {
  *
  * @return {Object} Updated state.
  */
-
-
 function commandLoaders(state = {}, action) {
   switch (action.type) {
     case 'REGISTER_COMMAND_LOADER':
-      return { ...state,
+      return {
+        ...state,
         [action.name]: {
           name: action.name,
           context: action.context,
           hook: action.hook
         }
       };
-
     case 'UNREGISTER_COMMAND_LOADER':
       {
         const {
@@ -3247,9 +3234,9 @@ function commandLoaders(state = {}, action) {
         return remainingState;
       }
   }
-
   return state;
 }
+
 /**
  * Reducer returning the command palette open state.
  *
@@ -3258,19 +3245,16 @@ function commandLoaders(state = {}, action) {
  *
  * @return {boolean} Updated state.
  */
-
-
 function isOpen(state = false, action) {
   switch (action.type) {
     case 'OPEN':
       return true;
-
     case 'CLOSE':
       return false;
   }
-
   return state;
 }
+
 /**
  * Reducer returning the command palette's active context.
  *
@@ -3279,24 +3263,20 @@ function isOpen(state = false, action) {
  *
  * @return {boolean} Updated state.
  */
-
-
 function context(state = 'root', action) {
   switch (action.type) {
     case 'SET_CONTEXT':
       return action.context;
   }
-
   return state;
 }
-
 const reducer = (0,external_wp_data_namespaceObject.combineReducers)({
   commands,
   commandLoaders,
   isOpen,
   context
 });
-/* harmony default export */ var store_reducer = (reducer);
+/* harmony default export */ const store_reducer = (reducer);
 
 ;// CONCATENATED MODULE: ./node_modules/@wordpress/commands/build-module/store/actions.js
 /** @typedef {import('@wordpress/keycodes').WPKeycodeModifier} WPKeycodeModifier */
@@ -3312,6 +3292,7 @@ const reducer = (0,external_wp_data_namespaceObject.combineReducers)({
  * @property {string=}     context     Command context.
  * @property {JSX.Element} icon        Command icon.
  * @property {Function}    callback    Command callback.
+ * @property {boolean}     disabled    Whether to disable the command.
  */
 
 /**
@@ -3323,9 +3304,10 @@ const reducer = (0,external_wp_data_namespaceObject.combineReducers)({
  *
  * @typedef {Object} WPCommandLoaderConfig
  *
- * @property {string}              name    Command loader name.
- * @property {string=}             context Command loader context.
- * @property {WPCommandLoaderHook} hook    Command loader hook.
+ * @property {string}              name     Command loader name.
+ * @property {string=}             context  Command loader context.
+ * @property {WPCommandLoaderHook} hook     Command loader hook.
+ * @property {boolean}             disabled Whether to disable the command loader.
  */
 
 /**
@@ -3341,6 +3323,7 @@ function registerCommand(config) {
     ...config
   };
 }
+
 /**
  * Returns an action object used to unregister a command.
  *
@@ -3348,13 +3331,13 @@ function registerCommand(config) {
  *
  * @return {Object} action.
  */
-
 function unregisterCommand(name) {
   return {
     type: 'UNREGISTER_COMMAND',
     name
   };
 }
+
 /**
  * Register command loader.
  *
@@ -3362,13 +3345,13 @@ function unregisterCommand(name) {
  *
  * @return {Object} action.
  */
-
 function registerCommandLoader(config) {
   return {
     type: 'REGISTER_COMMAND_LOADER',
     ...config
   };
 }
+
 /**
  * Unregister command loader hook.
  *
@@ -3376,350 +3359,85 @@ function registerCommandLoader(config) {
  *
  * @return {Object} action.
  */
-
 function unregisterCommandLoader(name) {
   return {
     type: 'UNREGISTER_COMMAND_LOADER',
     name
   };
 }
+
 /**
  * Opens the command palette.
  *
  * @return {Object} action.
  */
-
 function actions_open() {
   return {
     type: 'OPEN'
   };
 }
+
 /**
  * Closes the command palette.
  *
  * @return {Object} action.
  */
-
 function actions_close() {
   return {
     type: 'CLOSE'
   };
 }
 
-;// CONCATENATED MODULE: ./node_modules/rememo/rememo.js
-
-
-/** @typedef {(...args: any[]) => *[]} GetDependants */
-
-/** @typedef {() => void} Clear */
-
-/**
- * @typedef {{
- *   getDependants: GetDependants,
- *   clear: Clear
- * }} EnhancedSelector
- */
-
-/**
- * Internal cache entry.
- *
- * @typedef CacheNode
- *
- * @property {?CacheNode|undefined} [prev] Previous node.
- * @property {?CacheNode|undefined} [next] Next node.
- * @property {*[]} args Function arguments for cache entry.
- * @property {*} val Function result.
- */
-
-/**
- * @typedef Cache
- *
- * @property {Clear} clear Function to clear cache.
- * @property {boolean} [isUniqueByDependants] Whether dependants are valid in
- * considering cache uniqueness. A cache is unique if dependents are all arrays
- * or objects.
- * @property {CacheNode?} [head] Cache head.
- * @property {*[]} [lastDependants] Dependants from previous invocation.
- */
-
-/**
- * Arbitrary value used as key for referencing cache object in WeakMap tree.
- *
- * @type {{}}
- */
-var LEAF_KEY = {};
-
-/**
- * Returns the first argument as the sole entry in an array.
- *
- * @template T
- *
- * @param {T} value Value to return.
- *
- * @return {[T]} Value returned as entry in array.
- */
-function arrayOf(value) {
-	return [value];
-}
-
-/**
- * Returns true if the value passed is object-like, or false otherwise. A value
- * is object-like if it can support property assignment, e.g. object or array.
- *
- * @param {*} value Value to test.
- *
- * @return {boolean} Whether value is object-like.
- */
-function isObjectLike(value) {
-	return !!value && 'object' === typeof value;
-}
-
-/**
- * Creates and returns a new cache object.
- *
- * @return {Cache} Cache object.
- */
-function createCache() {
-	/** @type {Cache} */
-	var cache = {
-		clear: function () {
-			cache.head = null;
-		},
-	};
-
-	return cache;
-}
-
-/**
- * Returns true if entries within the two arrays are strictly equal by
- * reference from a starting index.
- *
- * @param {*[]} a First array.
- * @param {*[]} b Second array.
- * @param {number} fromIndex Index from which to start comparison.
- *
- * @return {boolean} Whether arrays are shallowly equal.
- */
-function isShallowEqual(a, b, fromIndex) {
-	var i;
-
-	if (a.length !== b.length) {
-		return false;
-	}
-
-	for (i = fromIndex; i < a.length; i++) {
-		if (a[i] !== b[i]) {
-			return false;
-		}
-	}
-
-	return true;
-}
-
-/**
- * Returns a memoized selector function. The getDependants function argument is
- * called before the memoized selector and is expected to return an immutable
- * reference or array of references on which the selector depends for computing
- * its own return value. The memoize cache is preserved only as long as those
- * dependant references remain the same. If getDependants returns a different
- * reference(s), the cache is cleared and the selector value regenerated.
- *
- * @template {(...args: *[]) => *} S
- *
- * @param {S} selector Selector function.
- * @param {GetDependants=} getDependants Dependant getter returning an array of
- * references used in cache bust consideration.
- */
-/* harmony default export */ function rememo(selector, getDependants) {
-	/** @type {WeakMap<*,*>} */
-	var rootCache;
-
-	/** @type {GetDependants} */
-	var normalizedGetDependants = getDependants ? getDependants : arrayOf;
-
-	/**
-	 * Returns the cache for a given dependants array. When possible, a WeakMap
-	 * will be used to create a unique cache for each set of dependants. This
-	 * is feasible due to the nature of WeakMap in allowing garbage collection
-	 * to occur on entries where the key object is no longer referenced. Since
-	 * WeakMap requires the key to be an object, this is only possible when the
-	 * dependant is object-like. The root cache is created as a hierarchy where
-	 * each top-level key is the first entry in a dependants set, the value a
-	 * WeakMap where each key is the next dependant, and so on. This continues
-	 * so long as the dependants are object-like. If no dependants are object-
-	 * like, then the cache is shared across all invocations.
-	 *
-	 * @see isObjectLike
-	 *
-	 * @param {*[]} dependants Selector dependants.
-	 *
-	 * @return {Cache} Cache object.
-	 */
-	function getCache(dependants) {
-		var caches = rootCache,
-			isUniqueByDependants = true,
-			i,
-			dependant,
-			map,
-			cache;
-
-		for (i = 0; i < dependants.length; i++) {
-			dependant = dependants[i];
-
-			// Can only compose WeakMap from object-like key.
-			if (!isObjectLike(dependant)) {
-				isUniqueByDependants = false;
-				break;
-			}
-
-			// Does current segment of cache already have a WeakMap?
-			if (caches.has(dependant)) {
-				// Traverse into nested WeakMap.
-				caches = caches.get(dependant);
-			} else {
-				// Create, set, and traverse into a new one.
-				map = new WeakMap();
-				caches.set(dependant, map);
-				caches = map;
-			}
-		}
-
-		// We use an arbitrary (but consistent) object as key for the last item
-		// in the WeakMap to serve as our running cache.
-		if (!caches.has(LEAF_KEY)) {
-			cache = createCache();
-			cache.isUniqueByDependants = isUniqueByDependants;
-			caches.set(LEAF_KEY, cache);
-		}
-
-		return caches.get(LEAF_KEY);
-	}
-
-	/**
-	 * Resets root memoization cache.
-	 */
-	function clear() {
-		rootCache = new WeakMap();
-	}
-
-	/* eslint-disable jsdoc/check-param-names */
-	/**
-	 * The augmented selector call, considering first whether dependants have
-	 * changed before passing it to underlying memoize function.
-	 *
-	 * @param {*}    source    Source object for derivation.
-	 * @param {...*} extraArgs Additional arguments to pass to selector.
-	 *
-	 * @return {*} Selector result.
-	 */
-	/* eslint-enable jsdoc/check-param-names */
-	function callSelector(/* source, ...extraArgs */) {
-		var len = arguments.length,
-			cache,
-			node,
-			i,
-			args,
-			dependants;
-
-		// Create copy of arguments (avoid leaking deoptimization).
-		args = new Array(len);
-		for (i = 0; i < len; i++) {
-			args[i] = arguments[i];
-		}
-
-		dependants = normalizedGetDependants.apply(null, args);
-		cache = getCache(dependants);
-
-		// If not guaranteed uniqueness by dependants (primitive type), shallow
-		// compare against last dependants and, if references have changed,
-		// destroy cache to recalculate result.
-		if (!cache.isUniqueByDependants) {
-			if (
-				cache.lastDependants &&
-				!isShallowEqual(dependants, cache.lastDependants, 0)
-			) {
-				cache.clear();
-			}
-
-			cache.lastDependants = dependants;
-		}
-
-		node = cache.head;
-		while (node) {
-			// Check whether node arguments match arguments
-			if (!isShallowEqual(node.args, args, 1)) {
-				node = node.next;
-				continue;
-			}
-
-			// At this point we can assume we've found a match
-
-			// Surface matched node to head if not already
-			if (node !== cache.head) {
-				// Adjust siblings to point to each other.
-				/** @type {CacheNode} */ (node.prev).next = node.next;
-				if (node.next) {
-					node.next.prev = node.prev;
-				}
-
-				node.next = cache.head;
-				node.prev = null;
-				/** @type {CacheNode} */ (cache.head).prev = node;
-				cache.head = node;
-			}
-
-			// Return immediately
-			return node.val;
-		}
-
-		// No cached value found. Continue to insertion phase:
-
-		node = /** @type {CacheNode} */ ({
-			// Generate the result from original function
-			val: selector.apply(null, args),
-		});
-
-		// Avoid including the source object in the cache.
-		args[0] = null;
-		node.args = args;
-
-		// Don't need to check whether node is already head, since it would
-		// have been returned above already if it was
-
-		// Shift existing head down list
-		if (cache.head) {
-			cache.head.prev = node;
-			node.next = cache.head;
-		}
-
-		cache.head = node;
-
-		return node.val;
-	}
-
-	callSelector.getDependants = normalizedGetDependants;
-	callSelector.clear = clear;
-	clear();
-
-	return /** @type {S & EnhancedSelector} */ (callSelector);
-}
-
 ;// CONCATENATED MODULE: ./node_modules/@wordpress/commands/build-module/store/selectors.js
 /**
- * External dependencies
+ * WordPress dependencies
  */
 
-const getCommands = rememo((state, contextual = false) => Object.values(state.commands).filter(command => {
+
+/**
+ * Returns the registered static commands.
+ *
+ * @param {Object}  state      State tree.
+ * @param {boolean} contextual Whether to return only contextual commands.
+ *
+ * @return {import('./actions').WPCommandConfig[]} The list of registered commands.
+ */
+const getCommands = (0,external_wp_data_namespaceObject.createSelector)((state, contextual = false) => Object.values(state.commands).filter(command => {
   const isContextual = command.context && command.context === state.context;
   return contextual ? isContextual : !isContextual;
 }), state => [state.commands, state.context]);
-const getCommandLoaders = rememo((state, contextual = false) => Object.values(state.commandLoaders).filter(loader => {
+
+/**
+ * Returns the registered command loaders.
+ *
+ * @param {Object}  state      State tree.
+ * @param {boolean} contextual Whether to return only contextual command loaders.
+ *
+ * @return {import('./actions').WPCommandLoaderConfig[]} The list of registered command loaders.
+ */
+const getCommandLoaders = (0,external_wp_data_namespaceObject.createSelector)((state, contextual = false) => Object.values(state.commandLoaders).filter(loader => {
   const isContextual = loader.context && loader.context === state.context;
   return contextual ? isContextual : !isContextual;
 }), state => [state.commandLoaders, state.context]);
+
+/**
+ * Returns whether the command palette is open.
+ *
+ * @param {Object} state State tree.
+ *
+ * @return {boolean} Returns whether the command palette is open.
+ */
 function selectors_isOpen(state) {
   return state.isOpen;
 }
+
+/**
+ * Returns whether the active context.
+ *
+ * @param {Object} state State tree.
+ *
+ * @return {string} Context.
+ */
 function getContext(state) {
   return state.context;
 }
@@ -3740,7 +3458,7 @@ function setContext(context) {
 }
 
 ;// CONCATENATED MODULE: external ["wp","privateApis"]
-var external_wp_privateApis_namespaceObject = window["wp"]["privateApis"];
+const external_wp_privateApis_namespaceObject = window["wp"]["privateApis"];
 ;// CONCATENATED MODULE: ./node_modules/@wordpress/commands/build-module/lock-unlock.js
 /**
  * WordPress dependencies
@@ -3749,12 +3467,13 @@ var external_wp_privateApis_namespaceObject = window["wp"]["privateApis"];
 const {
   lock,
   unlock
-} = (0,external_wp_privateApis_namespaceObject.__dangerousOptInToUnstableAPIsOnlyForCoreModules)('I know using unstable features means my plugin or theme will inevitably break on the next WordPress release.', '@wordpress/commands');
+} = (0,external_wp_privateApis_namespaceObject.__dangerousOptInToUnstableAPIsOnlyForCoreModules)('I acknowledge private features are not for use in themes or plugins and doing so will break in the next version of WordPress.', '@wordpress/commands');
 
 ;// CONCATENATED MODULE: ./node_modules/@wordpress/commands/build-module/store/index.js
 /**
  * WordPress dependencies
  */
+
 
 /**
  * Internal dependencies
@@ -3764,16 +3483,23 @@ const {
 
 
 
-
 const STORE_NAME = 'core/commands';
+
 /**
  * Store definition for the commands namespace.
  *
  * @see https://github.com/WordPress/gutenberg/blob/HEAD/packages/data/README.md#createReduxStore
  *
  * @type {Object}
+ *
+ * @example
+ * ```js
+ * import { store as commandsStore } from '@wordpress/commands';
+ * import { useDispatch } from '@wordpress/data';
+ * ...
+ * const { open: openCommandCenter } = useDispatch( commandsStore );
+ * ```
  */
-
 const store = (0,external_wp_data_namespaceObject.createReduxStore)(STORE_NAME, {
   reducer: store_reducer,
   actions: actions_namespaceObject,
@@ -3783,11 +3509,11 @@ const store = (0,external_wp_data_namespaceObject.createReduxStore)(STORE_NAME, 
 unlock(store).registerPrivateActions(private_actions_namespaceObject);
 
 ;// CONCATENATED MODULE: ./node_modules/@wordpress/commands/build-module/components/command-menu.js
-
-
 /**
  * External dependencies
  */
+
+
 
 /**
  * WordPress dependencies
@@ -3805,6 +3531,8 @@ unlock(store).registerPrivateActions(private_actions_namespaceObject);
 
 
 
+
+const inputLabel = (0,external_wp_i18n_namespaceObject.__)('Search commands and settings');
 function CommandMenuLoader({
   name,
   search,
@@ -3813,7 +3541,6 @@ function CommandMenuLoader({
   close
 }) {
   var _hook;
-
   const {
     isLoading,
     commands = []
@@ -3823,32 +3550,36 @@ function CommandMenuLoader({
   (0,external_wp_element_namespaceObject.useEffect)(() => {
     setLoader(name, isLoading);
   }, [setLoader, name, isLoading]);
-
   if (!commands.length) {
     return null;
   }
-
-  return (0,external_wp_element_namespaceObject.createElement)(external_wp_element_namespaceObject.Fragment, null, (0,external_wp_element_namespaceObject.createElement)(Le.List, null, commands.map(command => {
-    var _command$searchLabel;
-
-    return (0,external_wp_element_namespaceObject.createElement)(Le.Item, {
-      key: command.name,
-      value: (_command$searchLabel = command.searchLabel) !== null && _command$searchLabel !== void 0 ? _command$searchLabel : command.label,
-      onSelect: () => command.callback({
-        close
-      })
-    }, (0,external_wp_element_namespaceObject.createElement)(external_wp_components_namespaceObject.__experimentalHStack, {
-      alignment: "left",
-      className: "commands-command-menu__item"
-    }, (0,external_wp_element_namespaceObject.createElement)(icon, {
-      icon: command.icon
-    }), (0,external_wp_element_namespaceObject.createElement)("span", null, (0,external_wp_element_namespaceObject.createElement)(external_wp_components_namespaceObject.TextHighlight, {
-      text: command.label,
-      highlight: search
-    }))));
-  })));
+  return /*#__PURE__*/(0,external_ReactJSXRuntime_namespaceObject.jsx)(external_ReactJSXRuntime_namespaceObject.Fragment, {
+    children: commands.map(command => {
+      var _command$searchLabel;
+      return /*#__PURE__*/(0,external_ReactJSXRuntime_namespaceObject.jsx)(He.Item, {
+        value: (_command$searchLabel = command.searchLabel) !== null && _command$searchLabel !== void 0 ? _command$searchLabel : command.label,
+        onSelect: () => command.callback({
+          close
+        }),
+        id: command.name,
+        children: /*#__PURE__*/(0,external_ReactJSXRuntime_namespaceObject.jsxs)(external_wp_components_namespaceObject.__experimentalHStack, {
+          alignment: "left",
+          className: dist_clsx('commands-command-menu__item', {
+            'has-icon': command.icon
+          }),
+          children: [command.icon && /*#__PURE__*/(0,external_ReactJSXRuntime_namespaceObject.jsx)(icon, {
+            icon: command.icon
+          }), /*#__PURE__*/(0,external_ReactJSXRuntime_namespaceObject.jsx)("span", {
+            children: /*#__PURE__*/(0,external_ReactJSXRuntime_namespaceObject.jsx)(external_wp_components_namespaceObject.TextHighlight, {
+              text: command.label,
+              highlight: search
+            })
+          })]
+        })
+      }, command.name);
+    })
+  });
 }
-
 function CommandMenuLoaderWrapper({
   hook,
   search,
@@ -3860,21 +3591,20 @@ function CommandMenuLoaderWrapper({
   // the CommandMenuLoaderWrapper component need to be
   // remounted on each hook prop change
   // We use the key state to make sure we do that properly.
-  const currentLoader = (0,external_wp_element_namespaceObject.useRef)(hook);
+  const currentLoaderRef = (0,external_wp_element_namespaceObject.useRef)(hook);
   const [key, setKey] = (0,external_wp_element_namespaceObject.useState)(0);
   (0,external_wp_element_namespaceObject.useEffect)(() => {
-    if (currentLoader.current !== hook) {
-      currentLoader.current = hook;
+    if (currentLoaderRef.current !== hook) {
+      currentLoaderRef.current = hook;
       setKey(prevKey => prevKey + 1);
     }
   }, [hook]);
-  return (0,external_wp_element_namespaceObject.createElement)(CommandMenuLoader, {
-    key: key,
-    hook: currentLoader.current,
+  return /*#__PURE__*/(0,external_ReactJSXRuntime_namespaceObject.jsx)(CommandMenuLoader, {
+    hook: currentLoaderRef.current,
     search: search,
     setLoader: setLoader,
     close: close
-  });
+  }, key);
 }
 function CommandMenuGroup({
   isContextual,
@@ -3895,37 +3625,71 @@ function CommandMenuGroup({
       loaders: getCommandLoaders(isContextual)
     };
   }, [isContextual]);
-
   if (!commands.length && !loaders.length) {
     return null;
   }
-
-  return (0,external_wp_element_namespaceObject.createElement)(Le.Group, null, commands.map(command => {
-    var _command$searchLabel2;
-
-    return (0,external_wp_element_namespaceObject.createElement)(Le.Item, {
-      key: command.name,
-      value: (_command$searchLabel2 = command.searchLabel) !== null && _command$searchLabel2 !== void 0 ? _command$searchLabel2 : command.label,
-      onSelect: () => command.callback({
-        close
-      })
-    }, (0,external_wp_element_namespaceObject.createElement)(external_wp_components_namespaceObject.__experimentalHStack, {
-      alignment: "left",
-      className: "commands-command-menu__item"
-    }, (0,external_wp_element_namespaceObject.createElement)(icon, {
-      icon: command.icon
-    }), (0,external_wp_element_namespaceObject.createElement)("span", null, (0,external_wp_element_namespaceObject.createElement)(external_wp_components_namespaceObject.TextHighlight, {
-      text: command.label,
-      highlight: search
-    }))));
-  }), loaders.map(loader => (0,external_wp_element_namespaceObject.createElement)(CommandMenuLoaderWrapper, {
-    key: loader.name,
-    hook: loader.hook,
-    search: search,
-    setLoader: setLoader,
-    close: close
-  })));
+  return /*#__PURE__*/(0,external_ReactJSXRuntime_namespaceObject.jsxs)(He.Group, {
+    children: [commands.map(command => {
+      var _command$searchLabel2;
+      return /*#__PURE__*/(0,external_ReactJSXRuntime_namespaceObject.jsx)(He.Item, {
+        value: (_command$searchLabel2 = command.searchLabel) !== null && _command$searchLabel2 !== void 0 ? _command$searchLabel2 : command.label,
+        onSelect: () => command.callback({
+          close
+        }),
+        id: command.name,
+        children: /*#__PURE__*/(0,external_ReactJSXRuntime_namespaceObject.jsxs)(external_wp_components_namespaceObject.__experimentalHStack, {
+          alignment: "left",
+          className: dist_clsx('commands-command-menu__item', {
+            'has-icon': command.icon
+          }),
+          children: [command.icon && /*#__PURE__*/(0,external_ReactJSXRuntime_namespaceObject.jsx)(icon, {
+            icon: command.icon
+          }), /*#__PURE__*/(0,external_ReactJSXRuntime_namespaceObject.jsx)("span", {
+            children: /*#__PURE__*/(0,external_ReactJSXRuntime_namespaceObject.jsx)(external_wp_components_namespaceObject.TextHighlight, {
+              text: command.label,
+              highlight: search
+            })
+          })]
+        })
+      }, command.name);
+    }), loaders.map(loader => /*#__PURE__*/(0,external_ReactJSXRuntime_namespaceObject.jsx)(CommandMenuLoaderWrapper, {
+      hook: loader.hook,
+      search: search,
+      setLoader: setLoader,
+      close: close
+    }, loader.name))]
+  });
 }
+function CommandInput({
+  isOpen,
+  search,
+  setSearch
+}) {
+  const commandMenuInput = (0,external_wp_element_namespaceObject.useRef)();
+  const _value = dist_D(state => state.value);
+  const selectedItemId = (0,external_wp_element_namespaceObject.useMemo)(() => {
+    const item = document.querySelector(`[cmdk-item=""][data-value="${_value}"]`);
+    return item?.getAttribute('id');
+  }, [_value]);
+  (0,external_wp_element_namespaceObject.useEffect)(() => {
+    // Focus the command palette input when mounting the modal.
+    if (isOpen) {
+      commandMenuInput.current.focus();
+    }
+  }, [isOpen]);
+  return /*#__PURE__*/(0,external_ReactJSXRuntime_namespaceObject.jsx)(He.Input, {
+    ref: commandMenuInput,
+    value: search,
+    onValueChange: setSearch,
+    placeholder: inputLabel,
+    "aria-activedescendant": selectedItemId,
+    icon: search
+  });
+}
+
+/**
+ * @ignore
+ */
 function CommandMenu() {
   const {
     registerShortcut
@@ -3937,25 +3701,24 @@ function CommandMenu() {
     close
   } = (0,external_wp_data_namespaceObject.useDispatch)(store);
   const [loaders, setLoaders] = (0,external_wp_element_namespaceObject.useState)({});
-  const commandMenuInput = (0,external_wp_element_namespaceObject.useRef)();
   (0,external_wp_element_namespaceObject.useEffect)(() => {
     registerShortcut({
       name: 'core/commands',
       category: 'global',
-      description: (0,external_wp_i18n_namespaceObject.__)('Open the command palette'),
+      description: (0,external_wp_i18n_namespaceObject.__)('Open the command palette.'),
       keyCombination: {
         modifier: 'primary',
         character: 'k'
       }
     });
   }, [registerShortcut]);
-  (0,external_wp_keyboardShortcuts_namespaceObject.useShortcut)('core/commands',
-  /** @type {import('react').KeyboardEventHandler} */
+  (0,external_wp_keyboardShortcuts_namespaceObject.useShortcut)('core/commands', /** @type {import('react').KeyboardEventHandler} */
   event => {
     // Bails to avoid obscuring the effect of the preceding handler(s).
-    if (event.defaultPrevented) return;
+    if (event.defaultPrevented) {
+      return;
+    }
     event.preventDefault();
-
     if (isOpen) {
       close();
     } else {
@@ -3964,70 +3727,74 @@ function CommandMenu() {
   }, {
     bindGlobal: true
   });
-  const setLoader = (0,external_wp_element_namespaceObject.useCallback)((name, value) => setLoaders(current => ({ ...current,
+  const setLoader = (0,external_wp_element_namespaceObject.useCallback)((name, value) => setLoaders(current => ({
+    ...current,
     [name]: value
   })), []);
-
   const closeAndReset = () => {
     setSearch('');
     close();
   };
-
-  (0,external_wp_element_namespaceObject.useEffect)(() => {
-    // Focus the command palette input when mounting the modal.
-    if (isOpen) {
-      commandMenuInput.current.focus();
-    }
-  }, [isOpen]);
-
   if (!isOpen) {
     return false;
   }
-
   const onKeyDown = event => {
-    if ( // Ignore keydowns from IMEs
-    event.nativeEvent.isComposing || // Workaround for Mac Safari where the final Enter/Backspace of an IME composition
+    if (
+    // Ignore keydowns from IMEs
+    event.nativeEvent.isComposing ||
+    // Workaround for Mac Safari where the final Enter/Backspace of an IME composition
     // is `isComposing=false`, even though it's technically still part of the composition.
     // These can only be detected by keyCode.
     event.keyCode === 229) {
       event.preventDefault();
     }
   };
-
   const isLoading = Object.values(loaders).some(Boolean);
-  return (0,external_wp_element_namespaceObject.createElement)(external_wp_components_namespaceObject.Modal, {
+  return /*#__PURE__*/(0,external_ReactJSXRuntime_namespaceObject.jsx)(external_wp_components_namespaceObject.Modal, {
     className: "commands-command-menu",
     overlayClassName: "commands-command-menu__overlay",
     onRequestClose: closeAndReset,
-    __experimentalHideHeader: true
-  }, (0,external_wp_element_namespaceObject.createElement)("div", {
-    className: "commands-command-menu__container"
-  }, (0,external_wp_element_namespaceObject.createElement)(Le, {
-    label: (0,external_wp_i18n_namespaceObject.__)('Command palette'),
-    onKeyDown: onKeyDown
-  }, (0,external_wp_element_namespaceObject.createElement)("div", {
-    className: "commands-command-menu__header"
-  }, (0,external_wp_element_namespaceObject.createElement)(Le.Input, {
-    ref: commandMenuInput,
-    value: search,
-    onValueChange: setSearch,
-    placeholder: (0,external_wp_i18n_namespaceObject.__)('Type a command or search')
-  })), (0,external_wp_element_namespaceObject.createElement)(Le.List, null, search && !isLoading && (0,external_wp_element_namespaceObject.createElement)(Le.Empty, null, (0,external_wp_i18n_namespaceObject.__)('No results found.')), (0,external_wp_element_namespaceObject.createElement)(CommandMenuGroup, {
-    search: search,
-    setLoader: setLoader,
-    close: closeAndReset,
-    isContextual: true
-  }), search && (0,external_wp_element_namespaceObject.createElement)(CommandMenuGroup, {
-    search: search,
-    setLoader: setLoader,
-    close: closeAndReset
-  })))));
+    __experimentalHideHeader: true,
+    contentLabel: (0,external_wp_i18n_namespaceObject.__)('Command palette'),
+    children: /*#__PURE__*/(0,external_ReactJSXRuntime_namespaceObject.jsx)("div", {
+      className: "commands-command-menu__container",
+      children: /*#__PURE__*/(0,external_ReactJSXRuntime_namespaceObject.jsxs)(He, {
+        label: inputLabel,
+        onKeyDown: onKeyDown,
+        children: [/*#__PURE__*/(0,external_ReactJSXRuntime_namespaceObject.jsxs)("div", {
+          className: "commands-command-menu__header",
+          children: [/*#__PURE__*/(0,external_ReactJSXRuntime_namespaceObject.jsx)(CommandInput, {
+            search: search,
+            setSearch: setSearch,
+            isOpen: isOpen
+          }), /*#__PURE__*/(0,external_ReactJSXRuntime_namespaceObject.jsx)(icon, {
+            icon: library_search
+          })]
+        }), /*#__PURE__*/(0,external_ReactJSXRuntime_namespaceObject.jsxs)(He.List, {
+          label: (0,external_wp_i18n_namespaceObject.__)('Command suggestions'),
+          children: [search && !isLoading && /*#__PURE__*/(0,external_ReactJSXRuntime_namespaceObject.jsx)(He.Empty, {
+            children: (0,external_wp_i18n_namespaceObject.__)('No results found.')
+          }), /*#__PURE__*/(0,external_ReactJSXRuntime_namespaceObject.jsx)(CommandMenuGroup, {
+            search: search,
+            setLoader: setLoader,
+            close: closeAndReset,
+            isContextual: true
+          }), search && /*#__PURE__*/(0,external_ReactJSXRuntime_namespaceObject.jsx)(CommandMenuGroup, {
+            search: search,
+            setLoader: setLoader,
+            close: closeAndReset
+          })]
+        })]
+      })
+    })
+  });
 }
 
 ;// CONCATENATED MODULE: ./node_modules/@wordpress/commands/build-module/hooks/use-command-context.js
 /**
  * WordPress dependencies
  */
+
 
 
 /**
@@ -4041,7 +3808,6 @@ function CommandMenu() {
  *
  * @param {string} context Context to set.
  */
-
 function useCommandContext(context) {
   const {
     getContext
@@ -4052,9 +3818,10 @@ function useCommandContext(context) {
   } = unlock((0,external_wp_data_namespaceObject.useDispatch)(store));
   (0,external_wp_element_namespaceObject.useEffect)(() => {
     setContext(context);
-  }, [context, setContext]); // This effects ensures that on unmount, we restore the context
-  // that was set before the component actually mounts.
+  }, [context, setContext]);
 
+  // This effects ensures that on unmount, we restore the context
+  // that was set before the component actually mounts.
   (0,external_wp_element_namespaceObject.useEffect)(() => {
     const initialContextRef = initialContext.current;
     return () => setContext(initialContextRef);
@@ -4067,6 +3834,10 @@ function useCommandContext(context) {
  */
 
 
+
+/**
+ * @private
+ */
 const privateApis = {};
 lock(privateApis, {
   useCommandContext: useCommandContext
@@ -4078,39 +3849,58 @@ lock(privateApis, {
  */
 
 
+
 /**
  * Internal dependencies
  */
 
 
 /**
- * Attach a command to the command palette.
+ * Attach a command to the command palette. Used for static commands.
  *
  * @param {import('../store/actions').WPCommandConfig} command command config.
+ *
+ * @example
+ * ```js
+ * import { useCommand } from '@wordpress/commands';
+ * import { plus } from '@wordpress/icons';
+ *
+ * useCommand( {
+ *     name: 'myplugin/my-command-name',
+ *     label: __( 'Add new post' ),
+ *	   icon: plus,
+ *     callback: ({ close }) => {
+ *         document.location.href = 'post-new.php';
+ *         close();
+ *     },
+ * } );
+ * ```
  */
-
 function useCommand(command) {
   const {
     registerCommand,
     unregisterCommand
   } = (0,external_wp_data_namespaceObject.useDispatch)(store);
-  const currentCallback = (0,external_wp_element_namespaceObject.useRef)(command.callback);
+  const currentCallbackRef = (0,external_wp_element_namespaceObject.useRef)(command.callback);
   (0,external_wp_element_namespaceObject.useEffect)(() => {
-    currentCallback.current = command.callback;
+    currentCallbackRef.current = command.callback;
   }, [command.callback]);
   (0,external_wp_element_namespaceObject.useEffect)(() => {
+    if (command.disabled) {
+      return;
+    }
     registerCommand({
       name: command.name,
       context: command.context,
       label: command.label,
       searchLabel: command.searchLabel,
       icon: command.icon,
-      callback: (...args) => currentCallback.current(...args)
+      callback: (...args) => currentCallbackRef.current(...args)
     });
     return () => {
       unregisterCommand(command.name);
     };
-  }, [command.name, command.label, command.searchLabel, command.icon, command.context, registerCommand, unregisterCommand]);
+  }, [command.name, command.label, command.searchLabel, command.icon, command.context, command.disabled, registerCommand, unregisterCommand]);
 }
 
 ;// CONCATENATED MODULE: ./node_modules/@wordpress/commands/build-module/hooks/use-command-loader.js
@@ -4119,23 +3909,90 @@ function useCommand(command) {
  */
 
 
+
 /**
  * Internal dependencies
  */
 
 
 /**
- * Attach a command loader to the command palette.
+ * Attach a command loader to the command palette. Used for dynamic commands.
  *
  * @param {import('../store/actions').WPCommandLoaderConfig} loader command loader config.
+ *
+ * @example
+ * ```js
+ * import { useCommandLoader } from '@wordpress/commands';
+ * import { post, page, layout, symbolFilled } from '@wordpress/icons';
+ *
+ * const icons = {
+ *     post,
+ *     page,
+ *     wp_template: layout,
+ *     wp_template_part: symbolFilled,
+ * };
+ *
+ * function usePageSearchCommandLoader( { search } ) {
+ *     // Retrieve the pages for the "search" term.
+ *     const { records, isLoading } = useSelect( ( select ) => {
+ *         const { getEntityRecords } = select( coreStore );
+ *         const query = {
+ *             search: !! search ? search : undefined,
+ *             per_page: 10,
+ *             orderby: search ? 'relevance' : 'date',
+ *         };
+ *         return {
+ *             records: getEntityRecords( 'postType', 'page', query ),
+ *             isLoading: ! select( coreStore ).hasFinishedResolution(
+ *                 'getEntityRecords',
+ *                 'postType', 'page', query ]
+ *             ),
+ *         };
+ *     }, [ search ] );
+ *
+ *     // Create the commands.
+ *     const commands = useMemo( () => {
+ *         return ( records ?? [] ).slice( 0, 10 ).map( ( record ) => {
+ *             return {
+ *                 name: record.title?.rendered + ' ' + record.id,
+ *                 label: record.title?.rendered
+ *                     ? record.title?.rendered
+ *                     : __( '(no title)' ),
+ *                 icon: icons[ postType ],
+ *                 callback: ( { close } ) => {
+ *                     const args = {
+ *                         postType,
+ *                         postId: record.id,
+ *                         ...extraArgs,
+ *                     };
+ *                     document.location = addQueryArgs( 'site-editor.php', args );
+ *                     close();
+ *                 },
+ *             };
+ *         } );
+ *     }, [ records, history ] );
+ *
+ *     return {
+ *         commands,
+ *         isLoading,
+ *     };
+ * }
+ *
+ * useCommandLoader( {
+ *     name: 'myplugin/page-search',
+ *     hook: usePageSearchCommandLoader,
+ * } );
+ * ```
  */
-
 function useCommandLoader(loader) {
   const {
     registerCommandLoader,
     unregisterCommandLoader
   } = (0,external_wp_data_namespaceObject.useDispatch)(store);
   (0,external_wp_element_namespaceObject.useEffect)(() => {
+    if (loader.disabled) {
+      return;
+    }
     registerCommandLoader({
       name: loader.name,
       hook: loader.hook,
@@ -4144,7 +4001,7 @@ function useCommandLoader(loader) {
     return () => {
       unregisterCommandLoader(loader.name);
     };
-  }, [loader.name, loader.hook, loader.context, registerCommandLoader, unregisterCommandLoader]);
+  }, [loader.name, loader.hook, loader.context, loader.disabled, registerCommandLoader, unregisterCommandLoader]);
 }
 
 ;// CONCATENATED MODULE: ./node_modules/@wordpress/commands/build-module/index.js
@@ -4154,7 +4011,6 @@ function useCommandLoader(loader) {
 
 
 
-}();
 (window.wp = window.wp || {}).commands = __webpack_exports__;
 /******/ })()
 ;

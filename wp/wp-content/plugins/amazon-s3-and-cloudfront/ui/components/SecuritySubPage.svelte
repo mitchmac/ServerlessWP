@@ -235,7 +235,7 @@
 			{/if}
 		</PanelRow>
 		{#if !$current_settings[ "block-public-access" ] && blockPublicAccess && $delivery_provider.block_public_access_supported}
-			<div transition:slide|local>
+			<div transition:slide>
 				<PanelRow class="body flex-column toggle-reveal" footer>
 					<Checkbox name="confirm-setup-bapa-oai" bind:checked={bapaSetupConfirmed} disabled={$needs_refresh || $settingsLocked}>{@html $delivery_provider.block_public_access_confirm_setup_prompt}</Checkbox>
 				</PanelRow>
@@ -270,7 +270,7 @@
 			{/if}
 		</PanelRow>
 		{#if !$current_settings[ "object-ownership-enforced" ] && objectOwnershipEnforced && $delivery_provider.object_ownership_supported}
-			<div transition:slide|local>
+			<div transition:slide>
 				<PanelRow class="body flex-column toggle-reveal">
 					<Checkbox name="confirm-setup-ooe-oai" bind:checked={ooeSetupConfirmed} disabled={$needs_refresh || $settingsLocked}>{@html $delivery_provider.object_ownership_confirm_setup_prompt}</Checkbox>
 				</PanelRow>

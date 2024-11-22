@@ -175,7 +175,7 @@ class CurlFactory implements CurlFactoryInterface
         }
         $method = $easy->request->getMethod();
         if ($method === 'PUT' || $method === 'POST') {
-            // See https://tools.ietf.org/html/rfc7230#section-3.3.2
+            // See https://datatracker.ietf.org/doc/html/rfc7230#section-3.3.2
             if (!$easy->request->hasHeader('Content-Length')) {
                 $conf[\CURLOPT_HTTPHEADER][] = 'Content-Length: 0';
             }
@@ -485,5 +485,12 @@ class CurlFactory implements CurlFactoryInterface
             }
             return \strlen($h);
         };
+    }
+    public function __destruct()
+    {
+        foreach ($this->handles as $id => $handle) {
+            \curl_close($handle);
+            unset($this->handles[$id]);
+        }
     }
 }

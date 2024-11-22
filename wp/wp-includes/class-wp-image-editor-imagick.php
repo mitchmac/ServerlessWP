@@ -168,6 +168,10 @@ class WP_Image_Editor_Imagick extends WP_Image_Editor {
 				$this->image->setIteratorIndex( 0 );
 			}
 
+			if ( 'pdf' === $file_extension ) {
+				$this->remove_pdf_alpha_channel();
+			}
+
 			$this->mime_type = $this->get_mime_type( $this->image->getImageFormat() );
 		} catch ( Exception $e ) {
 			return new WP_Error( 'invalid_image', $e->getMessage(), $this->file );
@@ -202,6 +206,7 @@ class WP_Image_Editor_Imagick extends WP_Image_Editor {
 			switch ( $this->mime_type ) {
 				case 'image/jpeg':
 					$this->image->setImageCompressionQuality( $quality );
+					$this->image->setCompressionQuality( $quality );
 					$this->image->setImageCompression( imagick::COMPRESSION_JPEG );
 					break;
 				case 'image/webp':
@@ -210,13 +215,23 @@ class WP_Image_Editor_Imagick extends WP_Image_Editor {
 					if ( 'lossless' === $webp_info['type'] ) {
 						// Use WebP lossless settings.
 						$this->image->setImageCompressionQuality( 100 );
+						$this->image->setCompressionQuality( 100 );
 						$this->image->setOption( 'webp:lossless', 'true' );
+						parent::set_quality( 100 );
 					} else {
 						$this->image->setImageCompressionQuality( $quality );
+						$this->image->setCompressionQuality( $quality );
 					}
+					break;
+				case 'image/avif':
+					// Set the AVIF encoder to work faster, with minimal impact on image size.
+					$this->image->setOption( 'heic:speed', 7 );
+					$this->image->setImageCompressionQuality( $quality );
+					$this->image->setCompressionQuality( $quality );
 					break;
 				default:
 					$this->image->setImageCompressionQuality( $quality );
+					$this->image->setCompressionQuality( $quality );
 			}
 		} catch ( Exception $e ) {
 			return new WP_Error( 'image_quality_error', $e->getMessage() );
@@ -250,6 +265,16 @@ class WP_Image_Editor_Imagick extends WP_Image_Editor {
 
 		if ( ! $height ) {
 			$height = $size['height'];
+		}
+
+		/*
+		 * If we still don't have the image size, fall back to `wp_getimagesize`. This ensures AVIF and HEIC images
+		 * are properly sized without affecting previous `getImageGeometry` behavior.
+		 */
+		if ( ( ! $width || ! $height ) && ( 'image/avif' === $this->mime_type || wp_is_heic_image_mime_type( $this->mime_type ) ) ) {
+			$size   = wp_getimagesize( $this->file );
+			$width  = $size[0];
+			$height = $size[1];
 		}
 
 		return parent::update_size( $width, $height );
@@ -316,11 +341,18 @@ class WP_Image_Editor_Imagick extends WP_Image_Editor {
 	 *
 	 * @param int|null   $max_w Image width.
 	 * @param int|null   $max_h Image height.
-	 * @param bool|array $crop
+	 * @param bool|array $crop  {
+	 *     Optional. Image cropping behavior. If false, the image will be scaled (default).
+	 *     If true, image will be cropped to the specified dimensions using center positions.
+	 *     If an array, the image will be cropped using the array to specify the crop location:
+	 *
+	 *     @type string $0 The x crop position. Accepts 'left' 'center', or 'right'.
+	 *     @type string $1 The y crop position. Accepts 'top', 'center', or 'bottom'.
+	 * }
 	 * @return true|WP_Error
 	 */
 	public function resize( $max_w, $max_h, $crop = false ) {
-		if ( ( $this->size['width'] == $max_w ) && ( $this->size['height'] == $max_h ) ) {
+		if ( ( $this->size['width'] === $max_w ) && ( $this->size['height'] === $max_h ) ) {
 			return true;
 		}
 
@@ -466,10 +498,6 @@ class WP_Image_Editor_Imagick extends WP_Image_Editor {
 				if ( 8 < $this->image->getImageDepth() ) {
 					$this->image->setImageDepth( 8 );
 				}
-			}
-
-			if ( is_callable( array( $this->image, 'setInterlaceScheme' ) ) && defined( 'Imagick::INTERLACE_NO' ) ) {
-				$this->image->setInterlaceScheme( Imagick::INTERLACE_NO );
 			}
 		} catch ( Exception $e ) {
 			return new WP_Error( 'image_resize_error', $e->getMessage() );
@@ -752,6 +780,24 @@ class WP_Image_Editor_Imagick extends WP_Image_Editor {
 	}
 
 	/**
+	 * Removes PDF alpha after it's been read.
+	 *
+	 * @since 6.4.0
+	 */
+	protected function remove_pdf_alpha_channel() {
+		$version = Imagick::getVersion();
+		// Remove alpha channel if possible to avoid black backgrounds for Ghostscript >= 9.14. RemoveAlphaChannel added in ImageMagick 6.7.5.
+		if ( $version['versionNumber'] >= 0x675 ) {
+			try {
+				// Imagick::ALPHACHANNEL_REMOVE mapped to RemoveAlphaChannel in PHP imagick 3.2.0b2.
+				$this->image->setImageAlphaChannel( defined( 'Imagick::ALPHACHANNEL_REMOVE' ) ? Imagick::ALPHACHANNEL_REMOVE : 12 );
+			} catch ( Exception $e ) {
+				return new WP_Error( 'pdf_alpha_process_failed', $e->getMessage() );
+			}
+		}
+	}
+
+	/**
 	 * @since 3.5.0
 	 * @since 6.0.0 The `$filesize` value was added to the returned array.
 	 *
@@ -785,6 +831,20 @@ class WP_Image_Editor_Imagick extends WP_Image_Editor {
 			return new WP_Error( 'image_save_error', $e->getMessage(), $filename );
 		}
 
+		if ( method_exists( $this->image, 'setInterlaceScheme' )
+			&& method_exists( $this->image, 'getInterlaceScheme' )
+			&& defined( 'Imagick::INTERLACE_PLANE' )
+		) {
+			$orig_interlace = $this->image->getInterlaceScheme();
+
+			/** This filter is documented in wp-includes/class-wp-image-editor-gd.php */
+			if ( apply_filters( 'image_save_progressive', false, $mime_type ) ) {
+				$this->image->setInterlaceScheme( Imagick::INTERLACE_PLANE ); // True - line interlace output.
+			} else {
+				$this->image->setInterlaceScheme( Imagick::INTERLACE_NO ); // False - no interlace output.
+			}
+		}
+
 		$write_image_result = $this->write_image( $this->image, $filename );
 		if ( is_wp_error( $write_image_result ) ) {
 			return $write_image_result;
@@ -793,6 +853,10 @@ class WP_Image_Editor_Imagick extends WP_Image_Editor {
 		try {
 			// Reset original format.
 			$this->image->setImageFormat( $orig_format );
+
+			if ( isset( $orig_interlace ) ) {
+				$this->image->setInterlaceScheme( $orig_interlace );
+			}
 		} catch ( Exception $e ) {
 			return new WP_Error( 'image_save_error', $e->getMessage(), $filename );
 		}
@@ -1014,5 +1078,4 @@ class WP_Image_Editor_Imagick extends WP_Image_Editor {
 
 		return true;
 	}
-
 }

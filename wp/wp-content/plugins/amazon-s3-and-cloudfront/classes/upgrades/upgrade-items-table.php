@@ -60,7 +60,7 @@ class Upgrade_Items_Table extends Upgrade {
 		$fixed           = $item->provider_object !== $provider_object;
 
 		// Make sure legacy metadata isn't broken.
-		$provider_object = unserialize( $provider_object );
+		$provider_object = AS3CF_Utils::maybe_unserialize( $provider_object );
 
 		if ( false === $provider_object ) {
 			AS3CF_Error::log( 'Failed to unserialize legacy offload metadata for attachment ' . $item->ID . ': ' . $item->provider_object );

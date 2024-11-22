@@ -1,36 +1,36 @@
-/******/ (function() { // webpackBootstrap
+/******/ (() => { // webpackBootstrap
 /******/ 	"use strict";
 /******/ 	// The require scope
 /******/ 	var __webpack_require__ = {};
 /******/ 	
 /************************************************************************/
 /******/ 	/* webpack/runtime/define property getters */
-/******/ 	!function() {
+/******/ 	(() => {
 /******/ 		// define getter functions for harmony exports
-/******/ 		__webpack_require__.d = function(exports, definition) {
+/******/ 		__webpack_require__.d = (exports, definition) => {
 /******/ 			for(var key in definition) {
 /******/ 				if(__webpack_require__.o(definition, key) && !__webpack_require__.o(exports, key)) {
 /******/ 					Object.defineProperty(exports, key, { enumerable: true, get: definition[key] });
 /******/ 				}
 /******/ 			}
 /******/ 		};
-/******/ 	}();
+/******/ 	})();
 /******/ 	
 /******/ 	/* webpack/runtime/hasOwnProperty shorthand */
-/******/ 	!function() {
-/******/ 		__webpack_require__.o = function(obj, prop) { return Object.prototype.hasOwnProperty.call(obj, prop); }
-/******/ 	}();
+/******/ 	(() => {
+/******/ 		__webpack_require__.o = (obj, prop) => (Object.prototype.hasOwnProperty.call(obj, prop))
+/******/ 	})();
 /******/ 	
 /******/ 	/* webpack/runtime/make namespace object */
-/******/ 	!function() {
+/******/ 	(() => {
 /******/ 		// define __esModule on exports
-/******/ 		__webpack_require__.r = function(exports) {
+/******/ 		__webpack_require__.r = (exports) => {
 /******/ 			if(typeof Symbol !== 'undefined' && Symbol.toStringTag) {
 /******/ 				Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 /******/ 			}
 /******/ 			Object.defineProperty(exports, '__esModule', { value: true });
 /******/ 		};
-/******/ 	}();
+/******/ 	})();
 /******/ 	
 /************************************************************************/
 var __webpack_exports__ = {};
@@ -39,13 +39,13 @@ __webpack_require__.r(__webpack_exports__);
 
 // EXPORTS
 __webpack_require__.d(__webpack_exports__, {
-  "escapeAmpersand": function() { return /* binding */ escapeAmpersand; },
-  "escapeAttribute": function() { return /* binding */ escapeAttribute; },
-  "escapeEditableHTML": function() { return /* binding */ escapeEditableHTML; },
-  "escapeHTML": function() { return /* binding */ escapeHTML; },
-  "escapeLessThan": function() { return /* binding */ escapeLessThan; },
-  "escapeQuotationMark": function() { return /* binding */ escapeQuotationMark; },
-  "isValidAttributeName": function() { return /* binding */ isValidAttributeName; }
+  escapeAmpersand: () => (/* binding */ escapeAmpersand),
+  escapeAttribute: () => (/* binding */ escapeAttribute),
+  escapeEditableHTML: () => (/* binding */ escapeEditableHTML),
+  escapeHTML: () => (/* binding */ escapeHTML),
+  escapeLessThan: () => (/* binding */ escapeLessThan),
+  escapeQuotationMark: () => (/* binding */ escapeQuotationMark),
+  isValidAttributeName: () => (/* binding */ isValidAttributeName)
 });
 
 ;// CONCATENATED MODULE: ./node_modules/@wordpress/escape-html/build-module/escape-greater.js
@@ -57,9 +57,9 @@ __webpack_require__.d(__webpack_exports__, {
  *
  * See: https://core.trac.wordpress.org/ticket/45387
  *
- * @param {string} value Original string.
+ * @param value Original string.
  *
- * @return {string} Escaped string.
+ * @return Escaped string.
  */
 function __unstableEscapeGreaterThan(value) {
   return value.replace(/>/g, '&gt;');
@@ -70,6 +70,7 @@ function __unstableEscapeGreaterThan(value) {
  * Internal dependencies
  */
 
+
 /**
  * Regular expression matching invalid attribute names.
  *
@@ -78,11 +79,9 @@ function __unstableEscapeGreaterThan(value) {
  * and noncharacters."
  *
  * @see https://html.spec.whatwg.org/multipage/syntax.html#attributes-2
- *
- * @type {RegExp}
  */
-
 const REGEXP_INVALID_ATTRIBUTE_NAME = /[\u007F-\u009F "'>/="\uFDD0-\uFDEF]/;
+
 /**
  * Returns a string with ampersands escaped. Note that this is an imperfect
  * implementation, where only ampersands which do not appear as a pattern of
@@ -93,36 +92,36 @@ const REGEXP_INVALID_ATTRIBUTE_NAME = /[\u007F-\u009F "'>/="\uFDD0-\uFDEF]/;
  * @see https://w3c.github.io/html/syntax.html#ambiguous-ampersand
  * @see https://w3c.github.io/html/syntax.html#named-character-references
  *
- * @param {string} value Original string.
+ * @param value Original string.
  *
- * @return {string} Escaped string.
+ * @return Escaped string.
  */
-
 function escapeAmpersand(value) {
   return value.replace(/&(?!([a-z0-9]+|#[0-9]+|#x[a-f0-9]+);)/gi, '&amp;');
 }
+
 /**
  * Returns a string with quotation marks replaced.
  *
- * @param {string} value Original string.
+ * @param value Original string.
  *
- * @return {string} Escaped string.
+ * @return Escaped string.
  */
-
 function escapeQuotationMark(value) {
   return value.replace(/"/g, '&quot;');
 }
+
 /**
  * Returns a string with less-than sign replaced.
  *
- * @param {string} value Original string.
+ * @param value Original string.
  *
- * @return {string} Escaped string.
+ * @return Escaped string.
  */
-
 function escapeLessThan(value) {
   return value.replace(/</g, '&lt;');
 }
+
 /**
  * Returns an escaped attribute value.
  *
@@ -139,14 +138,14 @@ function escapeLessThan(value) {
  *
  * See: https://core.trac.wordpress.org/ticket/45387
  *
- * @param {string} value Attribute value.
+ * @param value Attribute value.
  *
- * @return {string} Escaped attribute value.
+ * @return Escaped attribute value.
  */
-
 function escapeAttribute(value) {
   return __unstableEscapeGreaterThan(escapeQuotationMark(escapeAmpersand(value)));
 }
+
 /**
  * Returns an escaped HTML element value.
  *
@@ -155,35 +154,34 @@ function escapeAttribute(value) {
  * "the text must not contain the character U+003C LESS-THAN SIGN (<) or an
  * ambiguous ampersand."
  *
- * @param {string} value Element value.
+ * @param value Element value.
  *
- * @return {string} Escaped HTML element value.
+ * @return Escaped HTML element value.
  */
-
 function escapeHTML(value) {
   return escapeLessThan(escapeAmpersand(value));
 }
+
 /**
  * Returns an escaped Editable HTML element value. This is different from
  * `escapeHTML`, because for editable HTML, ALL ampersands must be escaped in
  * order to render the content correctly on the page.
  *
- * @param {string} value Element value.
+ * @param value Element value.
  *
- * @return {string} Escaped HTML element value.
+ * @return Escaped HTML element value.
  */
-
 function escapeEditableHTML(value) {
   return escapeLessThan(value.replace(/&/g, '&amp;'));
 }
+
 /**
  * Returns true if the given attribute name is valid, or false otherwise.
  *
- * @param {string} name Attribute name to test.
+ * @param name Attribute name to test.
  *
- * @return {boolean} Whether attribute is valid.
+ * @return Whether attribute is valid.
  */
-
 function isValidAttributeName(name) {
   return !REGEXP_INVALID_ATTRIBUTE_NAME.test(name);
 }

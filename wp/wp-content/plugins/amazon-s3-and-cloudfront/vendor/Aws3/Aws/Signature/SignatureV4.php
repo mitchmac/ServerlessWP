@@ -5,6 +5,7 @@ namespace DeliciousBrains\WP_Offload_Media\Aws3\Aws\Signature;
 use DeliciousBrains\WP_Offload_Media\Aws3\Aws\Credentials\CredentialsInterface;
 use DeliciousBrains\WP_Offload_Media\Aws3\AWS\CRT\Auth\Signable;
 use DeliciousBrains\WP_Offload_Media\Aws3\AWS\CRT\Auth\SignatureType;
+use DeliciousBrains\WP_Offload_Media\Aws3\AWS\CRT\Auth\SignedBodyHeaderType;
 use DeliciousBrains\WP_Offload_Media\Aws3\AWS\CRT\Auth\Signing;
 use DeliciousBrains\WP_Offload_Media\Aws3\AWS\CRT\Auth\SigningAlgorithm;
 use DeliciousBrains\WP_Offload_Media\Aws3\AWS\CRT\Auth\SigningConfigAWS;
@@ -303,13 +304,13 @@ class SignatureV4 implements SignatureInterface
         }
         return new Psr7\Request($req['method'], $req['uri'], $req['headers'], $req['body'], $req['version']);
     }
-    private function verifyCRTLoaded()
+    protected function verifyCRTLoaded()
     {
         if (!\extension_loaded('awscrt')) {
             throw new CommonRuntimeException("AWS Common Runtime for PHP is required to use Signature V4A" . ".  Please install it using the instructions found at" . " https://github.com/aws/aws-sdk-php/blob/master/CRT_INSTRUCTIONS.md");
         }
     }
-    private function createCRTStaticCredentialsProvider($credentials)
+    protected function createCRTStaticCredentialsProvider($credentials)
     {
         return new StaticCredentialsProvider(['access_key_id' => $credentials->getAccessKeyId(), 'secret_access_key' => $credentials->getSecretKey(), 'session_token' => $credentials->getSecurityToken()]);
     }
@@ -341,13 +342,13 @@ class SignatureV4 implements SignatureInterface
      * @param CredentialsInterface $credentials
      * @param RequestInterface $request
      * @param $signingService
+     * @param SigningConfigAWS|null $signingConfig
      * @return RequestInterface
      */
-    protected function signWithV4a(CredentialsInterface $credentials, RequestInterface $request, $signingService)
+    protected function signWithV4a(CredentialsInterface $credentials, RequestInterface $request, $signingService, SigningConfigAWS $signingConfig = null)
     {
         $this->verifyCRTLoaded();
-        $credentials_provider = $this->createCRTStaticCredentialsProvider($credentials);
-        $signingConfig = new SigningConfigAWS(['algorithm' => SigningAlgorithm::SIGv4_ASYMMETRIC, 'signature_type' => SignatureType::HTTP_REQUEST_HEADERS, 'credentials_provider' => $credentials_provider, 'signed_body_value' => $this->getPayload($request), 'region' => "*", 'service' => $signingService, 'date' => \time()]);
+        $signingConfig = $signingConfig ?? new SigningConfigAWS(['algorithm' => SigningAlgorithm::SIGv4_ASYMMETRIC, 'signature_type' => SignatureType::HTTP_REQUEST_HEADERS, 'credentials_provider' => $this->createCRTStaticCredentialsProvider($credentials), 'signed_body_value' => $this->getPayload($request), 'should_normalize_uri_path' => \true, 'use_double_uri_encode' => \true, 'region' => "*", 'service' => $signingService, 'date' => \time()]);
         $removedIllegalHeaders = $this->removeIllegalV4aHeaders($request);
         $http_request = $this->CRTRequestFromGuzzleRequest($request);
         Signing::signRequestAws(Signable::fromHttpRequest($http_request), $signingConfig, function ($signing_result, $error_code) use(&$http_request) {

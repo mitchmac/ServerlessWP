@@ -8,6 +8,7 @@
   --wp-admin-border-width-focus:2px;
   --wp-block-synced-color:#7a00df;
   --wp-block-synced-color--rgb:122, 0, 223;
+  --wp-bound-block-color:var(--wp-block-synced-color);
 }
 @media (min-resolution:192dpi){
   :root{
@@ -19,6 +20,10 @@
   padding:10px;
 }
 
+[class].list-reusable-blocks-import-dropdown__button{
+  height:30px;
+}
+
 .list-reusable-blocks-import-form__label{
   display:block;
   margin-bottom:10px;
@@ -26,7 +31,6 @@
 
 .list-reusable-blocks-import-form__button{
   float:left;
-  margin-bottom:10px;
   margin-top:10px;
 }
 
@@ -43,9 +47,6 @@
   display:inline-flex;
   position:relative;
   top:-3px;
-}
-.list-reusable-blocks__container .components-button{
-  height:26px;
 }
 
 body.admin-color-light{

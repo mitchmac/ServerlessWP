@@ -7,6 +7,7 @@ use DeliciousBrains\WP_Offload_Media\Aws3\Aws\Api\DocModel;
 use DeliciousBrains\WP_Offload_Media\Aws3\Aws\Api\Service;
 use DeliciousBrains\WP_Offload_Media\Aws3\Aws\EndpointDiscovery\EndpointDiscoveryMiddleware;
 use DeliciousBrains\WP_Offload_Media\Aws3\Aws\EndpointV2\EndpointProviderV2;
+use DeliciousBrains\WP_Offload_Media\Aws3\Aws\EndpointV2\EndpointV2Middleware;
 use DeliciousBrains\WP_Offload_Media\Aws3\Aws\Exception\AwsException;
 use DeliciousBrains\WP_Offload_Media\Aws3\Aws\Signature\SignatureProvider;
 use DeliciousBrains\WP_Offload_Media\Aws3\GuzzleHttp\Psr7\Uri;
@@ -224,7 +225,12 @@ class AwsClient implements AwsClientInterface
         $this->loadAliases();
         $this->addStreamRequestPayload();
         $this->addRecursionDetection();
-        $this->addRequestBuilder();
+        if ($this->isUseEndpointV2()) {
+            $this->addEndpointV2Middleware();
+        }
+        if (!\is_null($this->api->getMetadata('awsQueryCompatible'))) {
+            $this->addQueryCompatibleInputMiddleware($this->api);
+        }
         if (isset($args['with_resolved'])) {
             $args['with_resolved']($config);
         }
@@ -374,7 +380,7 @@ class AwsClient implements AwsClientInterface
             }
             return SignatureProvider::resolve($provider, $version, $name, $region);
         };
-        $this->handlerList->appendSign(Middleware::signer($this->credentialProvider, $resolver, $this->tokenProvider), 'signer');
+        $this->handlerList->appendSign(Middleware::signer($this->credentialProvider, $resolver, $this->tokenProvider, $this->getConfig()), 'signer');
     }
     private function addRequestCompressionMiddleware($config)
     {
@@ -382,6 +388,11 @@ class AwsClient implements AwsClientInterface
             $list = $this->getHandlerList();
             $list->appendBuild(RequestCompressionMiddleware::wrap($config), 'request-compression');
         }
+    }
+    private function addQueryCompatibleInputMiddleware(Service $api)
+    {
+        $list = $this->getHandlerList();
+        $list->appendValidate(QueryCompatibleInputMiddleware::wrap($api), 'query-compatible-input');
     }
     private function addInvocationId()
     {
@@ -413,17 +424,11 @@ class AwsClient implements AwsClientInterface
         // originating in supported Lambda runtimes
         $this->handlerList->appendBuild(Middleware::recursionDetection(), 'recursion-detection');
     }
-    /**
-     * Adds the `builder` middleware such that a client's endpoint
-     * provider and endpoint resolution arguments can be passed.
-     */
-    private function addRequestBuilder()
+    private function addEndpointV2Middleware()
     {
-        $handlerList = $this->getHandlerList();
-        $serializer = $this->serializer;
-        $endpointProvider = $this->endpointProvider;
+        $list = $this->getHandlerList();
         $endpointArgs = $this->getEndpointProviderArgs();
-        $handlerList->prependBuild(Middleware::requestBuilder($serializer, $endpointProvider, $endpointArgs), 'builderV2');
+        $list->prependBuild(EndpointV2Middleware::wrap($this->endpointProvider, $this->getApi(), $endpointArgs), 'endpoint-resolution');
     }
     /**
      * Retrieves client context param definition from service model,

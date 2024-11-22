@@ -2,16 +2,22 @@
   display:inline-block;
   margin-left:8px;
 }
-.wp-block-social-links.wp-block-social-links{
-  background:none;
-}
 
 .wp-social-link:hover{
   transform:none;
 }
 
-.editor-styles-wrapper .wp-block-social-links{
+:root :where(.wp-block-social-links),:root :where(.wp-block-social-links.is-style-logos-only .wp-block-social-links__social-placeholder .wp-social-link){
   padding:0;
+}
+
+:root :where(.wp-block-social-links__social-placeholder .wp-social-link){
+  padding:.25em;
+}
+
+:root :where(.wp-block-social-links.is-style-pill-shape .wp-block-social-links__social-placeholder .wp-social-link){
+  padding-left:.66667em;
+  padding-right:.66667em;
 }
 
 .wp-block-social-links__social-placeholder{
@@ -29,16 +35,6 @@
 }
 .wp-block-social-links__social-placeholder>.wp-block-social-links__social-placeholder-icons{
   display:flex;
-}
-.wp-block-social-links__social-placeholder .wp-social-link{
-  padding:.25em;
-}
-.is-style-pill-shape .wp-block-social-links__social-placeholder .wp-social-link{
-  padding-left:.66667em;
-  padding-right:.66667em;
-}
-.is-style-logos-only .wp-block-social-links__social-placeholder .wp-social-link{
-  padding:0;
 }
 .wp-block-social-links__social-placeholder .wp-social-link:before{
   border-radius:50%;
@@ -60,11 +56,10 @@
   margin-bottom:auto;
   margin-top:auto;
   min-height:24px;
-  order:2;
   padding-right:8px;
 }
 
-.wp-block[data-align=center]>.wp-block-social-links{
+.wp-block.wp-block-social-links.aligncenter,.wp-block[data-align=center]>.wp-block-social-links{
   justify-content:center;
 }
 
@@ -84,4 +79,21 @@
 
 .wp-block-social-links .is-selected .wp-social-link__is-incomplete,.wp-social-link.wp-social-link__is-incomplete:focus,.wp-social-link.wp-social-link__is-incomplete:hover{
   opacity:1;
+}
+
+.wp-block-social-links .block-list-appender{
+  position:static;
+}
+.wp-block-social-links .block-list-appender .block-editor-button-block-appender.components-button.components-button{
+  padding:6px;
+}
+
+.wp-block-social-links.has-small-icon-size .block-editor-button-block-appender.components-button.components-button{
+  padding:0;
+}
+.wp-block-social-links.has-large-icon-size .block-editor-button-block-appender.components-button.components-button{
+  padding:14px;
+}
+.wp-block-social-links.has-huge-icon-size .block-editor-button-block-appender.components-button.components-button{
+  padding:23px;
 }

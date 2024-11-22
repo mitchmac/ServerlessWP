@@ -1,48 +1,48 @@
-/******/ (function() { // webpackBootstrap
+/******/ (() => { // webpackBootstrap
 /******/ 	"use strict";
 /******/ 	// The require scope
 /******/ 	var __webpack_require__ = {};
 /******/ 	
 /************************************************************************/
 /******/ 	/* webpack/runtime/compat get default export */
-/******/ 	!function() {
+/******/ 	(() => {
 /******/ 		// getDefaultExport function for compatibility with non-harmony modules
-/******/ 		__webpack_require__.n = function(module) {
+/******/ 		__webpack_require__.n = (module) => {
 /******/ 			var getter = module && module.__esModule ?
-/******/ 				function() { return module['default']; } :
-/******/ 				function() { return module; };
+/******/ 				() => (module['default']) :
+/******/ 				() => (module);
 /******/ 			__webpack_require__.d(getter, { a: getter });
 /******/ 			return getter;
 /******/ 		};
-/******/ 	}();
+/******/ 	})();
 /******/ 	
 /******/ 	/* webpack/runtime/define property getters */
-/******/ 	!function() {
+/******/ 	(() => {
 /******/ 		// define getter functions for harmony exports
-/******/ 		__webpack_require__.d = function(exports, definition) {
+/******/ 		__webpack_require__.d = (exports, definition) => {
 /******/ 			for(var key in definition) {
 /******/ 				if(__webpack_require__.o(definition, key) && !__webpack_require__.o(exports, key)) {
 /******/ 					Object.defineProperty(exports, key, { enumerable: true, get: definition[key] });
 /******/ 				}
 /******/ 			}
 /******/ 		};
-/******/ 	}();
+/******/ 	})();
 /******/ 	
 /******/ 	/* webpack/runtime/hasOwnProperty shorthand */
-/******/ 	!function() {
-/******/ 		__webpack_require__.o = function(obj, prop) { return Object.prototype.hasOwnProperty.call(obj, prop); }
-/******/ 	}();
+/******/ 	(() => {
+/******/ 		__webpack_require__.o = (obj, prop) => (Object.prototype.hasOwnProperty.call(obj, prop))
+/******/ 	})();
 /******/ 	
 /******/ 	/* webpack/runtime/make namespace object */
-/******/ 	!function() {
+/******/ 	(() => {
 /******/ 		// define __esModule on exports
-/******/ 		__webpack_require__.r = function(exports) {
+/******/ 		__webpack_require__.r = (exports) => {
 /******/ 			if(typeof Symbol !== 'undefined' && Symbol.toStringTag) {
 /******/ 				Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 /******/ 			}
 /******/ 			Object.defineProperty(exports, '__esModule', { value: true });
 /******/ 		};
-/******/ 	}();
+/******/ 	})();
 /******/ 	
 /************************************************************************/
 var __webpack_exports__ = {};
@@ -51,16 +51,15 @@ __webpack_require__.r(__webpack_exports__);
 
 // EXPORTS
 __webpack_require__.d(__webpack_exports__, {
-  "PluginArea": function() { return /* reexport */ plugin_area; },
-  "getPlugin": function() { return /* reexport */ getPlugin; },
-  "getPlugins": function() { return /* reexport */ getPlugins; },
-  "registerPlugin": function() { return /* reexport */ registerPlugin; },
-  "unregisterPlugin": function() { return /* reexport */ unregisterPlugin; },
-  "withPluginContext": function() { return /* reexport */ withPluginContext; }
+  PluginArea: () => (/* reexport */ plugin_area),
+  getPlugin: () => (/* reexport */ getPlugin),
+  getPlugins: () => (/* reexport */ getPlugins),
+  registerPlugin: () => (/* reexport */ registerPlugin),
+  unregisterPlugin: () => (/* reexport */ unregisterPlugin),
+  usePluginContext: () => (/* reexport */ usePluginContext),
+  withPluginContext: () => (/* reexport */ withPluginContext)
 });
 
-;// CONCATENATED MODULE: external ["wp","element"]
-var external_wp_element_namespaceObject = window["wp"]["element"];
 ;// CONCATENATED MODULE: ./node_modules/memize/dist/index.js
 /**
  * Memize options object.
@@ -223,32 +222,42 @@ function memize(fn, options) {
 
 
 
+;// CONCATENATED MODULE: external ["wp","element"]
+const external_wp_element_namespaceObject = window["wp"]["element"];
 ;// CONCATENATED MODULE: external ["wp","hooks"]
-var external_wp_hooks_namespaceObject = window["wp"]["hooks"];
+const external_wp_hooks_namespaceObject = window["wp"]["hooks"];
 ;// CONCATENATED MODULE: external ["wp","isShallowEqual"]
-var external_wp_isShallowEqual_namespaceObject = window["wp"]["isShallowEqual"];
+const external_wp_isShallowEqual_namespaceObject = window["wp"]["isShallowEqual"];
 var external_wp_isShallowEqual_default = /*#__PURE__*/__webpack_require__.n(external_wp_isShallowEqual_namespaceObject);
 ;// CONCATENATED MODULE: external ["wp","compose"]
-var external_wp_compose_namespaceObject = window["wp"]["compose"];
+const external_wp_compose_namespaceObject = window["wp"]["compose"];
+;// CONCATENATED MODULE: external "ReactJSXRuntime"
+const external_ReactJSXRuntime_namespaceObject = window["ReactJSXRuntime"];
 ;// CONCATENATED MODULE: ./node_modules/@wordpress/plugins/build-module/components/plugin-context/index.js
-
-
 /**
  * WordPress dependencies
  */
+
 
 
 /**
  * Internal dependencies
  */
 
-const {
-  Consumer,
-  Provider
-} = (0,external_wp_element_namespaceObject.createContext)({
+const Context = (0,external_wp_element_namespaceObject.createContext)({
   name: null,
   icon: null
 });
+const PluginContextProvider = Context.Provider;
+
+/**
+ * A hook that returns the plugin context.
+ *
+ * @return {PluginContext} Plugin context
+ */
+function usePluginContext() {
+  return (0,external_wp_element_namespaceObject.useContext)(Context);
+}
 
 /**
  * A Higher Order Component used to inject Plugin context to the
@@ -258,13 +267,15 @@ const {
  *                           expected to return object of props to
  *                           merge with the component's own props.
  *
- * @return {WPComponent} Enhanced component with injected context as props.
+ * @return {Component} Enhanced component with injected context as props.
  */
-
 const withPluginContext = mapContextToProps => (0,external_wp_compose_namespaceObject.createHigherOrderComponent)(OriginalComponent => {
-  return props => (0,external_wp_element_namespaceObject.createElement)(Consumer, null, context => (0,external_wp_element_namespaceObject.createElement)(OriginalComponent, { ...props,
-    ...mapContextToProps(context, props)
-  }));
+  return props => /*#__PURE__*/(0,external_ReactJSXRuntime_namespaceObject.jsx)(Context.Consumer, {
+    children: context => /*#__PURE__*/(0,external_ReactJSXRuntime_namespaceObject.jsx)(OriginalComponent, {
+      ...props,
+      ...mapContextToProps(context, props)
+    })
+  });
 }, 'withPluginContext');
 
 ;// CONCATENATED MODULE: ./node_modules/@wordpress/plugins/build-module/components/plugin-error-boundary/index.js
@@ -282,68 +293,70 @@ class PluginErrorBoundary extends external_wp_element_namespaceObject.Component 
       hasError: false
     };
   }
-
   static getDerivedStateFromError() {
     return {
       hasError: true
     };
   }
+
   /**
    * @param {Error} error Error object passed by React.
    */
-
-
   componentDidCatch(error) {
     const {
       name,
       onError
     } = this.props;
-
     if (onError) {
       onError(name, error);
     }
   }
-
   render() {
     if (!this.state.hasError) {
       return this.props.children;
     }
-
     return null;
   }
-
 }
 
 ;// CONCATENATED MODULE: external ["wp","primitives"]
-var external_wp_primitives_namespaceObject = window["wp"]["primitives"];
+const external_wp_primitives_namespaceObject = window["wp"]["primitives"];
 ;// CONCATENATED MODULE: ./node_modules/@wordpress/icons/build-module/library/plugins.js
-
-
 /**
  * WordPress dependencies
  */
 
-const plugins = (0,external_wp_element_namespaceObject.createElement)(external_wp_primitives_namespaceObject.SVG, {
+
+const plugins = /*#__PURE__*/(0,external_ReactJSXRuntime_namespaceObject.jsx)(external_wp_primitives_namespaceObject.SVG, {
   xmlns: "http://www.w3.org/2000/svg",
-  viewBox: "0 0 24 24"
-}, (0,external_wp_element_namespaceObject.createElement)(external_wp_primitives_namespaceObject.Path, {
-  d: "M10.5 4v4h3V4H15v4h1.5a1 1 0 011 1v4l-3 4v2a1 1 0 01-1 1h-3a1 1 0 01-1-1v-2l-3-4V9a1 1 0 011-1H9V4h1.5zm.5 12.5v2h2v-2l3-4v-3H8v3l3 4z"
-}));
-/* harmony default export */ var library_plugins = (plugins);
+  viewBox: "0 0 24 24",
+  children: /*#__PURE__*/(0,external_ReactJSXRuntime_namespaceObject.jsx)(external_wp_primitives_namespaceObject.Path, {
+    d: "M10.5 4v4h3V4H15v4h1.5a1 1 0 011 1v4l-3 4v2a1 1 0 01-1 1h-3a1 1 0 01-1-1v-2l-3-4V9a1 1 0 011-1H9V4h1.5zm.5 12.5v2h2v-2l3-4v-3H8v3l3 4z"
+  })
+});
+/* harmony default export */ const library_plugins = (plugins);
 
 ;// CONCATENATED MODULE: ./node_modules/@wordpress/plugins/build-module/api/index.js
 /* eslint no-console: [ 'error', { allow: [ 'error' ] } ] */
+/**
+ * External dependencies
+ */
 
 /**
  * WordPress dependencies
  */
 
 
+
+/**
+ * Defined behavior of a plugin type.
+ */
 
 /**
  * Plugin definitions keyed by plugin name.
  */
 const api_plugins = {};
+
 /**
  * Registers a plugin to the editor.
  *
@@ -354,12 +367,12 @@ const api_plugins = {};
  * @example
  * ```js
  * // Using ES5 syntax
- * var el = wp.element.createElement;
+ * var el = React.createElement;
  * var Fragment = wp.element.Fragment;
- * var PluginSidebar = wp.editPost.PluginSidebar;
- * var PluginSidebarMoreMenuItem = wp.editPost.PluginSidebarMoreMenuItem;
+ * var PluginSidebar = wp.editor.PluginSidebar;
+ * var PluginSidebarMoreMenuItem = wp.editor.PluginSidebarMoreMenuItem;
  * var registerPlugin = wp.plugins.registerPlugin;
- * var moreIcon = wp.element.createElement( 'svg' ); //... svg element.
+ * var moreIcon = React.createElement( 'svg' ); //... svg element.
  *
  * function Component() {
  * 	return el(
@@ -392,7 +405,7 @@ const api_plugins = {};
  * @example
  * ```js
  * // Using ESNext syntax
- * import { PluginSidebar, PluginSidebarMoreMenuItem } from '@wordpress/edit-post';
+ * import { PluginSidebar, PluginSidebarMoreMenuItem } from '@wordpress/editor';
  * import { registerPlugin } from '@wordpress/plugins';
  * import { more } from '@wordpress/icons';
  *
@@ -421,50 +434,41 @@ const api_plugins = {};
  *
  * @return The final plugin settings object.
  */
-
 function registerPlugin(name, settings) {
   if (typeof settings !== 'object') {
     console.error('No settings object provided!');
     return null;
   }
-
   if (typeof name !== 'string') {
     console.error('Plugin name must be string.');
     return null;
   }
-
   if (!/^[a-z][a-z0-9-]*$/.test(name)) {
     console.error('Plugin name must include only lowercase alphanumeric characters or dashes, and start with a letter. Example: "my-plugin".');
     return null;
   }
-
   if (api_plugins[name]) {
     console.error(`Plugin "${name}" is already registered.`);
   }
-
   settings = (0,external_wp_hooks_namespaceObject.applyFilters)('plugins.registerPlugin', settings, name);
   const {
     render,
     scope
   } = settings;
-
   if (typeof render !== 'function') {
     console.error('The "render" property must be specified and must be a valid function.');
     return null;
   }
-
   if (scope) {
     if (typeof scope !== 'string') {
       console.error('Plugin scope must be string.');
       return null;
     }
-
     if (!/^[a-z][a-z0-9-]*$/.test(scope)) {
       console.error('Plugin scope must include only lowercase alphanumeric characters or dashes, and start with a letter. Example: "my-page".');
       return null;
     }
   }
-
   api_plugins[name] = {
     name,
     icon: library_plugins,
@@ -473,6 +477,7 @@ function registerPlugin(name, settings) {
   (0,external_wp_hooks_namespaceObject.doAction)('plugins.pluginRegistered', settings, name);
   return settings;
 }
+
 /**
  * Unregisters a plugin by name.
  *
@@ -497,18 +502,17 @@ function registerPlugin(name, settings) {
  * @return The previous plugin settings object, if it has been
  *         successfully unregistered; otherwise `undefined`.
  */
-
 function unregisterPlugin(name) {
   if (!api_plugins[name]) {
     console.error('Plugin "' + name + '" is not registered.');
     return;
   }
-
   const oldPlugin = api_plugins[name];
   delete api_plugins[name];
   (0,external_wp_hooks_namespaceObject.doAction)('plugins.pluginUnregistered', oldPlugin, name);
   return oldPlugin;
 }
+
 /**
  * Returns a registered plugin settings.
  *
@@ -516,10 +520,10 @@ function unregisterPlugin(name) {
  *
  * @return Plugin setting.
  */
-
 function getPlugin(name) {
   return api_plugins[name];
 }
+
 /**
  * Returns all registered plugins without a scope or for a given scope.
  *
@@ -528,17 +532,15 @@ function getPlugin(name) {
  *
  * @return The list of plugins without a scope or for a given scope.
  */
-
 function getPlugins(scope) {
   return Object.values(api_plugins).filter(plugin => plugin.scope === scope);
 }
 
 ;// CONCATENATED MODULE: ./node_modules/@wordpress/plugins/build-module/components/plugin-area/index.js
-
-
 /**
  * External dependencies
  */
+
 
 /**
  * WordPress dependencies
@@ -558,6 +560,7 @@ const getPluginContext = memize((icon, name) => ({
   icon,
   name
 }));
+
 /**
  * A component that renders all plugin fills in a hidden div.
  *
@@ -567,7 +570,7 @@ const getPluginContext = memize((icon, name) => ({
  * @example
  * ```js
  * // Using ES5 syntax
- * var el = wp.element.createElement;
+ * var el = React.createElement;
  * var PluginArea = wp.plugins.PluginArea;
  *
  * function Layout() {
@@ -593,9 +596,8 @@ const getPluginContext = memize((icon, name) => ({
  * );
  * ```
  *
- * @return {WPComponent} The component to be rendered.
+ * @return {Component} The component to be rendered.
  */
-
 function PluginArea({
   scope,
   onError
@@ -611,38 +613,35 @@ function PluginArea({
           (0,external_wp_hooks_namespaceObject.removeAction)('plugins.pluginUnregistered', 'core/plugins/plugin-area/plugins-unregistered');
         };
       },
-
       getValue() {
         const nextValue = getPlugins(scope);
-
         if (!external_wp_isShallowEqual_default()(lastValue, nextValue)) {
           lastValue = nextValue;
         }
-
         return lastValue;
       }
-
     };
   }, [scope]);
-  const plugins = (0,external_wp_element_namespaceObject.useSyncExternalStore)(store.subscribe, store.getValue);
-  return (0,external_wp_element_namespaceObject.createElement)("div", {
+  const plugins = (0,external_wp_element_namespaceObject.useSyncExternalStore)(store.subscribe, store.getValue, store.getValue);
+  return /*#__PURE__*/(0,external_ReactJSXRuntime_namespaceObject.jsx)("div", {
     style: {
       display: 'none'
-    }
-  }, plugins.map(({
-    icon,
-    name,
-    render: Plugin
-  }) => (0,external_wp_element_namespaceObject.createElement)(Provider, {
-    key: name,
-    value: getPluginContext(icon, name)
-  }, (0,external_wp_element_namespaceObject.createElement)(PluginErrorBoundary, {
-    name: name,
-    onError: onError
-  }, (0,external_wp_element_namespaceObject.createElement)(Plugin, null)))));
+    },
+    children: plugins.map(({
+      icon,
+      name,
+      render: Plugin
+    }) => /*#__PURE__*/(0,external_ReactJSXRuntime_namespaceObject.jsx)(PluginContextProvider, {
+      value: getPluginContext(icon, name),
+      children: /*#__PURE__*/(0,external_ReactJSXRuntime_namespaceObject.jsx)(PluginErrorBoundary, {
+        name: name,
+        onError: onError,
+        children: /*#__PURE__*/(0,external_ReactJSXRuntime_namespaceObject.jsx)(Plugin, {})
+      })
+    }, name))
+  });
 }
-
-/* harmony default export */ var plugin_area = (PluginArea);
+/* harmony default export */ const plugin_area = (PluginArea);
 
 ;// CONCATENATED MODULE: ./node_modules/@wordpress/plugins/build-module/components/index.js
 

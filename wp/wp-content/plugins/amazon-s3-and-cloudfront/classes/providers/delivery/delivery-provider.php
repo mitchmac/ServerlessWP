@@ -621,12 +621,19 @@ abstract class Delivery_Provider extends Provider implements Validator_Interface
 	 * @return string
 	 */
 	public static function get_unsigned_url_can_access_private_file_desc(): string {
-		return sprintf(
-			__(
-				'Private media is currently exposed through unsigned URLs. Restore privacy by verifying the configuration of private media settings. <a href="%1$s" target="_blank">Read more</a>',
-				'amazon-s3-and-cloudfront'
-			),
-			static::get_provider_service_quick_start_url()
+		global $as3cf;
+
+		$storage_provider = $as3cf->get_storage_provider();
+
+		return apply_filters(
+			'as3cf_get_unsigned_url_can_access_private_file_desc_' . $storage_provider->get_provider_key_name(),
+			sprintf(
+				__(
+					'Delivery provider is connected, but private media is currently exposed through unsigned URLs. Restore privacy by verifying the configuration of private media settings. <a href="%1$s" target="_blank">Read more</a>',
+					'amazon-s3-and-cloudfront'
+				),
+				static::get_provider_service_quick_start_url()
+			)
 		);
 	}
 
@@ -714,21 +721,6 @@ abstract class Delivery_Provider extends Provider implements Validator_Interface
 					_x(
 						'Offloaded media cannot be delivered because <strong>Block All Public Access</strong> is enabled. <a href="%1$s">Edit bucket security</a>',
 						'Delivery setting notice for issue with BAPA enabled on Storage Provider',
-						'amazon-s3-and-cloudfront'
-					),
-					'#/storage/security'
-				)
-			);
-		}
-
-		// Object Ownership Policies enabled?
-		if ( ! static::object_ownership_supported() && $storage_provider->object_ownership_supported() && $storage_provider->object_ownership_enforced( $bucket ) ) {
-			return new AS3CF_Result(
-				Validator_Interface::AS3CF_STATUS_MESSAGE_ERROR,
-				sprintf(
-					_x(
-						'Offloaded media cannot be delivered due to the current <strong>Object Ownership</strong> configuration. <a href="%1$s">Edit bucket security</a>',
-						'Delivery setting notice for issue with Object Ownership enforced on Storage Provider',
 						'amazon-s3-and-cloudfront'
 					),
 					'#/storage/security'

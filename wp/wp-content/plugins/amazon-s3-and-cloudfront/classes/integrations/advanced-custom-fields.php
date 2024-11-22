@@ -3,10 +3,12 @@
 namespace DeliciousBrains\WP_Offload_Media\Integrations;
 
 use AS3CF_Error;
+use AS3CF_Utils;
 use DeliciousBrains\WP_Offload_Media\Items\Media_Library_Item;
 use DeliciousBrains\WP_Offload_Media\Items\Remove_Local_Handler;
 use Exception;
 use WP_Error;
+use WP_Post;
 
 class Advanced_Custom_Fields extends Integration {
 	/**
@@ -39,9 +41,13 @@ class Advanced_Custom_Fields extends Integration {
 		add_filter( 'acf/load_value/type=text', array( $this->as3cf->filter_local, 'filter_post' ) );
 		add_filter( 'acf/load_value/type=textarea', array( $this->as3cf->filter_local, 'filter_post' ) );
 		add_filter( 'acf/load_value/type=wysiwyg', array( $this->as3cf->filter_local, 'filter_post' ) );
+		add_filter( 'acf/load_value/type=url', array( $this->as3cf->filter_local, 'filter_post' ) );
+		add_filter( 'acf/load_value/type=link', array( $this, 'filter_link_local' ) );
 		add_filter( 'acf/update_value/type=text', array( $this->as3cf->filter_provider, 'filter_post' ) );
 		add_filter( 'acf/update_value/type=textarea', array( $this->as3cf->filter_provider, 'filter_post' ) );
 		add_filter( 'acf/update_value/type=wysiwyg', array( $this->as3cf->filter_provider, 'filter_post' ) );
+		add_filter( 'acf/update_value/type=url', array( $this->as3cf->filter_provider, 'filter_post' ) );
+		add_filter( 'acf/update_value/type=link', array( $this, 'filter_link_provider' ) );
 
 		/*
 		 * Image Crop Add-on
@@ -55,8 +61,13 @@ class Advanced_Custom_Fields extends Integration {
 		/*
 		 * Rewrite URLs in field and field group config.
 		 */
-		add_filter( 'acf/load_fields', array( $this, 'acf_load_config' ), 10, 1 );
-		add_filter( 'acf/load_field_group', array( $this, 'acf_load_config' ), 10, 1 );
+		add_filter( 'acf/load_fields', array( $this, 'acf_load_config' ) );
+		add_filter( 'acf/load_field_group', array( $this, 'acf_load_config' ) );
+
+		/*
+		 * Supply missing data.
+		 */
+		add_filter( 'acf/filesize', array( $this, 'acf_filesize' ), 10, 2 );
 	}
 
 	/**
@@ -186,7 +197,7 @@ class Advanced_Custom_Fields extends Integration {
 	 */
 	public function acf_load_config( array $config ): array {
 		try {
-			$filtered_config = unserialize( $this->as3cf->filter_local->filter_post( serialize( $config ) ) );
+			$filtered_config = AS3CF_Utils::maybe_unserialize( $this->as3cf->filter_local->filter_post( serialize( $config ) ) );
 		} catch ( Exception $e ) {
 			AS3CF_Error::log( __METHOD__ . ' ' . $e->getMessage() );
 
@@ -194,5 +205,76 @@ class Advanced_Custom_Fields extends Integration {
 		}
 
 		return is_array( $filtered_config ) ? $filtered_config : $config;
+	}
+
+	/**
+	 * Shortcut ACF's `filesize` call to prevent remote stream wrapper call
+	 * if attachment offloaded and removed from local and filesize metadata missing.
+	 *
+	 * ACF doesn't really use result, so if attachment offloaded and removed
+	 * but for some reason we too do not have the filesize, returning true
+	 * satisfies ACF's requirements.
+	 *
+	 * @param int|null $filesize   The default filesize.
+	 * @param WP_Post  $attachment The attachment post object we're looking for the filesize for.
+	 *
+	 * @return int|true
+	 */
+	public function acf_filesize( $filesize, $attachment ) {
+		if ( ! empty( $filesize ) || ! is_a( $attachment, 'WP_Post' ) ) {
+			return $filesize;
+		}
+
+		$item = Media_Library_Item::get_by_source_id( $attachment->ID );
+
+		if ( empty( $item ) ) {
+			return $filesize;
+		}
+
+		$filesize = $item->get_filesize();
+
+		if ( empty( $filesize ) ) {
+			return true;
+		}
+
+		return $filesize;
+	}
+
+	/**
+	 * Filter a link field's URL from local to provider.
+	 *
+	 * @param array $link
+	 *
+	 * @return array
+	 */
+	public function filter_link_local( $link ) {
+		if ( is_array( $link ) && ! empty( $link['url'] ) ) {
+			$url = $this->as3cf->filter_local->filter_post( $link['url'] );
+
+			if ( ! empty( $url ) ) {
+				$link['url'] = $url;
+			}
+		}
+
+		return $link;
+	}
+
+	/**
+	 * Filter a link field's URL from provider to local.
+	 *
+	 * @param array $link
+	 *
+	 * @return array
+	 */
+	public function filter_link_provider( $link ) {
+		if ( is_array( $link ) && ! empty( $link['url'] ) ) {
+			$url = $this->as3cf->filter_provider->filter_post( $link['url'] );
+
+			if ( ! empty( $url ) ) {
+				$link['url'] = $url;
+			}
+		}
+
+		return $link;
 	}
 }

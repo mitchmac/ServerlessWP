@@ -98,6 +98,9 @@
 			<ToggleSwitch name={toggleName} bind:checked={toggle} disabled={toggleDisabled}>
 				{heading}
 			</ToggleSwitch>
+			<!-- TODO: Fix a11y. -->
+			<!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
+			<!-- svelte-ignore a11y-click-events-have-key-events -->
 			<h4 id={headingName} on:click={headingClickHandler} class="toggler" class:toggleDisabled>{heading}</h4>
 		{:else}
 			<h4 id={headingName}>{heading}</h4>
@@ -127,7 +130,7 @@
 			</label>
 		</PanelRow>
 		{#if validationError && textDirty}
-			<p class="input-error" transition:slide|local>{validationError}</p>
+			<p class="input-error" transition:slide>{validationError}</p>
 		{/if}
 	{/if}
 
