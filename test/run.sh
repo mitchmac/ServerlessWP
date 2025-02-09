@@ -2,11 +2,14 @@
 
 ./build-test.sh
 
-docker run -p 9000:8080 -d -e FQDBDIR='/tmp/db' --name serverlesswp-test serverlesswp-test
+docker run -p 9000:8080 -d --name serverlesswp-test serverlesswp-test
 
-curl -s -o /dev/null -w "%{http_code}" -XPOST "http://localhost:9000/2015-03-31/functions/function/invocations" -d '{"path":"/installer.php"}'
+curl -s -o /dev/null -XPOST "http://localhost:9000/2015-03-31/functions/function/invocations" -d '{"path":"/installer.php"}'
 
-curl -s -o /dev/null -w "%{http_code}" -XPOST "http://localhost:9000/2015-03-31/functions/function/invocations" -d '{"path":"/"}'
+#sleep 180
+
+curl -s -XPOST "http://localhost:9000/2015-03-31/functions/function/invocations" -d '{"path":"/"}'
+
 
 docker stop serverlesswp-test
 docker rm serverlesswp-test
