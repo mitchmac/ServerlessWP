@@ -97,6 +97,7 @@ if (!isset($_ENV['SKIP_MYSQL_SSL'])) {
 
 $_SERVER['HTTPS'] = 'on';
 
+// Inject the true host.
 $headers = getallheaders();
 if (isset($headers['injectHost'])) {
   $_SERVER['HTTP_HOST'] = $headers['injectHost'];
