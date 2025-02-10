@@ -12,6 +12,4 @@ COPY test/installer.php ${LAMBDA_TASK_ROOT}/wp/
 
 RUN sed -i 's#{SQLITE_IMPLEMENTATION_FOLDER_PATH}#/tmp/wp/wp-content/plugins/sqlite-database-integration#' ${LAMBDA_TASK_ROOT}/wp/wp-content/db.php
 
-RUN echo "define('FQDBDIR', '/tmp/db' );" >>  ${LAMBDA_TASK_ROOT}/wp/wp-config.php
-
 CMD [ "api/index.handler" ]
