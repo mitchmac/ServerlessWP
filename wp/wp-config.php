@@ -91,7 +91,10 @@ define( 'WP_DEBUG', false );
 
 /* Add any custom values between this line and the "stop editing" line. */
 
-define('MYSQL_CLIENT_FLAGS', MYSQLI_CLIENT_SSL );
+if (!isset($_ENV['SKIP_MYSQL_SSL'])) {
+  define('MYSQL_CLIENT_FLAGS', MYSQLI_CLIENT_SSL );
+}
+
 $_SERVER['HTTPS'] = 'on';
 
 $headers = getallheaders();
