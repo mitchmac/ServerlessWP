@@ -4,8 +4,8 @@
     ],
     "functions": {
         "api/index.js": {
-          "memory": 1024,
-          "includeFiles": "wp/**"
+          "includeFiles": "wp/**",
+          "maxDuration": 60
         }
     },
     "build": {
