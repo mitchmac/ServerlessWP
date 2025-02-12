@@ -4,7 +4,7 @@
   "description": "",
   "license": "MIT",
   "dependencies": {
-    "serverlesswp": "^0.1.3-canary3"
+    "serverlesswp": "^0.1.3-canary4"
   },
   "engines": {
     "node": "22.x"
