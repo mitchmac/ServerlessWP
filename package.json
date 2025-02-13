@@ -4,9 +4,9 @@
   "description": "",
   "license": "MIT",
   "dependencies": {
-    "serverlesswp": "^0.1.2"
+    "serverlesswp": "^0.2.0"
   },
   "engines": {
-    "node": "18.x"
+    "node": "22.x"
   }
 }

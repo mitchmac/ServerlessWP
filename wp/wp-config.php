@@ -91,8 +91,17 @@ define( 'WP_DEBUG', false );
 
 /* Add any custom values between this line and the "stop editing" line. */
 
-define('MYSQL_CLIENT_FLAGS', MYSQLI_CLIENT_SSL );
+if (!isset($_ENV['SKIP_MYSQL_SSL'])) {
+  define('MYSQL_CLIENT_FLAGS', MYSQLI_CLIENT_SSL );
+}
+
 $_SERVER['HTTPS'] = 'on';
+
+// Inject the true host.
+$headers = getallheaders();
+if (isset($headers['injectHost'])) {
+  $_SERVER['HTTP_HOST'] = $headers['injectHost'];
+}
 
 // Optional S3 credentials for file storage.
 if (isset($_ENV['S3_KEY_ID']) && isset($_ENV['S3_ACCESS_KEY'])) {
