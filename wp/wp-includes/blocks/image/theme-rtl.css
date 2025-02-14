@@ -1,10 +1,10 @@
-.wp-block-image figcaption{
+:root :where(.wp-block-image figcaption){
   color:#555;
   font-size:13px;
   text-align:center;
 }
-.is-dark-theme .wp-block-image figcaption{
-  color:hsla(0,0%,100%,.65);
+.is-dark-theme :root :where(.wp-block-image figcaption){
+  color:#ffffffa6;
 }
 
 .wp-block-image{

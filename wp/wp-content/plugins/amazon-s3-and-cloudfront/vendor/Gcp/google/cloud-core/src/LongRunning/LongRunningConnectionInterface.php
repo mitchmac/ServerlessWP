@@ -21,6 +21,7 @@ namespace DeliciousBrains\WP_Offload_Media\Gcp\Google\Cloud\Core\LongRunning;
  * Defines the calls required to manage Long Running Operations.
  *
  * This interface should be implemented in a service's Connection namespace.
+ * @internal
  */
 interface LongRunningConnectionInterface
 {

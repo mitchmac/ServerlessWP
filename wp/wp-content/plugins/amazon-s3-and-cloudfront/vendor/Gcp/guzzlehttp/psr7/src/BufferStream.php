@@ -109,8 +109,6 @@ final class BufferStream implements StreamInterface
         return \strlen($string);
     }
     /**
-     * {@inheritdoc}
-     *
      * @return mixed
      */
     public function getMetadata($key = null)

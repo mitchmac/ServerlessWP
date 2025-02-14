@@ -345,6 +345,9 @@
 						<ul class="bucket-list">
 							{#if buckets.length}
 								{#each buckets as bucket}
+									<!-- TODO: Fix a11y. -->
+									<!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
+									<!-- svelte-ignore a11y-click-events-have-key-events -->
 									<li
 										class="row"
 										class:active={newBucket === bucket.Name}
@@ -368,7 +371,7 @@
 					{/await}
 				{/if}
 				{#if invalidBucketNameMessage}
-					<p class="input-error" transition:slide|local>{invalidBucketNameMessage}</p>
+					<p class="input-error" transition:slide>{invalidBucketNameMessage}</p>
 				{/if}
 			</PanelRow>
 		</Panel>
@@ -409,7 +412,7 @@
 					</div>
 				</div>
 				{#if invalidBucketNameMessage}
-					<p class="input-error" transition:slide|local>{invalidBucketNameMessage}</p>
+					<p class="input-error" transition:slide>{invalidBucketNameMessage}</p>
 				{/if}
 			</PanelRow>
 		</Panel>

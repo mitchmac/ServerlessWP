@@ -113,7 +113,7 @@ trait Settings_Trait {
 			if ( ! static::settings_constant() ) {
 				$unserialized = array();
 			} else {
-				$unserialized = maybe_unserialize( constant( static::settings_constant() ) );
+				$unserialized = AS3CF_Utils::maybe_unserialize( constant( static::settings_constant() ) );
 			}
 
 			$unserialized = is_array( $unserialized ) ? $unserialized : array();

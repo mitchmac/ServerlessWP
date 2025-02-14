@@ -105,7 +105,12 @@ class Delivery_Check extends Domain_Check {
 			);
 		}
 
-		$url          = $this->as3cf_item->get_provider_url();
+		$url = $this->as3cf_item->get_provider_url();
+
+		if ( is_wp_error( $url ) ) {
+			return new AS3CF_Result( Validator_Interface::AS3CF_STATUS_MESSAGE_ERROR, $url->get_error_message() );
+		}
+
 		$this->domain = AS3CF_Utils::parse_url( $url, PHP_URL_HOST );
 
 		try {
@@ -144,8 +149,7 @@ class Delivery_Check extends Domain_Check {
 
 		try {
 			$this->check_dns_resolution();
-			$response = wp_remote_get( $url );
-
+			$response = $this->dispatch_request( $url );
 			$this->check_response_code( (int) wp_remote_retrieve_response_code( $response ) );
 		} catch ( Exception $e ) {
 			return new AS3CF_Result( Validator_Interface::AS3CF_STATUS_MESSAGE_ERROR, $e->getMessage() );
@@ -171,8 +175,13 @@ class Delivery_Check extends Domain_Check {
 		// Remove the signing parameters from the URL.
 		$url = $this->as3cf->maybe_remove_query_string( $this->as3cf_item->get_provider_url() );
 
+		if ( is_wp_error( $url ) ) {
+			return new AS3CF_Result( Validator_Interface::AS3CF_STATUS_MESSAGE_ERROR, $url->get_error_message() );
+		}
+
 		try {
-			$response = wp_remote_get( $url );
+			$this->check_dns_resolution();
+			$response = $this->dispatch_request( $url );
 
 			// This should throw in an exception.
 			$this->check_response_code( (int) wp_remote_retrieve_response_code( $response ) );

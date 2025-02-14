@@ -22,7 +22,7 @@ use DeliciousBrains\WP_Offload_Media\Gcp\Psr\Cache\CacheItemPoolInterface;
  * A class to implement caching for any object implementing
  * FetchAuthTokenInterface
  */
-class FetchAuthTokenCache implements FetchAuthTokenInterface, GetQuotaProjectInterface, SignBlobInterface, ProjectIdProviderInterface, UpdateMetadataInterface
+class FetchAuthTokenCache implements FetchAuthTokenInterface, GetQuotaProjectInterface, GetUniverseDomainInterface, SignBlobInterface, ProjectIdProviderInterface, UpdateMetadataInterface
 {
     use CacheTrait;
     /**
@@ -42,7 +42,7 @@ class FetchAuthTokenCache implements FetchAuthTokenInterface, GetQuotaProjectInt
     {
         $this->fetcher = $fetcher;
         $this->cache = $cache;
-        $this->cacheConfig = \array_merge(['lifetime' => 1500, 'prefix' => ''], (array) $cacheConfig);
+        $this->cacheConfig = \array_merge(['lifetime' => 1500, 'prefix' => '', 'cacheUniverseDomain' => $fetcher instanceof Credentials\GCECredentials], (array) $cacheConfig);
     }
     /**
      * @return FetchAuthTokenInterface
@@ -113,9 +113,10 @@ class FetchAuthTokenCache implements FetchAuthTokenInterface, GetQuotaProjectInt
         if (!$this->fetcher instanceof SignBlobInterface) {
             throw new \RuntimeException('Credentials fetcher does not implement ' . 'DeliciousBrains\\WP_Offload_Media\\Gcp\\Google\\Auth\\SignBlobInterface');
         }
-        // Pass the access token from cache to GCECredentials for signing a blob.
-        // This saves a call to the metadata server when a cached token exists.
-        if ($this->fetcher instanceof Credentials\GCECredentials) {
+        // Pass the access token from cache for credentials that sign blobs
+        // using the IAM API. This saves a call to fetch an access token when a
+        // cached token exists.
+        if ($this->fetcher instanceof Credentials\GCECredentials || $this->fetcher instanceof Credentials\ImpersonatedServiceAccountCredentials) {
             $cached = $this->fetchAuthTokenFromCache();
             $accessToken = $cached['access_token'] ?? null;
             return $this->fetcher->signBlob($stringToSign, $forceOpenSsl, $accessToken);
@@ -148,7 +149,30 @@ class FetchAuthTokenCache implements FetchAuthTokenInterface, GetQuotaProjectInt
         if (!$this->fetcher instanceof ProjectIdProviderInterface) {
             throw new \RuntimeException('Credentials fetcher does not implement ' . 'DeliciousBrains\\WP_Offload_Media\\Gcp\\Google\\Auth\\ProvidesProjectIdInterface');
         }
+        // Pass the access token from cache for credentials that require an
+        // access token to fetch the project ID. This saves a call to fetch an
+        // access token when a cached token exists.
+        if ($this->fetcher instanceof Credentials\ExternalAccountCredentials) {
+            $cached = $this->fetchAuthTokenFromCache();
+            $accessToken = $cached['access_token'] ?? null;
+            return $this->fetcher->getProjectId($httpHandler, $accessToken);
+        }
         return $this->fetcher->getProjectId($httpHandler);
+    }
+    /*
+     * Get the Universe Domain from the fetcher.
+     *
+     * @return string
+     */
+    public function getUniverseDomain() : string
+    {
+        if ($this->fetcher instanceof GetUniverseDomainInterface) {
+            if ($this->cacheConfig['cacheUniverseDomain']) {
+                return $this->getCachedUniverseDomain($this->fetcher);
+            }
+            return $this->fetcher->getUniverseDomain();
+        }
+        return GetUniverseDomainInterface::DEFAULT_UNIVERSE_DOMAIN;
     }
     /**
      * Updates metadata with the authorization token.
@@ -172,6 +196,8 @@ class FetchAuthTokenCache implements FetchAuthTokenInterface, GetQuotaProjectInt
             // fetch another token.
             if (isset($cached['access_token'])) {
                 $metadata[self::AUTH_METADATA_KEY] = ['Bearer ' . $cached['access_token']];
+            } elseif (isset($cached['id_token'])) {
+                $metadata[self::AUTH_METADATA_KEY] = ['Bearer ' . $cached['id_token']];
             }
         }
         $newMetadata = $this->fetcher->updateMetadata($metadata, $authUri, $httpHandler);
@@ -220,5 +246,16 @@ class FetchAuthTokenCache implements FetchAuthTokenInterface, GetQuotaProjectInt
             $cacheKey = $authUri ? $this->getFullCacheKey($authUri) : $this->fetcher->getCacheKey();
             $this->setCachedValue($cacheKey, $authToken);
         }
+    }
+    private function getCachedUniverseDomain(GetUniverseDomainInterface $fetcher) : string
+    {
+        $cacheKey = $this->getFullCacheKey($fetcher->getCacheKey() . 'universe_domain');
+        // @phpstan-ignore-line
+        if ($universeDomain = $this->getCachedValue($cacheKey)) {
+            return $universeDomain;
+        }
+        $universeDomain = $fetcher->getUniverseDomain();
+        $this->setCachedValue($cacheKey, $universeDomain);
+        return $universeDomain;
     }
 }

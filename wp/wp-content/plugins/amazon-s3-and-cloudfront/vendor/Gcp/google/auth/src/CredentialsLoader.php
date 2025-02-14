@@ -17,6 +17,7 @@
  */
 namespace DeliciousBrains\WP_Offload_Media\Gcp\Google\Auth;
 
+use DeliciousBrains\WP_Offload_Media\Gcp\Google\Auth\Credentials\ExternalAccountCredentials;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Auth\Credentials\ImpersonatedServiceAccountCredentials;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Auth\Credentials\InsecureCredentials;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Auth\Credentials\ServiceAccountCredentials;
@@ -27,8 +28,9 @@ use UnexpectedValueException;
  * CredentialsLoader contains the behaviour used to locate and find default
  * credentials files on the file system.
  */
-abstract class CredentialsLoader implements FetchAuthTokenInterface, UpdateMetadataInterface
+abstract class CredentialsLoader implements GetUniverseDomainInterface, FetchAuthTokenInterface, UpdateMetadataInterface
 {
+    use UpdateMetadataTrait;
     const TOKEN_CREDENTIAL_URI = 'https://oauth2.googleapis.com/token';
     const ENV_VAR = 'GOOGLE_APPLICATION_CREDENTIALS';
     const QUOTA_PROJECT_ENV_VAR = 'GOOGLE_CLOUD_QUOTA_PROJECT';
@@ -113,7 +115,7 @@ abstract class CredentialsLoader implements FetchAuthTokenInterface, UpdateMetad
      *   user-defined scopes exist, expressed either as an Array or as a
      *   space-delimited string.
      *
-     * @return ServiceAccountCredentials|UserRefreshCredentials|ImpersonatedServiceAccountCredentials
+     * @return ServiceAccountCredentials|UserRefreshCredentials|ImpersonatedServiceAccountCredentials|ExternalAccountCredentials
      */
     public static function makeCredentials($scope, array $jsonKey, $defaultScope = null)
     {
@@ -131,6 +133,10 @@ abstract class CredentialsLoader implements FetchAuthTokenInterface, UpdateMetad
         if ($jsonKey['type'] == 'impersonated_service_account') {
             $anyScope = $scope ?: $defaultScope;
             return new ImpersonatedServiceAccountCredentials($anyScope, $jsonKey);
+        }
+        if ($jsonKey['type'] == 'external_account') {
+            $anyScope = $scope ?: $defaultScope;
+            return new ExternalAccountCredentials($anyScope, $jsonKey);
         }
         throw new \InvalidArgumentException('invalid value in the type field');
     }
@@ -158,39 +164,6 @@ abstract class CredentialsLoader implements FetchAuthTokenInterface, UpdateMetad
     public static function makeInsecureCredentials()
     {
         return new InsecureCredentials();
-    }
-    /**
-     * export a callback function which updates runtime metadata.
-     *
-     * @return callable updateMetadata function
-     * @deprecated
-     */
-    public function getUpdateMetadataFunc()
-    {
-        return [$this, 'updateMetadata'];
-    }
-    /**
-     * Updates metadata with the authorization token.
-     *
-     * @param array<mixed> $metadata metadata hashmap
-     * @param string $authUri optional auth uri
-     * @param callable $httpHandler callback which delivers psr7 request
-     * @return array<mixed> updated metadata hashmap
-     */
-    public function updateMetadata($metadata, $authUri = null, callable $httpHandler = null)
-    {
-        if (isset($metadata[self::AUTH_METADATA_KEY])) {
-            // Auth metadata has already been set
-            return $metadata;
-        }
-        $result = $this->fetchAuthToken($httpHandler);
-        $metadata_copy = $metadata;
-        if (isset($result['access_token'])) {
-            $metadata_copy[self::AUTH_METADATA_KEY] = ['Bearer ' . $result['access_token']];
-        } elseif (isset($result['id_token'])) {
-            $metadata_copy[self::AUTH_METADATA_KEY] = ['Bearer ' . $result['id_token']];
-        }
-        return $metadata_copy;
     }
     /**
      * Fetch a quota project from the environment variable
@@ -255,5 +228,15 @@ abstract class CredentialsLoader implements FetchAuthTokenInterface, UpdateMetad
             throw new UnexpectedValueException('cert source expects "cert_provider_command" to be an array');
         }
         return $clientCertSourceJson;
+    }
+    /**
+     * Get the universe domain from the credential. Defaults to "googleapis.com"
+     * for all credential types which do not support universe domain.
+     *
+     * @return string
+     */
+    public function getUniverseDomain() : string
+    {
+        return self::DEFAULT_UNIVERSE_DOMAIN;
     }
 }

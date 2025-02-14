@@ -17,6 +17,7 @@
  */
 namespace DeliciousBrains\WP_Offload_Media\Gcp\Google\Cloud\Storage\Connection;
 
+use DeliciousBrains\WP_Offload_Media\Gcp\Google\Auth\GetUniverseDomainInterface;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Cloud\Core\RequestBuilder;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Cloud\Core\RequestWrapper;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Cloud\Core\RestTrait;
@@ -29,8 +30,6 @@ use DeliciousBrains\WP_Offload_Media\Gcp\Google\Cloud\Core\Upload\StreamableUplo
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Cloud\Core\UriTrait;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Cloud\Storage\Connection\ConnectionInterface;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Cloud\Storage\StorageClient;
-use DeliciousBrains\WP_Offload_Media\Gcp\Google\CRC32\Builtin;
-use DeliciousBrains\WP_Offload_Media\Gcp\Google\CRC32\CRC32;
 use DeliciousBrains\WP_Offload_Media\Gcp\GuzzleHttp\Exception\RequestException;
 use DeliciousBrains\WP_Offload_Media\Gcp\GuzzleHttp\Psr7\MimeType;
 use DeliciousBrains\WP_Offload_Media\Gcp\GuzzleHttp\Psr7\Request;
@@ -42,6 +41,8 @@ use DeliciousBrains\WP_Offload_Media\Gcp\Ramsey\Uuid\Uuid;
 /**
  * Implementation of the
  * [Google Cloud Storage JSON API](https://cloud.google.com/storage/docs/json_api/).
+ *
+ * @internal
  */
 class Rest implements ConnectionInterface
 {
@@ -60,7 +61,11 @@ class Rest implements ConnectionInterface
      * @deprecated
      */
     const BASE_URI = 'https://storage.googleapis.com/storage/v1/';
+    /**
+     * @deprecated
+     */
     const DEFAULT_API_ENDPOINT = 'https://storage.googleapis.com';
+    const DEFAULT_API_ENDPOINT_TEMPLATE = 'https://storage.UNIVERSE_DOMAIN';
     /**
      * @deprecated
      */
@@ -92,12 +97,15 @@ class Rest implements ConnectionInterface
         $config += [
             'serviceDefinitionPath' => __DIR__ . '/ServiceDefinition/storage-v1.json',
             'componentVersion' => StorageClient::VERSION,
-            'apiEndpoint' => self::DEFAULT_API_ENDPOINT,
+            'apiEndpoint' => null,
+            // If the user has not supplied a universe domain, use the environment variable if set.
+            // Otherwise, use the default ("googleapis.com").
+            'universeDomain' => \getenv('GOOGLE_CLOUD_UNIVERSE_DOMAIN') ?: GetUniverseDomainInterface::DEFAULT_UNIVERSE_DOMAIN,
             // Cloud Storage needs to provide a default scope because the Storage
             // API does not accept JWTs with "audience"
             'scopes' => StorageClient::FULL_CONTROL_SCOPE,
         ];
-        $this->apiEndpoint = $this->getApiEndpoint(self::DEFAULT_API_ENDPOINT, $config);
+        $this->apiEndpoint = $this->getApiEndpoint(null, $config, self::DEFAULT_API_ENDPOINT_TEMPLATE);
         $this->setRequestWrapper(new RequestWrapper($config));
         $this->setRequestBuilder(new RequestBuilder($config['serviceDefinitionPath'], $this->apiEndpoint));
         $this->projectId = $this->pluck('projectId', $config, \false);
@@ -336,6 +344,12 @@ class Rest implements ConnectionInterface
             $args['metadata']['crc32c'] = $this->crcFromStream($args['data']);
         }
         $args['metadata']['name'] = $args['name'];
+        if (isset($args['retention'])) {
+            // during object creation retention properties go into metadata
+            // but not into request body
+            $args['metadata']['retention'] = $args['retention'];
+            unset($args['retention']);
+        }
         unset($args['name']);
         $args['contentType'] = $args['metadata']['contentType'] ?? MimeType::fromFilename($args['metadata']['name']);
         $uploaderOptionKeys = ['restOptions', 'retries', 'requestTimeout', 'chunkSize', 'contentType', 'metadata', 'uploadProgressCallback', 'restDelayFunction', 'restCalcDelayFunction'];
@@ -496,16 +510,15 @@ class Rest implements ConnectionInterface
     private function crcFromStream(StreamInterface $data)
     {
         $pos = $data->tell();
-        if ($pos > 0) {
-            $data->rewind();
-        }
-        $crc32c = CRC32::create(CRC32::CASTAGNOLI);
         $data->rewind();
+        $crc32c = \hash_init('crc32c');
         while (!$data->eof()) {
-            $crc32c->update($data->read(1048576));
+            $buffer = $data->read(1048576);
+            \hash_update($crc32c, $buffer);
         }
         $data->seek($pos);
-        return \base64_encode($crc32c->hash(\true));
+        $hash = \hash_final($crc32c, \true);
+        return \base64_encode($hash);
     }
     /**
      * Check if the crc32c extension is available.
@@ -521,13 +534,12 @@ class Rest implements ConnectionInterface
     /**
      * Check if hash() supports crc32c.
      *
-     * Protected access for unit testing.
-     *
+     * @deprecated
      * @return bool
      */
     protected function supportsBuiltinCrc32c()
     {
-        return Builtin::supports(CRC32::CASTAGNOLI);
+        return \extension_loaded('hash') && \in_array('crc32c', \hash_algos());
     }
     /**
      * Add the required retry function and send the request.

@@ -20,20 +20,15 @@ namespace DeliciousBrains\WP_Offload_Media\Gcp\Google\Cloud\Core;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Auth\HttpHandler\HttpHandlerFactory;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Cloud\Core\Exception;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\ApiCore\ApiException;
-use DeliciousBrains\WP_Offload_Media\Gcp\Google\ApiCore\OperationResponse;
-use DeliciousBrains\WP_Offload_Media\Gcp\Google\ApiCore\PagedListResponse;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\ApiCore\Serializer;
-use DeliciousBrains\WP_Offload_Media\Gcp\Google\ApiCore\ServerStream;
-use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Internal\Message;
-use DeliciousBrains\WP_Offload_Media\Gcp\Google\Rpc\BadRequest;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Rpc\Code;
-use DeliciousBrains\WP_Offload_Media\Gcp\Google\Rpc\RetryInfo;
 /**
  * The GrpcRequestWrapper is responsible for delivering gRPC requests.
  */
 class GrpcRequestWrapper
 {
     use RequestWrapperTrait;
+    use RequestProcessorTrait;
     /**
      * @var callable A handler used to deliver Psr7 requests specifically for
      * authentication.
@@ -53,13 +48,9 @@ class GrpcRequestWrapper
      */
     private $grpcRetryCodes = [Code::UNKNOWN, Code::INTERNAL, Code::UNAVAILABLE, Code::DATA_LOSS];
     /**
-     * @var array Map of error metadata types to RPC wrappers.
-     */
-    private $metadataTypes = ['google.rpc.retryinfo-bin' => RetryInfo::class, 'google.rpc.badrequest-bin' => BadRequest::class];
-    /**
      * @param array $config [optional] {
      *     Configuration options. Please see
-     *     {@see Google\Cloud\Core\RequestWrapperTrait::setCommonDefaults()} for
+     *     {@see \Google\Cloud\Core\RequestWrapperTrait::setCommonDefaults()} for
      *     the other available options.
      *
      *     @type callable $authHttpHandler A handler used to deliver Psr7
@@ -124,96 +115,5 @@ class GrpcRequestWrapper
             }
             throw $ex;
         }
-    }
-    /**
-     * Serializes a gRPC response.
-     *
-     * @param mixed $response
-     * @return \Generator|OperationResponse|array|null
-     */
-    private function handleResponse($response)
-    {
-        if ($response instanceof PagedListResponse) {
-            $response = $response->getPage()->getResponseObject();
-        }
-        if ($response instanceof Message) {
-            return $this->serializer->encodeMessage($response);
-        }
-        if ($response instanceof OperationResponse) {
-            return $response;
-        }
-        if ($response instanceof ServerStream) {
-            return $this->handleStream($response);
-        }
-        return null;
-    }
-    /**
-     * Handles a streaming response.
-     *
-     * @param ServerStream $response
-     * @return \Generator|array|null
-     * @throws Exception\ServiceException
-     */
-    private function handleStream($response)
-    {
-        try {
-            foreach ($response->readAll() as $count => $result) {
-                $res = $this->serializer->encodeMessage($result);
-                (yield $res);
-            }
-        } catch (\Exception $ex) {
-            throw $this->convertToGoogleException($ex);
-        }
-    }
-    /**
-     * Convert a ApiCore exception to a Google Exception.
-     *
-     * @param \Exception $ex
-     * @return Exception\ServiceException
-     */
-    private function convertToGoogleException($ex)
-    {
-        switch ($ex->getCode()) {
-            case Code::INVALID_ARGUMENT:
-                $exception = Exception\BadRequestException::class;
-                break;
-            case Code::NOT_FOUND:
-            case Code::UNIMPLEMENTED:
-                $exception = Exception\NotFoundException::class;
-                break;
-            case Code::ALREADY_EXISTS:
-                $exception = Exception\ConflictException::class;
-                break;
-            case Code::FAILED_PRECONDITION:
-                $exception = Exception\FailedPreconditionException::class;
-                break;
-            case Code::UNKNOWN:
-                $exception = Exception\ServerException::class;
-                break;
-            case Code::INTERNAL:
-                $exception = Exception\ServerException::class;
-                break;
-            case Code::ABORTED:
-                $exception = Exception\AbortedException::class;
-                break;
-            case Code::DEADLINE_EXCEEDED:
-                $exception = Exception\DeadlineExceededException::class;
-                break;
-            default:
-                $exception = Exception\ServiceException::class;
-                break;
-        }
-        $metadata = [];
-        if ($ex->getMetadata()) {
-            foreach ($ex->getMetadata() as $type => $binaryValue) {
-                if (!isset($this->metadataTypes[$type])) {
-                    continue;
-                }
-                $metadataElement = new $this->metadataTypes[$type]();
-                $metadataElement->mergeFromString($binaryValue[0]);
-                $metadata[] = $this->serializer->encodeMessage($metadataElement);
-            }
-        }
-        return new $exception($ex->getMessage(), $ex->getCode(), $ex, $metadata);
     }
 }

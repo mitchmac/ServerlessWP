@@ -20,7 +20,7 @@ namespace DeliciousBrains\WP_Offload_Media\Gcp\Google\Cloud\Core;
 /**
  * Retry implementation.
  *
- * Unlike {@see Google\Cloud\Core\ExponentialBackoff}, Retry requires an implementor
+ * Unlike {@see \Google\Cloud\Core\ExponentialBackoff}, Retry requires an implementor
  * to supply wait times for each iteration.
  */
 class Retry

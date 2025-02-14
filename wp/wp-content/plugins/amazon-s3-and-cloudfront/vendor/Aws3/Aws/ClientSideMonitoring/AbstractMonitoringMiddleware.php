@@ -172,6 +172,24 @@ abstract class AbstractMonitoringMiddleware implements MonitoringMiddlewareInter
         return $event;
     }
     /**
+     * Checks if the socket is created. If PHP version is greater or equals to 8 then,
+     * it will check if the var is instance of \Socket otherwise it will check if is
+     * a resource.
+     *
+     * @return bool Returns true if the socket is created, false otherwise.
+     */
+    private function isSocketCreated() : bool
+    {
+        // Before version 8, sockets are resources
+        // After version 8, sockets are instances of Socket
+        if (\PHP_MAJOR_VERSION >= 8) {
+            $socketClass = '\\Socket';
+            return self::$socket instanceof $socketClass;
+        } else {
+            return \is_resource(self::$socket);
+        }
+    }
+    /**
      * Creates a UDP socket resource and stores it with the class, or retrieves
      * it if already instantiated and connected. Handles error-checking and
      * re-connecting if necessary. If $forceNewConnection is set to true, a new
@@ -182,7 +200,7 @@ abstract class AbstractMonitoringMiddleware implements MonitoringMiddlewareInter
      */
     private function prepareSocket($forceNewConnection = \false)
     {
-        if (!\is_resource(self::$socket) || $forceNewConnection || \socket_last_error(self::$socket)) {
+        if (!$this->isSocketCreated() || $forceNewConnection || \socket_last_error(self::$socket)) {
             self::$socket = \socket_create(\AF_INET, \SOCK_DGRAM, \SOL_UDP);
             \socket_clear_error(self::$socket);
             \socket_connect(self::$socket, $this->getHost(), $this->getPort());

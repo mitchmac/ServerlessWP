@@ -43,57 +43,54 @@ class ClassLoader
 {
     /** @var \Closure(string):void */
     private static $includeFile;
-    /** @var ?string */
+    /** @var string|null */
     private $vendorDir;
     // PSR-4
     /**
-     * @var array[]
-     * @psalm-var array<string, array<string, int>>
+     * @var array<string, array<string, int>>
      */
     private $prefixLengthsPsr4 = array();
     /**
-     * @var array[]
-     * @psalm-var array<string, array<int, string>>
+     * @var array<string, list<string>>
      */
     private $prefixDirsPsr4 = array();
     /**
-     * @var array[]
-     * @psalm-var array<string, string>
+     * @var list<string>
      */
     private $fallbackDirsPsr4 = array();
     // PSR-0
     /**
-     * @var array[]
-     * @psalm-var array<string, array<string, string[]>>
+     * List of PSR-0 prefixes
+     *
+     * Structured as array('F (first letter)' => array('Foo\Bar (full prefix)' => array('path', 'path2')))
+     *
+     * @var array<string, array<string, list<string>>>
      */
     private $prefixesPsr0 = array();
     /**
-     * @var array[]
-     * @psalm-var array<string, string>
+     * @var list<string>
      */
     private $fallbackDirsPsr0 = array();
     /** @var bool */
     private $useIncludePath = \false;
     /**
-     * @var string[]
-     * @psalm-var array<string, string>
+     * @var array<string, string>
      */
     private $classMap = array();
     /** @var bool */
     private $classMapAuthoritative = \false;
     /**
-     * @var bool[]
-     * @psalm-var array<string, bool>
+     * @var array<string, bool>
      */
     private $missingClasses = array();
-    /** @var ?string */
+    /** @var string|null */
     private $apcuPrefix;
     /**
-     * @var self[]
+     * @var array<string, self>
      */
     private static $registeredLoaders = array();
     /**
-     * @param ?string $vendorDir
+     * @param string|null $vendorDir
      */
     public function __construct($vendorDir = null)
     {
@@ -101,7 +98,7 @@ class ClassLoader
         self::initializeIncludeClosure();
     }
     /**
-     * @return string[]
+     * @return array<string, list<string>>
      */
     public function getPrefixes()
     {
@@ -111,40 +108,35 @@ class ClassLoader
         return array();
     }
     /**
-     * @return array[]
-     * @psalm-return array<string, array<int, string>>
+     * @return array<string, list<string>>
      */
     public function getPrefixesPsr4()
     {
         return $this->prefixDirsPsr4;
     }
     /**
-     * @return array[]
-     * @psalm-return array<string, string>
+     * @return list<string>
      */
     public function getFallbackDirs()
     {
         return $this->fallbackDirsPsr0;
     }
     /**
-     * @return array[]
-     * @psalm-return array<string, string>
+     * @return list<string>
      */
     public function getFallbackDirsPsr4()
     {
         return $this->fallbackDirsPsr4;
     }
     /**
-     * @return string[] Array of classname => path
-     * @psalm-return array<string, string>
+     * @return array<string, string> Array of classname => path
      */
     public function getClassMap()
     {
         return $this->classMap;
     }
     /**
-     * @param string[] $classMap Class to filename map
-     * @psalm-param array<string, string> $classMap
+     * @param array<string, string> $classMap Class to filename map
      *
      * @return void
      */
@@ -160,40 +152,41 @@ class ClassLoader
      * Registers a set of PSR-0 directories for a given prefix, either
      * appending or prepending to the ones previously set for this prefix.
      *
-     * @param string          $prefix  The prefix
-     * @param string[]|string $paths   The PSR-0 root directories
-     * @param bool            $prepend Whether to prepend the directories
+     * @param string              $prefix  The prefix
+     * @param list<string>|string $paths   The PSR-0 root directories
+     * @param bool                $prepend Whether to prepend the directories
      *
      * @return void
      */
     public function add($prefix, $paths, $prepend = \false)
     {
+        $paths = (array) $paths;
         if (!$prefix) {
             if ($prepend) {
-                $this->fallbackDirsPsr0 = \array_merge((array) $paths, $this->fallbackDirsPsr0);
+                $this->fallbackDirsPsr0 = \array_merge($paths, $this->fallbackDirsPsr0);
             } else {
-                $this->fallbackDirsPsr0 = \array_merge($this->fallbackDirsPsr0, (array) $paths);
+                $this->fallbackDirsPsr0 = \array_merge($this->fallbackDirsPsr0, $paths);
             }
             return;
         }
         $first = $prefix[0];
         if (!isset($this->prefixesPsr0[$first][$prefix])) {
-            $this->prefixesPsr0[$first][$prefix] = (array) $paths;
+            $this->prefixesPsr0[$first][$prefix] = $paths;
             return;
         }
         if ($prepend) {
-            $this->prefixesPsr0[$first][$prefix] = \array_merge((array) $paths, $this->prefixesPsr0[$first][$prefix]);
+            $this->prefixesPsr0[$first][$prefix] = \array_merge($paths, $this->prefixesPsr0[$first][$prefix]);
         } else {
-            $this->prefixesPsr0[$first][$prefix] = \array_merge($this->prefixesPsr0[$first][$prefix], (array) $paths);
+            $this->prefixesPsr0[$first][$prefix] = \array_merge($this->prefixesPsr0[$first][$prefix], $paths);
         }
     }
     /**
      * Registers a set of PSR-4 directories for a given namespace, either
      * appending or prepending to the ones previously set for this namespace.
      *
-     * @param string          $prefix  The prefix/namespace, with trailing '\\'
-     * @param string[]|string $paths   The PSR-4 base directories
-     * @param bool            $prepend Whether to prepend the directories
+     * @param string              $prefix  The prefix/namespace, with trailing '\\'
+     * @param list<string>|string $paths   The PSR-4 base directories
+     * @param bool                $prepend Whether to prepend the directories
      *
      * @throws \InvalidArgumentException
      *
@@ -201,12 +194,13 @@ class ClassLoader
      */
     public function addPsr4($prefix, $paths, $prepend = \false)
     {
+        $paths = (array) $paths;
         if (!$prefix) {
             // Register directories for the root namespace.
             if ($prepend) {
-                $this->fallbackDirsPsr4 = \array_merge((array) $paths, $this->fallbackDirsPsr4);
+                $this->fallbackDirsPsr4 = \array_merge($paths, $this->fallbackDirsPsr4);
             } else {
-                $this->fallbackDirsPsr4 = \array_merge($this->fallbackDirsPsr4, (array) $paths);
+                $this->fallbackDirsPsr4 = \array_merge($this->fallbackDirsPsr4, $paths);
             }
         } elseif (!isset($this->prefixDirsPsr4[$prefix])) {
             // Register directories for a new namespace.
@@ -215,21 +209,21 @@ class ClassLoader
                 throw new \InvalidArgumentException("A non-empty PSR-4 prefix must end with a namespace separator.");
             }
             $this->prefixLengthsPsr4[$prefix[0]][$prefix] = $length;
-            $this->prefixDirsPsr4[$prefix] = (array) $paths;
+            $this->prefixDirsPsr4[$prefix] = $paths;
         } elseif ($prepend) {
             // Prepend directories for an already registered namespace.
-            $this->prefixDirsPsr4[$prefix] = \array_merge((array) $paths, $this->prefixDirsPsr4[$prefix]);
+            $this->prefixDirsPsr4[$prefix] = \array_merge($paths, $this->prefixDirsPsr4[$prefix]);
         } else {
             // Append directories for an already registered namespace.
-            $this->prefixDirsPsr4[$prefix] = \array_merge($this->prefixDirsPsr4[$prefix], (array) $paths);
+            $this->prefixDirsPsr4[$prefix] = \array_merge($this->prefixDirsPsr4[$prefix], $paths);
         }
     }
     /**
      * Registers a set of PSR-0 directories for a given prefix,
      * replacing any others previously set for this prefix.
      *
-     * @param string          $prefix The prefix
-     * @param string[]|string $paths  The PSR-0 base directories
+     * @param string              $prefix The prefix
+     * @param list<string>|string $paths  The PSR-0 base directories
      *
      * @return void
      */
@@ -245,8 +239,8 @@ class ClassLoader
      * Registers a set of PSR-4 directories for a given namespace,
      * replacing any others previously set for this namespace.
      *
-     * @param string          $prefix The prefix/namespace, with trailing '\\'
-     * @param string[]|string $paths  The PSR-4 base directories
+     * @param string              $prefix The prefix/namespace, with trailing '\\'
+     * @param list<string>|string $paths  The PSR-4 base directories
      *
      * @throws \InvalidArgumentException
      *
@@ -411,9 +405,9 @@ class ClassLoader
         return $file;
     }
     /**
-     * Returns the currently registered loaders indexed by their corresponding vendor directories.
+     * Returns the currently registered loaders keyed by their corresponding vendor directories.
      *
-     * @return self[]
+     * @return array<string, self>
      */
     public static function getRegisteredLoaders()
     {

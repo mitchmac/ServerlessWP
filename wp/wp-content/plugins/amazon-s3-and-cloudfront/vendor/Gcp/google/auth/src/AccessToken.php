@@ -18,7 +18,6 @@
 namespace DeliciousBrains\WP_Offload_Media\Gcp\Google\Auth;
 
 use DateTime;
-use Exception;
 use DeliciousBrains\WP_Offload_Media\Gcp\Firebase\JWT\ExpiredException;
 use DeliciousBrains\WP_Offload_Media\Gcp\Firebase\JWT\JWT;
 use DeliciousBrains\WP_Offload_Media\Gcp\Firebase\JWT\Key;
@@ -29,16 +28,16 @@ use DeliciousBrains\WP_Offload_Media\Gcp\Google\Auth\HttpHandler\HttpHandlerFact
 use DeliciousBrains\WP_Offload_Media\Gcp\GuzzleHttp\Psr7\Request;
 use DeliciousBrains\WP_Offload_Media\Gcp\GuzzleHttp\Psr7\Utils;
 use InvalidArgumentException;
-use DeliciousBrains\WP_Offload_Media\Gcp\phpseclib\Crypt\RSA;
-use DeliciousBrains\WP_Offload_Media\Gcp\phpseclib\Math\BigInteger as BigInteger2;
 use DeliciousBrains\WP_Offload_Media\Gcp\phpseclib3\Crypt\PublicKeyLoader;
-use DeliciousBrains\WP_Offload_Media\Gcp\phpseclib3\Math\BigInteger as BigInteger3;
+use DeliciousBrains\WP_Offload_Media\Gcp\phpseclib3\Crypt\RSA;
+use DeliciousBrains\WP_Offload_Media\Gcp\phpseclib3\Math\BigInteger;
 use DeliciousBrains\WP_Offload_Media\Gcp\Psr\Cache\CacheItemPoolInterface;
 use RuntimeException;
 use DeliciousBrains\WP_Offload_Media\Gcp\SimpleJWT\InvalidTokenException;
 use DeliciousBrains\WP_Offload_Media\Gcp\SimpleJWT\JWT as SimpleJWT;
 use DeliciousBrains\WP_Offload_Media\Gcp\SimpleJWT\Keys\KeyFactory;
 use DeliciousBrains\WP_Offload_Media\Gcp\SimpleJWT\Keys\KeySet;
+use TypeError;
 use UnexpectedValueException;
 /**
  * Wrapper around Google Access Tokens which provides convenience functions.
@@ -268,10 +267,9 @@ class AccessToken
     {
         $cacheItem = $this->cache->getItem($cacheKey);
         $certs = $cacheItem ? $cacheItem->get() : null;
-        $gotNewCerts = \false;
+        $expireTime = null;
         if (!$certs) {
-            $certs = $this->retrieveCertsFromLocation($location, $options);
-            $gotNewCerts = \true;
+            list($certs, $expireTime) = $this->retrieveCertsFromLocation($location, $options);
         }
         if (!isset($certs['keys'])) {
             if ($location !== self::IAP_CERT_URL) {
@@ -281,8 +279,8 @@ class AccessToken
         }
         // Push caching off until after verifying certs are in a valid format.
         // Don't want to cache bad data.
-        if ($gotNewCerts) {
-            $cacheItem->expiresAt(new DateTime('+1 hour'));
+        if ($expireTime) {
+            $cacheItem->expiresAt(new DateTime($expireTime));
             $cacheItem->set($certs);
             $this->cache->save($cacheItem);
         }
@@ -293,23 +291,32 @@ class AccessToken
      *
      * @param string $url location
      * @param array<mixed> $options [optional] Configuration options.
-     * @return array<mixed> certificates
+     * @return array{array<mixed>, string}
      * @throws InvalidArgumentException If certs could not be retrieved from a local file.
      * @throws RuntimeException If certs could not be retrieved from a remote location.
      */
     private function retrieveCertsFromLocation($url, array $options = [])
     {
         // If we're retrieving a local file, just grab it.
+        $expireTime = '+1 hour';
         if (\strpos($url, 'http') !== 0) {
             if (!\file_exists($url)) {
                 throw new InvalidArgumentException(\sprintf('Failed to retrieve verification certificates from path: %s.', $url));
             }
-            return \json_decode((string) \file_get_contents($url), \true);
+            return [\json_decode((string) \file_get_contents($url), \true), $expireTime];
         }
         $httpHandler = $this->httpHandler;
         $response = $httpHandler(new Request('GET', $url), $options);
         if ($response->getStatusCode() == 200) {
-            return \json_decode((string) $response->getBody(), \true);
+            if ($cacheControl = $response->getHeaderLine('Cache-Control')) {
+                \array_map(function ($value) use(&$expireTime) {
+                    list($key, $value) = \explode('=', $value) + [null, null];
+                    if (\trim($key) == 'max-age') {
+                        $expireTime = '+' . $value . ' seconds';
+                    }
+                }, \explode(',', $cacheControl));
+            }
+            return [\json_decode((string) $response->getBody(), \true), $expireTime];
         }
         throw new RuntimeException(\sprintf('Failed to retrieve verification certificates: "%s".', $response->getBody()->getContents()), $response->getStatusCode());
     }
@@ -318,53 +325,22 @@ class AccessToken
      */
     private function checkAndInitializePhpsec()
     {
-        if (!$this->checkAndInitializePhpsec2() && !$this->checkPhpsec3()) {
-            throw new RuntimeException('Please require phpseclib/phpseclib v2 or v3 to use this utility.');
+        if (!\class_exists(RSA::class)) {
+            throw new RuntimeException('Please require phpseclib/phpseclib v3 to use this utility.');
         }
     }
+    /**
+     * @return string
+     * @throws TypeError If the key cannot be initialized to a string.
+     */
     private function loadPhpsecPublicKey(string $modulus, string $exponent) : string
     {
-        if (\class_exists(RSA::class) && \class_exists(BigInteger2::class)) {
-            $key = new RSA();
-            $key->loadKey(['n' => new BigInteger2($this->callJwtStatic('urlsafeB64Decode', [$modulus]), 256), 'e' => new BigInteger2($this->callJwtStatic('urlsafeB64Decode', [$exponent]), 256)]);
-            return $key->getPublicKey();
+        $key = PublicKeyLoader::load(['n' => new BigInteger($this->callJwtStatic('urlsafeB64Decode', [$modulus]), 256), 'e' => new BigInteger($this->callJwtStatic('urlsafeB64Decode', [$exponent]), 256)]);
+        $formattedPublicKey = $key->toString('PKCS8');
+        if (!\is_string($formattedPublicKey)) {
+            throw new TypeError('Failed to initialize the key');
         }
-        $key = PublicKeyLoader::load(['n' => new BigInteger3($this->callJwtStatic('urlsafeB64Decode', [$modulus]), 256), 'e' => new BigInteger3($this->callJwtStatic('urlsafeB64Decode', [$exponent]), 256)]);
-        return $key->toString('PKCS1');
-    }
-    /**
-     * @return bool
-     */
-    private function checkAndInitializePhpsec2() : bool
-    {
-        if (!\class_exists('DeliciousBrains\\WP_Offload_Media\\Gcp\\phpseclib\\Crypt\\RSA')) {
-            return \false;
-        }
-        /**
-         * phpseclib calls "phpinfo" by default, which requires special
-         * whitelisting in the AppEngine VM environment. This function
-         * sets constants to bypass the need for phpseclib to check phpinfo
-         *
-         * @see phpseclib/Math/BigInteger
-         * @see https://github.com/GoogleCloudPlatform/getting-started-php/issues/85
-         * @codeCoverageIgnore
-         */
-        if (\filter_var(\getenv('GAE_VM'), \FILTER_VALIDATE_BOOLEAN)) {
-            if (!\defined('DeliciousBrains\\WP_Offload_Media\\Gcp\\MATH_BIGINTEGER_OPENSSL_ENABLED')) {
-                \define('DeliciousBrains\\WP_Offload_Media\\Gcp\\MATH_BIGINTEGER_OPENSSL_ENABLED', \true);
-            }
-            if (!\defined('DeliciousBrains\\WP_Offload_Media\\Gcp\\CRYPT_RSA_MODE')) {
-                \define('DeliciousBrains\\WP_Offload_Media\\Gcp\\CRYPT_RSA_MODE', RSA::MODE_OPENSSL);
-            }
-        }
-        return \true;
-    }
-    /**
-     * @return bool
-     */
-    private function checkPhpsec3() : bool
-    {
-        return \class_exists('DeliciousBrains\\WP_Offload_Media\\Gcp\\phpseclib3\\Crypt\\RSA');
+        return $formattedPublicKey;
     }
     /**
      * @return void

@@ -66,7 +66,7 @@
 </script>
 
 {#if $settingsChangedStore}
-	<div class="fixed-cta-block" transition:slide|local>
+	<div class="fixed-cta-block" transition:slide>
 		<div class="buttons">
 			<Button outline on:click={handleCancel}>{$strings.cancel_button}</Button>
 			<Button primary on:click={handleSave} {disabled}>{$strings.save_changes}</Button>

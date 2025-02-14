@@ -19,8 +19,10 @@ namespace DeliciousBrains\WP_Offload_Media\Gcp\Google\Cloud\Storage;
 
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Cloud\Core\Iterator\PageIteratorTrait;
 /**
+ * ObjectPageIterator
+ *
  * Iterates over a set of pages containing
- * {@see Google\Cloud\Storage\StorageObject} items.
+ * {@see StorageObject} items.
  */
 class ObjectPageIterator implements \Iterator
 {

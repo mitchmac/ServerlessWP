@@ -2,6 +2,7 @@
 
 namespace DeliciousBrains\WP_Offload_Media\Aws3\Aws\Api\Parser;
 
+use DeliciousBrains\WP_Offload_Media\Aws3\Aws\Api\Operation;
 use DeliciousBrains\WP_Offload_Media\Aws3\Aws\Api\StructureShape;
 use DeliciousBrains\WP_Offload_Media\Aws3\Aws\Api\Service;
 use DeliciousBrains\WP_Offload_Media\Aws3\Aws\Result;
@@ -26,8 +27,30 @@ class JsonRpcParser extends AbstractParser
     public function __invoke(CommandInterface $command, ResponseInterface $response)
     {
         $operation = $this->api->getOperation($command->getName());
-        $result = null === $operation['output'] ? null : $this->parseMemberFromStream($response->getBody(), $operation->getOutput(), $response);
-        return new Result($result ?: []);
+        return $this->parseResponse($response, $operation);
+    }
+    /**
+     * This method parses a response based on JSON RPC protocol.
+     *
+     * @param ResponseInterface $response the response to parse.
+     * @param Operation $operation the operation which holds information for
+     *        parsing the response.
+     *
+     * @return Result
+     */
+    private function parseResponse(ResponseInterface $response, Operation $operation)
+    {
+        if (null === $operation['output']) {
+            return new Result([]);
+        }
+        $outputShape = $operation->getOutput();
+        foreach ($outputShape->getMembers() as $memberName => $memberProps) {
+            if (!empty($memberProps['eventstream'])) {
+                return new Result([$memberName => new EventParsingIterator($response->getBody(), $outputShape->getMember($memberName), $this)]);
+            }
+        }
+        $result = $this->parseMemberFromStream($response->getBody(), $operation->getOutput(), $response);
+        return new Result(\is_null($result) ? [] : $result);
     }
     public function parseMemberFromStream(StreamInterface $stream, StructureShape $member, $response)
     {

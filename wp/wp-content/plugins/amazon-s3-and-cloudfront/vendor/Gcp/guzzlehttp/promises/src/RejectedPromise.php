@@ -24,7 +24,7 @@ class RejectedPromise implements PromiseInterface
         }
         $this->reason = $reason;
     }
-    public function then(callable $onFulfilled = null, callable $onRejected = null) : PromiseInterface
+    public function then(?callable $onFulfilled = null, ?callable $onRejected = null) : PromiseInterface
     {
         // If there's no onRejected callback then just return self.
         if (!$onRejected) {

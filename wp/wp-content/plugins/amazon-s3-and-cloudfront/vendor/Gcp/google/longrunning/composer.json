@@ -1,0 +1,26 @@
+{
+    "name": "google\/longrunning",
+    "description": "Google LongRunning Client for PHP",
+    "license": "Apache-2.0",
+    "minimum-stability": "stable",
+    "version": "0.4.4",
+    "autoload": {
+        "psr-4": {
+            "DeliciousBrains\\WP_Offload_Media\\Gcp\\Google\\ApiCore\\LongRunning\\": "src\/ApiCore\/LongRunning",
+            "DeliciousBrains\\WP_Offload_Media\\Gcp\\Google\\LongRunning\\": "src\/LongRunning",
+            "DeliciousBrains\\WP_Offload_Media\\Gcp\\GPBMetadata\\Google\\Longrunning\\": "metadata\/Longrunning"
+        }
+    },
+    "extra": {
+        "component": {
+            "id": "longrunning",
+            "path": "LongRunning",
+            "entry": null,
+            "target": "googleapis\/php-longrunning"
+        }
+    },
+    "require-dev": {
+        "google\/gax": "^1.34.0",
+        "phpunit\/phpunit": "^9.0"
+    }
+}

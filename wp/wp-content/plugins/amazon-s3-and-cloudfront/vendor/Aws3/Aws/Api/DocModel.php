@@ -100,7 +100,7 @@ class DocModel
             return '';
         }
         $tidy = new \tidy();
-        $tidy->parseString($content, ['indent' => \true, 'doctype' => 'omit', 'output-html' => \true, 'show-body-only' => \true, 'drop-empty-paras' => \true, 'drop-font-tags' => \true, 'drop-proprietary-attributes' => \true, 'hide-comments' => \true, 'logical-emphasis' => \true]);
+        $tidy->parseString($content, ['indent' => \true, 'doctype' => 'omit', 'output-html' => \true, 'show-body-only' => \true, 'drop-empty-paras' => \true, 'clean' => \true, 'drop-proprietary-attributes' => \true, 'hide-comments' => \true, 'logical-emphasis' => \true]);
         $tidy->cleanRepair();
         return (string) $content;
     }
