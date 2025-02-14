@@ -1,0 +1,32 @@
+{
+    "name": "google\/common-protos",
+    "type": "library",
+    "description": "Google API Common Protos for PHP",
+    "keywords": [
+        "google"
+    ],
+    "homepage": "https:\/\/github.com\/googleapis\/common-protos-php",
+    "license": "Apache-2.0",
+    "require": {
+        "php": ">=7.4",
+        "google\/protobuf": "^3.6.1"
+    },
+    "require-dev": {
+        "phpunit\/phpunit": "^9.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "DeliciousBrains\\WP_Offload_Media\\Gcp\\Google\\Api\\": "src\/Api",
+            "DeliciousBrains\\WP_Offload_Media\\Gcp\\Google\\Cloud\\": "src\/Cloud",
+            "DeliciousBrains\\WP_Offload_Media\\Gcp\\Google\\Iam\\": "src\/Iam",
+            "DeliciousBrains\\WP_Offload_Media\\Gcp\\Google\\Rpc\\": "src\/Rpc",
+            "DeliciousBrains\\WP_Offload_Media\\Gcp\\Google\\Type\\": "src\/Type",
+            "DeliciousBrains\\WP_Offload_Media\\Gcp\\GPBMetadata\\Google\\Api\\": "metadata\/Api",
+            "DeliciousBrains\\WP_Offload_Media\\Gcp\\GPBMetadata\\Google\\Cloud\\": "metadata\/Cloud",
+            "DeliciousBrains\\WP_Offload_Media\\Gcp\\GPBMetadata\\Google\\Iam\\": "metadata\/Iam",
+            "DeliciousBrains\\WP_Offload_Media\\Gcp\\GPBMetadata\\Google\\Logging\\": "metadata\/Logging",
+            "DeliciousBrains\\WP_Offload_Media\\Gcp\\GPBMetadata\\Google\\Rpc\\": "metadata\/Rpc",
+            "DeliciousBrains\\WP_Offload_Media\\Gcp\\GPBMetadata\\Google\\Type\\": "metadata\/Type"
+        }
+    }
+}

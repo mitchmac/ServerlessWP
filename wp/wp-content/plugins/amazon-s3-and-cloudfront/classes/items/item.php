@@ -748,7 +748,7 @@ abstract class Item {
 		$extra_info = array();
 
 		if ( ! empty( $object->extra_info ) ) {
-			$extra_info = unserialize( $object->extra_info );
+			$extra_info = AS3CF_Utils::maybe_unserialize( $object->extra_info );
 			static::maybe_update_extra_info( $extra_info, $object->source_id, $object->is_private );
 		}
 
@@ -1732,6 +1732,8 @@ abstract class Item {
 			return array();
 		}
 
+		$paths = array_map( 'esc_sql', $paths );
+
 		$paths = AS3CF_Utils::make_upload_file_paths_relative( array_unique( $paths ) );
 
 		$sql = '
@@ -1744,6 +1746,8 @@ abstract class Item {
 			if ( ! is_array( $exclude_source_ids ) ) {
 				$exclude_source_ids = array( $exclude_source_ids );
 			}
+
+			$exclude_source_ids = array_map( 'intval', $exclude_source_ids );
 
 			$sql .= ' AND items.source_id NOT IN (' . join( ',', $exclude_source_ids ) . ')';
 		}
@@ -1882,7 +1886,7 @@ abstract class Item {
 			$delivery_domain = AS3CF_Utils::sanitize_custom_domain( $delivery_domain );
 		}
 
-		if ( ! is_null( $expires ) && $as3cf->is_plugin_setup( true ) ) {
+		if ( ! is_null( $expires ) && ! $as3cf->get_storage_provider()->needs_access_keys() ) {
 			try {
 				/**
 				 * Filters the expires time for private content

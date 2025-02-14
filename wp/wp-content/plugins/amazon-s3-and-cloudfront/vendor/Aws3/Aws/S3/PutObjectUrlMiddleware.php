@@ -43,7 +43,7 @@ class PutObjectUrlMiddleware
                     $result['ObjectURL'] = isset($result['@metadata']['effectiveUri']) ? $result['@metadata']['effectiveUri'] : null;
                     break;
                 case 'CompleteMultipartUpload':
-                    $result['ObjectURL'] = $result['Location'];
+                    $result['ObjectURL'] = \urldecode($result['Location'] ?? '');
                     break;
             }
             return $result;

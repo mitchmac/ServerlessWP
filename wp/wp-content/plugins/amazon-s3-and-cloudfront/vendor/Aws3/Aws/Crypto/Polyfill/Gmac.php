@@ -4,8 +4,6 @@ namespace DeliciousBrains\WP_Offload_Media\Aws3\Aws\Crypto\Polyfill;
 
 /**
  * Class Gmac
- *
- * @package Aws\Crypto\Polyfill
  */
 class Gmac
 {

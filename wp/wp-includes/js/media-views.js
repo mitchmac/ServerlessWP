@@ -1,8 +1,8 @@
-/******/ (function() { // webpackBootstrap
+/******/ (() => { // webpackBootstrap
 /******/ 	var __webpack_modules__ = ({
 
-/***/ 1517:
-/***/ (function(module) {
+/***/ 7145:
+/***/ ((module) => {
 
 var Selection = wp.media.model.Selection,
 	Library = wp.media.controller.Library,
@@ -111,8 +111,8 @@ module.exports = CollectionAdd;
 
 /***/ }),
 
-/***/ 1817:
-/***/ (function(module) {
+/***/ 8612:
+/***/ ((module) => {
 
 var Library = wp.media.controller.Library,
 	l10n = wp.media.view.l10n,
@@ -280,8 +280,8 @@ module.exports = CollectionEdit;
 
 /***/ }),
 
-/***/ 2288:
-/***/ (function(module) {
+/***/ 5422:
+/***/ ((module) => {
 
 var l10n = wp.media.view.l10n,
 	Cropper;
@@ -378,9 +378,11 @@ Cropper = wp.media.controller.State.extend(/** @lends wp.media.controller.Croppe
 	 * @return {void}
 	 */
 	createCropToolbar: function() {
-		var canSkipCrop, toolbarOptions;
+		var canSkipCrop, hasRequiredAspectRatio, suggestedCropSize, toolbarOptions;
 
-		canSkipCrop = this.get('canSkipCrop') || false;
+		suggestedCropSize      = this.get( 'suggestedCropSize' );
+		hasRequiredAspectRatio = this.get( 'hasRequiredAspectRatio' );
+		canSkipCrop            = this.get( 'canSkipCrop' ) || false;
 
 		toolbarOptions = {
 			controller: this.frame,
@@ -412,7 +414,7 @@ Cropper = wp.media.controller.State.extend(/** @lends wp.media.controller.Croppe
 			}
 		};
 
-		if ( canSkipCrop ) {
+		if ( canSkipCrop || hasRequiredAspectRatio ) {
 			_.extend( toolbarOptions.items, {
 				skip: {
 					style:      'secondary',
@@ -420,10 +422,26 @@ Cropper = wp.media.controller.State.extend(/** @lends wp.media.controller.Croppe
 					priority:   70,
 					requires:   { library: false, selection: false },
 					click:      function() {
-						var selection = this.controller.state().get('selection').first();
-						this.controller.state().cropperView.remove();
-						this.controller.trigger('skippedcrop', selection);
-						this.controller.close();
+						var controller = this.controller,
+							selection = controller.state().get( 'selection' ).first();
+
+						controller.state().cropperView.remove();
+
+						// Apply the suggested crop size.
+						if ( hasRequiredAspectRatio && !canSkipCrop ) {
+							selection.set({cropDetails: suggestedCropSize});
+							controller.state().doCrop( selection ).done( function( croppedImage ) {
+								controller.trigger( 'cropped', croppedImage );
+								controller.close();
+							}).fail( function() {
+								controller.trigger( 'content:error:crop' );
+							});
+							return;
+						}
+
+						// Skip the cropping process.
+						controller.trigger( 'skippedcrop', selection );
+						controller.close();
 					}
 				}
 			});
@@ -457,8 +475,8 @@ module.exports = Cropper;
 
 /***/ }),
 
-/***/ 6934:
-/***/ (function(module) {
+/***/ 9660:
+/***/ ((module) => {
 
 var Controller = wp.media.controller,
 	CustomizeImageCropper;
@@ -517,8 +535,8 @@ module.exports = CustomizeImageCropper;
 
 /***/ }),
 
-/***/ 7658:
-/***/ (function(module) {
+/***/ 5663:
+/***/ ((module) => {
 
 var l10n = wp.media.view.l10n,
 	EditImage;
@@ -616,8 +634,8 @@ module.exports = EditImage;
 
 /***/ }),
 
-/***/ 9067:
-/***/ (function(module) {
+/***/ 4910:
+/***/ ((module) => {
 
 var l10n = wp.media.view.l10n,
 	$ = Backbone.$,
@@ -761,8 +779,8 @@ module.exports = Embed;
 
 /***/ }),
 
-/***/ 5095:
-/***/ (function(module) {
+/***/ 1169:
+/***/ ((module) => {
 
 var Attachment = wp.media.model.Attachment,
 	Library = wp.media.controller.Library,
@@ -889,8 +907,8 @@ module.exports = FeaturedImage;
 
 /***/ }),
 
-/***/ 7323:
-/***/ (function(module) {
+/***/ 7127:
+/***/ ((module) => {
 
 var Selection = wp.media.model.Selection,
 	Library = wp.media.controller.Library,
@@ -1003,8 +1021,8 @@ module.exports = GalleryAdd;
 
 /***/ }),
 
-/***/ 6328:
-/***/ (function(module) {
+/***/ 2038:
+/***/ ((module) => {
 
 var Library = wp.media.controller.Library,
 	l10n = wp.media.view.l10n,
@@ -1179,8 +1197,8 @@ module.exports = GalleryEdit;
 
 /***/ }),
 
-/***/ 3849:
-/***/ (function(module) {
+/***/ 705:
+/***/ ((module) => {
 
 var State = wp.media.controller.State,
 	Library = wp.media.controller.Library,
@@ -1248,8 +1266,8 @@ module.exports = ImageDetails;
 
 /***/ }),
 
-/***/ 9024:
-/***/ (function(module) {
+/***/ 472:
+/***/ ((module) => {
 
 var l10n = wp.media.view.l10n,
 	getUserSetting = window.getUserSetting,
@@ -1449,7 +1467,7 @@ Library = wp.media.controller.State.extend(/** @lends wp.media.controller.Librar
 	isImageAttachment: function( attachment ) {
 		// If uploading, we know the filename but not the mime type.
 		if ( attachment.get('uploading') ) {
-			return /\.(jpe?g|png|gif|webp)$/i.test( attachment.get('filename') );
+			return /\.(jpe?g|png|gif|webp|avif|heic|heif)$/i.test( attachment.get('filename') );
 		}
 
 		return attachment.get('type') === 'image';
@@ -1550,8 +1568,8 @@ module.exports = Library;
 
 /***/ }),
 
-/***/ 3742:
-/***/ (function(module) {
+/***/ 8065:
+/***/ ((module) => {
 
 /**
  * wp.media.controller.MediaLibrary
@@ -1607,8 +1625,8 @@ module.exports = MediaLibrary;
 
 /***/ }),
 
-/***/ 4903:
-/***/ (function(module) {
+/***/ 9875:
+/***/ ((module) => {
 
 /**
  * wp.media.controller.Region
@@ -1788,8 +1806,8 @@ module.exports = Region;
 
 /***/ }),
 
-/***/ 8493:
-/***/ (function(module) {
+/***/ 2275:
+/***/ ((module) => {
 
 var Library = wp.media.controller.Library,
 	l10n = wp.media.view.l10n,
@@ -1913,8 +1931,8 @@ module.exports = ReplaceImage;
 
 /***/ }),
 
-/***/ 5274:
-/***/ (function(module) {
+/***/ 6172:
+/***/ ((module) => {
 
 var Controller = wp.media.controller,
 	SiteIconCropper;
@@ -1969,8 +1987,8 @@ module.exports = SiteIconCropper;
 
 /***/ }),
 
-/***/ 5466:
-/***/ (function(module) {
+/***/ 6150:
+/***/ ((module) => {
 
 /**
  * wp.media.controller.StateMachine
@@ -2112,8 +2130,8 @@ module.exports = StateMachine;
 
 /***/ }),
 
-/***/ 5826:
-/***/ (function(module) {
+/***/ 5694:
+/***/ ((module) => {
 
 /**
  * wp.media.controller.State
@@ -2282,9 +2300,16 @@ var State = Backbone.Model.extend(/** @lends wp.media.controller.State.prototype
 	_menu: function() {
 		var menu = this.frame.menu,
 			mode = this.get('menu'),
+			actionMenuItems,
+			actionMenuLength,
 			view;
 
-		this.frame.$el.toggleClass( 'hide-menu', ! mode );
+		if ( this.frame.menu ) {
+			actionMenuItems = this.frame.menu.get('views'),
+			actionMenuLength = actionMenuItems ? actionMenuItems.views.get().length : 0,
+			// Show action menu only if it is active and has more than one default element.
+			this.frame.$el.toggleClass( 'hide-menu', ! mode || actionMenuLength < 2 );
+		}
 		if ( ! mode ) {
 			return;
 		}
@@ -2360,8 +2385,8 @@ module.exports = State;
 
 /***/ }),
 
-/***/ 3526:
-/***/ (function(module) {
+/***/ 4181:
+/***/ ((module) => {
 
 /**
  * wp.media.selectionSync
@@ -2435,8 +2460,8 @@ module.exports = selectionSync;
 
 /***/ }),
 
-/***/ 8093:
-/***/ (function(module) {
+/***/ 2982:
+/***/ ((module) => {
 
 var View = wp.media.View,
 	AttachmentCompat;
@@ -2529,8 +2554,8 @@ module.exports = AttachmentCompat;
 
 /***/ }),
 
-/***/ 4906:
-/***/ (function(module) {
+/***/ 7709:
+/***/ ((module) => {
 
 var $ = jQuery,
 	AttachmentFilters;
@@ -2613,8 +2638,8 @@ module.exports = AttachmentFilters;
 
 /***/ }),
 
-/***/ 2868:
-/***/ (function(module) {
+/***/ 7349:
+/***/ ((module) => {
 
 var l10n = wp.media.view.l10n,
 	All;
@@ -2731,8 +2756,8 @@ module.exports = All;
 
 /***/ }),
 
-/***/ 9663:
-/***/ (function(module) {
+/***/ 6472:
+/***/ ((module) => {
 
 var l10n = wp.media.view.l10n,
 	DateFilter;
@@ -2779,8 +2804,8 @@ module.exports = DateFilter;
 
 /***/ }),
 
-/***/ 7040:
-/***/ (function(module) {
+/***/ 1368:
+/***/ ((module) => {
 
 var l10n = wp.media.view.l10n,
 	Uploaded;
@@ -2861,8 +2886,8 @@ module.exports = Uploaded;
 
 /***/ }),
 
-/***/ 5019:
-/***/ (function(module) {
+/***/ 4075:
+/***/ ((module) => {
 
 var View = wp.media.View,
 	$ = jQuery,
@@ -2986,7 +3011,7 @@ Attachment = View.extend(/** @lends wp.media.view.Attachment.prototype */{
 			options.can.save = !! options.nonces.update;
 		}
 
-		if ( this.controller.state().get('allowLocalEdits') ) {
+		if ( this.controller.state().get('allowLocalEdits') && ! options.uploading ) {
 			options.allowLocalEdits = true;
 		}
 
@@ -3063,6 +3088,11 @@ Attachment = View.extend(/** @lends wp.media.view.Attachment.prototype */{
 			method = 'between';
 		} else if ( event.ctrlKey || event.metaKey ) {
 			method = 'toggle';
+		}
+
+		// Avoid toggles when the command or control key is pressed with the enter key to prevent deselecting the last selected attachment.
+		if ( ( event.metaKey || event.ctrlKey ) && ( 13 === event.keyCode || 10 === event.keyCode ) ) {
+			return;
 		}
 
 		this.toggleSelection({
@@ -3458,8 +3488,8 @@ module.exports = Attachment;
 
 /***/ }),
 
-/***/ 7274:
-/***/ (function(module) {
+/***/ 6090:
+/***/ ((module) => {
 
 /* global ClipboardJS */
 var Attachment = wp.media.view.Attachment,
@@ -3510,8 +3540,6 @@ Details = Attachment.extend(/** @lends wp.media.view.Attachment.Details.prototyp
 
 			// Clear the selection and move focus back to the trigger.
 			event.clearSelection();
-			// Handle ClipboardJS focus bug, see https://github.com/zenorocha/clipboard.js/issues/680
-			triggerElement.trigger( 'focus' );
 
 			// Show success visual feedback.
 			clearTimeout( successTimeout );
@@ -3745,8 +3773,8 @@ module.exports = Details;
 
 /***/ }),
 
-/***/ 4640:
-/***/ (function(module) {
+/***/ 5232:
+/***/ ((module) => {
 
 /**
  * wp.media.view.Attachment.EditLibrary
@@ -3770,8 +3798,8 @@ module.exports = EditLibrary;
 
 /***/ }),
 
-/***/ 1009:
-/***/ (function(module) {
+/***/ 4593:
+/***/ ((module) => {
 
 /**
  * wp.media.view.Attachment.EditSelection
@@ -3796,8 +3824,8 @@ module.exports = EditSelection;
 
 /***/ }),
 
-/***/ 9254:
-/***/ (function(module) {
+/***/ 3443:
+/***/ ((module) => {
 
 /**
  * wp.media.view.Attachment.Library
@@ -3821,8 +3849,8 @@ module.exports = Library;
 
 /***/ }),
 
-/***/ 9003:
-/***/ (function(module) {
+/***/ 3962:
+/***/ ((module) => {
 
 /**
  * wp.media.view.Attachment.Selection
@@ -3850,8 +3878,8 @@ module.exports = Selection;
 
 /***/ }),
 
-/***/ 8408:
-/***/ (function(module) {
+/***/ 8142:
+/***/ ((module) => {
 
 var View = wp.media.View,
 	$ = jQuery,
@@ -4320,8 +4348,8 @@ module.exports = Attachments;
 
 /***/ }),
 
-/***/ 9239:
-/***/ (function(module) {
+/***/ 6829:
+/***/ ((module) => {
 
 var View = wp.media.View,
 	mediaTrash = wp.media.view.settings.mediaTrash,
@@ -4703,7 +4731,7 @@ AttachmentsBrowser = View.extend(/** @lends wp.media.view.AttachmentsBrowser.pro
 		}
 
 		if ( this.options.search ) {
-			// Search is an input, a visually hidden label element needs to be rendered before.
+			// Search is an input, a label element needs to be rendered before.
 			this.toolbar.set( 'searchLabel', new wp.media.view.Label({
 				value: l10n.searchLabel,
 				className: 'media-search-input-label',
@@ -4748,6 +4776,7 @@ AttachmentsBrowser = View.extend(/** @lends wp.media.view.AttachmentsBrowser.pro
 
 		if ( ! this.collection.length ) {
 			this.toolbar.get( 'spinner' ).show();
+			this.toolbar.$( '.media-bg-overlay' ).show();
 			this.dfd = this.collection.more().done( function() {
 				if ( ! view.collection.length ) {
 					noItemsView.$el.removeClass( 'hidden' );
@@ -4755,10 +4784,12 @@ AttachmentsBrowser = View.extend(/** @lends wp.media.view.AttachmentsBrowser.pro
 					noItemsView.$el.addClass( 'hidden' );
 				}
 				view.toolbar.get( 'spinner' ).hide();
+				view.toolbar.$( '.media-bg-overlay' ).hide();
 			} );
 		} else {
 			noItemsView.$el.addClass( 'hidden' );
 			view.toolbar.get( 'spinner' ).hide();
+			this.toolbar.$( '.media-bg-overlay' ).hide();
 		}
 	},
 
@@ -5062,8 +5093,8 @@ module.exports = AttachmentsBrowser;
 
 /***/ }),
 
-/***/ 1223:
-/***/ (function(module) {
+/***/ 3479:
+/***/ ((module) => {
 
 var Attachments = wp.media.view.Attachments,
 	Selection;
@@ -5099,8 +5130,8 @@ module.exports = Selection;
 
 /***/ }),
 
-/***/ 4094:
-/***/ (function(module) {
+/***/ 168:
+/***/ ((module) => {
 
 var $ = Backbone.$,
 	ButtonGroup;
@@ -5152,8 +5183,8 @@ module.exports = ButtonGroup;
 
 /***/ }),
 
-/***/ 3157:
-/***/ (function(module) {
+/***/ 846:
+/***/ ((module) => {
 
 /**
  * wp.media.view.Button
@@ -5245,8 +5276,8 @@ module.exports = Button;
 
 /***/ }),
 
-/***/ 7137:
-/***/ (function(module) {
+/***/ 7637:
+/***/ ((module) => {
 
 var View = wp.media.View,
 	UploaderStatus = wp.media.view.UploaderStatus,
@@ -5347,8 +5378,8 @@ module.exports = Cropper;
 
 /***/ }),
 
-/***/ 5970:
-/***/ (function(module) {
+/***/ 6126:
+/***/ ((module) => {
 
 var View = wp.media.View,
 	EditImage;
@@ -5405,8 +5436,8 @@ module.exports = EditImage;
 
 /***/ }),
 
-/***/ 5138:
-/***/ (function(module) {
+/***/ 5741:
+/***/ ((module) => {
 
 /**
  * wp.media.view.Embed
@@ -5476,8 +5507,8 @@ module.exports = Embed;
 
 /***/ }),
 
-/***/ 1338:
-/***/ (function(module) {
+/***/ 2395:
+/***/ ((module) => {
 
 var AttachmentDisplay = wp.media.view.Settings.AttachmentDisplay,
 	EmbedImage;
@@ -5516,8 +5547,8 @@ module.exports = EmbedImage;
 
 /***/ }),
 
-/***/ 6959:
-/***/ (function(module) {
+/***/ 8232:
+/***/ ((module) => {
 
 var $ = jQuery,
 	EmbedLink;
@@ -5620,8 +5651,8 @@ module.exports = EmbedLink;
 
 /***/ }),
 
-/***/ 4848:
-/***/ (function(module) {
+/***/ 7327:
+/***/ ((module) => {
 
 var View = wp.media.View,
 	$ = jQuery,
@@ -5697,8 +5728,8 @@ module.exports = EmbedUrl;
 
 /***/ }),
 
-/***/ 6557:
-/***/ (function(module) {
+/***/ 718:
+/***/ ((module) => {
 
 var $ = jQuery;
 
@@ -6065,8 +6096,8 @@ module.exports = FocusManager;
 
 /***/ }),
 
-/***/ 3647:
-/***/ (function(module) {
+/***/ 1061:
+/***/ ((module) => {
 
 /**
  * wp.media.view.Frame
@@ -6238,8 +6269,8 @@ module.exports = Frame;
 
 /***/ }),
 
-/***/ 9142:
-/***/ (function(module) {
+/***/ 5424:
+/***/ ((module) => {
 
 var Select = wp.media.view.MediaFrame.Select,
 	l10n = wp.media.view.l10n,
@@ -6423,8 +6454,8 @@ module.exports = ImageDetails;
 
 /***/ }),
 
-/***/ 9075:
-/***/ (function(module) {
+/***/ 4274:
+/***/ ((module) => {
 
 var Select = wp.media.view.MediaFrame.Select,
 	Library = wp.media.controller.Library,
@@ -7179,8 +7210,8 @@ module.exports = Post;
 
 /***/ }),
 
-/***/ 8719:
-/***/ (function(module) {
+/***/ 455:
+/***/ ((module) => {
 
 var MediaFrame = wp.media.view.MediaFrame,
 	l10n = wp.media.view.l10n,
@@ -7368,8 +7399,8 @@ module.exports = Select;
 
 /***/ }),
 
-/***/ 7990:
-/***/ (function(module) {
+/***/ 170:
+/***/ ((module) => {
 
 /**
  * wp.media.view.Heading
@@ -7409,8 +7440,8 @@ module.exports = Heading;
 
 /***/ }),
 
-/***/ 6217:
-/***/ (function(module) {
+/***/ 1982:
+/***/ ((module) => {
 
 /**
  * wp.media.view.Iframe
@@ -7440,8 +7471,8 @@ module.exports = Iframe;
 
 /***/ }),
 
-/***/ 7598:
-/***/ (function(module) {
+/***/ 2650:
+/***/ ((module) => {
 
 var AttachmentDisplay = wp.media.view.Settings.AttachmentDisplay,
 	$ = jQuery,
@@ -7614,8 +7645,8 @@ module.exports = ImageDetails;
 
 /***/ }),
 
-/***/ 6644:
-/***/ (function(module) {
+/***/ 4338:
+/***/ ((module) => {
 
 /**
  * wp.media.view.Label
@@ -7647,8 +7678,8 @@ module.exports = Label;
 
 /***/ }),
 
-/***/ 4861:
-/***/ (function(module) {
+/***/ 2836:
+/***/ ((module) => {
 
 var Frame = wp.media.view.Frame,
 	l10n = wp.media.view.l10n,
@@ -8011,8 +8042,8 @@ module.exports = MediaFrame;
 
 /***/ }),
 
-/***/ 917:
-/***/ (function(module) {
+/***/ 9013:
+/***/ ((module) => {
 
 var MenuItem;
 
@@ -8087,8 +8118,8 @@ module.exports = MenuItem;
 
 /***/ }),
 
-/***/ 2596:
-/***/ (function(module) {
+/***/ 1:
+/***/ ((module) => {
 
 var MenuItem = wp.media.view.MenuItem,
 	PriorityList = wp.media.view.PriorityList,
@@ -8235,8 +8266,8 @@ module.exports = Menu;
 
 /***/ }),
 
-/***/ 3939:
-/***/ (function(module) {
+/***/ 2621:
+/***/ ((module) => {
 
 var $ = jQuery,
 	Modal;
@@ -8421,6 +8452,29 @@ Modal = wp.media.View.extend(/** @lends wp.media.view.Modal.prototype */{
 	},
 
 	/**
+	 * Handles the selection of attachments when the command or control key is pressed with the enter key.
+	 *
+	 * @since 6.7
+	 *
+	 * @param {Object} event The keydown event object.
+	 */
+	selectHandler: function( event ) {
+		var selection = this.controller.state().get( 'selection' );
+
+		if ( selection.length <= 0 ) {
+			return;
+		}
+
+		if ( 'insert' === this.controller.options.state ) {
+			this.controller.trigger( 'insert', selection );
+		} else {
+			this.controller.trigger( 'select', selection );
+			event.preventDefault();
+			this.escape();
+		}
+	},
+
+	/**
 	 * @param {Array|Object} content Views to register to '.media-modal-content'
 	 * @return {wp.media.view.Modal} Returns itself to allow chaining.
 	 */
@@ -8454,6 +8508,13 @@ Modal = wp.media.View.extend(/** @lends wp.media.view.Modal.prototype */{
 			this.escape();
 			event.stopImmediatePropagation();
 		}
+
+		// Select the attachment when command or control and enter are pressed.
+		if ( ( 13 === event.which || 10 === event.which ) && ( event.metaKey || event.ctrlKey ) ) {
+			this.selectHandler( event );
+			event.stopImmediatePropagation();
+		}
+
 	}
 });
 
@@ -8462,8 +8523,8 @@ module.exports = Modal;
 
 /***/ }),
 
-/***/ 1993:
-/***/ (function(module) {
+/***/ 8815:
+/***/ ((module) => {
 
 /**
  * wp.media.view.PriorityList
@@ -8566,8 +8627,8 @@ module.exports = PriorityList;
 
 /***/ }),
 
-/***/ 9484:
-/***/ (function(module) {
+/***/ 6327:
+/***/ ((module) => {
 
 /**
  * wp.media.view.RouterItem
@@ -8597,8 +8658,8 @@ module.exports = RouterItem;
 
 /***/ }),
 
-/***/ 1562:
-/***/ (function(module) {
+/***/ 4783:
+/***/ ((module) => {
 
 var Menu = wp.media.view.Menu,
 	Router;
@@ -8646,8 +8707,8 @@ module.exports = Router;
 
 /***/ }),
 
-/***/ 4556:
-/***/ (function(module) {
+/***/ 2102:
+/***/ ((module) => {
 
 var Search;
 
@@ -8699,8 +8760,8 @@ module.exports = Search;
 
 /***/ }),
 
-/***/ 6191:
-/***/ (function(module) {
+/***/ 8282:
+/***/ ((module) => {
 
 var _n = wp.i18n._n,
 	sprintf = wp.i18n.sprintf,
@@ -8792,8 +8853,8 @@ module.exports = Selection;
 
 /***/ }),
 
-/***/ 859:
-/***/ (function(module) {
+/***/ 1915:
+/***/ ((module) => {
 
 var View = wp.media.View,
 	$ = Backbone.$,
@@ -8925,8 +8986,8 @@ module.exports = Settings;
 
 /***/ }),
 
-/***/ 2176:
-/***/ (function(module) {
+/***/ 7656:
+/***/ ((module) => {
 
 var Settings = wp.media.view.Settings,
 	AttachmentDisplay;
@@ -9024,8 +9085,8 @@ module.exports = AttachmentDisplay;
 
 /***/ }),
 
-/***/ 6872:
-/***/ (function(module) {
+/***/ 7266:
+/***/ ((module) => {
 
 /**
  * wp.media.view.Settings.Gallery
@@ -9048,8 +9109,8 @@ module.exports = Gallery;
 
 /***/ }),
 
-/***/ 8488:
-/***/ (function(module) {
+/***/ 2356:
+/***/ ((module) => {
 
 /**
  * wp.media.view.Settings.Playlist
@@ -9072,8 +9133,8 @@ module.exports = Playlist;
 
 /***/ }),
 
-/***/ 9799:
-/***/ (function(module) {
+/***/ 1992:
+/***/ ((module) => {
 
 /**
  * wp.media.view.Sidebar
@@ -9095,8 +9156,8 @@ module.exports = Sidebar;
 
 /***/ }),
 
-/***/ 5187:
-/***/ (function(module) {
+/***/ 443:
+/***/ ((module) => {
 
 var View = wp.media.view,
 	SiteIconCropper;
@@ -9145,8 +9206,8 @@ module.exports = SiteIconCropper;
 
 /***/ }),
 
-/***/ 8260:
-/***/ (function(module) {
+/***/ 7810:
+/***/ ((module) => {
 
 var View = wp.media.View,
 	$ = jQuery,
@@ -9165,8 +9226,8 @@ var View = wp.media.View,
  * @augments Backbone.View
  */
 SiteIconPreview = View.extend(/** @lends wp.media.view.SiteIconPreview.prototype */{
-	className: 'site-icon-preview',
-	template: wp.template( 'site-icon-preview' ),
+	className: 'site-icon-preview-crop-modal',
+	template: wp.template( 'site-icon-preview-crop' ),
 
 	ready: function() {
 		this.controller.imgSelect.setOptions({
@@ -9184,8 +9245,8 @@ SiteIconPreview = View.extend(/** @lends wp.media.view.SiteIconPreview.prototype
 	updatePreview: function( img, coords ) {
 		var rx = 64 / coords.width,
 			ry = 64 / coords.height,
-			preview_rx = 16 / coords.width,
-			preview_ry = 16 / coords.height;
+			preview_rx = 24 / coords.width,
+			preview_ry = 24 / coords.height;
 
 		$( '#preview-app-icon' ).css({
 			width: Math.round(rx * this.imageWidth ) + 'px',
@@ -9208,8 +9269,8 @@ module.exports = SiteIconPreview;
 
 /***/ }),
 
-/***/ 2234:
-/***/ (function(module) {
+/***/ 9141:
+/***/ ((module) => {
 
 /**
  * wp.media.view.Spinner
@@ -9268,8 +9329,8 @@ module.exports = Spinner;
 
 /***/ }),
 
-/***/ 9510:
-/***/ (function(module) {
+/***/ 5275:
+/***/ ((module) => {
 
 var View = wp.media.View,
 	Toolbar;
@@ -9301,10 +9362,12 @@ Toolbar = View.extend(/** @lends wp.media.view.Toolbar.prototype */{
 		// The toolbar is composed of two `PriorityList` views.
 		this.primary   = new wp.media.view.PriorityList();
 		this.secondary = new wp.media.view.PriorityList();
+		this.tertiary  = new wp.media.view.PriorityList();
 		this.primary.$el.addClass('media-toolbar-primary search-form');
 		this.secondary.$el.addClass('media-toolbar-secondary');
+		this.tertiary.$el.addClass('media-bg-overlay');
 
-		this.views.set([ this.secondary, this.primary ]);
+		this.views.set([ this.secondary, this.primary, this.tertiary ]);
 
 		if ( this.options.items ) {
 			this.set( this.options.items, { silent: true });
@@ -9323,7 +9386,7 @@ Toolbar = View.extend(/** @lends wp.media.view.Toolbar.prototype */{
 		}
 	},
 	/**
-	 * @return {wp.media.view.Toolbar} Returns itsef to allow chaining
+	 * @return {wp.media.view.Toolbar} Returns itself to allow chaining
 	 */
 	dispose: function() {
 		if ( this.selection ) {
@@ -9395,6 +9458,7 @@ Toolbar = View.extend(/** @lends wp.media.view.Toolbar.prototype */{
 		delete this._views[ id ];
 		this.primary.unset( id, options );
 		this.secondary.unset( id, options );
+		this.tertiary.unset( id, options );
 
 		if ( ! options || ! options.silent ) {
 			this.refresh();
@@ -9437,8 +9501,8 @@ module.exports = Toolbar;
 
 /***/ }),
 
-/***/ 7128:
-/***/ (function(module) {
+/***/ 397:
+/***/ ((module) => {
 
 var Select = wp.media.view.Toolbar.Select,
 	l10n = wp.media.view.l10n,
@@ -9481,8 +9545,8 @@ module.exports = Embed;
 
 /***/ }),
 
-/***/ 6850:
-/***/ (function(module) {
+/***/ 9458:
+/***/ ((module) => {
 
 var Toolbar = wp.media.view.Toolbar,
 	l10n = wp.media.view.l10n,
@@ -9558,8 +9622,8 @@ module.exports = Select;
 
 /***/ }),
 
-/***/ 841:
-/***/ (function(module) {
+/***/ 3674:
+/***/ ((module) => {
 
 var View = wp.media.View,
 	l10n = wp.media.view.l10n,
@@ -9790,8 +9854,8 @@ module.exports = EditorUploader;
 
 /***/ }),
 
-/***/ 6353:
-/***/ (function(module) {
+/***/ 1753:
+/***/ ((module) => {
 
 var View = wp.media.View,
 	UploaderInline;
@@ -9940,8 +10004,8 @@ module.exports = UploaderInline;
 
 /***/ }),
 
-/***/ 9411:
-/***/ (function(module) {
+/***/ 6442:
+/***/ ((module) => {
 
 /**
  * wp.media.view.UploaderStatusError
@@ -9963,8 +10027,8 @@ module.exports = UploaderStatusError;
 
 /***/ }),
 
-/***/ 2894:
-/***/ (function(module) {
+/***/ 8197:
+/***/ ((module) => {
 
 var View = wp.media.View,
 	UploaderStatus;
@@ -10115,8 +10179,8 @@ module.exports = UploaderStatus;
 
 /***/ }),
 
-/***/ 5823:
-/***/ (function(module) {
+/***/ 8291:
+/***/ ((module) => {
 
 var $ = jQuery,
 	UploaderWindow;
@@ -10233,8 +10297,8 @@ module.exports = UploaderWindow;
 
 /***/ }),
 
-/***/ 487:
-/***/ (function(module) {
+/***/ 4747:
+/***/ ((module) => {
 
 /**
  * wp.media.View
@@ -10337,7 +10401,7 @@ module.exports = View;
 /************************************************************************/
 var __webpack_exports__ = {};
 // This entry need to be wrapped in an IIFE because it need to be isolated against other modules in the chunk.
-!function() {
+(() => {
 /**
  * @output wp-includes/js/media-views.js
  */
@@ -10415,84 +10479,85 @@ media.transition = function( selector, sensitivity ) {
 	return deferred.promise();
 };
 
-media.controller.Region = __webpack_require__( 4903 );
-media.controller.StateMachine = __webpack_require__( 5466 );
-media.controller.State = __webpack_require__( 5826 );
+media.controller.Region = __webpack_require__( 9875 );
+media.controller.StateMachine = __webpack_require__( 6150 );
+media.controller.State = __webpack_require__( 5694 );
 
-media.selectionSync = __webpack_require__( 3526 );
-media.controller.Library = __webpack_require__( 9024 );
-media.controller.ImageDetails = __webpack_require__( 3849 );
-media.controller.GalleryEdit = __webpack_require__( 6328 );
-media.controller.GalleryAdd = __webpack_require__( 7323 );
-media.controller.CollectionEdit = __webpack_require__( 1817 );
-media.controller.CollectionAdd = __webpack_require__( 1517 );
-media.controller.FeaturedImage = __webpack_require__( 5095 );
-media.controller.ReplaceImage = __webpack_require__( 8493 );
-media.controller.EditImage = __webpack_require__( 7658 );
-media.controller.MediaLibrary = __webpack_require__( 3742 );
-media.controller.Embed = __webpack_require__( 9067 );
-media.controller.Cropper = __webpack_require__( 2288 );
-media.controller.CustomizeImageCropper = __webpack_require__( 6934 );
-media.controller.SiteIconCropper = __webpack_require__( 5274 );
+media.selectionSync = __webpack_require__( 4181 );
+media.controller.Library = __webpack_require__( 472 );
+media.controller.ImageDetails = __webpack_require__( 705 );
+media.controller.GalleryEdit = __webpack_require__( 2038 );
+media.controller.GalleryAdd = __webpack_require__( 7127 );
+media.controller.CollectionEdit = __webpack_require__( 8612 );
+media.controller.CollectionAdd = __webpack_require__( 7145 );
+media.controller.FeaturedImage = __webpack_require__( 1169 );
+media.controller.ReplaceImage = __webpack_require__( 2275 );
+media.controller.EditImage = __webpack_require__( 5663 );
+media.controller.MediaLibrary = __webpack_require__( 8065 );
+media.controller.Embed = __webpack_require__( 4910 );
+media.controller.Cropper = __webpack_require__( 5422 );
+media.controller.CustomizeImageCropper = __webpack_require__( 9660 );
+media.controller.SiteIconCropper = __webpack_require__( 6172 );
 
-media.View = __webpack_require__( 487 );
-media.view.Frame = __webpack_require__( 3647 );
-media.view.MediaFrame = __webpack_require__( 4861 );
-media.view.MediaFrame.Select = __webpack_require__( 8719 );
-media.view.MediaFrame.Post = __webpack_require__( 9075 );
-media.view.MediaFrame.ImageDetails = __webpack_require__( 9142 );
-media.view.Modal = __webpack_require__( 3939 );
-media.view.FocusManager = __webpack_require__( 6557 );
-media.view.UploaderWindow = __webpack_require__( 5823 );
-media.view.EditorUploader = __webpack_require__( 841 );
-media.view.UploaderInline = __webpack_require__( 6353 );
-media.view.UploaderStatus = __webpack_require__( 2894 );
-media.view.UploaderStatusError = __webpack_require__( 9411 );
-media.view.Toolbar = __webpack_require__( 9510 );
-media.view.Toolbar.Select = __webpack_require__( 6850 );
-media.view.Toolbar.Embed = __webpack_require__( 7128 );
-media.view.Button = __webpack_require__( 3157 );
-media.view.ButtonGroup = __webpack_require__( 4094 );
-media.view.PriorityList = __webpack_require__( 1993 );
-media.view.MenuItem = __webpack_require__( 917 );
-media.view.Menu = __webpack_require__( 2596 );
-media.view.RouterItem = __webpack_require__( 9484 );
-media.view.Router = __webpack_require__( 1562 );
-media.view.Sidebar = __webpack_require__( 9799 );
-media.view.Attachment = __webpack_require__( 5019 );
-media.view.Attachment.Library = __webpack_require__( 9254 );
-media.view.Attachment.EditLibrary = __webpack_require__( 4640 );
-media.view.Attachments = __webpack_require__( 8408 );
-media.view.Search = __webpack_require__( 4556 );
-media.view.AttachmentFilters = __webpack_require__( 4906 );
-media.view.DateFilter = __webpack_require__( 9663 );
-media.view.AttachmentFilters.Uploaded = __webpack_require__( 7040 );
-media.view.AttachmentFilters.All = __webpack_require__( 2868 );
-media.view.AttachmentsBrowser = __webpack_require__( 9239 );
-media.view.Selection = __webpack_require__( 6191 );
-media.view.Attachment.Selection = __webpack_require__( 9003 );
-media.view.Attachments.Selection = __webpack_require__( 1223 );
-media.view.Attachment.EditSelection = __webpack_require__( 1009 );
-media.view.Settings = __webpack_require__( 859 );
-media.view.Settings.AttachmentDisplay = __webpack_require__( 2176 );
-media.view.Settings.Gallery = __webpack_require__( 6872 );
-media.view.Settings.Playlist = __webpack_require__( 8488 );
-media.view.Attachment.Details = __webpack_require__( 7274 );
-media.view.AttachmentCompat = __webpack_require__( 8093 );
-media.view.Iframe = __webpack_require__( 6217 );
-media.view.Embed = __webpack_require__( 5138 );
-media.view.Label = __webpack_require__( 6644 );
-media.view.EmbedUrl = __webpack_require__( 4848 );
-media.view.EmbedLink = __webpack_require__( 6959 );
-media.view.EmbedImage = __webpack_require__( 1338 );
-media.view.ImageDetails = __webpack_require__( 7598 );
-media.view.Cropper = __webpack_require__( 7137 );
-media.view.SiteIconCropper = __webpack_require__( 5187 );
-media.view.SiteIconPreview = __webpack_require__( 8260 );
-media.view.EditImage = __webpack_require__( 5970 );
-media.view.Spinner = __webpack_require__( 2234 );
-media.view.Heading = __webpack_require__( 7990 );
+media.View = __webpack_require__( 4747 );
+media.view.Frame = __webpack_require__( 1061 );
+media.view.MediaFrame = __webpack_require__( 2836 );
+media.view.MediaFrame.Select = __webpack_require__( 455 );
+media.view.MediaFrame.Post = __webpack_require__( 4274 );
+media.view.MediaFrame.ImageDetails = __webpack_require__( 5424 );
+media.view.Modal = __webpack_require__( 2621 );
+media.view.FocusManager = __webpack_require__( 718 );
+media.view.UploaderWindow = __webpack_require__( 8291 );
+media.view.EditorUploader = __webpack_require__( 3674 );
+media.view.UploaderInline = __webpack_require__( 1753 );
+media.view.UploaderStatus = __webpack_require__( 8197 );
+media.view.UploaderStatusError = __webpack_require__( 6442 );
+media.view.Toolbar = __webpack_require__( 5275 );
+media.view.Toolbar.Select = __webpack_require__( 9458 );
+media.view.Toolbar.Embed = __webpack_require__( 397 );
+media.view.Button = __webpack_require__( 846 );
+media.view.ButtonGroup = __webpack_require__( 168 );
+media.view.PriorityList = __webpack_require__( 8815 );
+media.view.MenuItem = __webpack_require__( 9013 );
+media.view.Menu = __webpack_require__( 1 );
+media.view.RouterItem = __webpack_require__( 6327 );
+media.view.Router = __webpack_require__( 4783 );
+media.view.Sidebar = __webpack_require__( 1992 );
+media.view.Attachment = __webpack_require__( 4075 );
+media.view.Attachment.Library = __webpack_require__( 3443 );
+media.view.Attachment.EditLibrary = __webpack_require__( 5232 );
+media.view.Attachments = __webpack_require__( 8142 );
+media.view.Search = __webpack_require__( 2102 );
+media.view.AttachmentFilters = __webpack_require__( 7709 );
+media.view.DateFilter = __webpack_require__( 6472 );
+media.view.AttachmentFilters.Uploaded = __webpack_require__( 1368 );
+media.view.AttachmentFilters.All = __webpack_require__( 7349 );
+media.view.AttachmentsBrowser = __webpack_require__( 6829 );
+media.view.Selection = __webpack_require__( 8282 );
+media.view.Attachment.Selection = __webpack_require__( 3962 );
+media.view.Attachments.Selection = __webpack_require__( 3479 );
+media.view.Attachment.EditSelection = __webpack_require__( 4593 );
+media.view.Settings = __webpack_require__( 1915 );
+media.view.Settings.AttachmentDisplay = __webpack_require__( 7656 );
+media.view.Settings.Gallery = __webpack_require__( 7266 );
+media.view.Settings.Playlist = __webpack_require__( 2356 );
+media.view.Attachment.Details = __webpack_require__( 6090 );
+media.view.AttachmentCompat = __webpack_require__( 2982 );
+media.view.Iframe = __webpack_require__( 1982 );
+media.view.Embed = __webpack_require__( 5741 );
+media.view.Label = __webpack_require__( 4338 );
+media.view.EmbedUrl = __webpack_require__( 7327 );
+media.view.EmbedLink = __webpack_require__( 8232 );
+media.view.EmbedImage = __webpack_require__( 2395 );
+media.view.ImageDetails = __webpack_require__( 2650 );
+media.view.Cropper = __webpack_require__( 7637 );
+media.view.SiteIconCropper = __webpack_require__( 443 );
+media.view.SiteIconPreview = __webpack_require__( 7810 );
+media.view.EditImage = __webpack_require__( 6126 );
+media.view.Spinner = __webpack_require__( 9141 );
+media.view.Heading = __webpack_require__( 170 );
 
-}();
+})();
+
 /******/ })()
 ;

@@ -4,6 +4,7 @@
 }
 .wp-block-site-logo a{
   display:inline-block;
+  line-height:0;
 }
 .wp-block-site-logo.is-default-size img{
   height:auto;
@@ -21,6 +22,7 @@
   margin-right:auto;
   text-align:center;
 }
-.wp-block-site-logo.is-style-rounded{
+
+:root :where(.wp-block-site-logo.is-style-rounded){
   border-radius:9999px;
 }

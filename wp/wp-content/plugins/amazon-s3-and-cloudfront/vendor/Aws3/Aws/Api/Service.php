@@ -214,10 +214,8 @@ class Service extends AbstractModel
                 throw new \InvalidArgumentException("Unknown operation: {$name}");
             }
             $this->operations[$name] = new Operation($this->definition['operations'][$name], $this->shapeMap);
-        } else {
-            if ($this->modifiedModel) {
-                $this->operations[$name] = new Operation($this->definition['operations'][$name], $this->shapeMap);
-            }
+        } elseif ($this->modifiedModel) {
+            $this->operations[$name] = new Operation($this->definition['operations'][$name], $this->shapeMap);
         }
         return $this->operations[$name];
     }
@@ -400,6 +398,7 @@ class Service extends AbstractModel
     public function setDefinition($definition)
     {
         $this->definition = $definition;
+        $this->shapeMap = new ShapeMap($definition['shapes']);
         $this->modifiedModel = \true;
     }
     /**
