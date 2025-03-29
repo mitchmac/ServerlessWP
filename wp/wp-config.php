@@ -116,6 +116,11 @@ if (isset($_ENV['S3_KEY_ID']) && isset($_ENV['S3_ACCESS_KEY'])) {
 define('DISALLOW_FILE_EDIT', true );
 define('DISALLOW_FILE_MODS', true );
 
+if (isset($_ENV['SQLITE_S3'])) {
+  define('DB_DIR', '/tmp');
+  define('DB_FILE', 'wp-sqlite-s3.sqlite');
+}
+
 /* That's all, stop editing! Happy publishing. */
 
 /** Absolute path to the WordPress directory. */

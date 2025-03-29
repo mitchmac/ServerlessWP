@@ -1,0 +1,199 @@
+<?xml version="1.0"?>
+<ruleset name="WordPress Coding Standards">
+	<description>Apply WordPress Coding Standards</description>
+
+	<!-- Only scan PHP files. -->
+	<arg name="extensions" value="php"/>
+
+	<!-- Set the memory limit to 512M.
+		 For most standard PHP configurations, this means the memory limit will temporarily be raised.
+		 Ref: https://github.com/squizlabs/PHP_CodeSniffer/wiki/Advanced-Usage#specifying-phpini-settings
+	-->
+	<ini name="memory_limit" value="512M"/>
+
+	<!-- Strip the filepaths down to the relevant bit. -->
+	<arg name="basepath" value="./"/>
+
+	<!-- Check up to 20 files simultaneously. -->
+	<arg name="parallel" value="20"/>
+
+	<!-- Show sniff codes in all reports. -->
+	<arg value="ps"/>
+
+	<!--
+	#############################################################################
+	FILE SELECTION
+	Set which files will be subject to the scans executed using this ruleset.
+	#############################################################################
+	-->
+
+	<file>.</file>
+
+	<!-- Directories and third party library exclusions. -->
+	<exclude-pattern>/vendor/*</exclude-pattern>
+	<exclude-pattern>/wp-includes/sqlite/class-wp-sqlite-crosscheck-db.php</exclude-pattern>
+
+	<!--
+	#############################################################################
+	SET UP THE RULESET
+	#############################################################################
+	-->
+
+	<rule ref="WordPress-Core"/>
+
+
+	<!--
+	#############################################################################
+	SNIFF-SPECIFIC CONFIGURATION
+	#############################################################################
+	-->
+
+	<!-- These rules are being set as warnings instead of errors, so we can error check the entire codebase. -->
+	<rule ref="Generic.Files.OneObjectStructurePerFile.MultipleFound">
+		<type>warning</type>
+		<!-- Exclude the unit tests as no warnings are allowed there. Note: these issues should be fixed and the exclude removed! -->
+		<exclude-pattern>/tests/phpunit/*</exclude-pattern>
+	</rule>
+	<rule ref="WordPress.DB.PreparedSQL.InterpolatedNotPrepared">
+		<type>warning</type>
+	</rule>
+	<rule ref="WordPress.DB.PreparedSQL.NotPrepared">
+		<type>warning</type>
+	</rule>
+	<rule ref="WordPress.Files.FileName.InvalidClassFileName">
+		<type>warning</type>
+	</rule>
+	<rule ref="WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase">
+		<type>warning</type>
+	</rule>
+
+	<rule ref="WordPress.NamingConventions.ValidVariableName">
+		<properties>
+			<property name="allowed_custom_properties" type="array">
+				<!-- From database structure queries. -->
+				<element value="Collation"/>
+				<element value="Column_name"/>
+				<element value="Default"/>
+				<element value="Extra"/>
+				<element value="Field"/>
+				<element value="Index_type"/>
+				<element value="Key"/>
+				<element value="Key_name"/>
+				<element value="Msg_text"/>
+				<element value="Non_unique"/>
+				<element value="Null"/>
+				<element value="Sub_part"/>
+				<element value="Type"/>
+				<!-- From plugin/theme data. -->
+				<element value="authorAndUri"/>
+				<element value="Name"/>
+				<element value="Version"/>
+				<!-- From the result of wp_xmlrpc_server::wp_getPageList(). -->
+				<element value="dateCreated"/>
+
+				<!-- From DOMDocument. -->
+				<element value="childNodes"/>
+				<element value="firstChild"/>
+				<element value="formatOutput"/>
+				<element value="lastChild"/>
+				<element value="nodeName"/>
+				<element value="nodeType"/>
+				<element value="nodeValue"/>
+				<element value="parentNode"/>
+				<element value="preserveWhiteSpace"/>
+				<element value="textContent"/>
+				<!-- From PHPMailer. -->
+				<element value="AltBody"/>
+				<element value="Body"/>
+				<element value="CharSet"/>
+				<element value="ContentType"/>
+				<element value="Encoding"/>
+				<element value="Hostname"/>
+				<element value="mailHeader"/>
+				<element value="MIMEBody"/>
+				<element value="MIMEHeader"/>
+				<element value="Sender"/>
+				<element value="Subject"/>
+				<!-- From PHPUnit_Util_Getopt. -->
+				<element value="longOptions"/>
+				<!-- From POP3. -->
+				<element value="ERROR"/>
+				<!-- From ZipArchive. -->
+				<element value="numFiles"/>
+			</property>
+		</properties>
+	</rule>
+
+	<rule ref="WordPress.PHP.NoSilencedErrors">
+		<properties>
+			<property name="customAllowedFunctionsList" type="array">
+				<element value="ssh2_connect"/>
+				<element value="ssh2_auth_password"/>
+				<element value="ssh2_auth_pubkey_file"/>
+				<element value="ftp_ssl_connect"/>
+				<element value="ftp_connect"/>
+				<element value="ftp_get_option"/>
+				<element value="ftp_set_option"/>
+				<element value="disk_free_space"/>
+				<element value="getimagesize"/>
+				<element value="iptcparse"/>
+				<element value="exif_read_data"/>
+				<element value="gzinflate"/>
+				<element value="gzuncompress"/>
+				<element value="gzdecode"/>
+				<element value="imagecreatefromwebp"/>
+				<element value="imagecreatefromavif"/>
+			</property>
+		</properties>
+	</rule>
+
+
+	<!--
+	#############################################################################
+	SELECTIVE EXCLUSIONS
+	Exclude specific files for specific sniffs and/or exclude sub-groups in sniffs.
+
+	These exclusions are listed ordered by alphabetic sniff name.
+	#############################################################################
+	-->
+
+	<rule ref="WordPress.DB.RestrictedClasses.mysql__PDO">
+		<exclude-pattern>/wp-includes/sqlite/class-wp-sqlite-translator.php</exclude-pattern>
+	</rule>
+
+	<!-- Assignments in while conditions are a valid method of looping over iterables. -->
+	<rule ref="Generic.CodeAnalysis.AssignmentInCondition.FoundInWhileCondition">
+		<exclude-pattern>*</exclude-pattern>
+	</rule>
+
+	<rule ref="WordPress.DB.RestrictedClasses">
+		<exclude-pattern>/src/wp-includes/sqlite/*\.php</exclude-pattern>
+		<exclude-pattern>/tests/*</exclude-pattern>
+	</rule>
+
+	<!-- Exclude the unit tests from the file name rules. -->
+	<rule ref="WordPress.Files.FileName">
+		<exclude-pattern>/tests/*</exclude-pattern>
+	</rule>
+	<rule ref="WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase">
+		<exclude-pattern>/wp-includes/sqlite/class-wp-sqlite-crosscheck-db.php</exclude-pattern>
+	</rule>
+	<rule ref="WordPress.NamingConventions.ValidFunctionName.FunctionNameInvalid">
+		<exclude-pattern>/tests/*</exclude-pattern>
+	</rule>
+	<rule ref="WordPress.Files.FileName.NotHyphenatedLowercase">
+		<exclude-pattern>/tests/*</exclude-pattern>
+	</rule>
+	<rule ref="WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase">
+		<exclude-pattern>/tests/*</exclude-pattern>
+	</rule>
+	<rule ref="WordPress.Files.FileName.InvalidClassFileName">
+		<exclude-pattern>/wp-includes/sqlite/class-wp-sqlite-crosscheck-db.php</exclude-pattern>
+	</rule>
+	<rule ref="Universal.Operators.DisallowShortTernary.Found">
+		<exclude-pattern>/wp-includes/sqlite/class-wp-sqlite-crosscheck-db.php</exclude-pattern>
+	</rule>
+	<rule ref="PEAR.NamingConventions.ValidClassName.Invalid">
+		<exclude-pattern>/wp-includes/sqlite/class-wp-sqlite-crosscheck-db.php</exclude-pattern>
+	</rule>
+</ruleset>

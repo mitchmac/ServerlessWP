@@ -1,0 +1,47 @@
+name: Run PHPUnit tests
+
+on:
+  workflow_call:
+    inputs:
+      os:
+        description: 'Operating system to run tests on'
+        required: false
+        type: 'string'
+        default: 'ubuntu-latest'
+      php:
+        description: 'The version of PHP to use, in the format of X.Y'
+        required: true
+        type: 'string'
+      phpunit-config:
+        description: 'The PHPUnit configuration file to use'
+        required: false
+        type: 'string'
+        default: 'phpunit.xml.dist'
+env:
+  LOCAL_PHP: ${{ inputs.php }}-fpm
+  PHPUNIT_CONFIG: ${{ inputs.phpunit-config }}
+
+jobs:
+  phpunit-tests:
+    name: ${{ inputs.os }}
+    runs-on: ${{ inputs.os }}
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '${{ inputs.php }}'
+          tools: phpunit-polyfills
+
+      - name: Install Composer dependencies
+        uses: ramsey/composer-install@v3
+        with:
+          ignore-cache: "yes"
+          composer-options: "--optimize-autoloader"
+
+      - name: Run PHPUnit tests
+        run: php ./vendor/bin/phpunit -c ./phpunit.xml.dist 

@@ -3,7 +3,7 @@ const fs = require('fs').promises;
 const { S3Client, GetObjectCommand, PutObjectCommand } = require('@aws-sdk/client-s3');
 
 const ETAG_CACHE = '/tmp/etag.txt';
-let sqliteFilePath = '/tmp/db';
+let sqliteFilePath = '/tmp/wp-sqlite-s3.sqlite';
 
 let init = false;
 let db;
@@ -22,11 +22,6 @@ exports.config = function(config) {
 }
 
 exports.preRequest = async function(event) {
-    if (!init) {
-        // @TODO: is this too much control/knowledge of the setup from the plugin?
-        prepPlugin();
-    }
-
     if (!_config?.bucket) {
         throw new Error("S3 bucket is required");
     }
@@ -39,11 +34,16 @@ exports.preRequest = async function(event) {
 
     let etag = await getEtag();
 
-    const get = new GetObjectCommand( {
+    let getCommandParams = {
         Bucket: _config.bucket,
-        Key: _config.file,
-        IfNoneMatch: etag
-    });
+        Key: _config.file
+    }
+    
+    if (etag) {
+        getCommandParams.IfNoneMatch = etag;
+    }
+
+    const get = new GetObjectCommand(getCommandParams);
 
     try {
         const response = await client.send(get);
@@ -53,7 +53,7 @@ exports.preRequest = async function(event) {
             db = new sqlite3.Database(sqliteFilePath);
             dataVersion = await getDataVersion();
             await setEtag(response.ETag);
-            console.log('etag: ' + etag);
+            console.log('etag prerequest: ' + await getEtag());
         }
         else {
             // @TODO: if it doesn't exist, behave like it's a new site?
@@ -75,7 +75,6 @@ exports.postRequest = async function(event, response) {
         console.log('Version now: ' + versionNow);
 
         // See if the db has been mutated, if so, send the changes to s3
-        // @TODO: If the file has changed in s3 in between, fail this request
 
         if (dataVersion !== versionNow) {
             const dbExists = await exists(sqliteFilePath);
@@ -84,25 +83,34 @@ exports.postRequest = async function(event, response) {
                     await dbClose();
                     const sqliteContent = await fs.readFile(sqliteFilePath);
                     let currentEtag = await getEtag();
-                    const command = new PutObjectCommand({
+                    console.log('etag postrequest: ' + currentEtag);
+
+                    let putCommandParams = {
                         Bucket: _config.bucket,
                         Key: _config.file,
                         Body: sqliteContent,
-                        IfMatch: currentEtag
-                    });
+                    }
 
-                    
+                    if (currentEtag) {
+                        putCommandParams.IfMatch = currentEtag;
+                    }
+                    const command = new PutObjectCommand(putCommandParams);
 
                     const response = await client.send(command);
                     await setEtag(response.ETag);
+                    // should db be closed?
                     return;
                 }
                 catch (err) {
                     console.log(err);
+                    //@TODO: more descriptive message
+                    return {
+                        statusCode: 500,
+                        body: 'Database error'
+                    }
                 }
             }
         }
-
 
         await dbClose();
     }
@@ -171,6 +179,20 @@ async function exists(path) {
 }
 
 // Put the sqlite db class in place if not already there.
-function prepPlugin() {
-    //@TODO maybe
+// Paths should reference where they've been setup in /tmp
+exports.prepPlugin = async function (wpContentPath, sqlitePluginPath) {
+    if (!init) {
+        try {
+            let oldPath = sqlitePluginPath + '/db.copy';
+            let newPath = wpContentPath + '/db.php';
+            await fs.copyFile(oldPath, newPath);
+            const content = await fs.readFile(newPath, 'utf8');
+            const modifiedContent = content.replace(new RegExp(/{SQLITE_IMPLEMENTATION_FOLDER_PATH}/, 'g'), sqlitePluginPath);
+
+            await fs.writeFile(newPath, modifiedContent)
+        }
+        catch (err) {
+            console.log(err);
+        }
+    }
 }

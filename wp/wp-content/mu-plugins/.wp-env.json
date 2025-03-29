@@ -1,0 +1,5 @@
+{
+    "mappings": {
+      "wp-content/mu-plugins": "."
+    }
+  }
