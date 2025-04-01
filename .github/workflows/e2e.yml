@@ -9,5 +9,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
       
-      - run: ./run.sh
+      - run: ./run-db-test.sh
+        working-directory: ./test
+
+      - run: ./run-s3-test.sh
         working-directory: ./test
