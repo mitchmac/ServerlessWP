@@ -116,7 +116,7 @@ if (isset($_ENV['S3_KEY_ID']) && isset($_ENV['S3_ACCESS_KEY'])) {
 define('DISALLOW_FILE_EDIT', true );
 define('DISALLOW_FILE_MODS', true );
 
-if (isset($_ENV['SQLITE_S3'])) {
+if (isset($_ENV['SQLITE_S3_BUCKET'])) {
   define('DB_DIR', '/tmp');
   define('DB_FILE', 'wp-sqlite-s3.sqlite');
 }

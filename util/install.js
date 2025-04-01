@@ -1,6 +1,6 @@
 exports.validate = function(response) {
     if (
-        !process.env['SQLITE_S3'] && 
+        !process.env['SQLITE_S3_BUCKET'] && 
         (!process.env['DATABASE'] || 
         !process.env['USERNAME'] ||
         !process.env['PASSWORD'] ||

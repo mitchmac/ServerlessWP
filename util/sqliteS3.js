@@ -81,6 +81,7 @@ exports.postRequest = async function(event, response) {
             if (dbExists) {
                 try {
                     await dbClose();
+                    
                     const sqliteContent = await fs.readFile(sqliteFilePath);
                     let currentEtag = await getEtag();
                     console.log('etag postrequest: ' + currentEtag);
