@@ -16,7 +16,7 @@ docker run -d --name mariadb \
 
 # Wait for MariaDB to initialize
 echo "Waiting for MariaDB to initialize..."
-sleep 10
+sleep 20
 
 # Run the application container with MariaDB environment variables
 docker run \
@@ -29,15 +29,11 @@ docker run \
     --network serverlesswp-test-network \
     -d --name serverlesswp-test serverlesswp-test
 
-# Wait for the application to start
 sleep 5
 
-# Test the application
-curl -s -XPOST "http://localhost:9000/2015-03-31/functions/function/invocations" -d '{"path":"/installer.php"}' #-o /dev/null
+curl -s -XPOST "http://localhost:9000/2015-03-31/functions/function/invocations" -d '{"path":"/installer.php"}'| jq -e '.statusCode == 200'
 
-echo 
-
-curl -s -XPOST "http://localhost:9000/2015-03-31/functions/function/invocations" -d '{"path":"/"}'
+curl -s -XPOST "http://localhost:9000/2015-03-31/functions/function/invocations" -d '{"path":"/"}' | jq -e '.statusCode == 200'
 
 # Clean up
 docker stop serverlesswp-test

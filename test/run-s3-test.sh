@@ -2,6 +2,9 @@
 
 ./build-test.sh
 
+VERCEL=${VERCEL:-1}
+VERCEL_GIT_COMMIT_REF=${VERCEL_GIT_COMMIT_REF:-test_branch}
+
 if ! command -v mc &> /dev/null
 then
     wget https://dl.min.io/client/mc/release/linux-amd64/mc -O /usr/local/bin/mc
@@ -27,15 +30,14 @@ docker run \
     -e SQLITE_S3_BUCKET=test-bucket \
     -e SQLITE_S3_API_KEY=testuser -e SQLITE_S3_API_SECRET=testpass \
     -e SQLITE_S3_REGION=us-east-1  -e SQLITE_S3_ENDPOINT=http://minio:9000 -e SQLITE_S3_FORCE_PATH_STYLE=1 \
+    -e VERCEL=$VERCEL -e VERCEL_GIT_COMMIT_REF=$VERCEL_GIT_COMMIT_REF \
     -p 9000:8080 \
     --network serverlesswp-test-network \
     -d --name serverlesswp-test serverlesswp-test
 
-curl -s -XPOST "http://localhost:9000/2015-03-31/functions/function/invocations" -d '{"path":"/installer.php"}' #-o /dev/null
+curl -s -XPOST "http://localhost:9000/2015-03-31/functions/function/invocations" -d '{"path":"/installer.php"}' | jq -e '.statusCode == 200'
 
-echo 
-
-curl -s -XPOST "http://localhost:9000/2015-03-31/functions/function/invocations" -d '{"path":"/"}'
+curl -s -XPOST "http://localhost:9000/2015-03-31/functions/function/invocations" -d '{"path":"/"}' | jq -e '.statusCode == 200'
 
 docker stop serverlesswp-test
 #docker logs serverlesswp-test
