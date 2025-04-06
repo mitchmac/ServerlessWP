@@ -61,7 +61,20 @@ exports.preRequest = async function(event) {
         }
     }
     catch (err) {
-        console.log(err);
+        if (err.$metadata && err.$metadata.httpStatusCode === 304) {
+            console.log('Database is already up-to-date (ETag matched)');
+            // No need to download, just use existing file
+            db = new sqlite3.Database(sqliteFilePath);
+            dataVersion = await getDataVersion();
+        } 
+        else if (err.name === 'NoSuchKey') {
+            // Handle case where the file doesn't exist on S3
+            console.log('Database file not found on server');
+        }
+        else {
+            // Handle other errors
+            console.error('Error fetching database:', err);
+        }
     }
 }
 
