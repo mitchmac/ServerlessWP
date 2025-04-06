@@ -32,7 +32,7 @@ exports.handler = async function (event, context, callback) {
         // Configure the sqliteS3 plugin.
         let sqliteS3Config = {
             bucket: process.env['SQLITE_S3_BUCKET'],
-            file: 'wp-sqlite-s3${branchSlug}.sqlite',
+            file:`wp-sqlite-s3${branchSlug}.sqlite`,
             S3Client: {
                 credentials: {
                     "accessKeyId": process.env['SQLITE_S3_API_KEY'],
