@@ -6,9 +6,6 @@
         "api/index.js": {
           "includeFiles": "wp/**",
           "maxDuration": 60
-        },
-        "api/cron.js": {
-          "maxDuration": 60
         }
     },
     "build": {

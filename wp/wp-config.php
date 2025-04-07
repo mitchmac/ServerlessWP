@@ -124,7 +124,10 @@ if (isset($_ENV['SQLITE_S3_BUCKET'])) {
   define('DB_FILE', 'wp-sqlite-s3.sqlite');
 }
 
-define('DISABLE_WP_CRON', true);
+// Auto-cron is can cause db race conditions on these urls, don't bother with it.
+if (strpos($_SERVER['REQUEST_URI'], 'wp-admin') !== false || strpos($_SERVER['REQUEST_URI'], 'wp-login') !== false) {
+  define('DISABLE_WP_CRON', true);
+}
 
 /* That's all, stop editing! Happy publishing. */
 
