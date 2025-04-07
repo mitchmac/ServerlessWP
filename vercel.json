@@ -15,11 +15,5 @@
       "env": {
         "NODEJS_AWS_HANDLER_NAME": "handler"
       }
-    },
-    "crons": [
-    {
-      "path": "/api/cron",
-      "schedule": "*/10 * * * *"
     }
-  ]
 }
