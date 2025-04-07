@@ -4,7 +4,9 @@
   "description": "",
   "license": "MIT",
   "dependencies": {
-    "serverlesswp": "^0.2.0"
+    "@aws-sdk/client-s3": "^3.772.0",
+    "serverlesswp": "^0.3.1",
+    "sqlite3": "^5.1.7"
   },
   "engines": {
     "node": "22.x"

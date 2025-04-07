@@ -4,6 +4,7 @@ namespace DeliciousBrains\WP_Offload_Media\Items;
 
 use AS3CF_Error;
 use AS3CF_Utils;
+use DeliciousBrains\WP_Offload_Media\Providers\Storage\Storage_Provider;
 use Exception;
 use WP_Error;
 
@@ -134,25 +135,7 @@ class Upload_Handler extends Item_Handler {
 				$args['ContentEncoding'] = 'gzip';
 			}
 
-			/**
-			 * This filter allows you to change the arguments passed to the cloud storage SDK client when
-			 * offloading a file to the bucket.
-			 *
-			 * Note: It is possible to change the destination 'Bucket' only while processing the primary object_key.
-			 *       All other object_keys will use the same bucket as the item's primary object.
-			 *       The 'Key' should be the "public" Key path. If a private prefix is configured
-			 *       for use with signed CloudFront URLs or similar, that prefix will be added later.
-			 *       A change to the 'Key' will only be handled when processing the primary object key.
-			 *
-			 * @param array  $args        Information to be sent to storage provider during offload (e.g. PutObject)
-			 * @param int    $source_id   Original file's unique ID for its source type
-			 * @param string $object_key  A unique file identifier for a composite item, e.g. image's "size" such as full, small, medium, large
-			 * @param bool   $copy        True if the object is being copied between buckets
-			 * @param array  $item_source Item source array containing source type and id
-			 *
-			 * @return array
-			 */
-			$args = apply_filters( 'as3cf_object_meta', $args, $as3cf_item->source_id(), $object_key, false, $as3cf_item->get_item_source_array() );
+			$args = Storage_Provider::filter_object_meta( $args, $as3cf_item, $object_key );
 
 			// If the bucket is changed by the filter while processing the primary object,
 			// we should try and use that bucket for the item.

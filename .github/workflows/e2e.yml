@@ -4,10 +4,14 @@ jobs:
   jest:
     name: e2e tests
     runs-on: ubuntu-latest
+    if: github.repository_owner == 'mitchmac'
     steps:
 
       - name: Checkout
         uses: actions/checkout@v3
       
-      - run: ./run.sh
+      - run: ./run-db-test.sh
+        working-directory: ./test
+
+      - run: ./run-s3-test.sh
         working-directory: ./test

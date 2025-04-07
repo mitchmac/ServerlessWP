@@ -45,7 +45,7 @@ class StorageClient
 {
     use ArrayTrait;
     use ClientTrait;
-    const VERSION = '1.33.0';
+    const VERSION = '1.39.0';
     const FULL_CONTROL_SCOPE = 'https://www.googleapis.com/auth/devstorage.full_control';
     const READ_ONLY_SCOPE = 'https://www.googleapis.com/auth/devstorage.read_only';
     const READ_WRITE_SCOPE = 'https://www.googleapis.com/auth/devstorage.read_write';
@@ -68,6 +68,7 @@ class StorageClient
     const RETRY_IDEMPOTENT = 'idempotent';
     /**
      * @var ConnectionInterface Represents a connection to Storage.
+     * @internal
      */
     protected $connection;
     /**
@@ -113,9 +114,10 @@ class StorageClient
         $this->connection = new Rest($this->configureAuthentication($config) + ['projectId' => $this->projectId]);
     }
     /**
-     * Lazily instantiates a bucket. There are no network requests made at this
-     * point. To see the operations that can be performed on a bucket please
-     * see {@see Google\Cloud\Storage\Bucket}.
+     * Lazily instantiates a bucket.
+     *
+     * There are no network requests made at this point. To see the operations
+     * that can be performed on a bucket please see {@see Bucket}.
      *
      * If `$userProject` is set to true, the current project ID (used to
      * instantiate the client) will be billed for all requests. If
@@ -234,6 +236,10 @@ class StorageClient
      *           `"projectPrivate"`, and `"publicRead"`.
      *     @type string $predefinedDefaultObjectAcl Apply a predefined set of
      *           default object access controls to this bucket.
+     *     @type bool $enableObjectRetention Whether object retention should
+     *          be enabled on this bucket. For more information, refer to the
+     *          [Object Retention Lock](https://cloud.google.com/storage/docs/object-lock)
+     *          documentation.
      *     @type string $projection Determines which properties to return. May
      *           be either `"full"` or `"noAcl"`. **Defaults to** `"noAcl"`,
      *           unless the bucket resource specifies acl or defaultObjectAcl
@@ -271,6 +277,8 @@ class StorageClient
      *           Buckets can have either StorageClass OLM rules or Autoclass,
      *           but not both. When Autoclass is enabled on a bucket, adding
      *           StorageClass OLM rules will result in failure.
+     *           For more information, refer to
+     *           [Storage Autoclass](https://cloud.google.com/storage/docs/autoclass)
      *     @type array $versioning The bucket's versioning configuration.
      *     @type array $website The bucket's website configuration.
      *     @type array $billing The bucket's billing configuration.
@@ -300,7 +308,7 @@ class StorageClient
      *           occurs, signified by the hold's release.
      *     @type array $retentionPolicy Defines the retention policy for a
      *           bucket. In order to lock a retention policy, please see
-     *           {@see Google\Cloud\Storage\Bucket::lockRetentionPolicy()}.
+     *           {@see Bucket::lockRetentionPolicy()}.
      *     @type int $retentionPolicy.retentionPeriod Specifies the retention
      *           period for objects in seconds. During the retention period an
      *           object cannot be overwritten or deleted. Retention period must
@@ -366,7 +374,7 @@ class StorageClient
      * @param string $uri The URI to accept an upload request.
      * @param string|resource|StreamInterface $data The data to be uploaded
      * @param array $options [optional] Configuration Options. Refer to
-     *        {@see Google\Cloud\Core\Upload\AbstractUploader::__construct()}.
+     *        {@see \Google\Cloud\Core\Upload\AbstractUploader::__construct()}.
      * @return SignedUrlUploader
      */
     public function signedUrlUploader($uri, $data, array $options = [])

@@ -43,6 +43,7 @@ class Acl
     const ROLE_OWNER = 'OWNER';
     /**
      * @var ConnectionInterface Represents a connection to Cloud Storage.
+     * @internal
      */
     protected $connection;
     /**
@@ -51,7 +52,8 @@ class Acl
     private $aclOptions;
     /**
      * @param ConnectionInterface $connection Represents a connection to
-     *        Cloud Storage.
+     *        Cloud Storage. This object is created by StorageClient,
+     *        and should not be instantiated outside of this client.
      * @param string $type The type of access control this instance applies to.
      * @param array $identity Represents which bucket, file, or generation this
      *        instance applies to.
@@ -67,8 +69,10 @@ class Acl
         $this->aclOptions = $identity + ['type' => $type];
     }
     /**
-     * Delete access controls on a {@see Google\Cloud\Storage\Bucket} or
-     * {@see Google\Cloud\Storage\StorageObject} for a specified entity.
+     * Delete access controls.
+     *
+     * Delete access controls on a {@see Bucket} or
+     * {@see StorageObject} for a specified entity.
      *
      * Example:
      * ```
@@ -92,8 +96,10 @@ class Acl
         $this->connection->deleteAcl($options + $aclOptions);
     }
     /**
-     * Get access controls on a {@see Google\Cloud\Storage\Bucket} or
-     * {@see Google\Cloud\Storage\StorageObject}. By default this will return all available
+     * Get access controls.
+     *
+     * Get access controls on a {@see Bucket} or
+     * {@see StorageObject}. By default this will return all available
      * access controls. You may optionally specify a single entity to return
      * details for as well.
      *
@@ -125,8 +131,10 @@ class Acl
         return $response['items'];
     }
     /**
-     * Add access controls on a {@see Google\Cloud\Storage\Bucket} or
-     * {@see Google\Cloud\Storage\StorageObject}.
+     * Add access controls.
+     *
+     * Add access controls on a {@see Bucket} or
+     * {@see StorageObject}.
      *
      * Example:
      * ```
@@ -152,8 +160,9 @@ class Acl
         return $this->connection->insertAcl($options + $aclOptions);
     }
     /**
-     * Update access controls on a {@see Google\Cloud\Storage\Bucket} or
-     * {@see Google\Cloud\Storage\StorageObject}.
+     * Update access controls.
+     *
+     * Update access controls on a {@see Bucket} or {@see StorageObject}.
      *
      * Example:
      * ```

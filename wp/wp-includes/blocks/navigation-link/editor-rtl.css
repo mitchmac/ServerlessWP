@@ -31,15 +31,6 @@
 .wp-block-navigation-link__invalid-item{
   color:#000;
 }
-
-.wp-block-navigation-link__missing_text-tooltip{
-  height:1px;
-  margin:-1px;
-  overflow:hidden;
-  padding:0;
-  position:absolute;
-  width:1px;
-}
 .wp-block-navigation-link__placeholder{
   background-image:none !important;
   box-shadow:none !important;
@@ -48,14 +39,11 @@
 }
 .wp-block-navigation-link__placeholder .wp-block-navigation-link__placeholder-text span{
   --wp-underline-color:var(--wp-admin-theme-color);
-  background-image:linear-gradient(-45deg, transparent 20%, var(--wp-underline-color) 30%, var(--wp-underline-color) 36%, transparent 46%), linear-gradient(-135deg, transparent 54%, var(--wp-underline-color) 64%, var(--wp-underline-color) 70%, transparent 80%);
+  background-image:linear-gradient(-45deg, #0000 20%, var(--wp-underline-color) 30%, var(--wp-underline-color) 36%, #0000 46%), linear-gradient(-135deg, #0000 54%, var(--wp-underline-color) 64%, var(--wp-underline-color) 70%, #0000 80%);
   background-position:100% 100%;
   background-repeat:repeat-x;
   background-size:6px 3px;
   padding-bottom:.1em;
-}
-.is-dark-theme .wp-block-navigation-link__placeholder .wp-block-navigation-link__placeholder-text span{
-  --wp-underline-color:#fff;
 }
 .wp-block-navigation-link__placeholder.wp-block-navigation-item__content{
   cursor:pointer;

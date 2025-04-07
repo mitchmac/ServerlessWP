@@ -49,7 +49,7 @@ class Client implements ClientInterface, \DeliciousBrains\WP_Offload_Media\Gcp\P
      *
      * @param array $config Client configuration settings.
      *
-     * @see \GuzzleHttp\RequestOptions for a list of available request options.
+     * @see RequestOptions for a list of available request options.
      */
     public function __construct(array $config = [])
     {

@@ -179,7 +179,7 @@ class TreeCompiler
         $this->dispatch($node['children'][0]);
         $merged = $this->makeVar('merged');
         $val = $this->makeVar('val');
-        $this->write('// Visiting merge node')->write('if (!Utils::isArray($value)) {')->indent()->write('$value = null;')->outdent()->write('} else {')->indent()->write('%s = [];', $merged)->write('foreach ($value as %s) {', $val)->indent()->write('if (is_array(%s) && isset(%s[0])) {', $val, $val)->indent()->write('%s = array_merge(%s, %s);', $merged, $merged, $val)->outdent()->write('} elseif (%s !== []) {', $val)->indent()->write('%s[] = %s;', $merged, $val)->outdent()->write('}')->outdent()->write('}')->write('$value = %s;', $merged)->outdent()->write('}');
+        $this->write('// Visiting merge node')->write('if (!Utils::isArray($value)) {')->indent()->write('$value = null;')->outdent()->write('} else {')->indent()->write('%s = [];', $merged)->write('foreach ($value as %s) {', $val)->indent()->write('if (is_array(%s) && array_key_exists(0, %s)) {', $val, $val)->indent()->write('%s = array_merge(%s, %s);', $merged, $merged, $val)->outdent()->write('} elseif (%s !== []) {', $val)->indent()->write('%s[] = %s;', $merged, $val)->outdent()->write('}')->outdent()->write('}')->write('$value = %s;', $merged)->outdent()->write('}');
         return $this;
     }
     private function visit_projection(array $node)

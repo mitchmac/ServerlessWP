@@ -24,15 +24,15 @@ class DecodingEventStreamIterator implements Iterator
     private static $lengthFormatMap = [1 => 'decodeUint8', 2 => 'decodeUint16', 4 => 'decodeUint32', 8 => 'decodeUint64'];
     private static $headerTypeMap = [0 => 'decodeBooleanTrue', 1 => 'decodeBooleanFalse', 2 => 'decodeInt8', 3 => 'decodeInt16', 4 => 'decodeInt32', 5 => 'decodeInt64', 6 => 'decodeBytes', 7 => 'decodeString', 8 => 'decodeTimestamp', 9 => 'decodeUuid'];
     /** @var StreamInterface Stream of eventstream shape to parse. */
-    private $stream;
+    protected $stream;
     /** @var array Currently parsed event. */
-    private $currentEvent;
+    protected $currentEvent;
     /** @var int Current in-order event key. */
-    private $key;
+    protected $key;
     /** @var resource|\HashContext CRC32 hash context for event validation */
-    private $hashContext;
+    protected $hashContext;
     /** @var int $currentPosition */
-    private $currentPosition;
+    protected $currentPosition;
     /**
      * DecodingEventStreamIterator constructor.
      *
@@ -43,7 +43,7 @@ class DecodingEventStreamIterator implements Iterator
         $this->stream = $stream;
         $this->rewind();
     }
-    private function parseHeaders($headerBytes)
+    protected function parseHeaders($headerBytes)
     {
         $headers = [];
         $bytesRead = 0;
@@ -62,7 +62,7 @@ class DecodingEventStreamIterator implements Iterator
         }
         return [$headers, $bytesRead];
     }
-    private function parsePrelude()
+    protected function parsePrelude()
     {
         $prelude = [];
         $bytesRead = 0;
@@ -82,7 +82,12 @@ class DecodingEventStreamIterator implements Iterator
         }
         return [$prelude, $bytesRead];
     }
-    private function parseEvent()
+    /**
+     * This method decodes an event from the stream.
+     *
+     * @return array
+     */
+    protected function parseEvent()
     {
         $event = [];
         if ($this->stream->tell() < $this->stream->getSize()) {
@@ -149,7 +154,7 @@ class DecodingEventStreamIterator implements Iterator
         return $this->currentPosition < $this->stream->getSize();
     }
     // Decoding Utilities
-    private function readAndHashBytes($num)
+    protected function readAndHashBytes($num)
     {
         $bytes = $this->stream->read($num);
         \hash_update($this->hashContext, $bytes);

@@ -1,10 +1,10 @@
-.wp-block-audio figcaption{
+.wp-block-audio :where(figcaption){
   color:#555;
   font-size:13px;
   text-align:center;
 }
-.is-dark-theme .wp-block-audio figcaption{
-  color:hsla(0,0%,100%,.65);
+.is-dark-theme .wp-block-audio :where(figcaption){
+  color:#ffffffa6;
 }
 
 .wp-block-audio{

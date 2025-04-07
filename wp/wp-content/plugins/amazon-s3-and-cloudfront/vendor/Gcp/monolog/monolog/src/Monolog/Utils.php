@@ -208,7 +208,7 @@ final class Utils
             return \false;
         }
         $val = (int) $match['val'];
-        switch (\strtolower($match['unit'] ?? '')) {
+        switch (\strtolower($match['unit'])) {
             case 'g':
                 $val *= 1024;
             case 'm':

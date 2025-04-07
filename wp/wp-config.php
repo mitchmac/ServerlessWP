@@ -103,6 +103,9 @@ if (isset($headers['injectHost'])) {
   $_SERVER['HTTP_HOST'] = $headers['injectHost'];
 }
 
+define('WP_SITEURL', 'https://' . $_SERVER['HTTP_HOST']);
+define('WP_HOME', 'https://' . $_SERVER['HTTP_HOST']);
+
 // Optional S3 credentials for file storage.
 if (isset($_ENV['S3_KEY_ID']) && isset($_ENV['S3_ACCESS_KEY'])) {
 	define( 'AS3CF_SETTINGS', serialize( array(
@@ -115,6 +118,16 @@ if (isset($_ENV['S3_KEY_ID']) && isset($_ENV['S3_ACCESS_KEY'])) {
 // Disable file modification because the changes won't be persisted.
 define('DISALLOW_FILE_EDIT', true );
 define('DISALLOW_FILE_MODS', true );
+
+if (isset($_ENV['SQLITE_S3_BUCKET'])) {
+  define('DB_DIR', '/tmp');
+  define('DB_FILE', 'wp-sqlite-s3.sqlite');
+}
+
+// Auto-cron is can cause db race conditions on these urls, don't bother with it.
+if (strpos($_SERVER['REQUEST_URI'], 'wp-admin') !== false || strpos($_SERVER['REQUEST_URI'], 'wp-login') !== false) {
+  define('DISABLE_WP_CRON', true);
+}
 
 /* That's all, stop editing! Happy publishing. */
 

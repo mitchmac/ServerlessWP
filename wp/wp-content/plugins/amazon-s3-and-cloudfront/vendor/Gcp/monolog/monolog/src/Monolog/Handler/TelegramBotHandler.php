@@ -88,7 +88,7 @@ class TelegramBotHandler extends AbstractProcessingHandler
      * @param bool $delayBetweenMessages Adds delay between sending a split message according to Telegram API
      * @throws MissingExtensionException
      */
-    public function __construct(string $apiKey, string $channel, $level = Logger::DEBUG, bool $bubble = \true, string $parseMode = null, bool $disableWebPagePreview = null, bool $disableNotification = null, bool $splitLongMessages = \false, bool $delayBetweenMessages = \false)
+    public function __construct(string $apiKey, string $channel, $level = Logger::DEBUG, bool $bubble = \true, ?string $parseMode = null, ?bool $disableWebPagePreview = null, ?bool $disableNotification = null, bool $splitLongMessages = \false, bool $delayBetweenMessages = \false)
     {
         if (!\extension_loaded('curl')) {
             throw new MissingExtensionException('The curl extension is needed to use the TelegramBotHandler');
@@ -102,7 +102,7 @@ class TelegramBotHandler extends AbstractProcessingHandler
         $this->splitLongMessages($splitLongMessages);
         $this->delayBetweenMessages($delayBetweenMessages);
     }
-    public function setParseMode(string $parseMode = null) : self
+    public function setParseMode(?string $parseMode = null) : self
     {
         if ($parseMode !== null && !\in_array($parseMode, self::AVAILABLE_PARSE_MODES)) {
             throw new \InvalidArgumentException('Unknown parseMode, use one of these: ' . \implode(', ', self::AVAILABLE_PARSE_MODES) . '.');
@@ -110,12 +110,12 @@ class TelegramBotHandler extends AbstractProcessingHandler
         $this->parseMode = $parseMode;
         return $this;
     }
-    public function disableWebPagePreview(bool $disableWebPagePreview = null) : self
+    public function disableWebPagePreview(?bool $disableWebPagePreview = null) : self
     {
         $this->disableWebPagePreview = $disableWebPagePreview;
         return $this;
     }
-    public function disableNotification(bool $disableNotification = null) : self
+    public function disableNotification(?bool $disableNotification = null) : self
     {
         $this->disableNotification = $disableNotification;
         return $this;

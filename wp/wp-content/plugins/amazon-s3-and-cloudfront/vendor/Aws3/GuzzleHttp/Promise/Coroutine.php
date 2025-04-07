@@ -76,7 +76,7 @@ final class Coroutine implements PromiseInterface
     {
         return new self($generatorFn);
     }
-    public function then(callable $onFulfilled = null, callable $onRejected = null) : PromiseInterface
+    public function then(?callable $onFulfilled = null, ?callable $onRejected = null) : PromiseInterface
     {
         return $this->result->then($onFulfilled, $onRejected);
     }

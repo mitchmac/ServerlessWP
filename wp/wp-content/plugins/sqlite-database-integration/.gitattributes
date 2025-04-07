@@ -1,0 +1,14 @@
+# Omit during export.
+.editorconfig export-ignore
+.gitattributes export-ignore
+.gitignore export-ignore
+composer.json export-ignore
+phpcs.xml.dist export-ignore
+phpunit.xml.dist export-ignore
+/.github export-ignore
+/grammar-tools export-ignore
+/tests export-ignore
+/wip export-ignore
+/wp-includes/mysql export-ignore
+/wp-includes/parser export-ignore
+/wp-includes/sqlite/class-wp-sqlite-crosscheck-db.php export-ignore
