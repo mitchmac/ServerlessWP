@@ -53,7 +53,6 @@ exports.preRequest = async function(event) {
             db = new sqlite3.Database(sqliteFilePath);
             dataVersion = await getDataVersion();
             await setEtag(response.ETag);
-            console.log('etag prerequest: ' + await getEtag());
         }
         else {
             // @TODO: if it doesn't exist, behave like it's a new site?
@@ -62,7 +61,6 @@ exports.preRequest = async function(event) {
     }
     catch (err) {
         if (err.$metadata && err.$metadata.httpStatusCode === 304) {
-            console.log('Database is already up-to-date (ETag matched)');
             // No need to download, just use existing file
             db = new sqlite3.Database(sqliteFilePath);
             dataVersion = await getDataVersion();
@@ -83,12 +81,9 @@ exports.postRequest = async function(event, response) {
         if (!db) {
             db = new sqlite3.Database(sqliteFilePath);
         }
-        console.log('Data version: ' + dataVersion);
         let versionNow = await getDataVersion();
-        console.log('Version now: ' + versionNow);
 
         // See if the db has been mutated, if so, send the changes to s3
-
         if (dataVersion !== versionNow) {
             const dbExists = await exists(sqliteFilePath);
             if (dbExists) {
@@ -97,7 +92,6 @@ exports.postRequest = async function(event, response) {
                     
                     const sqliteContent = await fs.readFile(sqliteFilePath);
                     let currentEtag = await getEtag();
-                    console.log('etag postrequest: ' + currentEtag);
 
                     let putCommandParams = {
                         Bucket: _config.bucket,
@@ -120,7 +114,7 @@ exports.postRequest = async function(event, response) {
                     //@TODO: more descriptive message
                     return {
                         statusCode: 500,
-                        body: 'Database error'
+                        body: 'Database error. This can happen when simultaneous database updates happen. Re-try your request.'
                     }
                 }
             }
