@@ -6,11 +6,20 @@
         "api/index.js": {
           "includeFiles": "wp/**",
           "maxDuration": 60
+        },
+        "api/cron.js": {
+          "maxDuration": 60
         }
     },
     "build": {
       "env": {
         "NODEJS_AWS_HANDLER_NAME": "handler"
       }
+    },
+    "crons": [
+    {
+      "path": "/api/cron",
+      "schedule": "*/10 * * * *"
     }
+  ]
 }
