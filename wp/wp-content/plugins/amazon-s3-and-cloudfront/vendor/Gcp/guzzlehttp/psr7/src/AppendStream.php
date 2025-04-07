@@ -194,8 +194,6 @@ final class AppendStream implements StreamInterface
         throw new \RuntimeException('Cannot write to an AppendStream');
     }
     /**
-     * {@inheritdoc}
-     *
      * @return mixed
      */
     public function getMetadata($key = null)

@@ -49,6 +49,7 @@ class CredentialProvider
     const ENV_PROFILE = 'AWS_PROFILE';
     const ENV_ROLE_SESSION_NAME = 'AWS_ROLE_SESSION_NAME';
     const ENV_SECRET = 'AWS_SECRET_ACCESS_KEY';
+    const ENV_ACCOUNT_ID = 'AWS_ACCOUNT_ID';
     const ENV_SESSION = 'AWS_SESSION_TOKEN';
     const ENV_TOKEN_FILE = 'AWS_WEB_IDENTITY_TOKEN_FILE';
     const ENV_SHARED_CREDENTIALS_FILE = 'AWS_SHARED_CREDENTIALS_FILE';
@@ -222,8 +223,10 @@ class CredentialProvider
             // Use credentials from environment variables, if available
             $key = \getenv(self::ENV_KEY);
             $secret = \getenv(self::ENV_SECRET);
+            $accountId = \getenv(self::ENV_ACCOUNT_ID) ?: null;
+            $token = \getenv(self::ENV_SESSION) ?: null;
             if ($key && $secret) {
-                return Promise\Create::promiseFor(new Credentials($key, $secret, \getenv(self::ENV_SESSION) ?: NULL));
+                return Promise\Create::promiseFor(new Credentials($key, $secret, $token, null, $accountId));
             }
             return self::reject('Could not find environment variable ' . 'credentials in ' . self::ENV_KEY . '/' . self::ENV_SECRET);
         };
@@ -397,7 +400,7 @@ class CredentialProvider
             if (empty($data[$profile]['aws_session_token'])) {
                 $data[$profile]['aws_session_token'] = isset($data[$profile]['aws_security_token']) ? $data[$profile]['aws_security_token'] : null;
             }
-            return Promise\Create::promiseFor(new Credentials($data[$profile]['aws_access_key_id'], $data[$profile]['aws_secret_access_key'], $data[$profile]['aws_session_token']));
+            return Promise\Create::promiseFor(new Credentials($data[$profile]['aws_access_key_id'], $data[$profile]['aws_secret_access_key'], $data[$profile]['aws_session_token'], null, !empty($data[$profile]['aws_account_id']) ? $data[$profile]['aws_account_id'] : null));
         };
     }
     /**
@@ -458,7 +461,13 @@ class CredentialProvider
             if (empty($processData['SessionToken'])) {
                 $processData['SessionToken'] = null;
             }
-            return Promise\Create::promiseFor(new Credentials($processData['AccessKeyId'], $processData['SecretAccessKey'], $processData['SessionToken'], $expires));
+            $accountId = null;
+            if (!empty($processData['AccountId'])) {
+                $accountId = $processData['AccountId'];
+            } elseif (!empty($data[$profile]['aws_account_id'])) {
+                $accountId = $data[$profile]['aws_account_id'];
+            }
+            return Promise\Create::promiseFor(new Credentials($processData['AccessKeyId'], $processData['SecretAccessKey'], $processData['SessionToken'], $expires, $accountId));
         };
     }
     /**
@@ -639,7 +648,7 @@ class CredentialProvider
         $token = $tokenPromise()->wait();
         $ssoCredentials = CredentialProvider::getCredentialsFromSsoService($ssoProfile, $ssoSession['sso_region'], $token->getToken(), $config);
         $expiration = $ssoCredentials['expiration'];
-        return Promise\Create::promiseFor(new Credentials($ssoCredentials['accessKeyId'], $ssoCredentials['secretAccessKey'], $ssoCredentials['sessionToken'], $expiration));
+        return Promise\Create::promiseFor(new Credentials($ssoCredentials['accessKeyId'], $ssoCredentials['secretAccessKey'], $ssoCredentials['sessionToken'], $expiration, $ssoProfile['sso_account_id']));
     }
     /**
      * @param $profiles
@@ -672,7 +681,7 @@ class CredentialProvider
             return self::reject("Cached SSO credentials returned expired credentials");
         }
         $ssoCredentials = CredentialProvider::getCredentialsFromSsoService($ssoProfile, $ssoProfile['sso_region'], $tokenData['accessToken'], $config);
-        return Promise\Create::promiseFor(new Credentials($ssoCredentials['accessKeyId'], $ssoCredentials['secretAccessKey'], $ssoCredentials['sessionToken'], $expiration));
+        return Promise\Create::promiseFor(new Credentials($ssoCredentials['accessKeyId'], $ssoCredentials['secretAccessKey'], $ssoCredentials['sessionToken'], $expiration, $ssoProfile['sso_account_id']));
     }
     /**
      * @param array $ssoProfile

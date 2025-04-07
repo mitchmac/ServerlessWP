@@ -17,21 +17,20 @@
  */
 namespace DeliciousBrains\WP_Offload_Media\Gcp\Google\Cloud\Core;
 
+use DeliciousBrains\WP_Offload_Media\Gcp\Google\Auth\GetUniverseDomainInterface;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\ApiCore\CredentialsWrapper;
-use DeliciousBrains\WP_Offload_Media\Gcp\Google\Cloud\Core\ArrayTrait;
-use DeliciousBrains\WP_Offload_Media\Gcp\Google\Cloud\Core\Duration;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Cloud\Core\Exception\NotFoundException;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Cloud\Core\Exception\ServiceException;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Cloud\Core\GrpcRequestWrapper;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\NullValue;
+use DeliciousBrains\WP_Offload_Media\Gcp\Google\Cloud\Core\Duration;
 /**
  * Provides shared functionality for gRPC service implementations.
  */
 trait GrpcTrait
 {
-    use ArrayTrait;
-    use TimeTrait;
     use WhitelistTrait;
+    use ArrayTrait;
     /**
      * @var GrpcRequestWrapper Wrapper used to handle sending requests to the
      * gRPC API.
@@ -81,21 +80,29 @@ trait GrpcTrait
      *
      * @param string $version
      * @param callable|null $authHttpHandler
+     * @param string|null $universeDomain
      * @return array
      */
-    private function getGaxConfig($version, callable $authHttpHandler = null)
+    private function getGaxConfig($version, callable $authHttpHandler = null, string $universeDomain = null)
     {
         $config = ['libName' => 'gccl', 'libVersion' => $version, 'transport' => 'grpc'];
         // GAX v0.32.0 introduced the CredentialsWrapper class and a different
         // way to configure credentials. If the class exists, use this new method
         // otherwise default to legacy usage.
         if (\class_exists(CredentialsWrapper::class)) {
-            $config['credentials'] = new CredentialsWrapper($this->requestWrapper->getCredentialsFetcher(), $authHttpHandler);
+            $config['credentials'] = new CredentialsWrapper(
+                $this->requestWrapper->getCredentialsFetcher(),
+                $authHttpHandler,
+                // If the universe domain hasn't been explicitly set, check the the environment variable,
+                // otherwise assume GDU ("googleapis.com").
+                ($universeDomain ?: \getenv('GOOGLE_CLOUD_UNIVERSE_DOMAIN')) ?: GetUniverseDomainInterface::DEFAULT_UNIVERSE_DOMAIN
+            );
         } else {
             $config += ['credentialsLoader' => $this->requestWrapper->getCredentialsFetcher(), 'authHttpHandler' => $authHttpHandler, 'enableCaching' => \false];
         }
         return $config;
     }
+    use TimeTrait;
     /**
      * Format a struct for the API.
      *
@@ -173,7 +180,7 @@ trait GrpcTrait
     /**
      * Format a value for the API.
      *
-     * @param array $value
+     * @param mixed $value
      * @return array
      */
     private function formatValueForApi($value)
@@ -223,7 +230,7 @@ trait GrpcTrait
     /**
      * Format a duration for the API.
      *
-     * @param string|Duration $value
+     * @param string|mixed $value
      * @return array
      */
     private function formatDurationForApi($value)

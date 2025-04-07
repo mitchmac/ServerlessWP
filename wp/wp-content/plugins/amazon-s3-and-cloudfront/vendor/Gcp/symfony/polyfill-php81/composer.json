@@ -21,7 +21,7 @@
         }
     ],
     "require": {
-        "php": ">=7.1"
+        "php": ">=7.2"
     },
     "autoload": {
         "psr-4": {
@@ -36,9 +36,6 @@
     },
     "minimum-stability": "dev",
     "extra": {
-        "branch-alias": {
-            "dev-main": "1.27-dev"
-        },
         "thanks": {
             "name": "symfony\/polyfill",
             "url": "https:\/\/github.com\/symfony\/polyfill"

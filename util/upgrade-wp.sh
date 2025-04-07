@@ -13,6 +13,8 @@ rm -rf wordpress/wp-content/themes/twentytwentytwo wordpress/wp-content/themes/t
 wget https://downloads.wordpress.org/plugin/amazon-s3-and-cloudfront.zip
 unzip amazon-s3-and-cloudfront.zip
 mv amazon-s3-and-cloudfront wordpress/wp-content/plugins/
+git clone https://github.com/WordPress/sqlite-database-integration.git
+mv sqlite-database-integration wordpress/wp-content/plugins/
 rm -rf ../wp
 mv wordpress ../wp
 cd ..

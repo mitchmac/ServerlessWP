@@ -2,7 +2,6 @@
 
 // Check if already defined
 if ( ! class_exists( 'WP_Offload_Media_Autoloader' ) ) {
-
 	class WP_Offload_Media_Autoloader {
 
 		/**
@@ -28,7 +27,7 @@ if ( ! class_exists( 'WP_Offload_Media_Autoloader' ) ) {
 		 */
 		public function __construct( string $prefix, string $abspath ) {
 			$this->prefix  = $prefix;
-			$this->abspath = $abspath;
+			$this->abspath = trailingslashit( $abspath );
 
 			spl_autoload_register( array( $this, 'autoloader' ) );
 		}
@@ -95,7 +94,7 @@ if ( ! class_exists( 'WP_Offload_Media_Autoloader' ) ) {
 		 * @return string
 		 */
 		protected function get_source_directory( string $type ): string {
-			return $this->abspath . DIRECTORY_SEPARATOR . $type . DIRECTORY_SEPARATOR;
+			return trailingslashit( $this->abspath . $type );
 		}
 	}
 }

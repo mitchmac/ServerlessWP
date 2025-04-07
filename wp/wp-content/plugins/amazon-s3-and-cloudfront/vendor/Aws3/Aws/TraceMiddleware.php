@@ -69,7 +69,7 @@ class TraceMiddleware
     {
         $this->prevOutput = $this->prevInput = [];
         return function (callable $next) use($step, $name) {
-            return function (CommandInterface $command, RequestInterface $request = null) use($next, $step, $name) {
+            return function (CommandInterface $command, $request = null) use($next, $step, $name) {
                 $this->createHttpDebug($command);
                 $start = \microtime(\true);
                 $this->stepInput(['step' => $step, 'name' => $name, 'request' => $this->requestArray($request), 'command' => $this->commandArray($command)]);
@@ -117,9 +117,9 @@ class TraceMiddleware
     {
         return ['instance' => \spl_object_hash($cmd), 'name' => $cmd->getName(), 'params' => $this->getRedactedArray($cmd)];
     }
-    private function requestArray(RequestInterface $request = null)
+    private function requestArray($request = null)
     {
-        return !$request ? [] : \array_filter(['instance' => \spl_object_hash($request), 'method' => $request->getMethod(), 'headers' => $this->redactHeaders($request->getHeaders()), 'body' => $this->streamStr($request->getBody()), 'scheme' => $request->getUri()->getScheme(), 'port' => $request->getUri()->getPort(), 'path' => $request->getUri()->getPath(), 'query' => $request->getUri()->getQuery()]);
+        return !$request instanceof RequestInterface ? [] : \array_filter(['instance' => \spl_object_hash($request), 'method' => $request->getMethod(), 'headers' => $this->redactHeaders($request->getHeaders()), 'body' => $this->streamStr($request->getBody()), 'scheme' => $request->getUri()->getScheme(), 'port' => $request->getUri()->getPort(), 'path' => $request->getUri()->getPath(), 'query' => $request->getUri()->getQuery()]);
     }
     private function responseArray(ResponseInterface $response = null)
     {

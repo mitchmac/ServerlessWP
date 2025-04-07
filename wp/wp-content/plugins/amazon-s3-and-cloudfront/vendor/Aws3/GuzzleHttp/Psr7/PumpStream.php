@@ -16,7 +16,7 @@ use DeliciousBrains\WP_Offload_Media\Aws3\Psr\Http\Message\StreamInterface;
  */
 final class PumpStream implements StreamInterface
 {
-    /** @var callable|null */
+    /** @var callable(int): (string|false|null)|null */
     private $source;
     /** @var int|null */
     private $size;
@@ -27,7 +27,7 @@ final class PumpStream implements StreamInterface
     /** @var BufferStream */
     private $buffer;
     /**
-     * @param callable(int): (string|null|false)  $source  Source of the stream data. The callable MAY
+     * @param callable(int): (string|false|null)  $source  Source of the stream data. The callable MAY
      *                                                     accept an integer argument used to control the
      *                                                     amount of data to return. The callable MUST
      *                                                     return a string when called, or false|null on error
@@ -123,8 +123,6 @@ final class PumpStream implements StreamInterface
         return $result;
     }
     /**
-     * {@inheritdoc}
-     *
      * @return mixed
      */
     public function getMetadata($key = null)
@@ -136,9 +134,9 @@ final class PumpStream implements StreamInterface
     }
     private function pump(int $length) : void
     {
-        if ($this->source) {
+        if ($this->source !== null) {
             do {
-                $data = \call_user_func($this->source, $length);
+                $data = ($this->source)($length);
                 if ($data === \false || $data === null) {
                     $this->source = null;
                     return;

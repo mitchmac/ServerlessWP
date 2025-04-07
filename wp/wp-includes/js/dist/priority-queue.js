@@ -1,8 +1,8 @@
-/******/ (function() { // webpackBootstrap
+/******/ (() => { // webpackBootstrap
 /******/ 	var __webpack_modules__ = ({
 
-/***/ 3159:
-/***/ (function(module, exports, __webpack_require__) {
+/***/ 5033:
+/***/ ((module, exports, __webpack_require__) => {
 
 var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;(function (factory) {
 	if (true) {
@@ -248,19 +248,19 @@ var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_
 /******/ 	
 /************************************************************************/
 /******/ 	/* webpack/runtime/define property getters */
-/******/ 	!function() {
+/******/ 	(() => {
 /******/ 		// define getter functions for harmony exports
-/******/ 		__webpack_require__.d = function(exports, definition) {
+/******/ 		__webpack_require__.d = (exports, definition) => {
 /******/ 			for(var key in definition) {
 /******/ 				if(__webpack_require__.o(definition, key) && !__webpack_require__.o(exports, key)) {
 /******/ 					Object.defineProperty(exports, key, { enumerable: true, get: definition[key] });
 /******/ 				}
 /******/ 			}
 /******/ 		};
-/******/ 	}();
+/******/ 	})();
 /******/ 	
 /******/ 	/* webpack/runtime/global */
-/******/ 	!function() {
+/******/ 	(() => {
 /******/ 		__webpack_require__.g = (function() {
 /******/ 			if (typeof globalThis === 'object') return globalThis;
 /******/ 			try {
@@ -269,43 +269,44 @@ var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_
 /******/ 				if (typeof window === 'object') return window;
 /******/ 			}
 /******/ 		})();
-/******/ 	}();
+/******/ 	})();
 /******/ 	
 /******/ 	/* webpack/runtime/hasOwnProperty shorthand */
-/******/ 	!function() {
-/******/ 		__webpack_require__.o = function(obj, prop) { return Object.prototype.hasOwnProperty.call(obj, prop); }
-/******/ 	}();
+/******/ 	(() => {
+/******/ 		__webpack_require__.o = (obj, prop) => (Object.prototype.hasOwnProperty.call(obj, prop))
+/******/ 	})();
 /******/ 	
 /******/ 	/* webpack/runtime/make namespace object */
-/******/ 	!function() {
+/******/ 	(() => {
 /******/ 		// define __esModule on exports
-/******/ 		__webpack_require__.r = function(exports) {
+/******/ 		__webpack_require__.r = (exports) => {
 /******/ 			if(typeof Symbol !== 'undefined' && Symbol.toStringTag) {
 /******/ 				Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 /******/ 			}
 /******/ 			Object.defineProperty(exports, '__esModule', { value: true });
 /******/ 		};
-/******/ 	}();
+/******/ 	})();
 /******/ 	
 /************************************************************************/
 var __webpack_exports__ = {};
 // This entry need to be wrapped in an IIFE because it need to be in strict mode.
-!function() {
+(() => {
 "use strict";
 // ESM COMPAT FLAG
 __webpack_require__.r(__webpack_exports__);
 
 // EXPORTS
 __webpack_require__.d(__webpack_exports__, {
-  "createQueue": function() { return /* binding */ createQueue; }
+  createQueue: () => (/* binding */ createQueue)
 });
 
 // EXTERNAL MODULE: ./node_modules/requestidlecallback/index.js
-var requestidlecallback = __webpack_require__(3159);
+var requestidlecallback = __webpack_require__(5033);
 ;// CONCATENATED MODULE: ./node_modules/@wordpress/priority-queue/build-module/request-idle-callback.js
 /**
  * External dependencies
  */
+
 
 /**
  * @typedef {( timeOrDeadline: IdleDeadline | number ) => void} Callback
@@ -314,22 +315,21 @@ var requestidlecallback = __webpack_require__(3159);
 /**
  * @return {(callback: Callback) => void} RequestIdleCallback
  */
-
 function createRequestIdleCallback() {
   if (typeof window === 'undefined') {
     return callback => {
       setTimeout(() => callback(Date.now()), 0);
     };
   }
-
   return window.requestIdleCallback;
 }
-/* harmony default export */ var request_idle_callback = (createRequestIdleCallback());
+/* harmony default export */ const request_idle_callback = (createRequestIdleCallback());
 
 ;// CONCATENATED MODULE: ./node_modules/@wordpress/priority-queue/build-module/index.js
 /**
  * Internal dependencies
  */
+
 
 /**
  * Enqueued callback to invoke once idle time permits.
@@ -394,11 +394,11 @@ function createRequestIdleCallback() {
  *
  * @return {WPPriorityQueue} Queue object with `add`, `flush` and `reset` methods.
  */
-
 const createQueue = () => {
   /** @type {Map<WPPriorityQueueContext, WPPriorityQueueCallback>} */
   const waitingList = new Map();
   let isRunning = false;
+
   /**
    * Callback to process as much queue as time permits.
    *
@@ -415,24 +415,21 @@ const createQueue = () => {
    * @param {IdleDeadline|number} deadline Idle callback deadline object, or
    *                                       animation frame timestamp.
    */
-
   const runWaitingList = deadline => {
     for (const [nextElement, callback] of waitingList) {
       waitingList.delete(nextElement);
       callback();
-
       if ('number' === typeof deadline || deadline.timeRemaining() <= 0) {
         break;
       }
     }
-
     if (waitingList.size === 0) {
       isRunning = false;
       return;
     }
-
     request_idle_callback(runWaitingList);
   };
+
   /**
    * Add a callback to the queue for a given context.
    *
@@ -446,16 +443,14 @@ const createQueue = () => {
    * @param {WPPriorityQueueContext}  element Context object.
    * @param {WPPriorityQueueCallback} item    Callback function.
    */
-
-
   const add = (element, item) => {
     waitingList.set(element, item);
-
     if (!isRunning) {
       isRunning = true;
       request_idle_callback(runWaitingList);
     }
   };
+
   /**
    * Flushes queue for a given context, returning true if the flush was
    * performed, or false if there is no queue for the given context.
@@ -466,19 +461,16 @@ const createQueue = () => {
    *
    * @return {boolean} Whether flush was performed.
    */
-
-
   const flush = element => {
     const callback = waitingList.get(element);
-
     if (undefined === callback) {
       return false;
     }
-
     waitingList.delete(element);
     callback();
     return true;
   };
+
   /**
    * Clears the queue for a given context, cancelling the callbacks without
    * executing them. Returns `true` if there were scheduled callbacks to cancel,
@@ -490,23 +482,19 @@ const createQueue = () => {
    *
    * @return {boolean} Whether any callbacks got cancelled.
    */
-
-
   const cancel = element => {
     return waitingList.delete(element);
   };
+
   /**
    * Reset the queue without running the pending callbacks.
    *
    * @type {WPPriorityQueueReset}
    */
-
-
   const reset = () => {
     waitingList.clear();
     isRunning = false;
   };
-
   return {
     add,
     flush,
@@ -515,7 +503,8 @@ const createQueue = () => {
   };
 };
 
-}();
+})();
+
 (window.wp = window.wp || {}).priorityQueue = __webpack_exports__;
 /******/ })()
 ;

@@ -2,6 +2,7 @@
 
 namespace DeliciousBrains\WP_Offload_Media\Upgrades;
 
+use AS3CF_Utils;
 use DeliciousBrains\WP_Offload_Media\Items\Media_Library_Item;
 
 /**
@@ -71,7 +72,7 @@ class Upgrade_EDD_Replace_URLs extends Upgrade {
 	 * @return bool
 	 */
 	protected function upgrade_item( $item ) {
-		$attachments = maybe_unserialize( $item->meta_value );
+		$attachments = AS3CF_Utils::maybe_unserialize( $item->meta_value );
 
 		if ( ! is_array( $attachments ) || empty( $attachments ) ) {
 			// No attachments to process, return
