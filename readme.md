@@ -11,7 +11,7 @@ Choose one of the following platforms to deploy your serverless WordPress site:
 
 | Vercel (recommended)  | Netlify  | Serverless Framework (Lambda)  |
 |---|---|---|
-| [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fmitchmac%2Fserverlesswp&env=DATABASE,USERNAME,PASSWORD,HOST&envDescription=Database%20credentials%20from%20PlanetScale%20or%20other%20host&envLink=https%3A%2F%2Fgithub.com%2Fmitchmac%2FServerlessWP%23deploy-serverlesswp&project-name=serverlesswp&repository-name=serverlesswp)  | [![Deploy to Netlify](https://www.netlify.com/img/deploy/button.svg)](https://app.netlify.com/start/deploy?repository=https://github.com/mitchmac/serverlesswp)  |  ```npm install && serverless deploy``` |
+| [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fmitchmac%2Fserverlesswp&project-name=serverlesswp&repository-name=serverlesswp)  | [![Deploy to Netlify](https://www.netlify.com/img/deploy/button.svg)](https://app.netlify.com/start/deploy?repository=https://github.com/mitchmac/serverlesswp)  |  ```npm install && serverless deploy``` |
 | 🕑 60 second requests   | 10 second requests  | 30 second requests  |
 | &nbsp;⎇&nbsp; automatic branch deploy config   | manual branch config  | do-it-yourself  |
 | 🗲 [Fluid compute](https://vercel.com/fluid) | single concurrency | single concurrency |
