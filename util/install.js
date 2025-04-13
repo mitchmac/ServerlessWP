@@ -23,8 +23,8 @@ exports.validate = function(response) {
   if (!hasSQL && !hasSqliteS3) {
     let message = "<p>It appears that the required environment variables for the WordPress database aren't setup.</p>"
       + "<p>If you don't have a database solution selected yet, there are a few options.</p>"
-      + "<p>Head over to the <a href='https://github.com/mitchmac/ServerlessWP?tab=readme-ov-file#3-update-the-environment-variables'>readme</a> to pick a data option and setup environment variables.</p>"
-      + `<p>You'll need to populate the environment variables for your site at Vercel or Netlify (<a href="${dashboardLink}">dashboard</a>)</p>`
+      + "<p>Head over to the <a href='https://github.com/mitchmac/ServerlessWP?tab=readme-ov-file#3-update-the-environment-variables' target='_blank'>readme</a> to pick a data option and setup environment variables.</p>"
+      + `<p>You'll need to populate the environment variables for your site at Vercel or Netlify (<a href="${dashboardLink}" target="_blank">dashboard</a>)</p>`
       + '<p>Then <strong>remember to redeploy your site at Vercel or Netlify</strong> for the environment variables to be updated for the site.</p>';
 
     return {
