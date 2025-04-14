@@ -124,10 +124,16 @@ if (isset($_ENV['SQLITE_S3_BUCKET'])) {
   define('DB_FILE', 'wp-sqlite-s3.sqlite');
 }
 
-// Auto-cron is can cause db race conditions on these urls, don't bother with it.
+// Auto-cron can cause db race conditions on these urls, don't bother with it.
 if (strpos($_SERVER['REQUEST_URI'], 'wp-admin') !== false || strpos($_SERVER['REQUEST_URI'], 'wp-login') !== false) {
   define('DISABLE_WP_CRON', true);
 }
+
+// Increase time between cron runs (2 hours) to reduce DB writes.
+define('WP_CRON_LOCK_TIMEOUT', 7200);
+
+// Limit revisions.
+define('WP_POST_REVISIONS', 3);
 
 /* That's all, stop editing! Happy publishing. */
 
