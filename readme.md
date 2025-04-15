@@ -1,7 +1,7 @@
 # WordPress on Vercel, Netlify, or AWS
 WordPress hosting is ridiculously wasteful of time and resouces. Host WordPress on Vercel, Netlify, or AWS Lambda serverless functions with ServerlessWP.
 
-Don't want to run a database server? ServerlessWP supports SQLite+S3 as a low maintenance alternative.
+Don't want to run a database server? ServerlessWP experimentally supports SQLite+S3 as a low maintenance alternative.
 
 Stay up-to-date at the ServerlessWP repository: [mitchmac/serverlesswp](https://github.com/mitchmac/serverlesswp)
 
