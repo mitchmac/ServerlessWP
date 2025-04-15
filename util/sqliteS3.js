@@ -17,6 +17,11 @@ exports.name = 'ServerlessWP sqlite s3';
 exports.config = function(config) {
     _config = config;
     if (config.S3Client) {
+        // Cloudflare workaround for https://www.cloudflarestatus.com/incidents/t5nrjmpxc1cj
+        if (config.S3Client.endpoint && config.S3Client.endpoint.includes('cloudflarestorage.com')) {
+            config.S3Client.requestChecksumCalculation = "WHEN_REQUIRED";
+            config.S3Client.responseChecksumValidation = "WHEN_REQUIRED";
+        }
         client = new S3Client(config.S3Client);
     }
 }
