@@ -2,7 +2,7 @@
 Contributors: wpengine, deliciousbrains, ianmjones, eriktorsner, kevinwhoffman, tysonreeder, dalewilliams, lewisia32, mattshaw, aaemnnosttv, a5hleyrich, polevaultweb, bradt, joetan
 Tags: uploads, amazon, s3, amazon s3, digitalocean, digitalocean spaces, google cloud storage, gcs, mirror, admin, media, cdn, cloudfront
 Requires at least: 5.5
-Tested up to: 6.7
+Tested up to: 6.8
 Requires PHP: 7.2
 Stable tag: 3.2.11
 License: GPLv3
@@ -95,7 +95,7 @@ This version requires PHP 5.3.3+ and the Amazon Web Services plugin
 * Bug fix: Speed of adding new media is no longer affected by the number of records in the postmeta table
 
 = WP Offload Media Lite 3.2.9 - 2024-10-04 =
-* Security: The plugin now uses its own update mechanism from WP Engine servers
+* Security: The plugin can now serve updates from WP Engine servers, however this update mechanism is not included when installed directly from WordPress.org
 * New: Amazon S3 region Asia Pacific (Malaysia) is now selectable
 * New: AWS PHP SDK has been updated to v3.319.4
 * New: PHP and JS dependencies have been updated
