@@ -486,7 +486,7 @@ class WP_Upgrader {
 	 * @since 6.2.0 Use move_dir() instead of copy_dir() when possible.
 	 *
 	 * @global WP_Filesystem_Base $wp_filesystem        WordPress filesystem subclass.
-	 * @global array              $wp_theme_directories
+	 * @global string[]           $wp_theme_directories
 	 *
 	 * @param array|string $args {
 	 *     Optional. Array or string of arguments for installing a package. Default empty array.
@@ -525,7 +525,11 @@ class WP_Upgrader {
 		$destination       = $args['destination'];
 		$clear_destination = $args['clear_destination'];
 
-		// Give the upgrade an additional 300 seconds(5 minutes) to ensure the install doesn't prematurely timeout having used up the maximum script execution time upacking and downloading in WP_Upgrader->run.
+		/*
+		 * Give the upgrade an additional 300 seconds (5 minutes) to ensure the install
+		 * doesn't prematurely timeout having used up the maximum script execution time
+		 * upacking and downloading in WP_Upgrader->run().
+		 */
 		if ( function_exists( 'set_time_limit' ) ) {
 			set_time_limit( 300 );
 		}
