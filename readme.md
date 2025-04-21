@@ -1,9 +1,12 @@
-# WordPress on Vercel, Netlify, or AWS
-WordPress hosting is ridiculously wasteful of time and resouces. Host WordPress on Vercel, Netlify, or AWS Lambda serverless functions with ServerlessWP.
+![ServerlessWP logo](https://serverlesswp.com/wp-content/serverlesswp.png)
 
-Don't want to run a database server? ServerlessWP experimentally supports SQLite+S3 as a low maintenance alternative.
+WordPress hosting is silly.
+
+Get low maintenance and low cost WordPress hosting on Vercel, Netlify, or AWS Lambda.
 
 Stay up-to-date at the ServerlessWP repository: [mitchmac/serverlesswp](https://github.com/mitchmac/serverlesswp)
+
+![PHP 8.1.32](https://img.shields.io/badge/version-8.1.32-blue?logo=php&labelColor=white) ![WordPress 6.7.2](https://img.shields.io/badge/version-6.7.2-blue?logo=wordpress&labelColor=white)
 
 ## Quick Deploy
 
@@ -16,6 +19,7 @@ Choose one of the following platforms to deploy your serverless WordPress site:
 | &nbsp;⎇&nbsp; automatic branch deploy config   | manual branch config  | do-it-yourself  |
 | 🗲 [Fluid compute](https://vercel.com/fluid) | single concurrency | single concurrency |
 
+Don't want to run a database server? ServerlessWP experimentally supports SQLite+S3 as a low maintenance alternative.
 
 ## Project goals
 
