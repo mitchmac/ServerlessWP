@@ -16,7 +16,7 @@ Choose one of the following platforms to deploy your serverless WordPress site:
 |---|---|---|
 | [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fmitchmac%2Fserverlesswp&project-name=serverlesswp&repository-name=serverlesswp)  | [![Deploy to Netlify](https://www.netlify.com/img/deploy/button.svg)](https://app.netlify.com/start/deploy?repository=https://github.com/mitchmac/serverlesswp)  |  ```npm install && serverless deploy``` |
 | 🕑 60 second requests   | 10 second requests  | 30 second requests  |
-| &nbsp;⎇&nbsp; automatic branch deploy config   | manual branch config  | do-it-yourself  |
+| &nbsp;⎇&nbsp; automatic branch deploy config   | manual branch config  | manual branch config  |
 | 🗲 [Fluid compute](https://vercel.com/fluid) | single concurrency | single concurrency |
 
 Don't want to run a database server? ServerlessWP experimentally supports SQLite+S3 as a low maintenance alternative.
