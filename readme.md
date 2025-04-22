@@ -1,4 +1,4 @@
-![ServerlessWP logo](https://serverlesswp.com/wp-content/serverlesswp.png)
+<p align="center"><img src="https://serverlesswp.com/wp-content/serverlesswp.png"></p>
 
 WordPress hosting is silly.
 
