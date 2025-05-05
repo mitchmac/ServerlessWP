@@ -2,7 +2,7 @@
 
 WordPress hosting is silly.
 
-Get low maintenance and low cost WordPress hosting on Vercel, Netlify, or AWS Lambda.
+Get low maintenance and low cost/free WordPress hosting on Vercel, Netlify, or AWS Lambda.
 
 Stay up-to-date at the ServerlessWP repository: [mitchmac/serverlesswp](https://github.com/mitchmac/serverlesswp)
 
@@ -10,16 +10,18 @@ Stay up-to-date at the ServerlessWP repository: [mitchmac/serverlesswp](https://
 
 ## Quick Deploy
 
-Choose one of the following platforms to deploy your serverless WordPress site:
+Click one of the options below to deploy your serverless WordPress site:
 
-| Vercel (recommended)  | Netlify  | Serverless Framework (Lambda)  |
-|---|---|---|
-| [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fmitchmac%2Fserverlesswp&project-name=serverlesswp&repository-name=serverlesswp)  | [![Deploy to Netlify](https://www.netlify.com/img/deploy/button.svg)](https://app.netlify.com/start/deploy?repository=https://github.com/mitchmac/serverlesswp)  |  ```npm install && serverless deploy``` |
-| 🕑 60 second requests   | 10 second requests  | 30 second requests  |
-| &nbsp;⎇&nbsp; automatic branch deploy config   | manual branch config  | manual branch config  |
-| 🗲 [Fluid compute](https://vercel.com/fluid) | single concurrency | single concurrency |
+| Vercel (recommended)  | Netlify  |
+|---|---|
+| [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fmitchmac%2Fserverlesswp&project-name=serverlesswp&repository-name=serverlesswp)  | [![Deploy to Netlify](https://www.netlify.com/img/deploy/button.svg)](https://app.netlify.com/start/deploy?repository=https://github.com/mitchmac/serverlesswp)  |
+| 🕑 60 second max request duration   | 10 second max request duration  |
+| &nbsp;⎇&nbsp; automatic branch deploy config   | manual branch config  |
+| 🗲 [Fluid compute](https://vercel.com/fluid) | - |
+| 📈 [Web analytics](https://vercel.com/docs/analytics) | paid add-on |
+| 🛡️ [Firewall](https://vercel.com/docs/vercel-firewall/vercel-waf) | paid add-on |
 
-Don't want to run a database server? ServerlessWP experimentally supports SQLite+S3 as a low maintenance alternative.
+Want to use AWS Lambda with the Serverless Framework instead? `npm install && serverless deploy`
 
 ## Project goals
 
@@ -39,12 +41,39 @@ Don't want to run a database server? ServerlessWP experimentally supports SQLite
 
 **This is currently an experimental project.**
 
-It's probably a good fit for development/experimentation, personal blogs, documentation sites, and small business sites. It shouldn't be used when considerable security or stability is required, yet.
+It's a good fit for development, personal blogs, documentation sites, and small business sites. It shouldn't be used when considerable security or stability is required, yet.
 
 ### 1. Deploy this repository to Vercel, Netlify, or AWS.
 One of the links above will get you started. You'll just need a GitHub account.
 
-### 2. Select a database solution.
+### 2. Setup a database.
+You'll need to create a database for your site's content.
+
+[TiDB](https://www.pingcap.com/tidb-cloud-serverless/) provides a cloud database with a generous free tier.
+
+Wouldn't it be great to skip hosting a database? [Skip below](#sqlite--s3-database-option) if you want to try something different with SQLite & S3.
+
+### 3. Update the environment variables.
+After creating your database you'll need to update environment variables for your project with the credentials. The WordPress config file ```wp-config.php``` is automatically configured to use these values to connect to the database.
+
+Update the environment variables in Vercel/Netlify:
+
+|  |  |
+|---|---|
+| DATABASE | database name you created |
+| USERNAME | database user to access the database |
+| PASSWORD | database user's password |
+| HOST |  address to access the database |
+| TABLE_PREFIX | optional: to use a prefix on the database tables |
+
+See [here for Vercel](https://vercel.com/docs/concepts/projects/environment-variables) and [here for Netlify](https://docs.netlify.com/environment-variables/overview/) for more about managing environment variables. **Remember to redeploy** your project after updating the environment variables if you update them after initially deploying your project.
+
+### 4. File and media uploads with S3 (optional, can be done later) 
+File and media uploads can be enabled using the included WP Offload Media Lite for Amazon S3 plugin. S3 setup details can be found [here](https://deliciousbrains.com/wp-offload-media/doc/amazon-s3-quick-start-guide/). The wp-config.php file is setup to use the following environment variables for use by the plugin:
+- S3_KEY_ID
+- S3_ACCESS_KEY
+
+## SQLite + S3 database option
 WordPress usually runs with a MySQL (or MariaDB) database. That means hosting a database that runs 24/7.
 
 A [SQLite database](https://github.com/WordPress/sqlite-database-integration) option has been developed by members of the WordPress community. With the recent ability to *conditionally write* to S3-compatible object storage a decentralized and serverless data layer for ServerlessWP is possible.
@@ -64,29 +93,15 @@ ServerlessWP supports both SQLite+S3 and MySQL as database options. Some of the 
 The main trade-off of using SQLite+S3 with ServerlessWP is:
 - if requests are handled by multiple underlying serverless functions at the same time and make a change to the database, the competing requests may fail. Sites with multiple editors working at the same time or receiving many form submissions aren't a great fit for SQLite+S3.
 
-### 3. **Update the environment variables.**
-After selecting your database solution you'll need to update environment variables for your project with the S3 or database credentials. The WordPress config file ```wp-config.php``` is automatically configured to use these values to connect to the database. 
+Want to give it a try? Setup a private S3 bucket and use these environment variables:
 
-If using **SQLite and S3** you'll need to create a private S3 bucket and get access credentials it.
-
-If using a **MySQL or MariaDB** database you'll need to setup a database and make sure it can be accessed by outside servers remotely.
-
-Update the environment variables (choose one):
-
-| SQLite+S3 | MySQL |
+| SQLite+S3 | |
 |---|---|
-| SQLITE_S3_BUCKET <br> the bucket name you created | DATABASE <br> the database name you created |
-| SQLITE_S3_API_KEY <br> the API key to access the bucket | USERNAME <br> the database user to access the database |
-| SQLITE_S3_API_SECRET <br> the API secret key to access the bucket | PASSWORD <br> the database user's password |
-| SQLITE_S3_REGION <br> the region where the bucket lives. Create it near your serverless functions | HOST <br> the address to access the database
-| SQLITE_S3_ENDPOINT <br> optional: to update where the bucket is, like a Cloudflare R2 address | TABLE_PREFIX <br> optional: to use a prefix on the database tables |
-
-See [here for Vercel](https://vercel.com/docs/concepts/projects/environment-variables) and [here for Netlify](https://docs.netlify.com/environment-variables/overview/) for more about managing environment variables. **Remember to redeploy** your project after updating the environment variables if you update them after initially deploying your project.
-
-### 4. File and media uploads with S3 (optional, can be done later) 
-File and media uploads can be enabled using the included WP Offload Media Lite for Amazon S3 plugin. S3 setup details can be found [here](https://deliciousbrains.com/wp-offload-media/doc/amazon-s3-quick-start-guide/). The wp-config.php file is setup to use the following environment variables for use by the plugin:
-- S3_KEY_ID
-- S3_ACCESS_KEY
+| SQLITE_S3_BUCKET | bucket name you created |
+| SQLITE_S3_API_KEY | API key to access the bucket |
+| SQLITE_S3_API_SECRET | API secret key to access the bucket |
+| SQLITE_S3_REGION | region where the bucket lives - create it near your serverless functions |
+| SQLITE_S3_ENDPOINT | optional: to update where the bucket is, like a Cloudflare R2 address |
 
 ## Customizing WordPress
 - WordPress and its files are in the ```/wp``` directory. You can add plugins or themes there in their respective directories in ```wp-content``` then commit the files to your repository so it will re-deploy.
