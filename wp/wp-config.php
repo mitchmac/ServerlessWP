@@ -43,7 +43,17 @@ if (isset($_ENV['HOST'])) {
 define( 'DB_CHARSET', 'utf8' );
 
 /** The database collate type. Don't change this if in doubt. */
-define( 'DB_COLLATE', '' );
+if (isset($_ENV['DB_COLLATE'])) {
+  define( 'DB_COLLATE', $_ENV['DB_COLLATE'] );
+}
+else {
+  if (isset($_ENV['HOST']) && str_contains($_ENV['HOST'], 'tidbcloud.com')) {
+    define ( 'DB_COLLATE', 'utf8mb4_general_ci');
+  }
+  else {
+    define( 'DB_COLLATE', '' );
+  }
+}
 
 /**#@+
  * Authentication unique keys and salts.
@@ -119,21 +129,22 @@ if (isset($_ENV['S3_KEY_ID']) && isset($_ENV['S3_ACCESS_KEY'])) {
 define('DISALLOW_FILE_EDIT', true );
 define('DISALLOW_FILE_MODS', true );
 
+// If using SQLite + S3 instead of MySQL/MariaDB.
 if (isset($_ENV['SQLITE_S3_BUCKET'])) {
   define('DB_DIR', '/tmp');
   define('DB_FILE', 'wp-sqlite-s3.sqlite');
+
+  // Auto-cron can cause db race conditions on these urls, don't bother with it.
+  if (strpos($_SERVER['REQUEST_URI'], 'wp-admin') !== false || strpos($_SERVER['REQUEST_URI'], 'wp-login') !== false) {
+    define('DISABLE_WP_CRON', true);
+  }
+
+  // Increase time between cron runs (2 hours) to reduce DB writes.
+  define('WP_CRON_LOCK_TIMEOUT', 7200);
+
+  // Limit revisions.
+  define('WP_POST_REVISIONS', 3);
 }
-
-// Auto-cron can cause db race conditions on these urls, don't bother with it.
-if (strpos($_SERVER['REQUEST_URI'], 'wp-admin') !== false || strpos($_SERVER['REQUEST_URI'], 'wp-login') !== false) {
-  define('DISABLE_WP_CRON', true);
-}
-
-// Increase time between cron runs (2 hours) to reduce DB writes.
-define('WP_CRON_LOCK_TIMEOUT', 7200);
-
-// Limit revisions.
-define('WP_POST_REVISIONS', 3);
 
 /* That's all, stop editing! Happy publishing. */
 
