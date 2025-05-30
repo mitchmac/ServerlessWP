@@ -6,7 +6,7 @@ Get low maintenance and low cost/free WordPress hosting on Vercel, Netlify, or A
 
 Stay up-to-date at the ServerlessWP repository: [mitchmac/serverlesswp](https://github.com/mitchmac/serverlesswp)
 
-![PHP 8.1.32](https://img.shields.io/badge/version-8.1.32-blue?logo=php&labelColor=white) ![WordPress 6.7.2](https://img.shields.io/badge/version-6.7.2-blue?logo=wordpress&labelColor=white&logoColor=black)
+![PHP 8.1.32](https://img.shields.io/badge/version-8.1.32-blue?logo=php&labelColor=white) ![WordPress 6.7.2](https://img.shields.io/badge/version-6.8.1-blue?logo=wordpress&labelColor=white&logoColor=black)
 
 ## Quick Deploy
 
