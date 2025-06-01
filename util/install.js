@@ -59,7 +59,7 @@ return `<!doctype html>
     </style>
   </head>
   <body>
-    <main class="container" style="width: 800px; margin: 50px auto 0">
+    <main class="container" style="max-width: 800px; margin: 50px auto 0">
       <p align="center" style="margin-bottom: 50px"><img src="https://serverlesswp.com/wp-content/serverlesswp.png"></p>
       <p>ServerlessWP is installed!</p>
       <p>Now we need to add a database for WordPress.</p>
