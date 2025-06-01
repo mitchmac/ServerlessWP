@@ -31,6 +31,7 @@
 
 	<!-- Directories and third party library exclusions. -->
 	<exclude-pattern>/vendor/*</exclude-pattern>
+	<exclude-pattern>/wordpress/*</exclude-pattern>
 	<exclude-pattern>/wp-includes/sqlite/class-wp-sqlite-crosscheck-db.php</exclude-pattern>
 
 	<!--
