@@ -6,6 +6,11 @@
  * @since 1.0.0
  */
 
+/**
+ * Load the "SQLITE_DRIVER_VERSION" constant.
+ */
+require_once dirname( __DIR__, 2 ) . '/version.php';
+
 // Require the constants file.
 require_once dirname( __DIR__, 2 ) . '/constants.php';
 
@@ -59,7 +64,7 @@ require_once __DIR__ . '/install-functions.php';
 $crosscheck_tests_file_path = dirname( __DIR__, 2 ) . '/tests/class-wp-sqlite-crosscheck-db.php';
 if ( defined( 'SQLITE_DEBUG_CROSSCHECK' ) && SQLITE_DEBUG_CROSSCHECK && file_exists( $crosscheck_tests_file_path ) ) {
 	require_once $crosscheck_tests_file_path;
-	$GLOBALS['wpdb'] = new WP_SQLite_Crosscheck_DB();
+	$GLOBALS['wpdb'] = new WP_SQLite_Crosscheck_DB( DB_NAME );
 } else {
-	$GLOBALS['wpdb'] = new WP_SQLite_DB();
+	$GLOBALS['wpdb'] = new WP_SQLite_DB( DB_NAME );
 }
