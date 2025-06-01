@@ -113,7 +113,7 @@ Want to give it a try? Setup a private S3 bucket and use these environment varia
 - You can modify the incoming request through the ```event``` object in api/index.js. You can also modify the WordPress ```response``` object there. ServerlessWP has a basic plugin system to do this. Checkout out ```/api/index.js``` for hints.
 
 ## Getting help
-Need help getting ServerlessWP installed? [Start a discussion](https://github.com/mitchmac/ServerlessWP/discussions)
+Need help getting ServerlessWP installed? [Start a discussion](https://github.com/mitchmac/ServerlessWP/discussions) or [send me a chat](https://serverlesswp.com/chat).
 
 ## Contributing
 - Using ServerlessWP and [reporting any problems you experience](https://github.com/mitchmac/ServerlessWP/issues) is a great way to help.
