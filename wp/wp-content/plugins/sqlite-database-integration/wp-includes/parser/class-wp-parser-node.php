@@ -15,7 +15,7 @@ class WP_Parser_Node {
 	 */
 	public $rule_id;
 	public $rule_name;
-	public $children = array();
+	private $children = array();
 
 	public function __construct( $rule_id, $rule_name ) {
 		$this->rule_id   = $rule_id;
@@ -102,83 +102,190 @@ class WP_Parser_Node {
 		$this->children = array_merge( $this->children, $node->children );
 	}
 
-	public function has_child( $rule_name ) {
+	public function has_child(): bool {
+		return count( $this->children ) > 0;
+	}
+
+	public function has_child_node( ?string $rule_name = null ): bool {
 		foreach ( $this->children as $child ) {
-			if ( ( $child instanceof WP_Parser_Node && $child->rule_name === $rule_name ) ) {
+			if (
+				$child instanceof WP_Parser_Node
+				&& ( null === $rule_name || $child->rule_name === $rule_name )
+			) {
 				return true;
 			}
 		}
 		return false;
 	}
 
-	public function has_token( $token_id = null ) {
+	public function has_child_token( ?int $token_id = null ): bool {
 		foreach ( $this->children as $child ) {
-			if ( $child instanceof WP_MySQL_Token && (
-				null === $token_id ||
-				$child->type === $token_id
-			) ) {
+			if (
+				$child instanceof WP_Parser_Token
+				&& ( null === $token_id || $child->id === $token_id )
+			) {
 				return true;
 			}
 		}
 		return false;
 	}
 
-	public function get_token( $token_id = null ) {
+
+	public function get_first_child() {
+		return $this->children[0] ?? null;
+	}
+
+	public function get_first_child_node( ?string $rule_name = null ): ?WP_Parser_Node {
 		foreach ( $this->children as $child ) {
-			if ( $child instanceof WP_MySQL_Token && (
-				null === $token_id ||
-				$child->type === $token_id
-			) ) {
+			if (
+				$child instanceof WP_Parser_Node
+				&& ( null === $rule_name || $child->rule_name === $rule_name )
+			) {
 				return $child;
 			}
 		}
 		return null;
 	}
 
-	public function get_child( $rule_name = null ) {
+	public function get_first_child_token( ?int $token_id = null ): ?WP_Parser_Token {
 		foreach ( $this->children as $child ) {
-			if ( $child instanceof WP_Parser_Node && (
-				$child->rule_name === $rule_name ||
-				null === $rule_name
-			) ) {
+			if (
+				$child instanceof WP_Parser_Token
+				&& ( null === $token_id || $child->id === $token_id )
+			) {
 				return $child;
 			}
-		}
-	}
-
-	public function get_descendant( $rule_name ) {
-		$parse_trees = array( $this );
-		while ( count( $parse_trees ) ) {
-			$parse_tree = array_pop( $parse_trees );
-			if ( $parse_tree->rule_name === $rule_name ) {
-				return $parse_tree;
-			}
-			array_push( $parse_trees, ...$parse_tree->get_children() );
 		}
 		return null;
 	}
 
-	public function get_descendants( $rule_name ) {
-		$parse_trees     = array( $this );
+	public function get_first_descendant_node( ?string $rule_name = null ): ?WP_Parser_Node {
+		$nodes = array( $this );
+		while ( count( $nodes ) ) {
+			$node  = array_shift( $nodes );
+			$child = $node->get_first_child_node( $rule_name );
+			if ( $child ) {
+				return $child;
+			}
+			$children = $node->get_child_nodes();
+			if ( count( $children ) > 0 ) {
+				array_push( $nodes, ...$children );
+			}
+		}
+		return null;
+	}
+
+	public function get_first_descendant_token( ?int $token_id = null ): ?WP_Parser_Token {
+		$nodes = array( $this );
+		while ( count( $nodes ) ) {
+			$node  = array_shift( $nodes );
+			$child = $node->get_first_child_token( $token_id );
+			if ( $child ) {
+				return $child;
+			}
+			$children = $node->get_child_nodes();
+			if ( count( $children ) > 0 ) {
+				array_push( $nodes, ...$children );
+			}
+		}
+		return null;
+	}
+
+	public function get_children(): array {
+		return $this->children;
+	}
+
+	public function get_child_nodes( ?string $rule_name = null ): array {
+		$nodes = array();
+		foreach ( $this->children as $child ) {
+			if (
+				$child instanceof WP_Parser_Node
+				&& ( null === $rule_name || $child->rule_name === $rule_name )
+			) {
+				$nodes[] = $child;
+			}
+		}
+		return $nodes;
+	}
+
+	public function get_child_tokens( ?int $token_id = null ): array {
+		$tokens = array();
+		foreach ( $this->children as $child ) {
+			if (
+				$child instanceof WP_Parser_Token
+				&& ( null === $token_id || $child->id === $token_id )
+			) {
+				$tokens[] = $child;
+			}
+		}
+		return $tokens;
+	}
+
+	public function get_descendants(): array {
+		$nodes           = array( $this );
 		$all_descendants = array();
-		while ( count( $parse_trees ) ) {
-			$parse_tree      = array_pop( $parse_trees );
-			$all_descendants = array_merge( $all_descendants, $parse_tree->get_children( $rule_name ) );
-			array_push( $parse_trees, ...$parse_tree->get_children() );
+		while ( count( $nodes ) ) {
+			$node            = array_shift( $nodes );
+			$all_descendants = array_merge( $all_descendants, $node->get_children() );
+			$children        = $node->get_child_nodes();
+			if ( count( $children ) > 0 ) {
+				array_push( $nodes, ...$children );
+			}
 		}
 		return $all_descendants;
 	}
 
-	public function get_children( $rule_name = null ) {
-		$matches = array();
-		foreach ( $this->children as $child ) {
-			if ( $child instanceof WP_Parser_Node && (
-				null === $rule_name ||
-				$child->rule_name === $rule_name
-			) ) {
-				$matches[] = $child;
+	public function get_descendant_nodes( ?string $rule_name = null ): array {
+		$nodes           = array( $this );
+		$all_descendants = array();
+		while ( count( $nodes ) ) {
+			$node            = array_shift( $nodes );
+			$all_descendants = array_merge( $all_descendants, $node->get_child_nodes( $rule_name ) );
+			$children        = $node->get_child_nodes();
+			if ( count( $children ) > 0 ) {
+				array_push( $nodes, ...$children );
 			}
 		}
-		return $matches;
+		return $all_descendants;
 	}
+
+	public function get_descendant_tokens( ?int $token_id = null ): array {
+		$nodes           = array( $this );
+		$all_descendants = array();
+		while ( count( $nodes ) ) {
+			$node            = array_shift( $nodes );
+			$all_descendants = array_merge( $all_descendants, $node->get_child_tokens( $token_id ) );
+			$children        = $node->get_child_nodes();
+			if ( count( $children ) > 0 ) {
+				array_push( $nodes, ...$children );
+			}
+		}
+		return $all_descendants;
+	}
+
+	/**
+	 * Get the byte offset in the input SQL string where this node begins.
+	 *
+	 * @return int
+	 */
+	public function get_start(): int {
+		return $this->get_first_descendant_token()->start;
+	}
+
+	/**
+	 * Get the byte length of this node in the input SQL string.
+	 *
+	 * @return int
+	 */
+	public function get_length(): int {
+		$tokens     = $this->get_descendant_tokens();
+		$last_token = end( $tokens );
+		$start      = $this->get_start();
+		return $last_token->start + $last_token->length - $start;
+	}
+
+	/*
+	 * @TODO: Let's implement a more powerful AST-querying API.
+	 *        See: https://github.com/WordPress/sqlite-database-integration/pull/164#discussion_r1855230501
+	 */
 }
