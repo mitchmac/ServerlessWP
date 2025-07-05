@@ -929,6 +929,7 @@ class WP_MySQL_Lexer {
 	const SECONDARY_ENGINE_ATTRIBUTE_SYMBOL             = 849;
 	const JSON_VALUE_SYMBOL                             = 850;
 	const RETURNING_SYMBOL                              = 851;
+	const GEOMCOLLECTION_SYMBOL                         = 852;
 
 	// Comments
 	const COMMENT             = 900;
@@ -1155,6 +1156,7 @@ class WP_MySQL_Lexer {
 		'FUNCTION'                               => self::FUNCTION_SYMBOL,
 		'GENERAL'                                => self::GENERAL_SYMBOL,
 		'GENERATED'                              => self::GENERATED_SYMBOL,
+		'GEOMCOLLECTION'                         => self::GEOMCOLLECTION_SYMBOL,
 		'GEOMETRY'                               => self::GEOMETRY_SYMBOL,
 		'GEOMETRYCOLLECTION'                     => self::GEOMETRYCOLLECTION_SYMBOL,
 		'GET'                                    => self::GET_SYMBOL,
@@ -1810,6 +1812,7 @@ class WP_MySQL_Lexer {
 		self::FIELDS_SYMBOL              => self::COLUMNS_SYMBOL,
 		self::FLOAT4_SYMBOL              => self::FLOAT_SYMBOL,
 		self::FLOAT8_SYMBOL              => self::DOUBLE_SYMBOL,
+		self::GEOMCOLLECTION_SYMBOL      => self::GEOMETRYCOLLECTION_SYMBOL,
 		self::INT1_SYMBOL                => self::TINYINT_SYMBOL,
 		self::INT2_SYMBOL                => self::SMALLINT_SYMBOL,
 		self::INT3_SYMBOL                => self::MEDIUMINT_SYMBOL,
@@ -1936,6 +1939,7 @@ class WP_MySQL_Lexer {
 		self::FAILED_LOGIN_ATTEMPTS_SYMBOL           => 80019,
 		self::FIRST_VALUE_SYMBOL                     => 80000,
 		self::FOLLOWING_SYMBOL                       => 80000,
+		self::GEOMCOLLECTION_SYMBOL                  => 80000,
 		self::GET_MASTER_PUBLIC_KEY_SYMBOL           => 80000,
 		self::GET_SOURCE_PUBLIC_KEY_SYMBOL           => 80000,
 		self::GROUPING_SYMBOL                        => 80000,
@@ -2126,7 +2130,7 @@ class WP_MySQL_Lexer {
 	 *
 	 * @var int
 	 */
-	private $sql_modes;
+	private $sql_modes = 0;
 
 	/**
 	 * How many bytes from the original SQL payload have been read and tokenized.
@@ -2177,16 +2181,28 @@ class WP_MySQL_Lexer {
 	/**
 	 * @param string $sql The SQL payload to tokenize.
 	 * @param int $mysql_version The version of the MySQL server that the SQL payload is intended for.
-	 * @param int $sql_modes The SQL modes that should be considered active during tokenization.
+	 * @param string[] $sql_modes The SQL modes that should be considered active during tokenization.
 	 */
 	public function __construct(
 		string $sql,
 		int $mysql_version = 80038,
-		int $sql_modes = 0
+		array $sql_modes = array()
 	) {
 		$this->sql           = $sql;
 		$this->mysql_version = $mysql_version;
-		$this->sql_modes     = $sql_modes;
+
+		foreach ( $sql_modes as $sql_mode ) {
+			$sql_mode = strtoupper( $sql_mode );
+			if ( 'HIGH_NOT_PRECEDENCE' === $sql_mode ) {
+				$this->sql_modes |= self::SQL_MODE_HIGH_NOT_PRECEDENCE;
+			} elseif ( 'PIPES_AS_CONCAT' === $sql_mode ) {
+				$this->sql_modes |= self::SQL_MODE_PIPES_AS_CONCAT;
+			} elseif ( 'IGNORE_SPACE' === $sql_mode ) {
+				$this->sql_modes |= self::SQL_MODE_IGNORE_SPACE;
+			} elseif ( 'NO_BACKSLASH_ESCAPES' === $sql_mode ) {
+				$this->sql_modes |= self::SQL_MODE_NO_BACKSLASH_ESCAPES;
+			}
+		}
 	}
 
 	/**
@@ -2243,7 +2259,13 @@ class WP_MySQL_Lexer {
 		if ( null === $this->token_type ) {
 			return null;
 		}
-		return new WP_MySQL_Token( $this->token_type, $this->get_current_token_bytes() );
+		return new WP_MySQL_Token(
+			$this->token_type,
+			$this->token_starts_at,
+			$this->bytes_already_read - $this->token_starts_at,
+			$this->sql,
+			$this->is_sql_mode_active( self::SQL_MODE_NO_BACKSLASH_ESCAPES )
+		);
 	}
 
 	/**
