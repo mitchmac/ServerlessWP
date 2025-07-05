@@ -51,3 +51,18 @@ if ( ! defined( 'FQDB' ) ) {
 		define( 'FQDB', FQDBDIR . '.ht.sqlite' );
 	}
 }
+
+/**
+ * The DB_NAME constant is required by the SQLite driver.
+ *
+ * When DB_NAME is not defined, let's use a default value that corresponds to
+ * the default value of the constant in "wp-config-sample.php" and in Studio.
+ */
+if ( ! defined( 'DB_NAME' ) ) {
+	define( 'DB_NAME', 'database_name_here' );
+}
+
+// Allow enabling the SQLite AST driver via environment variable.
+if ( ! defined( 'WP_SQLITE_AST_DRIVER' ) && isset( $_ENV['WP_SQLITE_AST_DRIVER'] ) && 'true' === $_ENV['WP_SQLITE_AST_DRIVER'] ) {
+	define( 'WP_SQLITE_AST_DRIVER', true );
+}
