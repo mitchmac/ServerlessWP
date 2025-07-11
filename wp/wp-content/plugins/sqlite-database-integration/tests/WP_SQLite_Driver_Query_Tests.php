@@ -5,8 +5,8 @@ use PHPUnit\Framework\TestCase;
 /**
  * Unit tests using the WordPress table definitions.
  */
-class WP_SQLite_Query_Tests extends TestCase {
-	/** @var WP_SQLite_Translator */
+class WP_SQLite_Driver_Query_Tests extends TestCase {
+	/** @var WP_SQLite_Driver */
 	private $engine;
 
 	/** @var PDO */
@@ -24,7 +24,10 @@ class WP_SQLite_Query_Tests extends TestCase {
 		$queries = explode( ';', $blog_tables );
 
 		$this->sqlite = new PDO( 'sqlite::memory:' );
-		$this->engine = new WP_SQLite_Translator( $this->sqlite );
+		$this->engine = new WP_SQLite_Driver(
+			new WP_SQLite_Connection( array( 'pdo' => $this->sqlite ) ),
+			'wp'
+		);
 
 		$translator = $this->engine;
 
@@ -36,10 +39,7 @@ class WP_SQLite_Query_Tests extends TestCase {
 					continue;
 				}
 
-				$result = $translator->execute_sqlite_query( $query );
-				if ( false === $result ) {
-					throw new PDOException( $translator->get_error_message() );
-				}
+				$translator->execute_sqlite_query( $query );
 			}
 			$translator->commit();
 		} catch ( PDOException $err ) {
@@ -438,7 +438,7 @@ QUERY;
 		);
 		$option_name          = 'serialized_option';
 		$option_value         = serialize( $obj );
-		$option_value_escaped = $this->engine->get_pdo()->quote( $option_value );
+		$option_value_escaped = $this->engine->get_connection()->quote( $option_value );
 		/* Note well: this is heredoc not nowdoc */
 		$insert = <<<QUERY
 		INSERT INTO `wp_options` (`option_name`, `option_value`, `autoload`)
@@ -464,7 +464,7 @@ QUERY;
 		++$obj ['two'];
 		$obj ['pi']          *= 2;
 		$option_value         = serialize( $obj );
-		$option_value_escaped = $this->engine->get_pdo()->quote( $option_value );
+		$option_value_escaped = $this->engine->get_connection()->quote( $option_value );
 		/* Note well: this is heredoc not nowdoc */
 		$insert = <<<QUERY
 		INSERT INTO `wp_options` (`option_name`, `option_value`, `autoload`)
@@ -491,7 +491,7 @@ QUERY;
 		$this->assertQuery(
 			'CREATE TABLE `test` (
 				`id` INT PRIMARY KEY,
-				`text` VARCHAR(255),
+				`text` VARCHAR(255)
 			);'
 		);
 		// The order is deliberate to test that the query works with the keys in any order.
@@ -513,8 +513,8 @@ QUERY;
 		);
 		// The order is deliberate to test that the query works with the keys in any order.
 		$this->assertQuery(
-			'INSERT INTO test (`name`, other)
-			VALUES ("name", "test")
+			'INSERT INTO test (id, `name`, other)
+			VALUES (1, "name", "test")
 			ON DUPLICATE KEY UPDATE `other` = values(other)'
 		);
 	}
@@ -541,11 +541,26 @@ QUERY;
 	}
 
 	public function testShowColumns() {
+		$this->assertQuery(
+			'
+			CREATE TABLE t (
+				id INT PRIMARY KEY,
+				name VARCHAR(255) NOT NULL,
+				age INT DEFAULT 0,
+				created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+				updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+				deleted_at TIMESTAMP DEFAULT NULL,
+				CONSTRAINT name_unique UNIQUE (name),
+				INDEX name_index (name)
+			);
+		'
+		);
 
-		$query = 'SHOW COLUMNS FROM wp_posts';
+		$query = 'SHOW COLUMNS FROM t';
 		$this->assertQuery( $query );
 
 		$actual = $this->engine->get_query_results();
+		$this->assertCount( 6, $actual );
 		foreach ( $actual as $row ) {
 			$this->assertIsObject( $row );
 			$this->assertTrue( property_exists( $row, 'Field' ) );
@@ -559,14 +574,7 @@ QUERY;
 
 	private function assertQuery( $sql ) {
 		$retval = $this->engine->query( $sql );
-		$this->assertEquals(
-			'',
-			$this->engine->get_error_message()
-		);
-		$this->assertNotFalse(
-			$retval
-		);
-
+		$this->assertNotFalse( $retval );
 		return $retval;
 	}
 }

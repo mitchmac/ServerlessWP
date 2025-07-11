@@ -153,13 +153,13 @@ alterStatement:
         | alterLogfileGroup
         | alterServer
         // ALTER USER is part of the user management rule.
-        | alterInstance /* @FIX: Add support for "ALTER INSTANCE ..." statement. */
+        | alterInstance /* @CHANGED: Added support for "ALTER INSTANCE ..." statement. */
     )
 ;
 
 /*
- * @FIX:
- * Add support for "ALTER INSTANCE ..." statement.
+ * @CHANGED:
+ * Added support for "ALTER INSTANCE ..." statement.
  */
 alterInstance:
     {serverVersion >= 50711}? INSTANCE_SYMBOL (
@@ -172,7 +172,7 @@ alterInstance:
 ;
 
 alterDatabase:
-    /* @FIX: Make "schemaRef" optional. */
+    /* @CHANGED: Made "schemaRef" optional. */
     DATABASE_SYMBOL schemaRef? (
         createDatabaseOption+
         | {serverVersion < 80000}? UPGRADE_SYMBOL DATA_SYMBOL DIRECTORY_SYMBOL NAME_SYMBOL
@@ -218,8 +218,8 @@ alterTable:
 ;*/
 
 /*
- * @FIX:
- * Fix "alterTableActions" to solve conflicts between "alterCommandsModifierList" and "alterCommandList".
+ * @CHANGED:
+ * Fixed "alterTableActions" to solve conflicts between "alterCommandsModifierList" and "alterCommandList".
  */
 alterTableActions:
     (alterCommandsModifierList COMMA_SYMBOL)? standaloneAlterCommands
@@ -234,8 +234,8 @@ alterTableActions:
 ;*/
 
 /*
- * @FIX:
- * Fix "alterCommandList" to solve conflicts between "alterCommandsModifierList" prefixes.
+ * @CHANGED:
+ * Fixed "alterCommandList" to solve conflicts between "alterCommandsModifierList" prefixes.
  */
 alterCommandList:
     alterCommandsModifierList (COMMA_SYMBOL alterList)?
@@ -298,14 +298,18 @@ alterListItem:
         | OPEN_PAR_SYMBOL tableElementList CLOSE_PAR_SYMBOL
     )
     | ADD_SYMBOL tableConstraintDef
-    | CHANGE_SYMBOL COLUMN_SYMBOL? columnInternalRef identifier fieldDefinition place?
-    | MODIFY_SYMBOL COLUMN_SYMBOL? columnInternalRef fieldDefinition place?
+    /* @CHANGED: Replaced "columnInternalRef" with "fieldIdentifier" as per sql_yacc.yy. */
+    | CHANGE_SYMBOL COLUMN_SYMBOL? fieldIdentifier identifier fieldDefinition place?
+    /* @CHANGED: Replaced "columnInternalRef" with "fieldIdentifier" as per sql_yacc.yy. */
+    | MODIFY_SYMBOL COLUMN_SYMBOL? fieldIdentifier fieldDefinition place?
     | DROP_SYMBOL (
-        COLUMN_SYMBOL? columnInternalRef restrict?
+        /* @CHANGED: Replaced "columnInternalRef" with "fieldIdentifier" as per sql_yacc.yy. */
+        COLUMN_SYMBOL? fieldIdentifier restrict?
         | FOREIGN_SYMBOL KEY_SYMBOL (
+            /* @CHANGED: Replaced "columnInternalRef" with "fieldIdentifier" as per sql_yacc.yy. */
             // This part is no longer optional starting with 5.7.
-            {serverVersion >= 50700}? columnInternalRef
-            | {serverVersion < 50700}? columnInternalRef?
+            {serverVersion >= 50700}? fieldIdentifier
+            | {serverVersion < 50700}? fieldIdentifier?
         )
         | PRIMARY_SYMBOL KEY_SYMBOL
         | keyOrIndex indexRef
@@ -314,18 +318,20 @@ alterListItem:
     )
     | DISABLE_SYMBOL KEYS_SYMBOL
     | ENABLE_SYMBOL KEYS_SYMBOL
-    | ALTER_SYMBOL COLUMN_SYMBOL? columnInternalRef (
+    /* @CHANGED: Replaced "columnInternalRef" with "fieldIdentifier" as per sql_yacc.yy. */
+    | ALTER_SYMBOL COLUMN_SYMBOL? fieldIdentifier (
         SET_SYMBOL DEFAULT_SYMBOL (
             {serverVersion >= 80014}? exprWithParentheses
             | signedLiteral
         )
         | DROP_SYMBOL DEFAULT_SYMBOL
-        | {serverVersion >= 80023}? SET_SYMBOL visibility /* @FIX: Add missing SET VISIBLE/INVISIBLE clause.  */
+        | {serverVersion >= 80023}? SET_SYMBOL visibility /* @CHANGED: Added missing SET VISIBLE/INVISIBLE clause.  */
     )
     | {serverVersion >= 80000}? ALTER_SYMBOL INDEX_SYMBOL indexRef visibility
     | {serverVersion >= 80017}? ALTER_SYMBOL CHECK_SYMBOL identifier constraintEnforcement
     | {serverVersion >= 80019}? ALTER_SYMBOL CONSTRAINT_SYMBOL identifier constraintEnforcement
-    | {serverVersion >= 80000}? RENAME_SYMBOL COLUMN_SYMBOL columnInternalRef TO_SYMBOL identifier
+    /* @CHANGED: Replaced "columnInternalRef" with "fieldIdentifier" as per sql_yacc.yy. */
+    | {serverVersion >= 80000}? RENAME_SYMBOL COLUMN_SYMBOL fieldIdentifier TO_SYMBOL identifier
     | RENAME_SYMBOL (TO_SYMBOL | AS_SYMBOL)? tableName
     | {serverVersion >= 50700}? RENAME_SYMBOL keyOrIndex indexRef TO_SYMBOL indexName
     | CONVERT_SYMBOL TO_SYMBOL charset (
@@ -352,12 +358,12 @@ restrict:
 ;*/
 
 /*
- * @FIX:
- * Fix ALTER TABLE with ORDER to use 'qualifiedIdentifier' instead of just 'identifier'.
+ * @CHANGED:
+ * Fixed ALTER TABLE with ORDER to use 'simpleIdentifier' instead of just 'identifier'.
  * This is necessary to support "t.id" in a query like "ALTER TABLE t ORDER BY t.id".
  */
 alterOrderList:
-    qualifiedIdentifier direction? (COMMA_SYMBOL qualifiedIdentifier direction?)*
+    simpleIdentifier direction? (COMMA_SYMBOL simpleIdentifier direction?)*
 ;
 
 alterAlgorithmOption:
@@ -425,7 +431,7 @@ alterTablespaceOption:
     | tsOptionAutoextendSize
     | tsOptionMaxSize
     | tsOptionEngine
-    | {serverVersion >= 80021}? tsOptionEngineAttribute /* @FIX: Add missing "ENGINE_ATTRIBUTE" option. */
+    | {serverVersion >= 80021}? tsOptionEngineAttribute /* @CHANGED: Added missing "ENGINE_ATTRIBUTE" option. */
     | tsOptionWait
     | tsOptionEncryption
 ;
@@ -495,8 +501,8 @@ createDatabaseOption:
 ;*/
 
 /*
- * @FIX:
- * Fix "createTable" to solve support "LIKE tableRef" and "LIKE (tableRef)".
+ * @CHANGED:
+ * Fixed "createTable" to solve support "LIKE tableRef" and "LIKE (tableRef)".
  * They need to come before "tableElementList" to avoid misinterpreting "LIKE".
  */
 createTable:
@@ -529,8 +535,8 @@ createRoutine: // Rule for external use only.
 ;
 
 /*
- * @FIX:
- * Add missing "ifNotExists?".
+ * @CHANGED:
+ * Added missing "ifNotExists?".
  */
 createProcedure:
     definerClause? PROCEDURE_SYMBOL ({serverVersion >= 80029}? ifNotExists?) procedureName OPEN_PAR_SYMBOL (
@@ -539,8 +545,8 @@ createProcedure:
 ;
 
 /*
- * @FIX:
- * Add missing "ifNotExists?".
+ * @CHANGED:
+ * Added missing "ifNotExists?".
  */
 createFunction:
     definerClause? FUNCTION_SYMBOL ({serverVersion >= 80029}? ifNotExists?) functionName OPEN_PAR_SYMBOL (
@@ -613,8 +619,8 @@ createIndex:
 ;*/
 
 /*
- * @FIX:
- * Fix "indexNameAndType" to solve conflicts between "indexName USING_SYMBOL"
+ * @CHANGED:
+ * Fixed "indexNameAndType" to solve conflicts between "indexName USING_SYMBOL"
  * and "indexName TYPE_SYMBOL" prefix by moving them to a single branch.
  */
 indexNameAndType:
@@ -694,7 +700,7 @@ tablespaceOption:
     | tsOptionExtentSize
     | tsOptionNodegroup
     | tsOptionEngine
-    | {serverVersion >= 80021}? tsOptionEngineAttribute /* @FIX: Add missing "ENGINE_ATTRIBUTE" option. */
+    | {serverVersion >= 80021}? tsOptionEngineAttribute /* @CHANGED: Added missing "ENGINE_ATTRIBUTE" option. */
     | tsOptionWait
     | tsOptionComment
     | {serverVersion >= 50707}? tsOptionFileblockSize
@@ -730,8 +736,8 @@ tsOptionEngine:
 ;
 
 /*
- * @FIX:
- * Add missing "ENGINE_ATTRIBUTE" option.
+ * @CHANGED:
+ * Added missing "ENGINE_ATTRIBUTE" option.
  */
 tsOptionEngineAttribute:
     ENGINE_ATTRIBUTE_SYMBOL EQUAL_OPERATOR? textStringLiteral
@@ -774,8 +780,8 @@ viewSuid:
 ;
 
 /*
- * @FIX:
- * Add missing "ifNotExists?".
+ * @CHANGED:
+ * Added missing "ifNotExists?".
  */
 createTrigger:
     definerClause? TRIGGER_SYMBOL ({serverVersion >= 80029}? ifNotExists?) triggerName timing = (BEFORE_SYMBOL | AFTER_SYMBOL) event = (
@@ -961,8 +967,8 @@ deleteStatementOption: // opt_delete_option in sql_yacc.yy, but the name collide
 ;*/
 
 /*
- * @FIX:
- * Reorder "selectItemList" and "exprList" to match "selectItemList", as we don't handle versions yet.
+ * @CHANGED:
+ * Reordered "selectItemList" and "exprList" to match "selectItemList", as we don't handle versions yet.
  */
 doStatement:
     DO_SYMBOL (
@@ -1099,8 +1105,8 @@ replaceStatement:
 ;*/
 
 /*
- * @FIX:
- * Fix "selectStatement" to solve conflicts between "queryExpressionParens" and "selectStatementWithInto".
+ * @CHANGED:
+ * Fixed "selectStatement" to solve conflicts between "queryExpressionParens" and "selectStatementWithInto".
  * Since "queryExpression" already contains "queryExpressionParens" as a subrule, we can remove it here.
  */
 selectStatement:
@@ -1145,7 +1151,7 @@ selectStatement:
 selectStatementWithInto:
     OPEN_PAR_SYMBOL selectStatementWithInto CLOSE_PAR_SYMBOL
     | queryExpression intoClause lockingClauseList?
-    | queryExpression lockingClauseList intoClause /* @FIX: Add missing "queryExpression" prefix. */
+    | queryExpression lockingClauseList intoClause /* @CHANGED: Added missing "queryExpression" prefix. */
 ;
 
 queryExpression:
@@ -1166,8 +1172,8 @@ queryExpression:
 ;*/
 
 /*
- * @FIX:
- * Implement missing "EXCEPT" and "INTERSECT" operators in the grammar.
+ * @CHANGED:
+ * Implemented missing "EXCEPT" and "INTERSECT" operators in the grammar.
  * Note that "INTERSECT" must have a higher precedence than "UNION" and "EXCEPT",
  * and is therefore evaluated first via "queryTerm" as per:
  *   https://dev.mysql.com/doc/refman/8.0/en/set-operations.html
@@ -1188,8 +1194,8 @@ queryTerm:
 ;*/
 
 /*
- * @FIX:
- * Rewrite "queryExpressionParens" to keep only "queryExpression" within.
+ * @CHANGED:
+ * Rewrote "queryExpressionParens" to keep only "queryExpression" within.
  * This avoids conflict between "queryExpressionParens" and "queryExpression"
  * (which already contains "queryExpressionParens" as a subrule).
  */
@@ -1278,8 +1284,8 @@ windowSpec:
 ;*/
 
 /*
- * @FIX:
- * Rewrite "windowSpecDetails" so to keep variants with "windowName?" last.
+ * @CHANGED:
+ * Rewrote "windowSpecDetails" so to keep variants with "windowName?" last.
  * We first need to try to match the symbols as keywords, only then as identifiers.
  * Identifiers can never take precedence over keywords in the grammar.
  *
@@ -1544,7 +1550,7 @@ jtOnResponse:
 ;*/
 
 /*
- * @FIX:
+ * @CHANGED:
  * Renamed "unionOption" to "setOperationOption" as this is now used also for EXCEPT and INTERSECT.
  */
 setOperationOption:
@@ -1561,8 +1567,8 @@ tableAlias:
 ;*/
 
 /*
- * @FIX:
- * Fix "indexHintList" to use only whitespace as a separator (not commas).
+ * @CHANGED:
+ * Fixed "indexHintList" to use only whitespace as a separator (not commas).
  */
 indexHintList:
     indexHint+
@@ -1618,7 +1624,7 @@ transactionOrLockingStatement:
 ;
 
 transactionStatement:
-    /* @FIX: Use "transactionCharacteristicList" instead of "transactionCharacteristic". */
+    /* @CHANGED: Used "transactionCharacteristicList" instead of "transactionCharacteristic". */
     START_SYMBOL TRANSACTION_SYMBOL transactionCharacteristicList?
     | COMMIT_SYMBOL WORK_SYMBOL? (AND_SYMBOL NO_SYMBOL? CHAIN_SYMBOL)? (
         NO_SYMBOL? RELEASE_SYMBOL
@@ -1632,8 +1638,8 @@ beginWork:
 ;
 
 /*
- * @FIX:
- * Add "transactionCharacteristicList" to fix support for transaction with multiple characteristics.
+ * @CHANGED:
+ * Added "transactionCharacteristicList" to fix support for transaction with multiple characteristics.
  */
 transactionCharacteristicList:
     transactionCharacteristic (COMMA_SYMBOL transactionCharacteristic)*
@@ -1709,9 +1715,9 @@ xid:
 ;*/
 
 /*
- * @FIX:
- * Fix "replicationStatement" to correctly support the "RESET PERSIST" statement.
- * The "ifExists" clause wasn't optional, and "identifier" was used instead of "qualifiedIdentifier".
+ * @CHANGED:
+ * Fixed "replicationStatement" to correctly support the "RESET PERSIST" statement.
+ * The "ifExists" clause wasn't optional, and "identifier" was used instead of "internalVariableName".
  */
 replicationStatement:
     PURGE_SYMBOL (BINARY_SYMBOL | MASTER_SYMBOL) LOGS_SYMBOL (
@@ -1814,7 +1820,7 @@ serverIdList:
 ;
 
 changeReplication:
-    /* @FIX: Add support for "CHANGE REPLICATION SOURCE ..." statement. */
+    /* @CHANGED: Added support for "CHANGE REPLICATION SOURCE ..." statement. */
     CHANGE_SYMBOL REPLICATION_SYMBOL SOURCE_SYMBOL TO_SYMBOL changeReplicationSourceOptions channel?
     | CHANGE_SYMBOL REPLICATION_SYMBOL FILTER_SYMBOL filterDefinition (
         COMMA_SYMBOL filterDefinition
@@ -1822,16 +1828,16 @@ changeReplication:
 ;
 
 /*
- * @FIX:
- * Add support for "CHANGE REPLICATION SOURCE ..." statement.
+ * @CHANGED:
+ * Added support for "CHANGE REPLICATION SOURCE ..." statement.
  */
 changeReplicationSourceOptions:
     replicationSourceOption (COMMA_SYMBOL replicationSourceOption)*
 ;
 
 /*
- * @FIX:
- * Add support for "CHANGE REPLICATION SOURCE ..." statement.
+ * @CHANGED:
+ * Added support for "CHANGE REPLICATION SOURCE ..." statement.
  */
 replicationSourceOption:
     (SOURCE_BIND_SYMBOL | MASTER_BIND_SYMBOL) EQUAL_OPERATOR textStringNoLinebreak
@@ -2013,12 +2019,12 @@ alterUser:
 ;*/
 
 /*
- * @FIX:
- * 1. Support also "USER()" function call.
- * 2. Fix matching "DEFAULT ROLE" by reordering rules.
- * 3. Reorder "alterUserList" and "createUserList" to match "alterUserList", as we don't handle versions yet.
+ * @CHANGED:
+ * 1. Added support for "USER()" function call.
+ * 2. Fixed matching "DEFAULT ROLE" by reordering rules.
+ * 3. Reordered "alterUserList" and "createUserList" to match "alterUserList", as we don't handle versions yet.
  * 4. Removed "IDENTIFIED (WITH) BY ..." and "discardOldPassword"; see the fixed "alterUserEntry" rule.
- * 5. Remove "FAILED_LOGIN_ATTEMPTS_SYMBOL" and "PASSWORD_LOCK_TIME_SYMBOL"; they are in "createUserTail" now.
+ * 5. Removed "FAILED_LOGIN_ATTEMPTS_SYMBOL" and "PASSWORD_LOCK_TIME_SYMBOL"; they are in "createUserTail" now.
  */
 alterUserTail:
     {serverVersion >= 80000}? (userFunction | user) DEFAULT_SYMBOL ROLE_SYMBOL (ALL_SYMBOL | NONE_SYMBOL | roleList)
@@ -2040,8 +2046,8 @@ createUser:
 //;
 
 /*
- * @FIX:
- * Add support COMMENT and ATTRIBUTE. The "(COMMENT_SYMBOL | ATTRIBUTE_SYMBOL) textString)?" was missing.
+ * @CHANGED:
+ * Added support COMMENT and ATTRIBUTE. The "(COMMENT_SYMBOL | ATTRIBUTE_SYMBOL) textString)?" was missing.
  */
 createUserTail:
     {serverVersion >= 50706}? requireClause? connectOptions? accountLockPasswordExpireOptions*
@@ -2089,8 +2095,8 @@ connectOptions:
 ;*/
 
 /*
- * @FIX:
- * Add missing "PASSWORD_LOCK_TIME_SYMBOL" and "FAILED_LOGIN_ATTEMPTS_SYMBOL".
+ * @CHANGED:
+ * Added missing "PASSWORD_LOCK_TIME_SYMBOL" and "FAILED_LOGIN_ATTEMPTS_SYMBOL".
  */
 accountLockPasswordExpireOptions:
     ACCOUNT_SYMBOL (LOCK_SYMBOL | UNLOCK_SYMBOL)
@@ -2179,8 +2185,8 @@ renameUser:
 ;*/
 
 /*
- * @FIX:
- * Fix "revoke" to support "IF EXISTS" and "REVOKE ALL ON ... FROM ...".
+ * @CHANGED:
+ * Fixed "revoke" to support "IF EXISTS" and "REVOKE ALL ON ... FROM ...".
  * 1. The "IF EXISTS" clause was missing in the original rule.
  * 2. The "(onTypeTo? FROM_SYMBOL userList)?" part was missing in the original rule.
  * 3. The "IGNORE UNKNOWN USER" clause was missing in the original rule.
@@ -2214,12 +2220,12 @@ roleOrPrivilegesList:
 
 roleOrPrivilege:
     {serverVersion > 80000}? (
-        /* @FIX: Reorder branches to solve conflict between them. */
+        /* @CHANGED: Reordered branches to solve conflict between them. */
         roleIdentifierOrText (AT_TEXT_SUFFIX | AT_SIGN_SYMBOL textOrIdentifier)
         | roleIdentifierOrText columnInternalRefList?
     )
     | (SELECT_SYMBOL | INSERT_SYMBOL | UPDATE_SYMBOL | REFERENCES_SYMBOL) columnInternalRefList?
-		/* @FIX: Moved "CREATE/DROP ROLE" before "CREATE ..." and "DROP ..." to solve conflict. */
+		/* @CHANGED: Moved "CREATE/DROP ROLE" before "CREATE ..." and "DROP ..." to solve conflict. */
 		| {serverVersion > 80000}? (CREATE_SYMBOL | DROP_SYMBOL) ROLE_SYMBOL
     | (
         DELETE_SYMBOL
@@ -2257,8 +2263,8 @@ roleOrPrivilege:
 ;*/
 
 /*
- * @FIX:
- * Rewrite "grantIdentifier" to solve conflicts between "schemaRef DOT_SYMBOL tableRef"
+ * @CHANGED:
+ * Rewrote "grantIdentifier" to solve conflicts between "schemaRef DOT_SYMBOL tableRef"
  * and "schemaRef DOT_SYMBOL MULT_OPERATOR". Move them to a single branch, and order
  * "schemaRef" and "tableRef" after to preserve precedence of keywords over identifiers.
  */
@@ -2318,8 +2324,8 @@ role:
 ;*/
 
 /*
- * @FIX:
- * Fix administration statements to support both "TABLE" and "TABLES" keywords.
+ * @CHANGED:
+ * Fixed administration statements to support both "TABLE" and "TABLES" keywords.
  * The original rule only supported "TABLE".
  */
 tableAdministrationStatement:
@@ -2343,8 +2349,8 @@ tableAdministrationStatement:
 ;*/
 
 /*
- * @FIX:
- * Add missing optional "USING DATA 'json_data'" to UPDATE HISTOGRAM clause.
+ * @CHANGED:
+ * Added missing optional "USING DATA 'json_data'" to UPDATE HISTOGRAM clause.
  */
 histogram:
     UPDATE_SYMBOL HISTOGRAM_SYMBOL ON_SYMBOL identifierList (
@@ -2369,7 +2375,7 @@ repairType:
 installUninstallStatment:
     // COMPONENT_SYMBOL is conditionally set in the lexer.
     action = INSTALL_SYMBOL type = PLUGIN_SYMBOL identifier SONAME_SYMBOL textStringLiteral
-    /* @FIX: Add missing "INSTALL COMPONENT" statement "SET ..." suffix. */
+    /* @CHANGED: Added missing "INSTALL COMPONENT" statement "SET ..." suffix. */
     | action = INSTALL_SYMBOL type = COMPONENT_SYMBOL textStringLiteralList (SET_SYMBOL installSetValueList)?
     | action = UNINSTALL_SYMBOL type = PLUGIN_SYMBOL pluginRef
     | action = UNINSTALL_SYMBOL type = COMPONENT_SYMBOL componentRef (
@@ -2378,8 +2384,8 @@ installUninstallStatment:
 ;
 
 /*
- * @FIX:
- * Add missing "INSTALL COMPONENT" statement "SET ..." suffix.
+ * @CHANGED:
+ * Added missing "INSTALL COMPONENT" statement "SET ..." suffix.
  */
 installOptionType: GLOBAL_SYMBOL | PERSIST_SYMBOL;
 
@@ -2520,7 +2526,7 @@ showStatement:
         | value = COLLATION_SYMBOL likeOrWhere?
         | {serverVersion < 50700}? value = CONTRIBUTORS_SYMBOL
         | value = PRIVILEGES_SYMBOL
-        /* @FIX: Moved "GRANTS_SYMBOL ... USING_SYMBOL" before "GRANTS_SYMBOL ..." to solve conflict. */
+        /* @CHANGED: Moved "GRANTS_SYMBOL ... USING_SYMBOL" before "GRANTS_SYMBOL ..." to solve conflict. */
         | value = GRANTS_SYMBOL FOR_SYMBOL user USING_SYMBOL userList
         | value = GRANTS_SYMBOL (FOR_SYMBOL user)?
         /*| value = GRANTS_SYMBOL FOR_SYMBOL user USING_SYMBOL userList */
@@ -2645,8 +2651,8 @@ logType:
 ;
 
 /*
- * @FIX:
- * Replace "identifierList" with "tableRefList" to correctly support qualified identifiers.
+ * @CHANGED:
+ * Replaced "identifierList" with "tableRefList" to correctly support qualified identifiers.
  */
 flushTables:
     (TABLES_SYMBOL | TABLE_SYMBOL) (
@@ -2738,8 +2744,8 @@ dropResourceGroup:
 ;*/
 
 /*
- * @FIX:
- * Reorder "explainStatement" and "describeStatement".
+ * @CHANGED:
+ * Reordered "explainStatement" and "describeStatement".
  * EXPLAIN can be followed by an identifier (matching a "describeStatement"),
  * but identifiers can never take precedence over keywords in the grammar.
  *
@@ -2774,8 +2780,8 @@ describeStatement:
 ;*/
 
 /*
- * @FIX:
- * Fix "explainStatement" to solve conflict between "ANALYZE ..." and "ANALYZE FORMAT=...".
+ * @CHANGED:
+ * Fixed "explainStatement" to solve conflict between "ANALYZE ..." and "ANALYZE FORMAT=...".
  * The "ANALYZE FORMAT=..." must be attempted to be matched before "ANALYZE ...".
  */
 explainStatement:
@@ -2823,8 +2829,8 @@ restartServer:
 ;
 
 /*
- * @FIX:
- * Factor left recursion.
+ * @CHANGED:
+ * Factored left recursion.
  */
 expr: %expr_simple %expr_rr*;
 
@@ -2847,9 +2853,9 @@ expr: %expr_simple %expr_rr*;
 ;*/
 
 /*
- * @FIX:
- * 1. Factor left recursion.
- * 2. Move "compOp (ALL_SYMBOL | ANY_SYMBOL)" before "compOp predicate" to avoid conflicts.
+ * @CHANGED:
+ * 1. Factored left recursion.
+ * 2. Movee "compOp (ALL_SYMBOL | ANY_SYMBOL)" before "compOp predicate" to avoid conflicts.
  */
 boolPri:
     predicate %boolPri_rr*
@@ -2904,8 +2910,8 @@ predicateOperations:
 ;*/
 
 /*
- * @FIX:
- * Factor left recursion.
+ * @CHANGED:
+ * Factored left recursion.
  */
 bitExpr: simpleExpr %bitExpr_rr*;
 
@@ -2954,8 +2960,8 @@ bitExpr: simpleExpr %bitExpr_rr*;
 ;*/
 
 /*
- * @FIX:
- * Factor left recursion.
+ * @CHANGED:
+ * Factored left recursion.
  */
 simpleExpr: %simpleExpr_collate (CONCAT_PIPES_SYMBOL %simpleExpr_collate)*;
 
@@ -2965,9 +2971,9 @@ simpleExpr: %simpleExpr_collate (CONCAT_PIPES_SYMBOL %simpleExpr_collate)*;
     literal                                                                                              # simpleExprLiteral
     | sumExpr                                                                                            # simpleExprSum
     | variable (equal expr)?                                                                             # simpleExprVariable
-    | functionCall                                                                                       # simpleExprFunction
-    | runtimeFunctionCall                                                                                # simpleExprRuntimeFunction
-    | columnRef jsonOperator?                                                                            # simpleExprColumnRef
+    /*| functionCall                                                                                       # simpleExprFunction*/
+    /*| runtimeFunctionCall                                                                                # simpleExprRuntimeFunction*/
+    /*| columnRef jsonOperator?                                                                            # simpleExprColumnRef*/
     | PARAM_MARKER                                                                                       # simpleExprParamMarker
     | {serverVersion >= 80000}? groupingOperation                                                        # simpleExprGroupingOperation
     | {serverVersion >= 80000}? windowFunctionCall                                                       # simpleExprWindowingFunction
@@ -2978,7 +2984,7 @@ simpleExpr: %simpleExpr_collate (CONCAT_PIPES_SYMBOL %simpleExpr_collate)*;
     | OPEN_CURLY_SYMBOL identifier expr CLOSE_CURLY_SYMBOL                                               # simpleExprOdbc
     | MATCH_SYMBOL identListArg AGAINST_SYMBOL OPEN_PAR_SYMBOL bitExpr fulltextOptions? CLOSE_PAR_SYMBOL # simpleExprMatch
     | BINARY_SYMBOL simpleExpr                                                                           # simpleExprBinary
-    /* @FIX: Add support for CAST(... AT TIME ZONE ... AS DATETIME ...). */
+    /* @CHANGED: Added support for CAST(... AT TIME ZONE ... AS DATETIME ...). */
     | ({serverVersion >= 80022}?
         CAST_SYMBOL OPEN_PAR_SYMBOL expr
         AT_SYMBOL TIME_SYMBOL ZONE_SYMBOL INTERVAL_SYMBOL? textStringLiteral
@@ -2991,6 +2997,10 @@ simpleExpr: %simpleExpr_collate (CONCAT_PIPES_SYMBOL %simpleExpr_collate)*;
     | DEFAULT_SYMBOL OPEN_PAR_SYMBOL simpleIdentifier CLOSE_PAR_SYMBOL                                   # simpleExprDefault
     | VALUES_SYMBOL OPEN_PAR_SYMBOL simpleIdentifier CLOSE_PAR_SYMBOL                                    # simpleExprValues
     | INTERVAL_SYMBOL expr interval PLUS_OPERATOR expr                                                   # simpleExprInterval
+    /* @CHANGED: Moved function calls and ref to the end to avoid conflicts with the above expressions. */
+    | functionCall                                                                                       # simpleExprFunction
+    | runtimeFunctionCall                                                                                # simpleExprRuntimeFunction
+    | columnRef jsonOperator?                                                                            # simpleExprColumnRef
 ;
 
 arrayCast:
@@ -3073,8 +3083,8 @@ windowingClause:
 ;*/
 
 /*
- * @FIX:
- * Fix "leadLagInfo" to support "identifier" and "userVariable" as well.
+ * @CHANGED:
+ * Fixed "leadLagInfo" to support "identifier" and "userVariable" as well.
  */
 leadLagInfo:
     COMMA_SYMBOL (ulonglong_number | PARAM_MARKER | identifier | userVariable) (COMMA_SYMBOL expr)?
@@ -3119,7 +3129,7 @@ runtimeFunctionCall:
     | name = HOUR_SYMBOL exprWithParentheses
     | name = INSERT_SYMBOL OPEN_PAR_SYMBOL expr COMMA_SYMBOL expr COMMA_SYMBOL expr COMMA_SYMBOL expr CLOSE_PAR_SYMBOL
     | name = INTERVAL_SYMBOL OPEN_PAR_SYMBOL expr (COMMA_SYMBOL expr)+ CLOSE_PAR_SYMBOL
-    /* @FIX: Add support for "JSON_VALUE(..., '...' RETURNING <type>). */
+    /* @CHANGED: Added support for "JSON_VALUE(..., '...' RETURNING <type>). */
     | {serverVersion >= 80021}?
         name = JSON_VALUE_SYMBOL OPEN_PAR_SYMBOL simpleExpr COMMA_SYMBOL textLiteral (RETURNING_SYMBOL castType)? onEmptyOrError? CLOSE_PAR_SYMBOL
     | name = LEFT_SYMBOL OPEN_PAR_SYMBOL expr COMMA_SYMBOL expr CLOSE_PAR_SYMBOL
@@ -3175,7 +3185,7 @@ runtimeFunctionCall:
     | name = WEEK_SYMBOL OPEN_PAR_SYMBOL expr (COMMA_SYMBOL expr)? CLOSE_PAR_SYMBOL
     | name = WEIGHT_STRING_SYMBOL OPEN_PAR_SYMBOL expr AS_SYMBOL CHAR_SYMBOL CLOSE_PAR_SYMBOL
     | name = WEIGHT_STRING_SYMBOL OPEN_PAR_SYMBOL expr (
-        /* @FIX: Move "AS BINARY(...)" before "AS CHAR(...)" to solve conflict. */ 
+        /* @CHANGED: Moved "AS BINARY(...)" before "AS CHAR(...)" to solve conflict. */
         AS_SYMBOL BINARY_SYMBOL wsNumCodepoints
         | (AS_SYMBOL CHAR_SYMBOL wsNumCodepoints)? (
             {serverVersion < 80000}? weightStringLevels
@@ -3303,8 +3313,8 @@ elseExpression:
 
 
 /*
- * @FIX:
- * Fix CAST(2024 AS YEAR).
+ * @CHANGED:
+ * Fixed CAST(2024 AS YEAR).
  * The original grammar was missing the YEAR_SYMBOL in the "castType" rule.
  */
 castType:
@@ -3557,7 +3567,8 @@ getDiagnostics:
 signalAllowedExpr:
     literal
     | variable
-    | qualifiedIdentifier
+    /* @CHANGED: Changed "qualifiedIdentifier" to "simpleIdentifier" as per sql_yacc.yy. */
+    | simpleIdentifier
 ;
 
 statementInformationItem:
@@ -3623,7 +3634,8 @@ schedule:
 ;
 
 columnDefinition:
-    columnName fieldDefinition checkOrReferences?
+    /* @CHANGED: Replaced "columnInternalRef" with "fieldIdentifier" as per sql_yacc.yy. */
+    fieldIdentifier fieldDefinition checkOrReferences?
 ;
 
 checkOrReferences:
@@ -3668,8 +3680,8 @@ constraintName:
 ;*/
 
 /*
- * @FIX:
- * Fix "fieldDefinition" to solve conflict between "columnAttribute" and GENERATED/AS.
+ * @CHANGED:
+ * Fixed "fieldDefinition" to solve conflict between "columnAttribute" and GENERATED/AS.
  */
 fieldDefinition:
     dataType (
@@ -3677,7 +3689,7 @@ fieldDefinition:
             VIRTUAL_SYMBOL
             | STORED_SYMBOL
         )? (
-            /* @FIX: Reorder "columnAttribute*" and "gcolAttribute*" to match "columnAttribute*", as we don't handle versions yet. */
+            /* @CHANGED: Reordered "columnAttribute*" and "gcolAttribute*" to match "columnAttribute*", as we don't handle versions yet. */
             {serverVersion >= 80000}? columnAttribute* // Beginning with 8.0 the full attribute set is supported.
             | {serverVersion < 80000}? gcolAttribute*
         )
@@ -3693,7 +3705,7 @@ columnAttribute:
         | NOW_SYMBOL timeFunctionParameters?
         | {serverVersion >= 80013}? exprWithParentheses
     )
-    | {serverVersion >= 80023}? visibility /* @FIX: Add missing VISIBLE/INVISIBLE attribute. */
+    | {serverVersion >= 80023}? visibility /* @CHANGED: Added missing VISIBLE/INVISIBLE attribute. */
     | value = ON_SYMBOL UPDATE_SYMBOL NOW_SYMBOL timeFunctionParameters?
     | value = AUTO_INCREMENT_SYMBOL
     | value = SERIAL_SYMBOL DEFAULT_SYMBOL VALUE_SYMBOL
@@ -3744,7 +3756,7 @@ deleteOption:
     (RESTRICT_SYMBOL | CASCADE_SYMBOL)
     | SET_SYMBOL nullLiteral
     | NO_SYMBOL ACTION_SYMBOL
-    | SET_SYMBOL DEFAULT_SYMBOL /* @FIX: Add missing "SET DEFAULT" option. */
+    | SET_SYMBOL DEFAULT_SYMBOL /* @CHANGED: Added missing "SET DEFAULT" option. */
 ;
 
 keyList:
@@ -3819,7 +3831,7 @@ dataType: // type in sql_yacc.yy
     | type = (FLOAT_SYMBOL | DECIMAL_SYMBOL | NUMERIC_SYMBOL | FIXED_SYMBOL) floatOptions? fieldOptions?
     | type = BIT_SYMBOL fieldLength?
     | type = (BOOL_SYMBOL | BOOLEAN_SYMBOL)
-    /* @FIX: Moved "CHAR_SYMBOL VARYING_SYMBOL" before "CHAR_SYMBOL ..." to solve conflict. */
+    /* @CHANGED: Moved "CHAR_SYMBOL VARYING_SYMBOL" before "CHAR_SYMBOL ..." to solve conflict. */
     | (type = CHAR_SYMBOL VARYING_SYMBOL | type = VARCHAR_SYMBOL) fieldLength charsetWithOptBinary?
     | type = CHAR_SYMBOL fieldLength? charsetWithOptBinary?
     /*| nchar fieldLength? BINARY_SYMBOL? */
@@ -3832,7 +3844,7 @@ dataType: // type in sql_yacc.yy
         | type = NATIONAL_SYMBOL CHAR_SYMBOL VARYING_SYMBOL
         | type = NCHAR_SYMBOL VARYING_SYMBOL
     ) fieldLength BINARY_SYMBOL?
-    /* @FIX: Moved "nchar fieldLength? BINARY_SYMBOL?" after othe nchar definitions to solve conflicts. */
+    /* @CHANGED: Moved "nchar fieldLength? BINARY_SYMBOL?" after othe nchar definitions to solve conflicts. */
     | nchar fieldLength? BINARY_SYMBOL?
     | type = VARBINARY_SYMBOL fieldLength
     | type = YEAR_SYMBOL fieldLength? fieldOptions?
@@ -3958,7 +3970,7 @@ createTableOption: // In the order as they appear in the server grammar.
         | REDUNDANT_SYMBOL
         | COMPACT_SYMBOL
     )
-    /* @FIX: Make "tablRefList" optional. */
+    /* @CHANGED: Made "tablRefList" optional. */
     | option = UNION_SYMBOL EQUAL_OPERATOR? OPEN_PAR_SYMBOL tableRefList? CLOSE_PAR_SYMBOL
     | defaultCharset
     | defaultCollation
@@ -3976,7 +3988,7 @@ createTableOption: // In the order as they appear in the server grammar.
     | option = STORAGE_SYMBOL (DISK_SYMBOL | MEMORY_SYMBOL)
     | option = CONNECTION_SYMBOL EQUAL_OPERATOR? textString
     | option = KEY_BLOCK_SIZE_SYMBOL EQUAL_OPERATOR? ulong_number
-    /* @FIX: Add missing options. */
+    /* @CHANGED: Added missing options. */
     | {serverVersion >= 80021}? option = START_SYMBOL TRANSACTION_SYMBOL
     | {serverVersion >= 80021}? option = ENGINE_ATTRIBUTE_SYMBOL EQUAL_OPERATOR? textString
     | {serverVersion >= 80021}? option = SECONDARY_ENGINE_ATTRIBUTE_SYMBOL EQUAL_OPERATOR? textString
@@ -4115,8 +4127,8 @@ updateList:
 ;*/
 
 /*
- * @FIX:
- * Change "EQUAL_OPERATOR" to "equal" to add support for ":=".
+ * @CHANGED:
+ * Changed "EQUAL_OPERATOR" to "equal" to add support for ":=".
  */
 updateElement:
     columnRef equal (expr | DEFAULT_SYMBOL)
@@ -4183,10 +4195,10 @@ createUserEntry: // create_user in sql_yacc.yy
 ;*/
 
 /*
- * @FIX:
- * Fix "alterUserEntry":
- * 1. Support also "USER()" function call.
- * 2. Add support for "RANDOM PASSWORD".
+ * @CHANGED:
+ * Fixed "alterUserEntry":
+ * 1. Added support for "USER()" function call.
+ * 2. Added support for "RANDOM PASSWORD".
  */
 alterUserEntry: // alter_user in sql_yacc.yy
     (userFunction | user) (
@@ -4217,8 +4229,8 @@ replacePassword:
 ;*/
 
 /*
- * @FIX:
- * Fix "userIdentifierOrText" to support omitting sequence after "@".
+ * @CHANGED:
+ * Fixed "userIdentifierOrText" to support omitting sequence after "@".
  */
 userIdentifierOrText:
     textOrIdentifier (AT_SIGN_SYMBOL textOrIdentifier? | AT_TEXT_SUFFIX)?
@@ -4261,16 +4273,19 @@ usePartition:
 // Sometimes we need additional reference rules with different form, depending on the place such a reference is used.
 
 // A name for a field (column/index). Can be qualified with the current schema + table (although it's not a reference).
+/* @CHANGED: Moved the conditional from "columnName" to "fieldIdentifier" as per sql_yacc.yy. */
 fieldIdentifier:
-    dotIdentifier
-    | qualifiedIdentifier dotIdentifier?
+    // With server 8.0 this became a simple identifier.
+    {serverVersion < 80000}? (dotIdentifier | qualifiedIdentifier dotIdentifier?)
+    | {serverVersion >= 80000}? identifier
 ;
 
-columnName:
+/* @CHANGED: Replaced more universally with "fieldIdentifier" as per sql_yacc.yy. */
+/*columnName:
     // With server 8.0 this became a simple identifier.
     {serverVersion >= 80000}? identifier
     | {serverVersion < 80000}? fieldIdentifier
-;
+;*/
 
 // A reference to a column of the object we are working on.
 columnInternalRef:
@@ -4336,12 +4351,14 @@ triggerRef:
 
 viewName:
     qualifiedIdentifier
-    | dotIdentifier
+    /* @CHANGED: Added missing version constraint. */
+    | {serverVersion < 80000}? dotIdentifier
 ;
 
 viewRef:
     qualifiedIdentifier
-    | dotIdentifier
+    /* @CHANGED: Added missing version constraint. */
+    | {serverVersion < 80000}? dotIdentifier
 ;
 
 tablespaceName:
@@ -4386,7 +4403,8 @@ engineRef:
 
 tableName:
     qualifiedIdentifier
-    | dotIdentifier
+    /* @CHANGED: Added missing version constraint. */
+    | {serverVersion < 80000}? dotIdentifier
 ;
 
 filterTableRef: // Always qualified.
@@ -4399,7 +4417,8 @@ tableRefWithWildcard:
 
 tableRef:
     qualifiedIdentifier
-    | dotIdentifier
+    /* @CHANGED: Added missing version constraint. */
+    | {serverVersion < 80000}? dotIdentifier
 ;
 
 tableRefList:
@@ -4593,8 +4612,8 @@ nullLiteral: // In sql_yacc.cc both 'NULL' and '\N' are mapped to NULL_SYM (whic
 ;*/
 
 /*
- * @FIX:
- * Replace "SINGLE_QUOTED_TEXT" with "textStringLiteral" to support both ' and ", as per SQL_MODE.
+ * @CHANGED:
+ * Replaced "SINGLE_QUOTED_TEXT" with "textStringLiteral" to support both ' and ", as per SQL_MODE.
  */
 temporalLiteral:
     DATE_SYMBOL textStringLiteral
