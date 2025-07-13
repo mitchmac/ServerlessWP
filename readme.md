@@ -2,9 +2,11 @@
 
 WordPress hosting is silly.
 
-Get low maintenance and low cost/free WordPress hosting on Vercel, Netlify, or AWS Lambda.
+**Low maintenance** and **low cost/free** WordPress hosting on Vercel, Netlify, or AWS Lambda.
 
-Stay up-to-date at the ServerlessWP repository: [mitchmac/serverlesswp](https://github.com/mitchmac/serverlesswp)
+ServerlessWP puts PHP & WordPress in serverless functions. Deploy this repository to give it a try.
+
+Stay up-to-date at the ServerlessWP repository: [github.com/mitchmac/serverlesswp](https://github.com/mitchmac/serverlesswp)
 
 ![PHP 8.3.23](https://img.shields.io/badge/version-8.3.23-blue?logo=php&labelColor=white) ![WordPress 6.8.1](https://img.shields.io/badge/version-6.8.1-blue?logo=wordpress&labelColor=white&logoColor=black)
 
@@ -25,15 +27,15 @@ Want to use AWS Lambda with the Serverless Framework instead? `npm install && se
 
 ## Project goals
 
-🌴 Maintaining servers for WordPress can be a pain. Serverless hosting should make it less time consuming.
+🌴 WordPress hosting made easy. Lower maintenance with serverless functions instead of servers.
 
 💲 Small WordPress sites shouldn't cost much to host. **Vercel, Netlify, & AWS have free tiers**.
 
 🔓 WordPress plugins and themes are extensively supported. No arbitrary limitations here.
 
-⚡ Blazing fast websites that take advantage of caching and Content Delivery Networks.
+⚡ Blazing fast websites that take advantage of caching and content delivery networks.
 
-🌎 Mindful consideration of the carbon footprint of WordPress websites.
+🌎 Lower the carbon footprint of WordPress websites.
 
 🤝 A helpful community. [Share your successes, ideas, or struggles](https://github.com/mitchmac/ServerlessWP/discussions) in the discussions.
 
