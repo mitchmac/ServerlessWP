@@ -3,29 +3,11 @@
 use PHPUnit\Framework\TestCase;
 
 class WP_SQLite_Metadata_Tests extends TestCase {
-
+	/** @var WP_SQLite_Translator */
 	private $engine;
-	private $sqlite;
 
-	public static function setUpBeforeClass(): void {
-		// if ( ! defined( 'PDO_DEBUG' )) {
-		// define( 'PDO_DEBUG', true );
-		// }
-		if ( ! defined( 'FQDB' ) ) {
-			define( 'FQDB', ':memory:' );
-			define( 'FQDBDIR', __DIR__ . '/../testdb' );
-		}
-		error_reporting( E_ALL & ~E_DEPRECATED );
-		if ( ! isset( $GLOBALS['table_prefix'] ) ) {
-			$GLOBALS['table_prefix'] = 'wptests_';
-		}
-		if ( ! isset( $GLOBALS['wpdb'] ) ) {
-			$GLOBALS['wpdb']                  = new stdClass();
-			$GLOBALS['wpdb']->suppress_errors = false;
-			$GLOBALS['wpdb']->show_errors     = true;
-		}
-		return;
-	}
+	/** @var PDO */
+	private $sqlite;
 
 	// Before each test, we create a new database
 	public function setUp(): void {
@@ -71,6 +53,69 @@ class WP_SQLite_Metadata_Tests extends TestCase {
 		$actual = $this->engine->get_query_results();
 		$count  = array_values( get_object_vars( $actual[0] ) )[0];
 		self::assertIsNumeric( $count );
+	}
+
+	public function testInformationSchemaTables() {
+		$result = $this->assertQuery( "SELECT * FROM information_schema.tables WHERE TABLE_NAME = 'wp_options'" );
+		$this->assertEquals(
+			array(
+				'TABLE_CATALOG'   => 'def',
+				'TABLE_SCHEMA'    => '',
+				'TABLE_NAME'      => 'wp_options',
+				'TABLE_TYPE'      => 'BASE TABLE',
+				'ENGINE'          => 'InnoDB',
+				'ROW_FORMAT'      => 'Dynamic',
+				'TABLE_COLLATION' => 'utf8mb4_general_ci',
+				'AUTO_INCREMENT'  => null,
+				'CREATE_TIME'     => null,
+				'UPDATE_TIME'     => null,
+				'CHECK_TIME'      => null,
+				'TABLE_ROWS'      => '0',
+				'AVG_ROW_LENGTH'  => '0',
+				'DATA_LENGTH'     => '0',
+				'MAX_DATA_LENGTH' => '0',
+				'INDEX_LENGTH'    => '0',
+				'DATA_FREE'       => '0',
+				'CHECKSUM'        => null,
+				'CREATE_OPTIONS'  => '',
+				'VERSION'         => '10',
+				'TABLE_COMMENT'   => '',
+			),
+			(array) $result[0]
+		);
+
+		$result = $this->assertQuery(
+			"SELECT
+				table_name as 'name',
+				engine AS 'engine',
+				FLOOR( data_length / 1024 / 1024 ) 'data'
+			FROM INFORMATION_SCHEMA.TABLES
+			WHERE TABLE_NAME = 'wp_posts'
+			ORDER BY name ASC;"
+		);
+
+		$this->assertEquals(
+			array(
+				'name'   => 'wp_posts',
+				'engine' => 'InnoDB',
+				'data'   => '0',
+			),
+			(array) $result[0]
+		);
+	}
+
+	public function testInformationSchemaQueryHidesSqliteSystemTables() {
+		/**
+		 * By default, system tables are not returned.
+		 */
+		$result = $this->assertQuery( "SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'sqlite_sequence'" );
+		$this->assertEquals( 0, count( $result ) );
+
+		/**
+		 * If we use a custom name for the table_name column, system tables are returned.
+		 */
+		$result = $this->assertQuery( "SELECT TABLE_NAME as custom_name FROM INFORMATION_SCHEMA.TABLES WHERE custom_name = 'sqlite_sequence'" );
+		$this->assertEquals( 1, count( $result ) );
 	}
 
 	private function assertQuery( $sql, $error_substring = null ) {
