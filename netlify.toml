@@ -5,3 +5,5 @@
   from = "/*"
   to = "/.netlify/functions/index/:splat"
   status = 200
+[build]
+  command = "rm -rf .git && npm install"
