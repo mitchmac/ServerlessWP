@@ -18,6 +18,8 @@
  * @throws PDOException If the database connection fails.
  */
 function sqlite_make_db_sqlite() {
+	global $wpdb;
+
 	include_once ABSPATH . 'wp-admin/includes/schema.php';
 
 	$table_schemas = wp_get_db_schema();
@@ -31,8 +33,15 @@ function sqlite_make_db_sqlite() {
 		wp_die( $message, 'Database Error!' );
 	}
 
-	$translator = new WP_SQLite_Translator( $pdo );
-	$query      = null;
+	if ( defined( 'WP_SQLITE_AST_DRIVER' ) && WP_SQLITE_AST_DRIVER ) {
+		$translator = new WP_SQLite_Driver(
+			new WP_SQLite_Connection( array( 'pdo' => $pdo ) ),
+			$wpdb->dbname
+		);
+	} else {
+		$translator = new WP_SQLite_Translator( $pdo );
+	}
+	$query = null;
 
 	try {
 		$translator->begin_transaction();

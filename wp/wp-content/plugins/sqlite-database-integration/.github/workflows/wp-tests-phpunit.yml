@@ -1,0 +1,38 @@
+name: WordPress Tests
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  test:
+    name: WordPress PHPUnit Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Set UID and GID for PHP in WordPress images
+        run: |
+          echo "PHP_FPM_UID=$(id -u)" >> $GITHUB_ENV
+          echo "PHP_FPM_GID=$(id -g)" >> $GITHUB_ENV
+
+      - name: Setup WordPress test environment
+        run: composer run wp-setup
+
+      - name: Start WordPress test environment
+        run: composer run wp-test-start
+
+      - name: Run WordPress PHPUnit tests
+        run: node .github/workflows/wp-tests-phpunit-run.js
+
+      - name: Stop Docker containers
+        if: always()
+        run: composer run wp-test-clean

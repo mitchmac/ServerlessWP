@@ -8,7 +8,9 @@
 		"issues": "https://github.com/wordpress/sqlite-database-integration/issues"
 	},
 	"require": {
-		"php": ">=7.0"
+		"php": ">=7.2",
+		"ext-pdo": "*",
+		"ext-pdo_sqlite": "*"
 	},
 	"require-dev": {
 		"ext-mbstring": "*",
@@ -24,7 +26,8 @@
 		"allow-plugins": {
 			"dealerdirect/phpcodesniffer-composer-installer": true,
 			"phpstan/extension-installer": true
-		}
+		},
+		"process-timeout": 3600
 	},
 	"scripts": {
 		"check-cs": [
@@ -35,6 +38,22 @@
 		],
 		"test": [
 			"phpunit"
+		],
+		"wp-setup": [
+			"./wp-setup.sh"
+		],
+		"wp-run": [
+			"npm --prefix wordpress run"
+		],
+		"wp-test-start": [
+			"npm --prefix wordpress run env:start",
+			"npm --prefix wordpress run env:install"
+		],
+		"wp-test-phpunit": [
+			"rm -rf wordpress/src/wp-content/database && npm --prefix wordpress run test:php --"
+		],
+		"wp-test-clean": [
+			"npm --prefix wordpress run env:clean"
 		]
 	}
 }
