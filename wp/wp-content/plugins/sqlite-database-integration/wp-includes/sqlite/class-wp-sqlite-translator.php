@@ -394,7 +394,7 @@ class WP_SQLite_Translator {
 			}
 		}
 
-		new WP_SQLite_PDO_User_Defined_Functions( $pdo );
+		WP_SQLite_PDO_User_Defined_Functions::register_for( $pdo );
 
 		// MySQL data comes across stringified by default.
 		$pdo->setAttribute( PDO::ATTR_STRINGIFY_FETCHES, true ); // phpcs:ignore WordPress.DB.RestrictedClasses.mysql__PDO
@@ -410,7 +410,7 @@ class WP_SQLite_Translator {
 		$this->pdo = $pdo;
 
 		// Fixes a warning in the site-health screen.
-		$this->client_info = SQLite3::version()['versionString'];
+		$this->client_info = $this->get_sqlite_version();
 
 		register_shutdown_function( array( $this, '__destruct' ) );
 
@@ -472,6 +472,15 @@ class WP_SQLite_Translator {
 	 */
 	public function get_pdo() {
 		return $this->pdo;
+	}
+
+	/**
+	 * Get the version of the SQLite engine.
+	 *
+	 * @return string SQLite engine version as a string.
+	 */
+	public function get_sqlite_version(): string {
+		return $this->pdo->query( 'SELECT SQLITE_VERSION()' )->fetchColumn();
 	}
 
 	/**
@@ -1013,15 +1022,25 @@ class WP_SQLite_Translator {
 			 *
 			 * Lexer does not seem to reliably understand whether the
 			 * first token is a field name or a reserved keyword, so
-			 * instead we'll check whether the second non-whitespace
-			 * token is a data type.
+			 * alongside checking for the reserved keyword, we'll also
+			 * check whether the second non-whitespace token is a data type.
+			 *
+			 * By checking for the reserved keyword, we can be sure that
+			 * we're not parsing a constraint as a field when the
+			 * constraint symbol matches a data type.
 			 */
-			$second_token = $this->rewriter->peek_nth( 2 );
+			$current_token = $this->rewriter->peek();
+			$second_token  = $this->rewriter->peek_nth( 2 );
 
-			if ( $second_token->matches(
-				WP_SQLite_Token::TYPE_KEYWORD,
-				WP_SQLite_Token::FLAG_KEYWORD_DATA_TYPE
-			) ) {
+			if (
+				$second_token->matches(
+					WP_SQLite_Token::TYPE_KEYWORD,
+					WP_SQLite_Token::FLAG_KEYWORD_DATA_TYPE
+				) && ! $current_token->matches(
+					WP_SQLite_Token::TYPE_KEYWORD,
+					WP_SQLite_Token::FLAG_KEYWORD_RESERVED
+				)
+			) {
 				$result->fields[] = $this->parse_mysql_create_table_field();
 			} else {
 				$result->constraints[] = $this->parse_mysql_create_table_constraint();
@@ -1509,8 +1528,43 @@ class WP_SQLite_Translator {
 
 		if ( $table_name && str_starts_with( strtolower( $table_name ), 'information_schema' ) ) {
 			$this->is_information_schema_query = true;
-			$updated_query                     = $this->get_information_schema_query( $updated_query );
-			$params                            = array();
+
+			$database_name = $this->pdo->quote( defined( 'DB_NAME' ) ? DB_NAME : '' );
+			$updated_query = preg_replace(
+				'/' . $table_name . '\.tables/i',
+				/**
+				 * TODO: Return real values for hardcoded column values.
+				 */
+				"(SELECT
+					'def' as TABLE_CATALOG,
+					$database_name as TABLE_SCHEMA,
+					name as TABLE_NAME,
+					CASE type
+					WHEN 'table' THEN 'BASE TABLE'
+					WHEN 'view' THEN 'VIEW'
+					ELSE type
+					END as TABLE_TYPE,
+					'InnoDB' as ENGINE,
+					10 as VERSION,
+					'Dynamic' as ROW_FORMAT,
+					0 as TABLE_ROWS,
+					0 as AVG_ROW_LENGTH,
+					0 as DATA_LENGTH,
+					0 as MAX_DATA_LENGTH,
+					0 as INDEX_LENGTH,
+					0 as DATA_FREE,
+					NULL as AUTO_INCREMENT,
+					NULL as CREATE_TIME,
+					NULL as UPDATE_TIME,
+					NULL as CHECK_TIME,
+					'utf8mb4_general_ci' as TABLE_COLLATION,
+					NULL as CHECKSUM,
+					'' as CREATE_OPTIONS,
+					'' as TABLE_COMMENT
+					FROM sqlite_master
+					WHERE type IN ('table', 'view'))",
+				$updated_query
+			);
 		} elseif (
 			// Examples: @@SESSION.sql_mode, @@GLOBAL.max_allowed_packet, @@character_set_client
 			preg_match( '/@@((SESSION|GLOBAL)\s*\.\s*)?\w+\b/i', $updated_query ) === 1 ||
@@ -2763,51 +2817,6 @@ class WP_SQLite_Translator {
 	}
 
 	/**
-	 * Rewrite a query from the MySQL information_schema.
-	 *
-	 * @param string $updated_query The query to rewrite.
-	 *
-	 * @return string The query for use by SQLite
-	 */
-	private function get_information_schema_query( $updated_query ) {
-		// @TODO: Actually rewrite the columns.
-		$normalized_query = preg_replace( '/\s+/', ' ', strtolower( $updated_query ) );
-		if ( str_contains( $normalized_query, 'bytes' ) ) {
-			// Count rows per table.
-			$tables =
-				$this->execute_sqlite_query( "SELECT name as `table_name` FROM sqlite_master WHERE type='table' ORDER BY name" )->fetchAll();
-			$tables = $this->strip_sqlite_system_tables( $tables );
-
-			$rows = '(CASE ';
-			foreach ( $tables as $table ) {
-				$table_name = $table['table_name'];
-				$count      = $this->execute_sqlite_query( "SELECT COUNT(1) as `count` FROM $table_name" )->fetch();
-				$rows      .= " WHEN name = '$table_name' THEN {$count['count']} ";
-			}
-			$rows         .= 'ELSE 0 END) ';
-			$updated_query =
-				"SELECT name as `table_name`, $rows as `rows`, 0 as `bytes` FROM sqlite_master WHERE type='table' ORDER BY name";
-		} elseif ( str_contains( $normalized_query, 'count(*)' ) && ! str_contains( $normalized_query, 'table_name =' ) ) {
-			// @TODO This is a guess that the caller wants a count of tables.
-			$list = array();
-			foreach ( $this->sqlite_system_tables as $system_table => $name ) {
-				$list [] = "'" . $system_table . "'";
-			}
-			$list          = implode( ', ', $list );
-			$sql           = "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name NOT IN ($list)";
-			$table_count   = $this->execute_sqlite_query( $sql )->fetch();
-			$updated_query = 'SELECT ' . $table_count[0] . ' AS num';
-
-			$this->is_information_schema_query = false;
-		} else {
-			$updated_query =
-				"SELECT name as `table_name`, 'myisam' as `engine`, 0 as `data_length`, 0 as `index_length`, 0 as `data_free` FROM sqlite_master WHERE type='table' ORDER BY name";
-		}
-
-		return $updated_query;
-	}
-
-	/**
 	 * Remove system table rows from resultsets of information_schema tables.
 	 *
 	 * @param array $tables The result set.
@@ -2819,20 +2828,22 @@ class WP_SQLite_Translator {
 			array_filter(
 				$tables,
 				function ( $table ) {
-					$table_name = false;
-					if ( is_array( $table ) ) {
-						if ( isset( $table['Name'] ) ) {
-							$table_name = $table['Name'];
-						} elseif ( isset( $table['table_name'] ) ) {
-							$table_name = $table['table_name'];
-						}
-					} elseif ( is_object( $table ) ) {
-						$table_name = property_exists( $table, 'Name' )
-							? $table->Name // phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase
-							: $table->table_name;
+					/**
+					 * By default, we assume the table name is in the result set,
+					 * so we allow empty table names to pass through.
+					 * Otherwise, if an information_schema table uses a custom name
+					 * for the name/table_name column, the table would be removed.
+					 */
+					$table_name = '';
+					$table      = (array) $table;
+					if ( isset( $table['Name'] ) ) {
+						$table_name = $table['Name'];
+					} elseif ( isset( $table['table_name'] ) ) {
+						$table_name = $table['table_name'];
+					} elseif ( isset( $table['TABLE_NAME'] ) ) {
+						$table_name = $table['TABLE_NAME'];
 					}
-
-					return $table_name && ! array_key_exists( $table_name, $this->sqlite_system_tables );
+					return '' === $table_name || ! array_key_exists( $table_name, $this->sqlite_system_tables );
 				},
 				ARRAY_FILTER_USE_BOTH
 			)
@@ -3271,7 +3282,7 @@ class WP_SQLite_Translator {
 						new WP_SQLite_Token( ' ', WP_SQLite_Token::TYPE_WHITESPACE ),
 						new WP_SQLite_Token( 'ON', WP_SQLite_Token::TYPE_KEYWORD, WP_SQLite_Token::FLAG_KEYWORD_RESERVED ),
 						new WP_SQLite_Token( ' ', WP_SQLite_Token::TYPE_WHITESPACE ),
-						new WP_SQLite_Token( '"' . $this->table_name . '"', WP_SQLite_Token::TYPE_STRING, WP_SQLite_Token::FLAG_STRING_DOUBLE_QUOTES ),
+						new WP_SQLite_Token( "\"$this->table_name\"", WP_SQLite_Token::TYPE_STRING, WP_SQLite_Token::FLAG_STRING_DOUBLE_QUOTES ),
 						new WP_SQLite_Token( ' ', WP_SQLite_Token::TYPE_WHITESPACE ),
 						new WP_SQLite_Token( '(', WP_SQLite_Token::TYPE_OPERATOR ),
 					)

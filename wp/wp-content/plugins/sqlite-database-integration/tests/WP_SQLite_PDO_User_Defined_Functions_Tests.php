@@ -10,7 +10,7 @@ class WP_SQLite_PDO_User_Defined_Functions_Tests extends TestCase {
 	 */
 	public function testFieldFunction( $expected, $args ) {
 		$pdo = new PDO( 'sqlite::memory:' );
-		$fns = new WP_SQLite_PDO_User_Defined_Functions( $pdo );
+		$fns = WP_SQLite_PDO_User_Defined_Functions::register_for( $pdo );
 
 		$this->assertEquals(
 			$expected,
