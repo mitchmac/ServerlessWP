@@ -117,10 +117,15 @@ exports.postRequest = async function(event, response) {
                 catch (err) {
                     console.log(err);
                     //@TODO: more descriptive message
-                    return {
+                    let errResponse = {
                         statusCode: 500,
                         body: 'Database error. This can happen when simultaneous database updates happen. Re-try your request.'
                     }
+                    if (err.$metadata && err.$metadata.httpStatusCode === 412) {
+                       errResponse.retry = true;
+                       console.log('Retrying database save to s3 because of a conflicting update.');
+                    }
+                    return errResponse;
                 }
             }
         }
