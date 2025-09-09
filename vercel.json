@@ -1,16 +1,34 @@
 {
-    "rewrites": [
-      { "source": "/(.*)", "destination": "/api/index.js" }
-    ],
-    "functions": {
-        "api/index.js": {
-          "includeFiles": "wp/**",
-          "maxDuration": 60
-        }
+  "rewrites": [
+    {
+      "source": "/(.+)\\.(css|js|svg|png|gif|jpg|jpeg|webp|woff|woff2|ico|otf)",
+      "destination": "/wp/$1.$2"
     },
-    "build": {
-      "env": {
-        "NODEJS_AWS_HANDLER_NAME": "handler"
-      }
+    {
+      "source": "/(.*)",
+      "destination": "/api/index.js"
     }
+  ],
+  "headers": [
+    {
+      "source": "/(.+)\\.(css|js|svg|png|gif|jpg|jpeg|webp|woff|woff2|ico|otf)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "max-age=864000, s-maxage=864000"
+        }
+      ]
+    }
+  ],
+  "functions": {
+    "api/index.js": {
+      "includeFiles": "wp/**",
+      "maxDuration": 60
+    }
+  },
+  "build": {
+    "env": {
+      "NODEJS_AWS_HANDLER_NAME": "handler"
+    }
+  }
 }
