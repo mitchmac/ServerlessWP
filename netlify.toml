@@ -5,5 +5,10 @@
   from = "/*"
   to = "/.netlify/functions/index/:splat"
   status = 200
+[[headers]]
+  for = "/*"
+  [headers.values]
+    Cache-Control = "max-age=864000, s-maxage=864000"
 [build]
-  command = "rm -rf .git && npm install"
+  command = "rm -rf .git && npm install && mkdir -p wp-public && find wp -type f \\( -name '*.css' -o -name '*.js' -o -name '*.png' -o -name '*.jpg' -o -name '*.jpeg' -o -name '*.gif' -o -name '*.svg' -o -name '*.woff' -o -name '*.woff2' -o -name '*.ico' -o -name '*.otf' -o -name '*.webp' \\) -exec cp --parents {} wp-public/ \\;"
+  publish = "wp-public/wp"
