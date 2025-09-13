@@ -165,17 +165,17 @@ function expand( $value ) {
 	$last = $value[ strlen( $value ) - 1 ];
 	$name = substr( $value, 0, -1 );
 	if ( '?' === $last ) {
-		$expanded[] = array(
+		$expanded[ $value ] = array(
 			'name'  => $value,
 			'value' => array( array( $name ), array( 'ε' ) ),
 		);
 	} elseif ( '*' === $last ) {
-		$expanded[] = array(
+		$expanded[ $value ] = array(
 			'name'  => $value,
 			'value' => array( array( $name, $value ), array( $name ), array( 'ε' ) ),
 		);
 	} elseif ( '+' === $last ) {
-		$expanded[] = array(
+		$expanded[ $value ] = array(
 			'name'  => $value,
 			'value' => array( array( $name, $value ), array( $name ) ),
 		);

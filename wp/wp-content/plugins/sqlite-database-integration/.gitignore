@@ -5,3 +5,4 @@ composer.lock
 ._.DS_Store
 .DS_Store
 ._*
+/wordpress
