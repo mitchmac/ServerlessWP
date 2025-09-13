@@ -15,7 +15,7 @@ class WP_Parser_Node {
 	 */
 	public $rule_id;
 	public $rule_name;
-	public $children = array();
+	private $children = array();
 
 	public function __construct( $rule_id, $rule_name ) {
 		$this->rule_id   = $rule_id;
@@ -102,83 +102,283 @@ class WP_Parser_Node {
 		$this->children = array_merge( $this->children, $node->children );
 	}
 
-	public function has_child( $rule_name ) {
+	/**
+	 * Check if this node has any child nodes or tokens.
+	 *
+	 * @return bool True if this node has any child nodes or tokens, false otherwise.
+	 */
+	public function has_child(): bool {
+		return count( $this->children ) > 0;
+	}
+
+	/**
+	 * Check if this node has any child nodes.
+	 *
+	 * @param  string|null $rule_name Optional. A node rule name to check for.
+	 * @return bool                   True if any child nodes are found, false otherwise.
+	 */
+	public function has_child_node( ?string $rule_name = null ): bool {
 		foreach ( $this->children as $child ) {
-			if ( ( $child instanceof WP_Parser_Node && $child->rule_name === $rule_name ) ) {
+			if (
+				$child instanceof WP_Parser_Node
+				&& ( null === $rule_name || $child->rule_name === $rule_name )
+			) {
 				return true;
 			}
 		}
 		return false;
 	}
 
-	public function has_token( $token_id = null ) {
+	/**
+	 * Check if this node has any child tokens.
+	 *
+	 * @param  int|null $token_id Optional. A token ID to check for.
+	 * @return bool               True if any child tokens are found, false otherwise.
+	 */
+	public function has_child_token( ?int $token_id = null ): bool {
 		foreach ( $this->children as $child ) {
-			if ( $child instanceof WP_MySQL_Token && (
-				null === $token_id ||
-				$child->type === $token_id
-			) ) {
+			if (
+				$child instanceof WP_Parser_Token
+				&& ( null === $token_id || $child->id === $token_id )
+			) {
 				return true;
 			}
 		}
 		return false;
 	}
 
-	public function get_token( $token_id = null ) {
+	/**
+	 * Get the first child node or token of this node.
+	 *
+	 * @return WP_Parser_Node|WP_Parser_Token|null The first child node or token;
+	 *                                             null when no children are found.
+	 */
+	public function get_first_child() {
+		return $this->children[0] ?? null;
+	}
+
+	/**
+	 * Get the first child node of this node.
+	 *
+	 * @param  string|null $rule_name Optional. A node rule name to check for.
+	 * @return WP_Parser_Node|null    The first matching child node; null when no children are found.
+	 */
+	public function get_first_child_node( ?string $rule_name = null ): ?WP_Parser_Node {
 		foreach ( $this->children as $child ) {
-			if ( $child instanceof WP_MySQL_Token && (
-				null === $token_id ||
-				$child->type === $token_id
-			) ) {
+			if (
+				$child instanceof WP_Parser_Node
+				&& ( null === $rule_name || $child->rule_name === $rule_name )
+			) {
 				return $child;
 			}
 		}
 		return null;
 	}
 
-	public function get_child( $rule_name = null ) {
+	/**
+	 * Get the first child token of this node.
+	 *
+	 * @param  int|null $token_id   Optional. A token ID to check for.
+	 * @return WP_Parser_Token|null The first matching child token; null when no children are found.
+	 */
+	public function get_first_child_token( ?int $token_id = null ): ?WP_Parser_Token {
 		foreach ( $this->children as $child ) {
-			if ( $child instanceof WP_Parser_Node && (
-				$child->rule_name === $rule_name ||
-				null === $rule_name
-			) ) {
+			if (
+				$child instanceof WP_Parser_Token
+				&& ( null === $token_id || $child->id === $token_id )
+			) {
 				return $child;
 			}
-		}
-	}
-
-	public function get_descendant( $rule_name ) {
-		$parse_trees = array( $this );
-		while ( count( $parse_trees ) ) {
-			$parse_tree = array_pop( $parse_trees );
-			if ( $parse_tree->rule_name === $rule_name ) {
-				return $parse_tree;
-			}
-			array_push( $parse_trees, ...$parse_tree->get_children() );
 		}
 		return null;
 	}
 
-	public function get_descendants( $rule_name ) {
-		$parse_trees     = array( $this );
-		$all_descendants = array();
-		while ( count( $parse_trees ) ) {
-			$parse_tree      = array_pop( $parse_trees );
-			$all_descendants = array_merge( $all_descendants, $parse_tree->get_children( $rule_name ) );
-			array_push( $parse_trees, ...$parse_tree->get_children() );
-		}
-		return $all_descendants;
-	}
-
-	public function get_children( $rule_name = null ) {
-		$matches = array();
-		foreach ( $this->children as $child ) {
-			if ( $child instanceof WP_Parser_Node && (
-				null === $rule_name ||
-				$child->rule_name === $rule_name
-			) ) {
-				$matches[] = $child;
+	/**
+	 * Get the first descendant node of this node.
+	 *
+	 * The node children are traversed recursively in a depth-first order until
+	 * a matching descendant node is found, or the entire subtree is searched.
+	 *
+	 * @param  string|null $rule_name Optional. A node rule name to check for.
+	 * @return WP_Parser_Node|null    The first matching descendant node; null when no descendants are found.
+	 */
+	public function get_first_descendant_node( ?string $rule_name = null ): ?WP_Parser_Node {
+		for ( $i = 0; $i < count( $this->children ); $i++ ) {
+			$child = $this->children[ $i ];
+			if ( ! $child instanceof WP_Parser_Node ) {
+				continue;
+			}
+			if ( null === $rule_name || $child->rule_name === $rule_name ) {
+				return $child;
+			}
+			$node = $child->get_first_descendant_node( $rule_name );
+			if ( $node ) {
+				return $node;
 			}
 		}
-		return $matches;
+		return null;
+	}
+
+	/**
+	 * Get the first descendant token of this node.
+	 *
+	 * The node children are traversed recursively in a depth-first order until
+	 * a matching descendant token is found, or the entire subtree is searched.
+	 *
+	 * @param  int|null $token_id   Optional. A token ID to check for.
+	 * @return WP_Parser_Token|null The first matching descendant token; null when no descendants are found.
+	 */
+	public function get_first_descendant_token( ?int $token_id = null ): ?WP_Parser_Token {
+		for ( $i = 0; $i < count( $this->children ); $i++ ) {
+			$child = $this->children[ $i ];
+			if ( $child instanceof WP_Parser_Token ) {
+				if ( null === $token_id || $child->id === $token_id ) {
+					return $child;
+				}
+			} else {
+				$token = $child->get_first_descendant_token( $token_id );
+				if ( $token ) {
+					return $token;
+				}
+			}
+		}
+		return null;
+	}
+
+	/**
+	 * Get all children of this node.
+	 *
+	 * @return array<WP_Parser_Node|WP_Parser_Token> An array of all child nodes and tokens of this node.
+	 */
+	public function get_children(): array {
+		return $this->children;
+	}
+
+	/**
+	 * Get all child nodes of this node.
+	 *
+	 * @param  string|null $rule_name Optional. A node rule name to check for.
+	 * @return WP_Parser_Node[]       An array of all matching child nodes.
+	 */
+	public function get_child_nodes( ?string $rule_name = null ): array {
+		$nodes = array();
+		foreach ( $this->children as $child ) {
+			if (
+				$child instanceof WP_Parser_Node
+				&& ( null === $rule_name || $child->rule_name === $rule_name )
+			) {
+				$nodes[] = $child;
+			}
+		}
+		return $nodes;
+	}
+
+	/**
+	 * Get all child tokens of this node.
+	 *
+	 * @param  int|null $token_id Optional. A token ID to check for.
+	 * @return WP_Parser_Token[]  An array of all matching child tokens.
+	 */
+	public function get_child_tokens( ?int $token_id = null ): array {
+		$tokens = array();
+		foreach ( $this->children as $child ) {
+			if (
+				$child instanceof WP_Parser_Token
+				&& ( null === $token_id || $child->id === $token_id )
+			) {
+				$tokens[] = $child;
+			}
+		}
+		return $tokens;
+	}
+
+	/**
+	 * Get all descendants of this node.
+	 *
+	 * The descendants are collected using a depth-first pre-order NLR traversal.
+	 * This produces a natural ordering that corresponds to the original input.
+	 *
+	 * @return array<WP_Parser_Node|WP_Parser_Token> An array of all descendant nodes and tokens of this node.
+	 */
+	public function get_descendants(): array {
+		$descendants = array();
+		foreach ( $this->children as $child ) {
+			if ( $child instanceof WP_Parser_Node ) {
+				$descendants[] = $child;
+				$descendants   = array_merge( $descendants, $child->get_descendants() );
+			} else {
+				$descendants[] = $child;
+			}
+		}
+		return $descendants;
+	}
+
+	/**
+	 * Get all descendant nodes of this node.
+	 *
+	 * The descendants are collected using a depth-first pre-order NLR traversal.
+	 * This produces a natural ordering that corresponds to the original input.
+	 * All matching nodes are collected during the traversal.
+	 *
+	 * @param  string|null $rule_name Optional. A node rule name to check for.
+	 * @return WP_Parser_Node[]       An array of all matching descendant nodes.
+	 */
+	public function get_descendant_nodes( ?string $rule_name = null ): array {
+		$nodes = array();
+		foreach ( $this->children as $child ) {
+			if ( ! $child instanceof WP_Parser_Node ) {
+				continue;
+			}
+			if ( null === $rule_name || $child->rule_name === $rule_name ) {
+				$nodes[] = $child;
+			}
+			$nodes = array_merge( $nodes, $child->get_descendant_nodes( $rule_name ) );
+		}
+		return $nodes;
+	}
+
+	/**
+	 * Get all descendant tokens of this node.
+	 *
+	 * The descendants are collected using a depth-first pre-order NLR traversal.
+	 * This produces a natural ordering that corresponds to the original input.
+	 * All matching tokens are collected during the traversal.
+	 *
+	 * @param  int|null $token_id Optional. A token ID to check for.
+	 * @return WP_Parser_Token[]  An array of all matching descendant tokens.
+	 */
+	public function get_descendant_tokens( ?int $token_id = null ): array {
+		$tokens = array();
+		foreach ( $this->children as $child ) {
+			if ( $child instanceof WP_Parser_Token ) {
+				if ( null === $token_id || $child->id === $token_id ) {
+					$tokens[] = $child;
+				}
+			} else {
+				$tokens = array_merge( $tokens, $child->get_descendant_tokens( $token_id ) );
+			}
+		}
+		return $tokens;
+	}
+
+	/**
+	 * Get the byte offset in the input string where this node begins.
+	 *
+	 * @return int The byte offset in the input string where this node begins.
+	 */
+	public function get_start(): int {
+		return $this->get_first_descendant_token()->start;
+	}
+
+	/**
+	 * Get the byte length of this node in the input string.
+	 *
+	 * @return int The byte length of this node in the input string.
+	 */
+	public function get_length(): int {
+		$tokens      = $this->get_descendant_tokens();
+		$first_token = $tokens[0];
+		$last_token  = $tokens[ count( $tokens ) - 1 ];
+		return $last_token->start + $last_token->length - $first_token->start;
 	}
 }

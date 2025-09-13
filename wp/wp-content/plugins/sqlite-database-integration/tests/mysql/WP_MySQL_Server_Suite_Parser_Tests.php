@@ -17,7 +17,6 @@ class WP_MySQL_Server_Suite_Parser_Tests extends TestCase {
 		'SELECT 1 /*!99999 /* */ */'                       => true,
 		'select 1ea10.1a20,1e+ 1e+10 from 1ea10'           => true,
 		"聠聡聢聣聤聬聭聮聯聰聲聽隆垄拢陇楼卤潞禄录陆戮 聶職聳聴\n0聲5\n1聲5\n2聲5\n3聲5\n4\n\nSET NAMES gb18030" => true,
-		'CREATE TABLE t1 (g GEOMCOLLECTION)'               => true,
 		"alter user mysqltest_7@ identified by 'systpass'" => true,
 		"SELECT 'a%' LIKE 'a!%' ESCAPE '!', 'a%' LIKE 'a!' || '%' ESCAPE '!'" => true,
 		"SELECT 'a%' NOT LIKE 'a!%' ESCAPE '!', 'a%' NOT LIKE 'a!' || '%' ESCAPE '!'" => true,
