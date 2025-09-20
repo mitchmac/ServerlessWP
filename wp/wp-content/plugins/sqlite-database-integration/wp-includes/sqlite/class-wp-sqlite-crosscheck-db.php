@@ -2,8 +2,8 @@
 
 class WP_SQLite_Crosscheck_DB_ extends WP_SQLite_DB {
 
-	public function __construct() {
-		parent::__construct();
+	public function __construct( string $dbname ) {
+		parent::__construct( $dbname );
 		$GLOBALS['sqlite'] = $this;
 		$GLOBALS['mysql']  = new wpdb(
 			DB_USER,

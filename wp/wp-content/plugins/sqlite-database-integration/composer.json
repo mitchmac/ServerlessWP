@@ -8,7 +8,9 @@
 		"issues": "https://github.com/wordpress/sqlite-database-integration/issues"
 	},
 	"require": {
-		"php": ">=7.0"
+		"php": ">=7.2",
+		"ext-pdo": "*",
+		"ext-pdo_sqlite": "*"
 	},
 	"require-dev": {
 		"ext-mbstring": "*",
@@ -24,7 +26,8 @@
 		"allow-plugins": {
 			"dealerdirect/phpcodesniffer-composer-installer": true,
 			"phpstan/extension-installer": true
-		}
+		},
+		"process-timeout": 3600
 	},
 	"scripts": {
 		"check-cs": [
@@ -35,6 +38,43 @@
 		],
 		"test": [
 			"phpunit"
+		],
+		"test-e2e": [
+			"@wp-test-ensure-env @no_additional_args",
+			"rm -f tests/e2e/package.json tests/e2e/node_modules @no_additional_args",
+			"ln -s ../../wordpress/package.json tests/e2e/package.json @no_additional_args",
+			"ln -s ../../wordpress/node_modules tests/e2e/node_modules @no_additional_args",
+			"npm --prefix tests/e2e run test:e2e -- --config . @additional_args"
+		],
+		"wp-setup": [
+			"./wp-setup.sh"
+		],
+		"wp-run": [
+			"npm --prefix wordpress run"
+		],
+		"wp-test-start": [
+			"npm --prefix wordpress run env:start",
+			"npm --prefix wordpress run env:install",
+			"npm --prefix wordpress run env:cli -- plugin install gutenberg",
+			"npm --prefix wordpress run env:cli -- plugin install query-monitor"
+		],
+		"wp-test-ensure-env": [
+			"if [ ! -f wordpress/src/wp-load.php ]; then composer run wp-setup; fi",
+			"@putenv COMPOSE_IGNORE_ORPHANS=true",
+			"cd wordpress && if [ -z \"$(node tools/local-env/scripts/docker.js ps -q)\" ]; then cd ..; composer run wp-test-start; fi"
+		],
+		"wp-test-php": [
+			"@wp-test-ensure-env @no_additional_args",
+			"rm -rf wordpress/src/wp-content/database/.ht.sqlite @no_additional_args",
+			"npm --prefix wordpress run test:php -- @additional_args"
+		],
+		"wp-test-e2e": [
+			"@wp-test-ensure-env @no_additional_args",
+			"npm --prefix wordpress run test:e2e -- @additional_args"
+		],
+		"wp-test-clean": [
+			"npm --prefix wordpress run env:clean",
+			"rm -rf wordpress/src/wp-content/database/.ht.sqlite"
 		]
 	}
 }
