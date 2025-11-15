@@ -211,7 +211,8 @@ exports.prepPlugin = async function (wpContentPath, sqlitePluginPath) {
             const content = await fs.readFile(newPath, 'utf8');
             const modifiedContent = content.replace(new RegExp(/{SQLITE_IMPLEMENTATION_FOLDER_PATH}/, 'g'), sqlitePluginPath);
 
-            await fs.writeFile(newPath, modifiedContent)
+            await fs.writeFile(newPath, modifiedContent);
+            init = true;
         }
         catch (err) {
             console.log(err);
