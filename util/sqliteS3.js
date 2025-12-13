@@ -69,7 +69,16 @@ exports.preRequest = async function(event) {
             // No need to download, just use existing file
             db = new sqlite3.Database(sqliteFilePath);
             dataVersion = await getDataVersion();
-        } 
+        }
+        else if (err.$metadata?.httpStatusCode === 403) {
+            if (_config.onAuthError) {
+                try {
+                    await _config.onAuthError(event, _config);
+                } catch (regErr) {
+                    console.error('Auto-registration failed:', regErr.message);
+                }
+            }
+        }
         else if (err.name === 'NoSuchKey') {
             // Handle case where the file doesn't exist on S3
             console.log('Database file not found on server');
@@ -211,7 +220,8 @@ exports.prepPlugin = async function (wpContentPath, sqlitePluginPath) {
             const content = await fs.readFile(newPath, 'utf8');
             const modifiedContent = content.replace(new RegExp(/{SQLITE_IMPLEMENTATION_FOLDER_PATH}/, 'g'), sqlitePluginPath);
 
-            await fs.writeFile(newPath, modifiedContent)
+            await fs.writeFile(newPath, modifiedContent);
+            init = true;
         }
         catch (err) {
             console.log(err);
