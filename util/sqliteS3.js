@@ -92,14 +92,20 @@ exports.preRequest = async function(event) {
 
 exports.postRequest = async function(event, response) {
     try {
+        // If db wasn't initialized but file exists, this is a new database
+        const dbExists = await exists(sqliteFilePath);
         if (!db) {
-            db = new sqlite3.Database(sqliteFilePath);
+            if (dbExists) {
+                db = new sqlite3.Database(sqliteFilePath);
+                dataVersion = null;
+            } else {
+                return;
+            }
         }
         let versionNow = await getDataVersion();
 
         // See if the db has been mutated, if so, send the changes to s3
         if (dataVersion !== versionNow) {
-            const dbExists = await exists(sqliteFilePath);
             if (dbExists) {
                 try {
                     await dbClose();
