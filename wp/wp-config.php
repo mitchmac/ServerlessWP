@@ -130,7 +130,7 @@ define('DISALLOW_FILE_EDIT', true );
 define('DISALLOW_FILE_MODS', true );
 
 // If using SQLite + S3 instead of MySQL/MariaDB.
-if (isset($_ENV['SQLITE_S3_BUCKET'])) {
+if (isset($_ENV['SQLITE_S3_BUCKET']) || isset($_ENV['SERVERLESSWP_DATA_SECRET'])) {
   define('DB_DIR', '/tmp');
   define('DB_FILE', 'wp-sqlite-s3.sqlite');
 
