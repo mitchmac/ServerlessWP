@@ -4,7 +4,7 @@ exports.validate = function(response) {
   let platform = 'AWS';
   let dashboardLink;
 
-  if (process.env['SQLITE_S3_BUCKET']) {
+  if (process.env['SQLITE_S3_BUCKET'] || process.env['SERVERLESSWP_DATA_SECRET']) {
     hasSqliteS3 = true;
   }
 
