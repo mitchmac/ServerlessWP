@@ -12,7 +12,7 @@ Stay up-to-date at the ServerlessWP repository: [github.com/mitchmac/serverlessw
 
 ## Quick Deploy
 
-**(Beta)** Try ServerlessWP nearly instantly on Vercel with a temporary SQLite database
+**(Beta)** Try ServerlessWP nearly instantly on Vercel with a temporary SQLite database (database expires after a few days)
 
 [![Deploy with Vercel](https://vercel.com/button)](https://serverlesswp.com/vercel-deploy)
 
