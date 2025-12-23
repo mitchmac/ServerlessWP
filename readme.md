@@ -12,9 +12,13 @@ Stay up-to-date at the ServerlessWP repository: [github.com/mitchmac/serverlessw
 
 ## Quick Deploy
 
-Click one of the options below to deploy your serverless WordPress site:
+**(Beta)** Try ServerlessWP nearly instantly on Vercel with a temporary SQLite database
 
-| Vercel (recommended)  | Netlify  |
+[![Deploy with Vercel](https://vercel.com/button)](https://serverlesswp.com/vercel-deploy)
+
+Or click one of the options below to deploy your serverless WordPress site with your database of choice:
+
+| Vercel  | Netlify  |
 |---|---|
 | [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fmitchmac%2Fserverlesswp&project-name=serverlesswp&repository-name=serverlesswp)  | [![Deploy to Netlify](https://www.netlify.com/img/deploy/button.svg)](https://app.netlify.com/start/deploy?repository=https://github.com/mitchmac/serverlesswp)  |
 | 🕑 60 second max request duration   | 10 second max request duration  |
