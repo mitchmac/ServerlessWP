@@ -75,12 +75,34 @@ add_filter(
  * When the plugin gets merged in wp-core, this is not to be ported.
  */
 function sqlite_plugin_copy_db_file() {
-	// Bail early if the SQLite3 class does not exist.
-	if ( ! class_exists( 'SQLite3' ) ) {
+	// Bail early if the PDO SQLite extension is not loaded.
+	if ( ! extension_loaded( 'pdo_sqlite' ) ) {
 		return;
 	}
 
 	$destination = WP_CONTENT_DIR . '/db.php';
+
+	/*
+	 * When an existing "db.php" drop-in is detected, let's check if it's a known
+	 * plugin that we can continue supporting even when we override the drop-in.
+	 */
+	$override_db_dropin = false;
+	if ( file_exists( $destination ) ) {
+		// Check for the Query Monitor plugin.
+		// When "QM_DB" exists, it must have been loaded via the "db.php" file.
+		if ( class_exists( 'QM_DB', false ) ) {
+			$override_db_dropin = true;
+		}
+
+		if ( $override_db_dropin ) {
+			require_once ABSPATH . '/wp-admin/includes/file.php';
+			global $wp_filesystem;
+			if ( ! $wp_filesystem ) {
+				WP_Filesystem();
+			}
+			$wp_filesystem->delete( $destination );
+		}
+	}
 
 	// Place database drop-in if not present yet, except in case there is
 	// another database drop-in present already.

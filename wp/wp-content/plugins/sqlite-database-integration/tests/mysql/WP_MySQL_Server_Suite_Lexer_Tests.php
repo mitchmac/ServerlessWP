@@ -21,7 +21,7 @@ class WP_MySQL_Server_Suite_Lexer_Tests extends TestCase {
 		}
 
 		try {
-			while ( ( $record = fgetcsv( $handle ) ) !== false ) {
+			while ( ( $record = fgetcsv( $handle, null, ',', '"', '\\' ) ) !== false ) {
 				$query  = $record[0];
 				$lexer  = new WP_MySQL_Lexer( $query );
 				$tokens = $lexer->remaining_tokens();

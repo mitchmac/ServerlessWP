@@ -23,19 +23,21 @@
 class WP_SQLite_PDO_User_Defined_Functions {
 
 	/**
-	 * The class constructor
+	 * Registers the user defined functions for SQLite to a PDO instance.
+	 * The functions are registered using PDO::sqliteCreateFunction().
 	 *
-	 * Initializes the use defined functions to PDO object with PDO::sqliteCreateFunction().
-	 *
-	 * @param PDO $pdo The PDO object.
+	 * @param PDO|PDO\SQLite $pdo The PDO object.
 	 */
-	public function __construct( $pdo ) {
-		if ( ! $pdo ) {
-			wp_die( 'Database is not initialized.', 'Database Error' );
+	public static function register_for( $pdo ): self {
+		$instance = new self();
+		foreach ( $instance->functions as $f => $t ) {
+			if ( $pdo instanceof PDO\SQLite ) {
+				$pdo->createFunction( $f, array( $instance, $t ) );
+			} else {
+				$pdo->sqliteCreateFunction( $f, array( $instance, $t ) );
+			}
 		}
-		foreach ( $this->functions as $f => $t ) {
-			$pdo->sqliteCreateFunction( $f, array( $this, $t ) );
-		}
+		return $instance;
 	}
 
 	/**
@@ -46,46 +48,62 @@ class WP_SQLite_PDO_User_Defined_Functions {
 	 * @var array
 	 */
 	private $functions = array(
-		'month'          => 'month',
-		'monthnum'       => 'month',
-		'year'           => 'year',
-		'day'            => 'day',
-		'hour'           => 'hour',
-		'minute'         => 'minute',
-		'second'         => 'second',
-		'week'           => 'week',
-		'weekday'        => 'weekday',
-		'dayofweek'      => 'dayofweek',
-		'dayofmonth'     => 'dayofmonth',
-		'unix_timestamp' => 'unix_timestamp',
-		'now'            => 'now',
-		'md5'            => 'md5',
-		'curdate'        => 'curdate',
-		'rand'           => 'rand',
-		'from_unixtime'  => 'from_unixtime',
-		'localtime'      => 'now',
-		'localtimestamp' => 'now',
-		'isnull'         => 'isnull',
-		'if'             => '_if',
-		'regexp'         => 'regexp',
-		'field'          => 'field',
-		'log'            => 'log',
-		'least'          => 'least',
-		'greatest'       => 'greatest',
-		'get_lock'       => 'get_lock',
-		'release_lock'   => 'release_lock',
-		'ucase'          => 'ucase',
-		'lcase'          => 'lcase',
-		'unhex'          => 'unhex',
-		'inet_ntoa'      => 'inet_ntoa',
-		'inet_aton'      => 'inet_aton',
-		'datediff'       => 'datediff',
-		'locate'         => 'locate',
-		'utc_date'       => 'utc_date',
-		'utc_time'       => 'utc_time',
-		'utc_timestamp'  => 'utc_timestamp',
-		'version'        => 'version',
+		'throw'                        => 'throw',
+		'month'                        => 'month',
+		'monthnum'                     => 'month',
+		'year'                         => 'year',
+		'day'                          => 'day',
+		'hour'                         => 'hour',
+		'minute'                       => 'minute',
+		'second'                       => 'second',
+		'week'                         => 'week',
+		'weekday'                      => 'weekday',
+		'dayofweek'                    => 'dayofweek',
+		'dayofmonth'                   => 'dayofmonth',
+		'unix_timestamp'               => 'unix_timestamp',
+		'now'                          => 'now',
+		'md5'                          => 'md5',
+		'curdate'                      => 'curdate',
+		'rand'                         => 'rand',
+		'from_unixtime'                => 'from_unixtime',
+		'localtime'                    => 'now',
+		'localtimestamp'               => 'now',
+		'isnull'                       => 'isnull',
+		'if'                           => '_if',
+		'regexp'                       => 'regexp',
+		'field'                        => 'field',
+		'log'                          => 'log',
+		'least'                        => 'least',
+		'greatest'                     => 'greatest',
+		'get_lock'                     => 'get_lock',
+		'release_lock'                 => 'release_lock',
+		'ucase'                        => 'ucase',
+		'lcase'                        => 'lcase',
+		'unhex'                        => 'unhex',
+		'inet_ntoa'                    => 'inet_ntoa',
+		'inet_aton'                    => 'inet_aton',
+		'datediff'                     => 'datediff',
+		'locate'                       => 'locate',
+		'utc_date'                     => 'utc_date',
+		'utc_time'                     => 'utc_time',
+		'utc_timestamp'                => 'utc_timestamp',
+		'version'                      => 'version',
+
+		// Internal helper functions.
+		'_helper_like_to_glob_pattern' => '_helper_like_to_glob_pattern',
 	);
+
+	/**
+	 * A helper function to throw an error from SQLite expressions.
+	 *
+	 * @param string $message The error message.
+	 *
+	 * @throws Exception The error message.
+	 * @return void
+	 */
+	public function throw( $message ): void {
+		throw new Exception( $message );
+	}
 
 	/**
 	 * Method to return the unix timestamp.
@@ -758,5 +776,61 @@ class WP_SQLite_PDO_User_Defined_Functions {
 	 */
 	public function version() {
 		return '5.5';
+	}
+
+	/**
+	 * A helper to covert LIKE pattern to a GLOB pattern for "LIKE BINARY" support.
+
+	 * @TODO: Some of the MySQL string specifics described below are likely to
+	 *        affect also other patterns than just "LIKE BINARY". We should
+	 *        consider applying some of the conversions more broadly.
+	 *
+	 * @param string $pattern
+	 * @return string
+	 */
+	public function _helper_like_to_glob_pattern( $pattern ) {
+		if ( null === $pattern ) {
+			return null;
+		}
+
+		/*
+		 * 1. Escape characters that have special meaning in GLOB patterns.
+		 *
+		 * We need to:
+		 *  1. Escape "]" as "[]]" to avoid interpreting "[...]" as a character class.
+		 *  2. Escape "*" as "[*]" (must be after 1 to avoid being escaped).
+		 *  3. Escape "?" as "[?]" (must be after 1 to avoid being escaped).
+		 */
+		$pattern = str_replace( ']', '[]]', $pattern );
+		$pattern = str_replace( '*', '[*]', $pattern );
+		$pattern = str_replace( '?', '[?]', $pattern );
+
+		/*
+		 * 2. Convert LIKE wildcards to GLOB wildcards ("%" -> "*", "_" -> "?").
+		 *
+		 * We need to convert them only when they don't follow any backslashes,
+		 * or when they follow an even number of backslashes (as "\\" is "\").
+		 */
+		$pattern = preg_replace( '/(^|[^\\\\](?:\\\\{2})*)%/', '$1*', $pattern );
+		$pattern = preg_replace( '/(^|[^\\\\](?:\\\\{2})*)_/', '$1?', $pattern );
+
+		/*
+		 * 3. Unescape LIKE escape sequences.
+		 *
+		 * While in MySQL LIKE patterns, a backslash is usually used to escape
+		 * special characters ("%", "_", and "\"), it works with all characters.
+		 *
+		 * That is:
+		 *   SELECT '\\x' prints '\x', but LIKE '\\x' is equivalent to LIKE 'x'.
+		 *
+		 * This is true also for multi-byte characters:
+		 *   SELECT '\\©' prints '\©', but LIKE '\\©' is equivalent to LIKE '©'.
+		 *
+		 * However, the multi-byte behavior is likely to depend on the charset.
+		 * For now, we'll assume UTF-8 and thus the "u" modifier for the regex.
+		 */
+		$pattern = preg_replace( '/\\\\(.)/u', '$1', $pattern );
+
+		return $pattern;
 	}
 }

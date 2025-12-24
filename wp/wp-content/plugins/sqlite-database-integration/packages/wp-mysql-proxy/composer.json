@@ -1,0 +1,22 @@
+{
+    "name": "wordpress/wp-mysql-proxy",
+    "type": "library",
+	"bin": [
+		"bin/wp-mysql-proxy.php"
+	],
+	"scripts": {
+		"test": "phpunit"
+	},
+    "require-dev": {
+        "phpunit/phpunit": "^8.5",
+        "symfony/process": "^5.4"
+    },
+	"autoload": {
+		"classmap": [
+			"src/"
+		],
+		"files": [
+			"../../php-polyfills.php"
+		]
+	}
+}
