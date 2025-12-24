@@ -1,0 +1,33 @@
+name: MySQL Proxy Tests
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  test:
+    name: MySQL Proxy Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '7.4'
+
+      - name: Install Composer dependencies
+        uses: ramsey/composer-install@v3
+        with:
+          ignore-cache: "yes"
+          composer-options: "--optimize-autoloader"
+          working-directory: packages/wp-mysql-proxy
+
+      - name: Run MySQL Proxy tests
+        run: composer run test
+        working-directory: packages/wp-mysql-proxy

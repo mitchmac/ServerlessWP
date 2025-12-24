@@ -1,17 +1,23 @@
 <?php
 
 require_once __DIR__ . '/wp-sqlite-schema.php';
-require_once __DIR__ . '/../wp-includes/mysql/class-wp-mysql-token.php';
-require_once __DIR__ . '/../wp-includes/mysql/class-wp-mysql-lexer.php';
-require_once __DIR__ . '/../wp-includes/parser/class-wp-parser-grammar.php';
-require_once __DIR__ . '/../wp-includes/parser/class-wp-parser.php';
-require_once __DIR__ . '/../wp-includes/parser/class-wp-parser-node.php';
-require_once __DIR__ . '/../wp-includes/mysql/class-wp-mysql-parser.php';
+require_once __DIR__ . '/../wp-pdo-mysql-on-sqlite.php';
 require_once __DIR__ . '/../wp-includes/sqlite/class-wp-sqlite-query-rewriter.php';
 require_once __DIR__ . '/../wp-includes/sqlite/class-wp-sqlite-lexer.php';
 require_once __DIR__ . '/../wp-includes/sqlite/class-wp-sqlite-token.php';
 require_once __DIR__ . '/../wp-includes/sqlite/class-wp-sqlite-pdo-user-defined-functions.php';
 require_once __DIR__ . '/../wp-includes/sqlite/class-wp-sqlite-translator.php';
+
+// Configure the test environment.
+error_reporting( E_ALL );
+define( 'FQDB', ':memory:' );
+define( 'FQDBDIR', __DIR__ . '/../testdb' );
+
+// Polyfill WPDB globals.
+$GLOBALS['table_prefix'] = 'wptests_';
+$GLOBALS['wpdb']         = new class() {
+	public function set_prefix( string $prefix ): void {}
+};
 
 /**
  * Polyfills for WordPress functions
