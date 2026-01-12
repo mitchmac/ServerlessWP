@@ -8,7 +8,7 @@ ServerlessWP puts PHP & WordPress in serverless functions. Deploy this repositor
 
 Stay up-to-date at the ServerlessWP repository: [github.com/mitchmac/serverlesswp](https://github.com/mitchmac/serverlesswp)
 
-![PHP 8.3.23](https://img.shields.io/badge/version-8.3.23-blue?logo=php&labelColor=white) ![WordPress 6.8.1](https://img.shields.io/badge/version-6.8.1-blue?logo=wordpress&labelColor=white&logoColor=black)
+![PHP 8.3.29](https://img.shields.io/badge/version-8.3.29-blue?logo=php&labelColor=white) ![WordPress 6.8.1](https://img.shields.io/badge/version-6.8.1-blue?logo=wordpress&labelColor=white&logoColor=black)
 
 ## Quick Deploy
 
@@ -23,7 +23,6 @@ Or click one of the options below to deploy your serverless WordPress site with 
 | [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fmitchmac%2Fserverlesswp&project-name=serverlesswp&repository-name=serverlesswp)  | [![Deploy to Netlify](https://www.netlify.com/img/deploy/button.svg)](https://app.netlify.com/start/deploy?repository=https://github.com/mitchmac/serverlesswp)  |
 | 🕑 60 second max request duration   | 10 second max request duration  |
 | &nbsp;⎇&nbsp; automatic branch deploy config   | manual branch config  |
-| 🗲 [Fluid compute](https://vercel.com/fluid) | - |
 | 📈 [Web analytics](https://vercel.com/docs/analytics) | paid add-on |
 | 🛡️ [Firewall](https://vercel.com/docs/vercel-firewall/vercel-waf) | paid add-on |
 
