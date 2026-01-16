@@ -12,12 +12,13 @@ set_error_handler(
 	}
 );
 
-require_once __DIR__ . '/../../wp-includes/mysql/class-wp-mysql-token.php';
-require_once __DIR__ . '/../../wp-includes/mysql/class-wp-mysql-lexer.php';
 require_once __DIR__ . '/../../wp-includes/parser/class-wp-parser.php';
 require_once __DIR__ . '/../../wp-includes/parser/class-wp-parser-grammar.php';
 require_once __DIR__ . '/../../wp-includes/parser/class-wp-parser-node.php';
+require_once __DIR__ . '/../../wp-includes/parser/class-wp-parser-token.php';
+require_once __DIR__ . '/../../wp-includes/mysql/class-wp-mysql-lexer.php';
 require_once __DIR__ . '/../../wp-includes/mysql/class-wp-mysql-parser.php';
+require_once __DIR__ . '/../../wp-includes/mysql/class-wp-mysql-token.php';
 
 $grammar_data = include __DIR__ . '/../../wp-includes/mysql/mysql-grammar.php';
 $grammar      = new WP_Parser_Grammar( $grammar_data );
