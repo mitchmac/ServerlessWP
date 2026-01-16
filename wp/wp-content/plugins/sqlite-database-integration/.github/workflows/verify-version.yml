@@ -1,0 +1,35 @@
+name: Verify plugin version
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  verify-version:
+    name: Assert the WordPress plugin header declares the same version as the SQLITE_DRIVER_VERSION constant
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Extract version from "load.php"
+        id: load_version
+        run: |
+          VERSION=$(grep "Version:" load.php | sed "s/.*Version: \([^ ]*\).*/\1/")
+          echo "load_version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Extract version from "version.php"
+        id: const_version
+        run: |
+          VERSION=$(php -r "require 'version.php'; echo SQLITE_DRIVER_VERSION;")
+          echo "const_version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Compare versions
+        run: |
+          if [ "${{ steps.load_version.outputs.load_version }}" != "${{ steps.const_version.outputs.const_version }}" ]; then
+            echo "Version mismatch detected!"
+            echo "  load.php version:     ${{ steps.load_version.outputs.load_version }}"
+            echo "  version.php constant: ${{ steps.const_version.outputs.const_version }}"
+            exit 1
+          fi

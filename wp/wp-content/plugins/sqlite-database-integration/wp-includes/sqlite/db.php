@@ -6,6 +6,11 @@
  * @since 1.0.0
  */
 
+/**
+ * Load the "SQLITE_DRIVER_VERSION" constant.
+ */
+require_once dirname( __DIR__, 2 ) . '/version.php';
+
 // Require the constants file.
 require_once dirname( __DIR__, 2 ) . '/constants.php';
 
@@ -50,6 +55,21 @@ require_once __DIR__ . '/class-wp-sqlite-pdo-user-defined-functions.php';
 require_once __DIR__ . '/class-wp-sqlite-db.php';
 require_once __DIR__ . '/install-functions.php';
 
+/**
+ * The DB_NAME constant is required by the new SQLite driver.
+ *
+ * There are some existing projects in which the DB_NAME constant is missing in
+ * wp-config.php. To enable easier early adoption and testing of the new SQLite
+ * driver, let's allow using a default database name when DB_NAME is not set.
+ *
+ * TODO: For version 3.0, enforce the DB_NAME constant and remove the fallback.
+ */
+if ( defined( 'DB_NAME' ) && '' !== DB_NAME ) {
+	$db_name = DB_NAME;
+} else {
+	$db_name = apply_filters( 'wp_sqlite_default_db_name', 'database_name_here' );
+}
+
 /*
  * Debug: Cross-check with MySQL.
  * This is for debugging purpose only and requires files
@@ -59,7 +79,10 @@ require_once __DIR__ . '/install-functions.php';
 $crosscheck_tests_file_path = dirname( __DIR__, 2 ) . '/tests/class-wp-sqlite-crosscheck-db.php';
 if ( defined( 'SQLITE_DEBUG_CROSSCHECK' ) && SQLITE_DEBUG_CROSSCHECK && file_exists( $crosscheck_tests_file_path ) ) {
 	require_once $crosscheck_tests_file_path;
-	$GLOBALS['wpdb'] = new WP_SQLite_Crosscheck_DB();
+	$GLOBALS['wpdb'] = new WP_SQLite_Crosscheck_DB( $db_name );
 } else {
-	$GLOBALS['wpdb'] = new WP_SQLite_DB();
+	$GLOBALS['wpdb'] = new WP_SQLite_DB( $db_name );
+
+	// Boot the Query Monitor plugin if it is active.
+	require_once dirname( __DIR__, 2 ) . '/integrations/query-monitor/boot.php';
 }

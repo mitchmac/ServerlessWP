@@ -9,9 +9,9 @@
  *        satisfy in order to be supported by this parser (e.g., no left recursion).
  */
 class WP_Parser {
-	private $grammar;
-	private $tokens;
-	private $position;
+	protected $grammar;
+	protected $tokens;
+	protected $position;
 
 	public function __construct( WP_Parser_Grammar $grammar, array $tokens ) {
 		$this->grammar  = $grammar;
@@ -37,7 +37,7 @@ class WP_Parser {
 				return true;
 			}
 
-			if ( $this->tokens[ $this->position ]->type === $rule_id ) {
+			if ( $this->tokens[ $this->position ]->id === $rule_id ) {
 				++$this->position;
 				return $this->tokens[ $this->position - 1 ];
 			}
@@ -52,7 +52,7 @@ class WP_Parser {
 		// Bale out from processing the current branch if none of its rules can
 		// possibly match the current token.
 		if ( isset( $this->grammar->lookahead_is_match_possible[ $rule_id ] ) ) {
-			$token_id = $this->tokens[ $this->position ]->type;
+			$token_id = $this->tokens[ $this->position ]->id;
 			if (
 				! isset( $this->grammar->lookahead_is_match_possible[ $rule_id ][ $token_id ] ) &&
 				! isset( $this->grammar->lookahead_is_match_possible[ $rule_id ][ WP_Parser_Grammar::EMPTY_RULE_ID ] )
@@ -101,7 +101,7 @@ class WP_Parser {
 			//        See: https://github.com/mysql/mysql-workbench/blob/8.0.38/library/parsers/grammars/MySQLParser.g4#L994
 			//        See: https://github.com/antlr/antlr4/issues/488
 			$la = $this->tokens[ $this->position ] ?? null;
-			if ( $la && 'selectStatement' === $rule_name && WP_MySQL_Lexer::INTO_SYMBOL === $la->type ) {
+			if ( $la && 'selectStatement' === $rule_name && WP_MySQL_Lexer::INTO_SYMBOL === $la->id ) {
 				$branch_matches = false;
 			}
 
@@ -115,7 +115,7 @@ class WP_Parser {
 			return false;
 		}
 
-		if ( 0 === count( $node->children ) ) {
+		if ( ! $node->has_child() ) {
 			return true;
 		}
 

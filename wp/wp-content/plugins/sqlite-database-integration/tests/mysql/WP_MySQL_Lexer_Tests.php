@@ -8,23 +8,23 @@ class WP_MySQL_Lexer_Tests extends TestCase {
 
 		// SELECT
 		$this->assertTrue( $lexer->next_token() );
-		$this->assertSame( WP_MySQL_Lexer::SELECT_SYMBOL, $lexer->get_token()->get_type() );
+		$this->assertSame( WP_MySQL_Lexer::SELECT_SYMBOL, $lexer->get_token()->id );
 
 		// id
 		$this->assertTrue( $lexer->next_token() );
-		$this->assertSame( WP_MySQL_Lexer::IDENTIFIER, $lexer->get_token()->get_type() );
+		$this->assertSame( WP_MySQL_Lexer::IDENTIFIER, $lexer->get_token()->id );
 
 		// FROM
 		$this->assertTrue( $lexer->next_token() );
-		$this->assertSame( WP_MySQL_Lexer::FROM_SYMBOL, $lexer->get_token()->get_type() );
+		$this->assertSame( WP_MySQL_Lexer::FROM_SYMBOL, $lexer->get_token()->id );
 
 		// users
 		$this->assertTrue( $lexer->next_token() );
-		$this->assertSame( WP_MySQL_Lexer::IDENTIFIER, $lexer->get_token()->get_type() );
+		$this->assertSame( WP_MySQL_Lexer::IDENTIFIER, $lexer->get_token()->id );
 
 		// EOF
 		$this->assertTrue( $lexer->next_token() );
-		$this->assertSame( WP_MySQL_Lexer::EOF, $lexer->get_token()->get_type() );
+		$this->assertSame( WP_MySQL_Lexer::EOF, $lexer->get_token()->id );
 
 		// No more tokens.
 		$this->assertFalse( $lexer->next_token() );
@@ -40,7 +40,7 @@ class WP_MySQL_Lexer_Tests extends TestCase {
 
 		// SELECT
 		$this->assertTrue( $lexer->next_token() );
-		$this->assertSame( WP_MySQL_Lexer::SELECT_SYMBOL, $lexer->get_token()->get_type() );
+		$this->assertSame( WP_MySQL_Lexer::SELECT_SYMBOL, $lexer->get_token()->id );
 
 		// Invalid input.
 		$this->assertFalse( $lexer->next_token() );
@@ -66,7 +66,7 @@ class WP_MySQL_Lexer_Tests extends TestCase {
 			$lexer = new WP_MySQL_Lexer( $value );
 			$this->assertTrue( $lexer->next_token() );
 
-			$type     = $lexer->get_token()->get_type();
+			$type     = $lexer->get_token()->id;
 			$is_valid = preg_match( '/^[\x{0080}-\x{ffff}]$/u', $value );
 			if ( $is_valid ) {
 				$this->assertSame( WP_MySQL_Lexer::IDENTIFIER, $type );
@@ -95,7 +95,7 @@ class WP_MySQL_Lexer_Tests extends TestCase {
 				$is_valid = preg_match( '/^[\x{0080}-\x{ffff}]$/u', $value );
 				if ( $is_valid ) {
 					$this->assertTrue( $result );
-					$this->assertSame( WP_MySQL_Lexer::IDENTIFIER, $token->get_type() );
+					$this->assertSame( WP_MySQL_Lexer::IDENTIFIER, $token->id );
 				} else {
 					$this->assertFalse( $result );
 					$this->assertNull( $token );
@@ -125,7 +125,7 @@ class WP_MySQL_Lexer_Tests extends TestCase {
 					$is_valid = preg_match( '/^[\x{0080}-\x{ffff}]$/u', $value );
 					if ( $is_valid ) {
 						$this->assertTrue( $result );
-						$this->assertSame( WP_MySQL_Lexer::IDENTIFIER, $token->get_type() );
+						$this->assertSame( WP_MySQL_Lexer::IDENTIFIER, $token->id );
 					} else {
 						$this->assertFalse( $result );
 						$this->assertNull( $token );
@@ -141,7 +141,7 @@ class WP_MySQL_Lexer_Tests extends TestCase {
 	public function test_integer_types( $input, $expected ): void {
 		$lexer = new WP_MySQL_Lexer( $input );
 		$this->assertTrue( $lexer->next_token() );
-		$this->assertSame( $expected, $lexer->get_token()->get_type() );
+		$this->assertSame( $expected, $lexer->get_token()->id );
 	}
 
 	public function data_integer_types(): array {
@@ -185,7 +185,7 @@ class WP_MySQL_Lexer_Tests extends TestCase {
 		$lexer  = new WP_MySQL_Lexer( $input );
 		$actual = array_map(
 			function ( $token ) {
-				return $token->get_type();
+				return $token->id;
 			},
 			$lexer->remaining_tokens()
 		);

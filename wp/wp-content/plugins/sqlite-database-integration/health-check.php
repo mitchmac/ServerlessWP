@@ -31,7 +31,7 @@ function sqlite_plugin_filter_debug_data( $info ) {
 	if ( 'sqlite' === $db_engine ) {
 		$info['wp-database']['fields']['database_version'] = array(
 			'label' => __( 'SQLite version', 'sqlite-database-integration' ),
-			'value' => class_exists( 'SQLite3' ) ? SQLite3::version()['versionString'] : null,
+			'value' => $info['wp-database']['fields']['server_version'] ?? null,
 		);
 
 		$info['wp-database']['fields']['database_file'] = array(

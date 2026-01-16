@@ -17,6 +17,11 @@ on:
         required: false
         type: 'string'
         default: 'phpunit.xml.dist'
+      sqlite:
+        description: 'SQLite version to install (e.g., 3.24.0). Leave empty for latest version.'
+        required: false
+        type: 'string'
+        default: 'latest'
 env:
   LOCAL_PHP: ${{ inputs.php }}-fpm
   PHPUNIT_CONFIG: ${{ inputs.phpunit-config }}
@@ -31,11 +36,41 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Set up SQLite
+        run: |
+          VERSION='${{ inputs.sqlite }}'
+          if [ "$VERSION" = 'latest' ]; then
+            TAG='release'
+          else
+            TAG="version-${VERSION}"
+          fi
+          wget -O sqlite.tar.gz "https://sqlite.org/src/tarball/sqlite.tar.gz?r=${TAG}"
+          tar xzf sqlite.tar.gz
+          cd sqlite
+          ./configure --prefix=/usr/local CFLAGS="-DSQLITE_ENABLE_COLUMN_METADATA -DSQLITE_ENABLE_FTS5 -DSQLITE_USE_URI -DSQLITE_ENABLE_JSON1" LDFLAGS="-lm"
+          make -j$(nproc)
+          sudo make install
+          sudo ldconfig
+
       - name: Set up PHP
         uses: shivammathur/setup-php@v2
         with:
           php-version: '${{ inputs.php }}'
           tools: phpunit-polyfills
+
+      - name: Verify SQLite version in PHP
+        run: |
+          EXPECTED='${{ inputs.sqlite }}'
+          if [ "$EXPECTED" = 'latest' ]; then
+            EXPECTED=$(cat sqlite/VERSION)
+          fi
+          PDO=$(php -r "echo (new PDO('sqlite::memory'))->query('SELECT SQLITE_VERSION();')->fetch()[0];")
+          echo "Expected SQLite version: $EXPECTED"
+          echo "PHP PDO SQLite version:  $PDO"
+          if [ "$EXPECTED" != "$PDO" ]; then
+            echo "Error: Expected SQLite version $EXPECTED, but PHP PDO uses $PDO"
+            exit 1
+          fi
 
       - name: Install Composer dependencies
         uses: ramsey/composer-install@v3
