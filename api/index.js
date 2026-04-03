@@ -3,8 +3,7 @@ const serverlesswp = require('serverlesswp');
 const { validate } = require('../util/install.js');
 const { setup } = require('../util/directory.js');
 const sqliteS3 = require('../util/sqliteS3.js');
-
-const { register } = require('../util/goldilock.js');
+const goldilock = require('../util/goldilock.js');
 
 const pathToWP = '/tmp/wp';
 let initSqliteS3 = false;
@@ -53,7 +52,7 @@ exports.handler = async function (event, context, callback) {
 
         if (process.env['SERVERLESSWP_DATA_SECRET']) {
             sqliteS3Config.S3Client.endpoint = 'https://data.serverlesswp.com';
-            sqliteS3Config.onAuthError = () => register(
+            sqliteS3Config.onAuthError = () => goldilock.register(
                 sqliteS3Config.bucket,
                 process.env['SERVERLESSWP_DATA_SECRET']
             );
@@ -82,4 +81,9 @@ exports.handler = async function (event, context, callback) {
 if (process.env['SQLITE_S3_BUCKET'] || process.env['SERVERLESSWP_DATA_SECRET']) {
     // Register the sqlite serverlesswp plugin.
     serverlesswp.registerPlugin(sqliteS3);
+}
+
+if (process.env['SERVERLESSWP_DATA_SECRET']) {
+    // Register the goldilock widget plugin.
+    serverlesswp.registerPlugin(goldilock);
 }
