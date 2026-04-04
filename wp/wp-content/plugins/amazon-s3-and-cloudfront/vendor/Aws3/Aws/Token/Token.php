@@ -3,7 +3,6 @@
 namespace DeliciousBrains\WP_Offload_Media\Aws3\Aws\Token;
 
 use DeliciousBrains\WP_Offload_Media\Aws3\Aws\Identity\BearerTokenIdentity;
-use DeliciousBrains\WP_Offload_Media\Aws3\Aws\Token\TokenInterface;
 /**
  * Basic implementation of the AWS Token interface that allows callers to
  * pass in an AWS token in the constructor.
@@ -12,6 +11,7 @@ class Token extends BearerTokenIdentity implements TokenInterface, \Serializable
 {
     protected $token;
     protected $expires;
+    protected ?TokenSource $source;
     /**
      * Constructs a new basic token object, with the specified AWS
      * token
@@ -19,10 +19,11 @@ class Token extends BearerTokenIdentity implements TokenInterface, \Serializable
      * @param string $token   Security token to use
      * @param int    $expires UNIX timestamp for when the token expires
      */
-    public function __construct($token, $expires = null)
+    public function __construct($token, $expires = null, ?TokenSource $source = null)
     {
         $this->token = $token;
         $this->expires = $expires;
+        $this->source = $source;
     }
     /**
      * Sets the state of a token object
@@ -48,6 +49,13 @@ class Token extends BearerTokenIdentity implements TokenInterface, \Serializable
         return $this->expires;
     }
     /**
+     * @return string|null
+     */
+    public function getSource() : ?string
+    {
+        return $this->source?->value;
+    }
+    /**
      * @return bool
      */
     public function isExpired()
@@ -59,7 +67,7 @@ class Token extends BearerTokenIdentity implements TokenInterface, \Serializable
      */
     public function toArray()
     {
-        return ['token' => $this->token, 'expires' => $this->expires];
+        return ['token' => $this->token, 'expires' => $this->expires, 'source' => $this->source?->value];
     }
     /**
      * @return string
@@ -90,5 +98,6 @@ class Token extends BearerTokenIdentity implements TokenInterface, \Serializable
     {
         $this->token = $data['token'];
         $this->expires = $data['expires'];
+        $this->source = isset($data['source']) ? TokenSource::from($data['source']) : null;
     }
 }

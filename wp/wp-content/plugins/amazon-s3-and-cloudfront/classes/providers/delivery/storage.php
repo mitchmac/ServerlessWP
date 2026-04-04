@@ -101,7 +101,12 @@ class Storage extends Delivery_Provider {
 	 * {@inheritDoc}
 	 */
 	public function get_url( Item $as3cf_item, $path, $domain, $scheme, $headers = array() ) {
-		$lookup_domain = $this->as3cf->get_storage_provider_instance( $as3cf_item->provider() )->get_url_domain( $as3cf_item->bucket(), $as3cf_item->region() );
+		$lookup_domain = $this->as3cf->get_storage_provider_instance(
+			$as3cf_item->provider()
+		)->get_url_domain(
+			$as3cf_item->bucket(),
+			$as3cf_item->region()
+		);
 
 		return parent::get_url( $as3cf_item, $path, $lookup_domain, $scheme, $headers );
 	}
@@ -112,7 +117,10 @@ class Storage extends Delivery_Provider {
 	 * @return string
 	 */
 	public static function get_block_public_access_enabled_unsupported_desc() {
-		return __( 'You need to disable Block All Public Access so that your bucket is accessible for delivery.', 'amazon-s3-and-cloudfront' );
+		return __(
+			'You need to disable Block All Public Access so that your bucket is accessible for delivery.',
+			'amazon-s3-and-cloudfront'
+		);
 	}
 
 	/**
@@ -129,7 +137,11 @@ class Storage extends Delivery_Provider {
 		);
 
 		return sprintf(
-			__( 'You need to edit the bucket\'s Object Ownership setting and <a href="%1$s">enable ACLs</a> or add a <a href="%2$s">Bucket Policy</a> so that objects can be made available for delivery.', 'amazon-s3-and-cloudfront' ),
+		/* translators: %1$s is a URL fragment, %2$s is a different URL fragment. */
+			__(
+				'You need to edit the bucket\'s Object Ownership setting and <a href="%1$s">enable ACLs</a> or add a <a href="%2$s">Bucket Policy</a> so that objects can be made available for delivery.',
+				'amazon-s3-and-cloudfront'
+			),
 			$object_ownership_doc . '#acls',
 			$object_ownership_doc . '#bucket-policy'
 		);

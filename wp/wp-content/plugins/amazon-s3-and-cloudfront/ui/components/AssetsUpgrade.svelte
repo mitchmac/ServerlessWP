@@ -6,17 +6,17 @@
 		{
 			icon: $urls.assets + 'img/icon/fonts.svg',
 			alt: 'js icon',
-			text: $strings.assets_uppsell_benefits.js,
+			text: $strings.assets_upsell_benefits.js,
 		},
 		{
 			icon: $urls.assets + 'img/icon/css.svg',
 			alt: 'css icon',
-			text: $strings.assets_uppsell_benefits.css,
+			text: $strings.assets_upsell_benefits.css,
 		},
 		{
 			icon: $urls.assets + 'img/icon/fonts.svg',
 			alt: 'fonts icon',
-			text: $strings.assets_uppsell_benefits.fonts,
+			text: $strings.assets_upsell_benefits.fonts,
 		},
 	];
 </script>

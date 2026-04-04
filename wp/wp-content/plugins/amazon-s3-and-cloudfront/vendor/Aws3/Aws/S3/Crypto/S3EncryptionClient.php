@@ -4,6 +4,7 @@ namespace DeliciousBrains\WP_Offload_Media\Aws3\Aws\S3\Crypto;
 
 use DeliciousBrains\WP_Offload_Media\Aws3\Aws\Crypto\DecryptionTrait;
 use DeliciousBrains\WP_Offload_Media\Aws3\Aws\HashingStream;
+use DeliciousBrains\WP_Offload_Media\Aws3\Aws\MetricsBuilder;
 use DeliciousBrains\WP_Offload_Media\Aws3\Aws\PhpHash;
 use DeliciousBrains\WP_Offload_Media\Aws3\Aws\Crypto\AbstractCryptoClient;
 use DeliciousBrains\WP_Offload_Media\Aws3\Aws\Crypto\EncryptionTrait;
@@ -48,9 +49,9 @@ class S3EncryptionClient extends AbstractCryptoClient
      */
     public function __construct(S3Client $client, $instructionFileSuffix = null)
     {
-        $this->appendUserAgent($client, 'feat/s3-encrypt/' . self::CRYPTO_VERSION);
         $this->client = $client;
         $this->instructionFileSuffix = $instructionFileSuffix;
+        MetricsBuilder::appendMetricsCaptureMiddleware($this->client->getHandlerList(), MetricsBuilder::S3_CRYPTO_V1N);
     }
     private static function getDefaultStrategy()
     {

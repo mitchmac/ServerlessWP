@@ -44,7 +44,15 @@ class Upgrade_Content_Replace_URLs extends Upgrade_Filter_Post {
 	 * @return string
 	 */
 	protected function get_running_message() {
-		return sprintf( __( '<strong>Running Content Upgrade%1$s</strong><br>A find &amp; replace is running in the background to update URLs in your post content. %2$s', 'amazon-s3-and-cloudfront' ), $this->get_progress_text(), $this->get_generic_message() );
+		return sprintf(
+		/* translators: %1$s is formatted progress info, %2$s is a documentation link. */
+			__(
+				'<strong>Running Content Upgrade%1$s</strong><br>A find &amp; replace is running in the background to update URLs in your post content. %2$s',
+				'amazon-s3-and-cloudfront'
+			),
+			$this->get_progress_text(),
+			$this->get_generic_message()
+		);
 	}
 
 	/**
@@ -64,7 +72,8 @@ class Upgrade_Content_Replace_URLs extends Upgrade_Filter_Post {
 	protected function upgrade_theme_mods() {
 		global $wpdb;
 
-		$mods = $wpdb->get_results( "SELECT * FROM `{$wpdb->options}` WHERE option_name LIKE 'theme_mods_%'" );
+		// phpcs:ignore WordPress.DB -- safe query, must not be cached
+		$mods = $wpdb->get_results( "SELECT * FROM `$wpdb->options` WHERE option_name LIKE 'theme_mods_%'" );
 
 		foreach ( $mods as $mod ) {
 			$value = AS3CF_Utils::maybe_unserialize( $mod->option_value );
@@ -84,7 +93,8 @@ class Upgrade_Content_Replace_URLs extends Upgrade_Filter_Post {
 			$value = maybe_serialize( $value );
 
 			if ( $value !== $mod->option_value ) {
-				$wpdb->query( "UPDATE `{$wpdb->options}` SET option_value = '{$value}' WHERE option_id = '{$mod->option_id}'" );
+				// phpcs:ignore WordPress.DB,PluginCheck.Security.DirectDB.UnescapedDBParameter -- safe query, must not be cached
+				$wpdb->query( "UPDATE `$wpdb->options` SET option_value = '$value' WHERE option_id = '$mod->option_id'" );
 			}
 		}
 	}

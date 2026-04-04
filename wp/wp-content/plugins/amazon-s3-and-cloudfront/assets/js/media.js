@@ -12,11 +12,10 @@ var test = {};
 	 * Add S3 details to attachment.
 	 */
 	media.view.Attachment.Details.TwoColumn = wpAttachmentDetailsTwoColumn.extend( {
-		events: function() {
-			return _.extend( {}, wpAttachmentDetailsTwoColumn.prototype.events, {
-				'click .local-warning': 'confirmS3Removal',
-				'click #as3cfpro-toggle-acl': 'toggleACL'
-			} );
+		events: {
+			...wpAttachmentDetailsTwoColumn.prototype.events,
+			'click .local-warning': 'confirmS3Removal',
+			'click #as3cfpro-toggle-acl': 'toggleACL'
 		},
 
 		render: function() {

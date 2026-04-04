@@ -1,0 +1,15 @@
+{
+	"name": "wordpress/sqlite-database-integration",
+	"license": "GPL-2.0-or-later",
+	"description": "SQLite integration plugin for WordPress.",
+	"homepage": "https://github.com/wordpress/sqlite-database-integration",
+	"keywords": [ "wordpress", "plugin", "database", "sqlite" ],
+	"support": {
+		"issues": "https://github.com/wordpress/sqlite-database-integration/issues"
+	},
+	"require": {
+		"php": ">=7.2",
+		"ext-pdo": "*",
+		"ext-pdo_sqlite": "*"
+	}
+}

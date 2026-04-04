@@ -140,7 +140,11 @@ class Settings extends API {
 			if (
 				'secret-access-key' === $key &&
 				! empty( $new_settings['secret-access-key'] ) &&
-				_x( '-- not shown --', 'placeholder for hidden secret access key, 39 char max', 'amazon-s3-and-cloudfront' ) === $new_settings['secret-access-key']
+				_x(
+					'-- not shown --',
+					'placeholder for hidden secret access key, 39 char max',
+					'amazon-s3-and-cloudfront'
+				) === $new_settings['secret-access-key']
 			) {
 				continue;
 			}
@@ -183,12 +187,24 @@ class Settings extends API {
 
 			if ( $check_signed_urls_settings ) {
 				if ( 'signed-urls-key-id' === $key && empty( $value ) ) {
-					return $this->return_with_error( $this->as3cf->get_delivery_provider()->signed_urls_key_id_name() . _x( ' not provided.', 'missing form field', 'amazon-s3-and-cloudfront' ) );
+					return $this->return_with_error(
+						$this->as3cf->get_delivery_provider()->signed_urls_key_id_name() . _x(
+							' not provided.',
+							'missing form field',
+							'amazon-s3-and-cloudfront'
+						)
+					);
 				}
 
 				if ( 'signed-urls-key-file-path' === $key ) {
 					if ( empty( $value ) ) {
-						return $this->return_with_error( $this->as3cf->get_delivery_provider()->signed_urls_key_file_path_name() . _x( ' not provided.', 'missing form field', 'amazon-s3-and-cloudfront' ) );
+						return $this->return_with_error(
+							$this->as3cf->get_delivery_provider()->signed_urls_key_file_path_name() . _x(
+								' not provided.',
+								'missing form field',
+								'amazon-s3-and-cloudfront'
+							)
+						);
 					}
 
 					if ( ! $this->as3cf->get_delivery_provider()->validate_signed_urls_key_file_path( $value ) ) {
@@ -198,7 +214,13 @@ class Settings extends API {
 				}
 
 				if ( 'signed-urls-object-prefix' === $key && empty( $value ) ) {
-					return $this->return_with_error( $this->as3cf->get_delivery_provider()->signed_urls_object_prefix_name() . _x( ' not provided.', 'missing form field', 'amazon-s3-and-cloudfront' ) );
+					return $this->return_with_error(
+						$this->as3cf->get_delivery_provider()->signed_urls_object_prefix_name() . _x(
+							' not provided.',
+							'missing form field',
+							'amazon-s3-and-cloudfront'
+						)
+					);
 				}
 			}
 
@@ -238,7 +260,10 @@ class Settings extends API {
 		}
 
 		// Ensure newly selected provider/region/bucket combination is usable and bucket's extra data is up-to-date.
-		if ( ! empty( $changed_keys ) && ( in_array( 'bucket', $changed_keys ) || in_array( 'region', $changed_keys ) ) ) {
+		if (
+			! empty( $changed_keys ) &&
+			( in_array( 'bucket', $changed_keys ) || in_array( 'region', $changed_keys ) )
+		) {
 			$bucket_error = $this->check_set_bucket_for_error();
 
 			if ( ! empty( $bucket_error ) ) {
@@ -254,11 +279,19 @@ class Settings extends API {
 		if (
 			! empty( $changed_keys ) &&
 			! in_array( 'delivery-provider', $changed_keys ) &&
-			$this->setting_changed( $old_settings, 'delivery-provider', $this->as3cf->get_setting( 'delivery-provider' ) )
+			$this->setting_changed(
+				$old_settings,
+				'delivery-provider',
+				$this->as3cf->get_setting( 'delivery-provider' )
+			)
 		) {
 			$changed_keys     = array_unique( array_merge( $changed_keys, array( 'delivery-provider' ) ) );
 			$storage_provider = $this->as3cf->get_storage_provider();
-			$warnings[]       = sprintf( __( 'Delivery Provider has been reset to the default for %s', 'amazon-s3-and-cloudfront' ), $storage_provider->get_provider_service_name() );
+			$warnings[]       = sprintf(
+			/* translators: %s is a storage provider service name, e.g. "Amazon S3". */
+				__( 'Delivery Provider has been reset to the default for %s', 'amazon-s3-and-cloudfront' ),
+				$storage_provider->get_provider_service_name()
+			);
 		}
 
 		// None of the settings produced an error of their own.
@@ -267,14 +300,25 @@ class Settings extends API {
 
 		// Check provider/region/bucket to see whether any error notice or warning necessary.
 		// Note: As this is a side effect of another change such as switching provider, settings save is not prevented.
-		if ( ! in_array( 'bucket', $changed_keys ) && ! in_array( 'region', $changed_keys ) && ! empty( $this->as3cf->get_setting( 'bucket' ) ) ) {
+		if (
+			! in_array( 'bucket', $changed_keys ) &&
+			! in_array( 'region', $changed_keys ) &&
+			! empty( $this->as3cf->get_setting( 'bucket' ) )
+		) {
 			$bucket_error = $this->check_set_bucket_for_error();
 
-			if ( empty( $bucket_error ) && $this->setting_changed( $old_settings, 'region', $this->as3cf->get_setting( 'region' ) ) ) {
+			if (
+				empty( $bucket_error ) &&
+				$this->setting_changed( $old_settings, 'region', $this->as3cf->get_setting( 'region' ) )
+			) {
 				// If region has been changed, but not intentionally, we may need to warn user.
 				$changed_keys = array_unique( array_merge( $changed_keys, array( 'region' ) ) );
 				$region_name  = $this->as3cf->get_storage_provider()->get_region_name( $this->as3cf->get_setting( 'region' ) );
-				$warnings[]   = sprintf( __( 'Region has been changed to %s', 'amazon-s3-and-cloudfront' ), $region_name );
+				$warnings[]   = sprintf(
+				/* translators: %s is a storage provider region name, e.g. "US East (N. Virginia)". */
+					__( 'Region has been changed to %s', 'amazon-s3-and-cloudfront' ),
+					$region_name
+				);
 			}
 		}
 
@@ -326,7 +370,10 @@ class Settings extends API {
 		}
 
 		// If region not required as a parameter, and not already defined, get it from bucket.
-		if ( $this->as3cf->get_storage_provider()->region_required() || $this->as3cf->get_defined_setting( 'region', false ) ) {
+		if (
+			$this->as3cf->get_storage_provider()->region_required() ||
+			$this->as3cf->get_defined_setting( 'region', false )
+		) {
 			$region = $this->as3cf->get_setting( 'region', false );
 		} else {
 			$region = $this->as3cf->get_bucket_region( $bucket, false );
@@ -370,10 +417,18 @@ class Settings extends API {
 	 * @return bool
 	 */
 	private function check_signed_urls_settings( array $new_settings, array $old_settings ): bool {
-		$delivery_provider_changed = ! empty( $new_settings['delivery-provider'] ) && $this->setting_changed( $old_settings, 'delivery-provider', $new_settings['delivery-provider'] );
-		$signed_urls_enabled       = ! empty( $new_settings['enable-delivery-domain'] ) && ! empty( $new_settings['enable-signed-urls'] );
+		$delivery_provider_changed = false;
 
-		return ! $delivery_provider_changed && $signed_urls_enabled ? $this->as3cf->get_delivery_provider()->use_signed_urls_key_file_allowed() : false;
+		if (
+			! empty( $new_settings['delivery-provider'] ) &&
+			$this->setting_changed( $old_settings, 'delivery-provider', $new_settings['delivery-provider'] )
+		) {
+			$delivery_provider_changed = true;
+		}
+
+		$signed_urls_enabled = ! empty( $new_settings['enable-delivery-domain'] ) && ! empty( $new_settings['enable-signed-urls'] );
+
+		return ! $delivery_provider_changed && $signed_urls_enabled && $this->as3cf->get_delivery_provider()->use_signed_urls_key_file_allowed();
 	}
 
 	/**

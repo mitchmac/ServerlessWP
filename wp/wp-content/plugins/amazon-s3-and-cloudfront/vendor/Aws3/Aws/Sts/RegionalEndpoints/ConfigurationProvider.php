@@ -44,7 +44,7 @@ use DeliciousBrains\WP_Offload_Media\Aws3\GuzzleHttp\Promise\PromiseInterface;
  */
 class ConfigurationProvider extends AbstractConfigurationProvider implements ConfigurationProviderInterface
 {
-    const DEFAULT_ENDPOINTS_TYPE = 'legacy';
+    const DEFAULT_ENDPOINTS_TYPE = 'regional';
     const ENV_ENDPOINTS_TYPE = 'AWS_STS_REGIONAL_ENDPOINTS';
     const ENV_PROFILE = 'AWS_PROFILE';
     const INI_ENDPOINTS_TYPE = 'sts_regional_endpoints';

@@ -47,7 +47,10 @@ class Upgrade_Meta_WP_Error extends Upgrade {
 	 * @return string
 	 */
 	protected function get_running_update_text() {
-		return __( 'and rebuilding the metadata for attachments that may have been corrupted.', 'amazon-s3-and-cloudfront' );
+		return __(
+			'and rebuilding the metadata for attachments that may have been corrupted.',
+			'amazon-s3-and-cloudfront'
+		);
 	}
 
 	/**
@@ -72,7 +75,14 @@ class Upgrade_Meta_WP_Error extends Upgrade {
 
 		if ( $fixed ) {
 			if ( update_post_meta( $item->ID, 'amazonS3_info', $provider_object ) ) {
-				$msg = sprintf( __( 'Fixed legacy amazonS3_info metadata when rebuilding corrupted attachment metadata, please check bucket and path for attachment ID %1$s', 'amazon-s3-and-cloudfront' ), $item->ID );
+				$msg = sprintf(
+				/* translators: %s is a unique ID string. */
+					__(
+						'Fixed legacy amazonS3_info metadata when rebuilding corrupted attachment metadata, please check bucket and path for attachment ID %1$s',
+						'amazon-s3-and-cloudfront'
+					),
+					$item->ID
+				);
 				AS3CF_Error::log( $msg );
 			} else {
 				AS3CF_Error::log( 'Failed to fix broken serialized legacy offload metadata for attachment ' . $item->ID . ': ' . $item->provider_object );
@@ -95,7 +105,17 @@ class Upgrade_Meta_WP_Error extends Upgrade {
 				);
 				$this->as3cf->get_provider_client( $provider_object['region'], true )->get_object( $args );
 			} catch ( Exception $e ) {
-				AS3CF_Error::log( sprintf( __( 'There was an error attempting to download the file %s from the bucket: %s', 'amazon-s3-and-cloudfront' ), $provider_object['key'], $e->getMessage() ) );
+				AS3CF_Error::log(
+					sprintf(
+					/* translators: %1$s is a file path, %2$s is an error message. */
+						__(
+							'There was an error attempting to download the file %1$s from the bucket: %2$s',
+							'amazon-s3-and-cloudfront'
+						),
+						$provider_object['key'],
+						$e->getMessage()
+					)
+				);
 
 				return false;
 			}
@@ -157,6 +177,7 @@ class Upgrade_Meta_WP_Error extends Upgrade {
 		if ( $count ) {
 			$sql = 'SELECT COUNT(*)' . $sql;
 
+			// phpcs:ignore WordPress.DB,PluginCheck.Security.DirectDB.UnescapedDBParameter -- safe query, must not be cached
 			return $wpdb->get_var( $sql );
 		}
 
@@ -166,6 +187,7 @@ class Upgrade_Meta_WP_Error extends Upgrade {
 			$sql .= sprintf( ' LIMIT %d', (int) $limit );
 		}
 
+		// phpcs:ignore WordPress.DB,PluginCheck.Security.DirectDB.UnescapedDBParameter -- safe query, must not be cached
 		return $wpdb->get_results( $sql, OBJECT );
 	}
 }

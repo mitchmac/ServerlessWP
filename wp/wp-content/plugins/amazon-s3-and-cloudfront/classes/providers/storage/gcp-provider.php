@@ -104,10 +104,12 @@ class GCP_Provider extends Storage_Provider {
 		'us-south1'               => 'North America (Dallas)',
 		'northamerica-northeast1' => 'North America (Montréal)',
 		'northamerica-northeast2' => 'North America (Toronto)',
+		'northamerica-south1'     => 'North America (Querétaro)',
 		'southamerica-east1'      => 'South America (São Paulo)',
 		'southamerica-west1'      => 'South America (Santiago)',
 		'europe-central2'         => 'Europe (Warsaw)',
 		'europe-north1'           => 'Europe (Finland)',
+		'europe-north2'           => 'Europe (Stockholm)',
 		'europe-west1'            => 'Europe (Belgium)',
 		'europe-west2'            => 'Europe (London)',
 		'europe-west3'            => 'Europe (Frankfurt)',
@@ -125,7 +127,7 @@ class GCP_Provider extends Storage_Provider {
 		'asia-northeast3'         => 'Asia (Seoul)',
 		'asia-southeast1'         => 'Asia (Singapore)',
 		'asia-south1'             => 'India (Mumbai)',
-		'asia-south2'             => 'India (Dehli)',
+		'asia-south2'             => 'India (Delhi)',
 		'asia-southeast2'         => 'Indonesia (Jakarta)',
 		'me-central1'             => 'Middle East (Doha)',
 		'me-central2'             => 'Middle East (Dammam, Saudi Arabia)',
@@ -462,7 +464,7 @@ class GCP_Provider extends Storage_Provider {
 	 */
 	public function upload_object( array $args ) {
 		if ( ! empty( $args['SourceFile'] ) ) {
-			$file = fopen( $args['SourceFile'], 'r' );
+			$file = fopen( $args['SourceFile'], 'r' ); // phpcs:ignore -- need raw resource
 		} elseif ( ! empty( $args['Body'] ) ) {
 			$file = $args['Body'];
 		} else {
@@ -802,6 +804,7 @@ class GCP_Provider extends Storage_Provider {
 		if ( ! isset( $key_file_content['project_id'] ) ) {
 			$this->as3cf->notices->add_notice(
 				sprintf(
+				/* translators: %1$s is a URL. */
 					__(
 						'Media cannot be offloaded due to a missing <code>project_id</code> field which may be the result of an old or obsolete key file. <a href="%1$s" target="_blank">Create a new key file</a>',
 						'amazon-s3-and-cloudfront'
@@ -817,6 +820,7 @@ class GCP_Provider extends Storage_Provider {
 		if ( ! isset( $key_file_content['private_key'] ) ) {
 			$this->as3cf->notices->add_notice(
 				sprintf(
+				/* translators: %1$s is a URL. */
 					__(
 						'Media cannot be offloaded due to a missing <code>private_key</code> field in the key file. <a href="%1$s" target="_blank"">Create a new key file</a>',
 						'amazon-s3-and-cloudfront'
@@ -832,6 +836,7 @@ class GCP_Provider extends Storage_Provider {
 		if ( ! isset( $key_file_content['type'] ) ) {
 			$this->as3cf->notices->add_notice(
 				sprintf(
+				/* translators: %1$s is a URL. */
 					__(
 						'Media cannot be offloaded due to a missing <code>type</code> field in the key file. <a href="%1$s" target="_blank">Create a new key file</a>',
 						'amazon-s3-and-cloudfront'
@@ -847,6 +852,7 @@ class GCP_Provider extends Storage_Provider {
 		if ( ! isset( $key_file_content['client_email'] ) ) {
 			$this->as3cf->notices->add_notice(
 				sprintf(
+				/* translators: %1$s is a URL. */
 					__(
 						'Media cannot be offloaded due to a missing <code>client_email</code> field in the key file. <a href="%1$s" target="_blank">Create a new key file</a>',
 						'amazon-s3-and-cloudfront'
@@ -873,6 +879,7 @@ class GCP_Provider extends Storage_Provider {
 	public function prepare_bucket_error( WP_Error $object, bool $single = true ): string {
 		if ( false !== strpos( $object->get_error_message(), "OpenSSL unable to sign" ) ) {
 			return sprintf(
+			/* translators: %1$s is a URL. */
 				__(
 					'Media cannot be offloaded due to an invalid OpenSSL Private Key. <a href="%1$s" target="_blank">Update the key file</a>',
 					'amazon-s3-and-cloudfront'
@@ -886,6 +893,7 @@ class GCP_Provider extends Storage_Provider {
 		if ( ! is_null( $message ) ) {
 			if ( isset( $message->error ) && 'invalid_grant' === $message->error ) {
 				return sprintf(
+				/* translators: %1$s is a URL. */
 					__(
 						'Media cannot be offloaded using the provided service account. <a href="%1$s" target="_blank">Read more</a>',
 						'amazon-s3-and-cloudfront'
@@ -896,6 +904,7 @@ class GCP_Provider extends Storage_Provider {
 
 			if ( isset( $message->error->code ) && 404 === $message->error->code ) {
 				return sprintf(
+				/* translators: %1$s is a URL fragment. */
 					__(
 						'Media cannot be offloaded because a bucket with the configured name does not exist. <a href="%1$s">Enter a different bucket</a>',
 						'amazon-s3-and-cloudfront'

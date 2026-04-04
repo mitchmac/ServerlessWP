@@ -8,7 +8,7 @@ on:
 
 jobs:
   test:
-    name: PHP ${{ matrix.php }}
+    name: PHP ${{ matrix.php }} / SQLite ${{ matrix.sqlite || 'latest' }}
     uses: ./.github/workflows/phpunit-tests-run.yml
     permissions:
       contents: read
@@ -17,12 +17,30 @@ jobs:
       fail-fast: false
       matrix:
         os: [ ubuntu-latest ]
-        # NOTE: There does not appear to be a single phpunit version that supports all
-        # PHP versions tested here. For now, we are removing PHP 7.0. and 7.1 tests
-        # in order to run a single phpunit version for PHP 7.2 and up.
-        php: [ '7.2', '7.3', '7.4', '8.0', '8.1', '8.2', '8.3' ]
+        php: [ '7.2', '7.3', '7.4', '8.0', '8.1', '8.2', '8.3', '8.4', '8.5' ]
+        include:
+          # Add specific SQLite versions for specific PHP versions here:
+          - php: '7.2'
+            sqlite: '3.27.0' # minimum version with WP_SQLITE_UNSAFE_ENABLE_UNSUPPORTED_VERSIONS
+          - php: '7.3'
+            sqlite: '3.31.1' # Ubuntu 20.04 LTS
+          - php: '7.4'
+            sqlite: '3.34.1' # Debian 11 (Bullseye), common with PHP < 8.1
+          - php: '8.0'
+            sqlite: '3.37.0' # minimum supported version (STRICT table support), Ubuntu 22.04 LTS (3.37.2)
+          - php: '8.1'
+            sqlite: '3.40.1' # Debian 12 (Bookworm)
+          - php: '8.2'
+            sqlite: '3.45.1' # Ubuntu 24.04 LTS
+          - php: '8.3'
+            sqlite: '3.46.1' # Debian 13 (Trixie), Ubuntu >= 24.10
+          - php: '8.4'
+            sqlite: '3.51.2' # First 2026 release
+          - php: '8.5'
+            sqlite: 'latest'
 
     with:
       os: ${{ matrix.os }}
       php: ${{ matrix.php }}
+      sqlite: ${{ matrix.sqlite || 'latest' }}
       phpunit-config: ${{ 'phpunit.xml.dist' }}

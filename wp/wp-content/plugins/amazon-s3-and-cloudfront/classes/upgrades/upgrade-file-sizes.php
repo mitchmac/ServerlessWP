@@ -47,7 +47,10 @@ class Upgrade_File_Sizes extends Upgrade {
 	 * @return string
 	 */
 	protected function get_running_update_text() {
-		return __( 'and updating the metadata with the sizes of files that have been removed from the server. This will allow us to serve the correct size for media items and the total space used in Multisite subsites.', 'amazon-s3-and-cloudfront' );
+		return __(
+			'and updating the metadata with the sizes of files that have been removed from the server. This will allow us to serve the correct size for media items and the total space used in Multisite subsites.',
+			'amazon-s3-and-cloudfront'
+		);
 	}
 
 	/**
@@ -73,7 +76,14 @@ class Upgrade_File_Sizes extends Upgrade {
 
 		if ( $fixed ) {
 			if ( update_post_meta( $item->ID, 'amazonS3_info', $provider_object ) ) {
-				$msg = sprintf( __( 'Fixed legacy amazonS3_info metadata when updating file size metadata, please check bucket and path for attachment ID %1$s', 'amazon-s3-and-cloudfront' ), $item->ID );
+				$msg = sprintf(
+				/* translators: %1$s is a unique ID string. */
+					__(
+						'Fixed legacy amazonS3_info metadata when updating file size metadata, please check bucket and path for attachment ID %1$s',
+						'amazon-s3-and-cloudfront'
+					),
+					$item->ID
+				);
 				AS3CF_Error::log( $msg );
 			} else {
 				AS3CF_Error::log( 'Failed to fix broken serialized legacy offload metadata for attachment ' . $item->ID . ': ' . $item->provider_object );
@@ -149,9 +159,12 @@ class Upgrade_File_Sizes extends Upgrade {
 		}
 
 		// Update the main file size for the attachment
-		$meta             = get_post_meta( $item->ID, '_wp_attachment_metadata', true );
-		$meta['filesize'] = $main_file_size;
-		update_post_meta( $item->ID, '_wp_attachment_metadata', $meta );
+		$meta = get_post_meta( $item->ID, '_wp_attachment_metadata', true );
+
+		if ( ! empty( $meta ) && is_array( $meta ) ) {
+			$meta['filesize'] = $main_file_size;
+			update_post_meta( $item->ID, '_wp_attachment_metadata', $meta );
+		}
 
 		// Add the total file size for all image sizes
 		update_post_meta( $item->ID, 'wpos3_filesize_total', $file_size_total );
@@ -205,6 +218,7 @@ class Upgrade_File_Sizes extends Upgrade {
 			$sql .= sprintf( ' LIMIT %d', (int) $limit );
 		}
 
+		// phpcs:ignore WordPress.DB, PluginCheck.Security.DirectDB.UnescapedDBParameter -- safe query, must not be cached
 		return $wpdb->get_results( $sql, OBJECT );
 	}
 }

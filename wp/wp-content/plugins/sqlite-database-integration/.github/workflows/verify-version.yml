@@ -1,0 +1,17 @@
+name: Verify release metadata
+
+on:
+  push:
+    branches:
+      - trunk
+  pull_request:
+
+jobs:
+  verify-version:
+    name: Assert release metadata is internally consistent
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify release metadata
+        run: bash bin/verify-release-metadata.sh packages/plugin-sqlite-database-integration

@@ -1,0 +1,135 @@
+name: Publish release
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [trunk]
+
+concurrency:
+  group: release-publish
+  cancel-in-progress: false
+
+jobs:
+  publish-release:
+    name: Build plugin and create GitHub release
+    if: >-
+      github.repository == 'WordPress/sqlite-database-integration'
+      && github.event.pull_request.merged == true
+      && startsWith(github.event.pull_request.head.ref, 'release/')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      tag: ${{ steps.version.outputs.tag }}
+      prerelease: ${{ steps.version.outputs.prerelease }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Extract version from branch name
+        id: version
+        env:
+          BRANCH: ${{ github.event.pull_request.head.ref }}
+        run: |
+          # Extract version from branch name (release/v2.3.0 → 2.3.0).
+          VERSION="${BRANCH#release/v}"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tag=v$VERSION" >> $GITHUB_OUTPUT
+
+          # Versions with a hyphen (e.g., 2.3.0-beta.1) are prereleases.
+          if [[ "$VERSION" == *-* ]]; then
+            echo "prerelease=true" >> $GITHUB_OUTPUT
+          else
+            echo "prerelease=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+
+      - name: Build plugin zip
+        run: composer run build-sqlite-plugin-zip
+
+      - name: Extract changelog from readme.txt
+        id: changelog
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          README="packages/plugin-sqlite-database-integration/readme.txt"
+
+          # Extract the changelog entry for this version.
+          CHANGELOG=$(awk -v version="$VERSION" '
+            $0 == "= " version " =" { found = 1; next }
+            found && /^= / { exit }
+            found { print }
+          ' "$README" | sed -e '/./,$!d' -e :a -e '/^\s*$/{ $d; N; ba; }')  # Trim leading/trailing blank lines.
+
+          {
+            echo "body<<CHANGELOG_EOF"
+            echo "$CHANGELOG"
+            echo "CHANGELOG_EOF"
+          } >> $GITHUB_OUTPUT
+
+      - name: Get contributors from changelog PRs
+        id: contributors
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CHANGELOG: ${{ steps.changelog.outputs.body }}
+        run: |
+          # Extract PR numbers from changelog links like [#123](...).
+          PR_NUMBERS=$(echo "$CHANGELOG" | grep -oE '\[#[0-9]+\]' | tr -d '[]#' | sort -u)
+
+          CONTRIBUTORS=""
+          if [ -n "$PR_NUMBERS" ]; then
+            # Build a single GraphQL query to fetch all PR authors.
+            QUERY='{ repository(owner: "${{ github.repository_owner }}", name: "${{ github.event.repository.name }}") {'
+            while IFS= read -r PR; do
+              [ -n "$PR" ] && QUERY="$QUERY pr$PR: pullRequest(number: $PR) { author { login } }"
+            done <<< "$PR_NUMBERS"
+            QUERY="$QUERY } }"
+
+            CONTRIBUTORS=$(gh api graphql -f query="$QUERY" \
+              --jq '[.data.repository[].author.login] | unique | map("@" + .) | join(", ")')
+          fi
+          echo "list=$CONTRIBUTORS" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.version.outputs.tag }}
+          MERGE_SHA: ${{ github.event.pull_request.merge_commit_sha }}
+          BODY: ${{ steps.changelog.outputs.body }}
+          CONTRIBUTORS: ${{ steps.contributors.outputs.list }}
+        run: |
+          PRERELEASE_FLAG=""
+          if [[ "${{ steps.version.outputs.prerelease }}" == "true" ]]; then
+            PRERELEASE_FLAG="--prerelease"
+          fi
+
+          NOTES="$(printf '## Changelog\n\n%s' "$BODY")"
+          if [ -n "$CONTRIBUTORS" ]; then
+            NOTES="$(printf '%s\n\n## Contributors\n\nThe following contributors merged PRs in this release:\n\n%s' "$NOTES" "$CONTRIBUTORS")"
+          fi
+
+          gh release create "$TAG" \
+            --target "$MERGE_SHA" \
+            --title "$TAG" \
+            --notes "$NOTES" \
+            $PRERELEASE_FLAG \
+            "build/plugin-sqlite-database-integration.zip"
+
+      - name: Delete release branch
+        env:
+          BRANCH: ${{ github.event.pull_request.head.ref }}
+        run: git push origin --delete "$BRANCH" 2>/dev/null || true
+
+  deploy-wporg:
+    name: Deploy to WordPress.org
+    needs: publish-release
+    if: needs.publish-release.outputs.prerelease == 'false'
+    uses: ./.github/workflows/release-wporg.yml
+    with:
+      tag: ${{ needs.publish-release.outputs.tag }}
+    secrets: inherit

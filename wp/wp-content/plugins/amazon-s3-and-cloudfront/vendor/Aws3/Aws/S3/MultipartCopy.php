@@ -49,6 +49,8 @@ class MultipartCopy extends AbstractUploadManager
      *   options are ignored.
      * - source_metadata: (Aws\ResultInterface) An object that represents the
      *   result of executing a HeadObject command on the copy source.
+     * - display_progress: (boolean) Set true to track status in 1/8th increments
+     *   for upload.
      *
      * @param S3ClientInterface $client Client used for the upload.
      * @param string|array $source Location of the data to be copied (in the
@@ -65,6 +67,9 @@ class MultipartCopy extends AbstractUploadManager
             $this->source = $this->getInputSource($source);
         }
         parent::__construct($client, \array_change_key_case($config) + ['source_metadata' => null]);
+        if ($this->displayProgress) {
+            $this->getState()->setProgressThresholds($this->sourceMetadata["ContentLength"]);
+        }
     }
     /**
      * An alias of the self::upload method.

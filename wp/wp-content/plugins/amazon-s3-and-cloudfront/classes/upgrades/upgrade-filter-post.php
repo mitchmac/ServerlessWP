@@ -50,6 +50,7 @@ abstract class Upgrade_Filter_Post extends Upgrade {
 	protected function get_highest_post_id() {
 		global $wpdb;
 
+		// phpcs:ignore WordPress.DB -- safe query, must not be cached
 		return (int) $wpdb->get_var( "SELECT MAX(ID) FROM {$wpdb->posts}" );
 	}
 
@@ -81,6 +82,7 @@ abstract class Upgrade_Filter_Post extends Upgrade {
 			$sql .= sprintf( ' LIMIT %d', (int) $limit );
 		}
 
+		// phpcs:ignore WordPress.DB, PluginCheck.Security.DirectDB.UnescapedDBParameter -- safe query, must not be cached
 		return $wpdb->get_results( $sql );
 	}
 
@@ -197,11 +199,26 @@ abstract class Upgrade_Filter_Post extends Upgrade {
 		$new_file_name = wp_basename( $new_url );
 
 		// Full size image
-		$url_pairs[] = $this->add_url_pair( $file_path, $file_name, $old_url, $old_file_name, $new_url, $new_file_name );
+		$url_pairs[] = $this->add_url_pair(
+			$file_path,
+			$file_name,
+			$old_url,
+			$old_file_name,
+			$new_url,
+			$new_file_name
+		);
 
 		if ( isset( $meta['thumb'] ) && $meta['thumb'] ) {
 			// Replace URLs for legacy thumbnail of image
-			$url_pairs[] = $this->add_url_pair( $file_path, $file_name, $old_url, $old_file_name, $new_url, $new_file_name, $meta['thumb'] );
+			$url_pairs[] = $this->add_url_pair(
+				$file_path,
+				$file_name,
+				$old_url,
+				$old_file_name,
+				$new_url,
+				$new_file_name,
+				$meta['thumb']
+			);
 		}
 
 		if ( ! empty( $meta['sizes'] ) ) {
@@ -211,7 +228,15 @@ abstract class Upgrade_Filter_Post extends Upgrade {
 					continue;
 				}
 
-				$url_pairs[] = $this->add_url_pair( $file_path, $file_name, $old_url, $old_file_name, $new_url, $new_file_name, $size['file'] );
+				$url_pairs[] = $this->add_url_pair(
+					$file_path,
+					$file_name,
+					$old_url,
+					$old_file_name,
+					$new_url,
+					$new_file_name,
+					$size['file']
+				);
 			}
 		}
 
@@ -222,7 +247,15 @@ abstract class Upgrade_Filter_Post extends Upgrade {
 					continue;
 				}
 
-				$url_pairs[] = $this->add_url_pair( $file_path, $file_name, $old_url, $old_file_name, $new_url, $new_file_name, $backup['file'] );
+				$url_pairs[] = $this->add_url_pair(
+					$file_path,
+					$file_name,
+					$old_url,
+					$old_file_name,
+					$new_url,
+					$new_file_name,
+					$backup['file']
+				);
 			}
 		}
 
@@ -235,7 +268,14 @@ abstract class Upgrade_Filter_Post extends Upgrade {
 			$url_pairs[ $key ]['new_url'] = AS3CF_Utils::remove_scheme( $url_pair['new_url'] );
 		}
 
-		return apply_filters( 'as3cf_update_' . $this->upgrade_name . '_url_pairs', $url_pairs, $file_path, $old_url, $new_url, $meta );
+		return apply_filters(
+			'as3cf_update_' . $this->upgrade_name . '_url_pairs',
+			$url_pairs,
+			$file_path,
+			$old_url,
+			$new_url,
+			$meta
+		);
 	}
 
 	/**
@@ -251,7 +291,15 @@ abstract class Upgrade_Filter_Post extends Upgrade {
 	 *
 	 * @return array
 	 */
-	protected function add_url_pair( $file_path, $file_name, $old_url, $old_file_name, $new_url, $new_file_name, $size_file_name = false ) {
+	protected function add_url_pair(
+		$file_path,
+		$file_name,
+		$old_url,
+		$old_file_name,
+		$new_url,
+		$new_file_name,
+		$size_file_name = false
+	) {
 		if ( ! $size_file_name ) {
 			return array(
 				'old_path' => $file_path,
@@ -298,6 +346,7 @@ abstract class Upgrade_Filter_Post extends Upgrade {
 	protected function process_pair_replacement( $url_pairs, $where_lowest_id, $where_highest_id ) {
 		global $wpdb;
 
+		// phpcs:ignore WordPress.DB, PluginCheck.Security.DirectDB.UnescapedDBParameter -- safe query, must not be cached
 		$posts = $wpdb->get_results( $this->generate_select_sql( $url_pairs, $where_lowest_id, $where_highest_id ) );
 
 		if ( empty( $posts ) ) {
@@ -311,6 +360,7 @@ abstract class Upgrade_Filter_Post extends Upgrade {
 
 		foreach ( $url_pairs as $url_pairs_chunk ) {
 			foreach ( $ids as $ids_chunk ) {
+				// phpcs:ignore WordPress.DB, PluginCheck.Security.DirectDB.UnescapedDBParameter -- safe query, must not be cached
 				$wpdb->query( $this->generate_update_sql( $url_pairs_chunk, $ids_chunk ) );
 			}
 		}
@@ -387,7 +437,14 @@ abstract class Upgrade_Filter_Post extends Upgrade {
 	 * @return string
 	 */
 	protected function get_paused_message() {
-		return sprintf( __( '<strong>Paused Upgrade</strong><br>The find &amp; replace to update URLs has been paused. %s', 'amazon-s3-and-cloudfront' ), $this->get_generic_message() );
+		return sprintf(
+		/* translators: %s is an error message. */
+			__(
+				'<strong>Paused Upgrade</strong><br>The find &amp; replace to update URLs has been paused. %s',
+				'amazon-s3-and-cloudfront'
+			),
+			$this->get_generic_message()
+		);
 	}
 
 	/**
@@ -402,7 +459,14 @@ abstract class Upgrade_Filter_Post extends Upgrade {
 		) );
 		$link      = AS3CF_Utils::dbrains_link( $url, $link_text );
 
-		return sprintf( __( '%s for details on why we&#8217;re doing this, why it runs slowly, and how to make it run faster.', 'amazon-s3-and-cloudfront' ), $link );
+		return sprintf(
+		/* translators: %s is a documentation link. */
+			__(
+				'%s for details on why we&#8217;re doing this, why it runs slowly, and how to make it run faster.',
+				'amazon-s3-and-cloudfront'
+			),
+			$link
+		);
 	}
 
 	/**

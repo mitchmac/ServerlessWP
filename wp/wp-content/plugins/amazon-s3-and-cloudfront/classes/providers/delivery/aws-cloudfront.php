@@ -102,6 +102,7 @@ class AWS_CloudFront extends Delivery_Provider {
 		global $as3cf;
 
 		return sprintf(
+		/* translators: %s is a URL. */
 			__( 'Private Media Supported with <a href="%s" target="_blank">upgrade</a>', 'amazon-s3-and-cloudfront' ),
 			$as3cf::dbrains_url( '/wp-offload-media/upgrade/', array(
 				'utm_campaign' => 'WP+Offload+S3',
@@ -117,7 +118,10 @@ class AWS_CloudFront extends Delivery_Provider {
 	public static function get_block_public_access_enabled_supported_desc() {
 		global $as3cf;
 
-		$mesg = __( 'Since you\'re using Amazon CloudFront for delivery we recommend you keep Block All Public Access enabled.', 'amazon-s3-and-cloudfront' );
+		$mesg = __(
+			'Since you\'re using Amazon CloudFront for delivery we recommend you keep Block All Public Access enabled.',
+			'amazon-s3-and-cloudfront'
+		);
 		$mesg .= '&nbsp;';
 		$mesg .= $as3cf::settings_more_info_link( 'bucket', '', 'change+bucket+access' );
 
@@ -132,7 +136,10 @@ class AWS_CloudFront extends Delivery_Provider {
 	public static function get_block_public_access_disabled_supported_desc() {
 		global $as3cf;
 
-		$mesg = __( 'Since you\'re using Amazon CloudFront for delivery we recommend you enable Block All Public Access once you have set up the required Origin Access Identity and bucket policy.', 'amazon-s3-and-cloudfront' );
+		$mesg = __(
+			'Since you\'re using Amazon CloudFront for delivery we recommend you enable Block All Public Access once you have set up the required Origin Access Identity and bucket policy.',
+			'amazon-s3-and-cloudfront'
+		);
 		$mesg .= '&nbsp;';
 		$mesg .= $as3cf::settings_more_info_link( 'bucket', '', 'change+bucket+access' );
 
@@ -154,7 +161,11 @@ class AWS_CloudFront extends Delivery_Provider {
 		);
 
 		return sprintf(
-			__( 'I have set up the required <a href="%1$s">Origin Access Identity and bucket policy</a>', 'amazon-s3-and-cloudfront' ),
+		/* translators: %s is a URL. */
+			__(
+				'I have set up the required <a href="%1$s">Origin Access Identity and bucket policy</a>',
+				'amazon-s3-and-cloudfront'
+			),
 			$bucket_settings_doc
 		);
 	}
@@ -167,7 +178,10 @@ class AWS_CloudFront extends Delivery_Provider {
 	public static function get_object_ownership_enforced_supported_desc(): string {
 		global $as3cf;
 
-		$mesg = __( 'Since you\'re using Amazon CloudFront for delivery we recommend you keep Object Ownership enforced.', 'amazon-s3-and-cloudfront' );
+		$mesg = __(
+			'Since you\'re using Amazon CloudFront for delivery we recommend you keep Object Ownership enforced.',
+			'amazon-s3-and-cloudfront'
+		);
 		$mesg .= '&nbsp;';
 		$mesg .= $as3cf::settings_more_info_link( 'bucket', '', 'change+bucket+access' );
 
@@ -182,7 +196,10 @@ class AWS_CloudFront extends Delivery_Provider {
 	public static function get_object_ownership_not_enforced_supported_desc(): string {
 		global $as3cf;
 
-		$mesg = __( 'Since you\'re using Amazon CloudFront for delivery we recommend you enforce Object Ownership once you have set up the required Origin Access Identity and bucket policy.', 'amazon-s3-and-cloudfront' );
+		$mesg = __(
+			'Since you\'re using Amazon CloudFront for delivery we recommend you enforce Object Ownership once you have set up the required Origin Access Identity and bucket policy.',
+			'amazon-s3-and-cloudfront'
+		);
 		$mesg .= '&nbsp;';
 		$mesg .= $as3cf::settings_more_info_link( 'bucket', '', 'change+bucket+access' );
 

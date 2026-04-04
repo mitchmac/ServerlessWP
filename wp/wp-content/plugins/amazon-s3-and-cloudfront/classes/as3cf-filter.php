@@ -176,8 +176,9 @@ abstract class AS3CF_Filter {
 		$to_cache     = array();
 		$update_cache = true;
 
-		// Editing widgets in Customizer throws an error if more than one option record is updated.
-		// Therefore cache updating has to wait until render or edit via Appearance menu.
+		// Editing widgets in Customizer throws an error if more than one option record is updated,
+		// therefore cache updating has to wait until render or edit via Appearance menu.
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- equality check way down the stack
 		if ( isset( $_POST['wp_customize'] ) && 'on' === $_POST['wp_customize'] ) {
 			$update_cache = false;
 		}
@@ -346,7 +347,10 @@ abstract class AS3CF_Filter {
 			return $url_pairs;
 		}
 
-		if ( ! preg_match_all( '/(http|https)?:?\/\/[^"\'\s<>()\\\]*/', $content, $matches ) || ! isset( $matches[0] ) ) {
+		if (
+			! preg_match_all( '/(http|https)?:?\/\/[^"\'\s<>()\\\]*/', $content, $matches ) ||
+			! isset( $matches[0] )
+		) {
 			// No URLs found, return
 			return $url_pairs;
 		}
@@ -506,7 +510,7 @@ abstract class AS3CF_Filter {
 
 		$size         = $this->get_size_string_from_url( $item_source, $find );
 		$replace_size = $this->get_url( $item_source, $size );
-		$parts        = parse_url( $find );
+		$parts        = wp_parse_url( $find );
 
 		if ( ! isset( $parts['scheme'] ) ) {
 			$replace_full = AS3CF_Utils::remove_scheme( $replace_full );
@@ -542,7 +546,12 @@ abstract class AS3CF_Filter {
 			return false;
 		}
 
-		return apply_filters( 'as3cf_get_size_string_from_url_for_item_source', Item::primary_object_key(), $url, $item_source );
+		return apply_filters(
+			'as3cf_get_size_string_from_url_for_item_source',
+			Item::primary_object_key(),
+			$url,
+			$item_source
+		);
 	}
 
 	/**
@@ -672,7 +681,12 @@ abstract class AS3CF_Filter {
 	 */
 	protected function set_option_cache( $data ) {
 		if ( wp_using_ext_object_cache() ) {
-			$expires = apply_filters( 'as3cf_' . self::OPTION_CACHE_GROUP . '_expires', DAY_IN_SECONDS, self::CACHE_KEY, $data );
+			$expires = apply_filters(
+				'as3cf_' . self::OPTION_CACHE_GROUP . '_expires',
+				DAY_IN_SECONDS,
+				self::CACHE_KEY,
+				$data
+			);
 			wp_cache_set( self::CACHE_KEY, $data, self::OPTION_CACHE_GROUP, $expires );
 		} else {
 			update_option( self::CACHE_KEY, $data );
@@ -773,21 +787,31 @@ abstract class AS3CF_Filter {
 		}
 
 		// Purge postmeta cache
-		$sql = $wpdb->prepare( "
+		$sql = $wpdb->prepare(
+			"
  			DELETE FROM {$wpdb->postmeta}
  			WHERE meta_key = %s
  			AND meta_value LIKE %s;
- 		", self::CACHE_KEY, '%"' . $url . '"%' );
+			",
+			self::CACHE_KEY,
+			'%"' . $url . '"%'
+		);
 
+		// phpcs:ignore WordPress.DB -- safe query, must not be cached
 		$wpdb->query( $sql );
 
 		// Purge option cache
-		$sql = $wpdb->prepare( "
+		$sql = $wpdb->prepare(
+			"
  			DELETE FROM {$wpdb->options}
  			WHERE option_name = %s
  			AND option_value LIKE %s;
- 		", self::CACHE_KEY, '%"' . $url . '"%' );
+			",
+			self::CACHE_KEY,
+			'%"' . $url . '"%'
+		);
 
+		// phpcs:ignore WordPress.DB -- safe query, must not be cached
 		$wpdb->query( $sql );
 
 		if ( false !== $blog_id ) {

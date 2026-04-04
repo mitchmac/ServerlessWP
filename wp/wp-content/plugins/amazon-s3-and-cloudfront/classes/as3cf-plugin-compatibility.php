@@ -122,13 +122,19 @@ class AS3CF_Plugin_Compatibility {
 		 * Regenerate Thumbnails v3+ and other REST-API using plugins that need a local file.
 		 */
 		add_filter( 'rest_dispatch_request', array( $this, 'rest_dispatch_request_copy_back_to_local' ), 10, 4 );
-		add_filter( 'as3cf_wait_for_generate_attachment_metadata', array( $this, 'wait_for_generate_attachment_metadata' ) );
+		add_filter(
+			'as3cf_wait_for_generate_attachment_metadata',
+			array( $this, 'wait_for_generate_attachment_metadata' )
+		);
 
 		/*
 		 * WP-CLI Compatibility
 		 */
 		if ( defined( 'WP_CLI' ) && class_exists( 'WP_CLI' ) ) {
-			WP_CLI::add_hook( 'before_invoke:media regenerate', array( $this, 'enable_copy_back_and_wait_for_generate_metadata' ) );
+			WP_CLI::add_hook(
+				'before_invoke:media regenerate',
+				array( $this, 'enable_copy_back_and_wait_for_generate_metadata' )
+			);
 		}
 	}
 
@@ -144,7 +150,13 @@ class AS3CF_Plugin_Compatibility {
 	 * @return string
 	 */
 	function legacy_copy_back_to_local( $url, $file, $attachment_id, Media_Library_Item $as3cf_item ) {
-		$copy_back_to_local = apply_filters( 'as3cf_get_attached_file_copy_back_to_local', false, $file, $attachment_id, $as3cf_item );
+		$copy_back_to_local = apply_filters(
+			'as3cf_get_attached_file_copy_back_to_local',
+			false,
+			$file,
+			$attachment_id,
+			$as3cf_item
+		);
 		if ( false === $copy_back_to_local ) {
 			// Not copying back file
 			return $url;
@@ -217,7 +229,12 @@ class AS3CF_Plugin_Compatibility {
 	 *
 	 * @return bool
 	 */
-	public function prevent_copy_back_to_local_after_remove( $copy_back_to_local, $file, $attachment_id, Media_Library_Item $as3cf_item ) {
+	public function prevent_copy_back_to_local_after_remove(
+		$copy_back_to_local,
+		$file,
+		$attachment_id,
+		Media_Library_Item $as3cf_item
+	) {
 		if ( $copy_back_to_local && in_array( $file, $this->removed_files ) ) {
 			$copy_back_to_local = false;
 		}
@@ -268,6 +285,8 @@ class AS3CF_Plugin_Compatibility {
 	 * @param null|string|array $context_key
 	 *
 	 * @return bool
+	 *
+	 * phpcs:disable WordPress.Security.NonceVerification
 	 */
 	public function maybe_process_on_action( $action_key, $ajax, $context_key = null ) {
 		if ( $ajax !== AS3CF_Utils::is_ajax() ) {
@@ -362,6 +381,7 @@ class AS3CF_Plugin_Compatibility {
 	 * @return bool
 	 */
 	public function image_editor_remove_files( $cancel, $data, $post_id, $as3cf_item ) {
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- existence/equality check, admin_init
 		if ( ! isset( $_POST['do'] ) || 'restore' !== $_POST['do'] ) {
 			return $cancel;
 		}
@@ -413,6 +433,7 @@ class AS3CF_Plugin_Compatibility {
 		// but we actually need to copy back the original image at this point
 		// for the restore to be successful and edited images to be deleted from the bucket
 		// via image_editor_remove_files()
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- existence/equality check, admin_init
 		if ( isset( $_POST['do'] ) && 'restore' == $_POST['do'] ) {
 			$objects = $as3cf_item->objects();
 			if ( isset( $objects['full-orig'] ) ) {
@@ -460,6 +481,7 @@ class AS3CF_Plugin_Compatibility {
 			return $files_to_remove;
 		}
 
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- existence/equality check, admin_init
 		if ( isset( $_POST['action'] ) && 'image-editor' === sanitize_key( $_POST['action'] ) ) { // input var okay
 			if ( ( $original_file = $this->get_original_image_file( $as3cf_item ) ) ) {
 				$files_to_remove[] = $original_file;
@@ -659,7 +681,11 @@ class AS3CF_Plugin_Compatibility {
 		$client = $this->register_stream_wrapper( $as3cf_item->region() );
 
 		if ( ! empty( $client ) ) {
-			return $client->prepare_stream_wrapper_file( $as3cf_item->region(), $as3cf_item->bucket(), $as3cf_item->key() );
+			return $client->prepare_stream_wrapper_file(
+				$as3cf_item->region(),
+				$as3cf_item->bucket(),
+				$as3cf_item->key()
+			);
 		}
 
 		return $url;
@@ -730,8 +756,10 @@ class AS3CF_Plugin_Compatibility {
 		}
 
 		// Bail early if an image has been inserted and later edited.
-		if ( preg_match( '/-e[0-9]{13}/', $image_meta['file'], $img_edit_hash ) && strpos( wp_basename( $image_src ), $img_edit_hash[0] ) === false ) {
-
+		if (
+			preg_match( '/-e[0-9]{13}/', $image_meta['file'], $img_edit_hash ) &&
+			strpos( wp_basename( $image_src ), $img_edit_hash[0] ) === false
+		) {
 			return $image;
 		}
 
@@ -933,13 +961,18 @@ class AS3CF_Plugin_Compatibility {
 	 * is planned to be increased in a subsequent release.
 	 */
 	public function maybe_warn_about_php_version() {
-		$key_base = 'php-version-72';
+		$key_base    = 'php-version-81';
+		$php_version = '8.1';
 
-		if ( version_compare( PHP_VERSION, '7.2', '<' ) ) {
+		if ( version_compare( PHP_VERSION, $php_version, '<' ) ) {
 			$message = sprintf(
-				__( '<strong>Warning:</strong> This site is using PHP %1$s, in a future update WP Offload Media will require PHP %2$s or later. %3$s', 'amazon-s3-and-cloudfront' ),
+			/* translators: %1$s is a version string, %2$s a different version string, %3$s is a documentation link. */
+				__(
+					'<strong>Warning:</strong> This site is using PHP %1$s, in a future update WP Offload Media will require PHP %2$s or later. %3$s',
+					'amazon-s3-and-cloudfront'
+				),
 				PHP_MAJOR_VERSION . '.' . PHP_MINOR_VERSION,
-				'7.2',
+				$php_version,
 				$this->as3cf->more_info_link( '/wp-offload-media/doc/php-version-requirements/', 'upgrade-php-version' )
 			);
 

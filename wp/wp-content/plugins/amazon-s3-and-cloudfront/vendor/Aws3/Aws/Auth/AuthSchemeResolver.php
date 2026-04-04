@@ -3,6 +3,8 @@
 namespace DeliciousBrains\WP_Offload_Media\Aws3\Aws\Auth;
 
 use DeliciousBrains\WP_Offload_Media\Aws3\Aws\Auth\Exception\UnresolvedAuthSchemeException;
+use DeliciousBrains\WP_Offload_Media\Aws3\Aws\Exception\CredentialsException;
+use DeliciousBrains\WP_Offload_Media\Aws3\Aws\Exception\TokenException;
 use DeliciousBrains\WP_Offload_Media\Aws3\Aws\Identity\AwsCredentialIdentity;
 use DeliciousBrains\WP_Offload_Media\Aws3\Aws\Identity\BearerTokenIdentity;
 use DeliciousBrains\WP_Offload_Media\Aws3\GuzzleHttp\Promise\PromiseInterface;
@@ -25,7 +27,7 @@ class AuthSchemeResolver implements AuthSchemeResolverInterface
     private $authSchemeMap;
     private $tokenProvider;
     private $credentialProvider;
-    public function __construct(callable $credentialProvider, callable $tokenProvider = null, array $authSchemeMap = [])
+    public function __construct(callable $credentialProvider, ?callable $tokenProvider = null, array $authSchemeMap = [])
     {
         $this->credentialProvider = $credentialProvider;
         $this->tokenProvider = $tokenProvider;
@@ -112,7 +114,12 @@ class AuthSchemeResolver implements AuthSchemeResolverInterface
         $fn = $this->credentialProvider;
         $result = $fn();
         if ($result instanceof PromiseInterface) {
-            return $result->wait() instanceof AwsCredentialIdentity;
+            try {
+                $resolved = $result->wait();
+                return $resolved instanceof AwsCredentialIdentity;
+            } catch (CredentialsException $e) {
+                return \false;
+            }
         }
         return $result instanceof AwsCredentialIdentity;
     }
@@ -125,7 +132,12 @@ class AuthSchemeResolver implements AuthSchemeResolverInterface
             $fn = $this->tokenProvider;
             $result = $fn();
             if ($result instanceof PromiseInterface) {
-                return $result->wait() instanceof BearerTokenIdentity;
+                try {
+                    $resolved = $result->wait();
+                    return $resolved instanceof BearerTokenIdentity;
+                } catch (TokenException $e) {
+                    return \false;
+                }
             }
             return $result instanceof BearerTokenIdentity;
         }

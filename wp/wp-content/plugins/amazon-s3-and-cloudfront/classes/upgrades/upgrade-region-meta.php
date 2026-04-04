@@ -45,7 +45,10 @@ class Upgrade_Region_Meta extends Upgrade {
 	 * @return string
 	 */
 	protected function get_running_update_text() {
-		return __( 'and updating the metadata with the bucket region it is served from. This will allow us to serve your files from the proper region subdomain <span style="white-space:nowrap;">(e.g. s3-us-west-2.amazonaws.com)</span>.', 'amazon-s3-and-cloudfront' );
+		return __(
+			'and updating the metadata with the bucket region it is served from. This will allow us to serve your files from the proper region subdomain <span style="white-space:nowrap;">(e.g. s3-us-west-2.amazonaws.com)</span>.',
+			'amazon-s3-and-cloudfront'
+		);
 	}
 
 	/**
@@ -70,7 +73,14 @@ class Upgrade_Region_Meta extends Upgrade {
 
 		if ( $fixed ) {
 			if ( update_post_meta( $item->ID, 'amazonS3_info', $provider_object ) ) {
-				$msg = sprintf( __( 'Fixed legacy amazonS3_info metadata when updating its region, please check bucket and path for attachment ID %1$s', 'amazon-s3-and-cloudfront' ), $item->ID );
+				$msg = sprintf(
+				/* translators: %1$s is a unique ID string. */
+					__(
+						'Fixed legacy amazonS3_info metadata when updating its region, please check bucket and path for attachment ID %1$s',
+						'amazon-s3-and-cloudfront'
+					),
+					$item->ID
+				);
 				AS3CF_Error::log( $msg );
 			} else {
 				AS3CF_Error::log( 'Failed to fix broken serialized legacy offload metadata for attachment ' . $item->ID . ': ' . $item->provider_object );
@@ -162,6 +172,7 @@ class Upgrade_Region_Meta extends Upgrade {
 		if ( $count ) {
 			$sql = 'SELECT COUNT(*)' . $sql;
 
+			// phpcs:ignore WordPress.DB, PluginCheck.Security.DirectDB.UnescapedDBParameter -- safe query, must not be cached
 			return $wpdb->get_var( $sql );
 		}
 
@@ -171,6 +182,7 @@ class Upgrade_Region_Meta extends Upgrade {
 			$sql .= sprintf( ' LIMIT %d', (int) $limit );
 		}
 
+		// phpcs:ignore WordPress.DB, PluginCheck.Security.DirectDB.UnescapedDBParameter -- safe query, must not be cached
 		return $wpdb->get_results( $sql, OBJECT );
 	}
 }

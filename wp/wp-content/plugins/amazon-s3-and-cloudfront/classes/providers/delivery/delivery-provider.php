@@ -89,7 +89,12 @@ abstract class Delivery_Provider extends Provider implements Validator_Interface
 		global $as3cf;
 
 		$mesg = sprintf(
-			_x( 'Serves offloaded media files by rewriting local URLs so that they point to %s.', 'Setting description', 'amazon-s3-and-cloudfront' ),
+		/* translators: %s is a provider service name, e.g. "Amazon S3". */
+			_x(
+				'Serves offloaded media files by rewriting local URLs so that they point to %s.',
+				'Setting description',
+				'amazon-s3-and-cloudfront'
+			),
 			static::get_provider_service_name()
 		);
 		$mesg .= ' ' . $as3cf::settings_more_info_link( 'serve-from-s3', 'How URL rewriting works' );
@@ -113,7 +118,11 @@ abstract class Delivery_Provider extends Provider implements Validator_Interface
 	 */
 	public static function get_delivery_domain_desc(): string {
 		return sprintf(
-			__( 'Serves media from a custom domain that has been pointed to %1$s. <a href="%2$s" target="_blank">How to set a custom domain name</a>', 'amazon-s3-and-cloudfront' ),
+		/* translators: %1$s is a provider service name, e.g. "Amazon S3", %2$s is a URL. */
+			__(
+				'Serves media from a custom domain that has been pointed to %1$s. <a href="%2$s" target="_blank">How to set a custom domain name</a>',
+				'amazon-s3-and-cloudfront'
+			),
 			static::get_provider_service_name(),
 			static::get_provider_service_quick_start_url() . '#create-cname'
 		);
@@ -136,7 +145,10 @@ abstract class Delivery_Provider extends Provider implements Validator_Interface
 	 * @return bool
 	 */
 	public static function supports_storage( $storage_provider_key ) {
-		if ( empty( static::$supported_storage_providers ) || in_array( $storage_provider_key, static::$supported_storage_providers ) ) {
+		if (
+			empty( static::$supported_storage_providers ) ||
+			in_array( $storage_provider_key, static::$supported_storage_providers )
+		) {
 			return true;
 		}
 
@@ -223,7 +235,10 @@ abstract class Delivery_Provider extends Provider implements Validator_Interface
 	 * @return string
 	 */
 	protected static function delivery_tests_pass_desc( array $recommendations = array() ): string {
-		$message = __( 'Delivery provider is successfully connected and serving offloaded media.', 'amazon-s3-and-cloudfront' );
+		$message = __(
+			'Delivery provider is successfully connected and serving offloaded media.',
+			'amazon-s3-and-cloudfront'
+		);
 
 		if ( ! empty( $recommendations ) ) {
 			$message = __( 'Delivery settings validated.', 'amazon-s3-and-cloudfront' );
@@ -331,7 +346,9 @@ abstract class Delivery_Provider extends Provider implements Validator_Interface
 			}
 		}
 
-		return $this->validate_signed_urls_key_file_path( $this->as3cf->get_core_setting( static::$signed_urls_key_file_path_setting_name, false ) );
+		return $this->validate_signed_urls_key_file_path(
+			$this->as3cf->get_core_setting( static::$signed_urls_key_file_path_setting_name, false )
+		);
 	}
 
 	/**
@@ -375,7 +392,12 @@ abstract class Delivery_Provider extends Provider implements Validator_Interface
 		}
 
 		if ( ! file_exists( $signed_urls_key_file_path ) ) {
-			$this->as3cf->notices->add_notice( __( 'Given Signing Key File Path is invalid or could not be accessed.', 'amazon-s3-and-cloudfront' ), $notice_settings );
+			$this->as3cf->notices->add_notice(
+				__( 'Given Signing Key File Path is invalid or could not be accessed.',
+					'amazon-s3-and-cloudfront'
+				),
+				$notice_settings
+			);
 
 			return false;
 		}
@@ -385,12 +407,18 @@ abstract class Delivery_Provider extends Provider implements Validator_Interface
 
 			// An exception isn't always thrown, so check value instead.
 			if ( empty( $value ) ) {
-				$this->as3cf->notices->add_notice( __( 'Could not read Signing Key File Path\'s contents.', 'amazon-s3-and-cloudfront' ), $notice_settings );
+				$this->as3cf->notices->add_notice(
+					__( 'Could not read Signing Key File Path\'s contents.', 'amazon-s3-and-cloudfront' ),
+					$notice_settings
+				);
 
 				return false;
 			}
 		} catch ( Exception $e ) {
-			$this->as3cf->notices->add_notice( __( 'Could not read Signing Key File Path\'s contents.', 'amazon-s3-and-cloudfront' ), $notice_settings );
+			$this->as3cf->notices->add_notice(
+				__( 'Could not read Signing Key File Path\'s contents.', 'amazon-s3-and-cloudfront' ),
+				$notice_settings
+			);
 
 			return false;
 		}
@@ -517,7 +545,12 @@ abstract class Delivery_Provider extends Provider implements Validator_Interface
 			$headers['BaseURL'] = $scheme . '://' . $domain;
 		}
 
-		return $this->as3cf->get_provider_client( $region )->get_object_url( $as3cf_item->bucket(), $path, $timestamp, $headers );
+		return $this->as3cf->get_provider_client( $region )->get_object_url(
+			$as3cf_item->bucket(),
+			$path,
+			$timestamp,
+			$headers
+		);
 	}
 
 	/**
@@ -545,7 +578,11 @@ abstract class Delivery_Provider extends Provider implements Validator_Interface
 	 */
 	public static function get_block_public_access_enabled_unsupported_desc() {
 		return sprintf(
-			__( 'You need to disable Block All Public Access so that %1$s can access your bucket for delivery.', 'amazon-s3-and-cloudfront' ),
+		/* translators: %1$s is a provider name, e.g. "Amazon Web Services". */
+			__(
+				'You need to disable Block All Public Access so that %1$s can access your bucket for delivery.',
+				'amazon-s3-and-cloudfront'
+			),
 			static::get_provider_name()
 		);
 	}
@@ -573,7 +610,11 @@ abstract class Delivery_Provider extends Provider implements Validator_Interface
 		);
 
 		return sprintf(
-			__( 'You need to edit the bucket\'s Object Ownership setting and <a href="%1$s">enable ACLs</a> so that %2$s can access your bucket for delivery.', 'amazon-s3-and-cloudfront' ),
+		/* translators: %1$s is a documentation link, %2$s is a provider name, e.g. "Amazon Web Services". */
+			__(
+				'You need to edit the bucket\'s Object Ownership setting and <a href="%1$s">enable ACLs</a> so that %2$s can access your bucket for delivery.',
+				'amazon-s3-and-cloudfront'
+			),
 			$object_ownership_doc,
 			static::get_provider_name()
 		);
@@ -588,6 +629,7 @@ abstract class Delivery_Provider extends Provider implements Validator_Interface
 	 */
 	public static function get_cannot_access_public_file_desc( string $error_message ): string {
 		return sprintf(
+		/* translators: %1$s is an error message, %2$s is a documentation link. */
 			__(
 				'Offloaded media URLs may be broken. %1$s <a href="%2$s" target="_blank">Read more</a>',
 				'amazon-s3-and-cloudfront'
@@ -606,6 +648,7 @@ abstract class Delivery_Provider extends Provider implements Validator_Interface
 	 */
 	public static function get_cannot_access_private_file_desc( string $error_message ): string {
 		return sprintf(
+		/* translators: %1$s is an error message, %2$s is a documentation link. */
 			__(
 				'Private offloaded media URLs may be broken. %1$s <a href="%2$s" target="_blank">Read more</a>',
 				'amazon-s3-and-cloudfront'
@@ -628,6 +671,7 @@ abstract class Delivery_Provider extends Provider implements Validator_Interface
 		return apply_filters(
 			'as3cf_get_unsigned_url_can_access_private_file_desc_' . $storage_provider->get_provider_key_name(),
 			sprintf(
+			/* translators: %1$s is a documentation link. */
 				__(
 					'Delivery provider is connected, but private media is currently exposed through unsigned URLs. Restore privacy by verifying the configuration of private media settings. <a href="%1$s" target="_blank">Read more</a>',
 					'amazon-s3-and-cloudfront'
@@ -659,15 +703,28 @@ abstract class Delivery_Provider extends Provider implements Validator_Interface
 	 * NOTE: By default delivery providers append the suffix to the base console URL only.
 	 *       The usual bucket, prefix and region params are still processed and the suffix
 	 *       may end up being either a path, params or both that get deeper into the console.
+	 *
+	 * phpcs:disable PEAR.Functions.FunctionCallSignature.Indent
+	 * phpcs:disable Universal.WhiteSpace.PrecisionAlignment.Found
+	 * phpcs:disable Generic.WhiteSpace.DisallowSpaceIndent.SpacesUsed
 	 */
 	public function get_console_url( string $bucket = '', string $prefix = '', string $region = '' ): string {
 		if ( '' !== $prefix ) {
-			$prefix = $this->get_console_url_prefix_param() . apply_filters( 'as3cf_' . static::$provider_key_name . '_' . static::$service_key_name . '_console_url_prefix_value', $prefix );
+			$prefix = $this->get_console_url_prefix_param() . apply_filters(
+					'as3cf_' . static::$provider_key_name . '_' . static::$service_key_name . '_console_url_prefix_value',
+					$prefix
+				);
 		}
 
-		$suffix = apply_filters( 'as3cf_' . static::$provider_key_name . '_' . static::$service_key_name . '_console_url_suffix_param', $this->get_console_url_suffix_param( $bucket, $prefix, $region ) );
+		$suffix = apply_filters(
+			'as3cf_' . static::$provider_key_name . '_' . static::$service_key_name . '_console_url_suffix_param',
+			$this->get_console_url_suffix_param( $bucket, $prefix, $region )
+		);
 
-		return apply_filters( 'as3cf_' . static::$provider_key_name . '_' . static::$service_key_name . '_console_url', $this->console_url ) . $suffix;
+		return apply_filters(
+			       'as3cf_' . static::$provider_key_name . '_' . static::$service_key_name . '_console_url',
+			       $this->console_url
+		       ) . $suffix;
 	}
 
 	/**
@@ -679,7 +736,11 @@ abstract class Delivery_Provider extends Provider implements Validator_Interface
 	 *
 	 * @return string
 	 */
-	protected function get_console_url_suffix_param( string $bucket = '', string $prefix = '', string $region = '' ): string {
+	protected function get_console_url_suffix_param(
+		string $bucket = '',
+		string $prefix = '',
+		string $region = ''
+	): string {
 		return '';
 	}
 
@@ -706,7 +767,10 @@ abstract class Delivery_Provider extends Provider implements Validator_Interface
 		if ( $this->is_result_code_unknown_or_error( $this->as3cf->validation_manager->get_validation_status( 'storage' ) ) ) {
 			return new AS3CF_Result(
 				Validator_Interface::AS3CF_STATUS_MESSAGE_WARNING,
-				__( 'Delivery of offloaded media cannot be tested until the storage provider is successfully connected. See "Storage Settings" for more information.', 'amazon-s3-and-cloudfront' )
+				__(
+					'Delivery of offloaded media cannot be tested until the storage provider is successfully connected. See "Storage Settings" for more information.',
+					'amazon-s3-and-cloudfront'
+				)
 			);
 		}
 
@@ -718,6 +782,7 @@ abstract class Delivery_Provider extends Provider implements Validator_Interface
 			return new AS3CF_Result(
 				Validator_Interface::AS3CF_STATUS_MESSAGE_ERROR,
 				sprintf(
+				/* translators: %1$s is a URL fragment. */
 					_x(
 						'Offloaded media cannot be delivered because <strong>Block All Public Access</strong> is enabled. <a href="%1$s">Edit bucket security</a>',
 						'Delivery setting notice for issue with BAPA enabled on Storage Provider',
@@ -774,8 +839,16 @@ abstract class Delivery_Provider extends Provider implements Validator_Interface
 			return new AS3CF_Result(
 				Validator_Interface::AS3CF_STATUS_MESSAGE_ERROR,
 				sprintf(
-					__( 'An invalid delivery provider has been defined for the active storage provider. Please use %1$s.', 'amazon-s3-and-cloudfront' ),
-					"<code>" . AS3CF_Utils::human_readable_join( "</code>, <code>", "</code> or <code>", $valid_providers ) . "</code>"
+				/* translators: %1$s is a comma separated list of delivery providers. */
+					__(
+						'An invalid delivery provider has been defined for the active storage provider. Please use %1$s.',
+						'amazon-s3-and-cloudfront'
+					),
+					"<code>" . AS3CF_Utils::human_readable_join(
+						"</code>, <code>",
+						"</code> or <code>",
+						$valid_providers
+					) . "</code>"
 				)
 			);
 		}
@@ -829,6 +902,7 @@ abstract class Delivery_Provider extends Provider implements Validator_Interface
 			return new AS3CF_Result(
 				Validator_Interface::AS3CF_STATUS_MESSAGE_WARNING,
 				sprintf(
+				/* translators: %1$s is a documentation link. */
 					__(
 						'Offloaded media cannot be delivered from the CDN until a delivery domain is set. <a href="%1$s" target="_blank">Read more</a>',
 						'amazon-s3-and-cloudfront'
@@ -845,6 +919,7 @@ abstract class Delivery_Provider extends Provider implements Validator_Interface
 			return new AS3CF_Result(
 				Validator_Interface::AS3CF_STATUS_MESSAGE_ERROR,
 				sprintf(
+				/* translators: %1$s is an error message, %2$s is a documentation link. */
 					__(
 						'Offloaded media URLs may be broken due to an invalid delivery domain. %1$s <a href="%2$s">How to set a delivery domain</a>',
 						'amazon-s3-and-cloudfront'
