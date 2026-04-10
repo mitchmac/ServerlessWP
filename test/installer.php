@@ -1,6 +1,9 @@
 <?php
 
 // Do not use this on a live site! For testing purposes only!
+if (getenv('SERVERLESSWP_TESTING') !== '1') {
+    exit('Not allowed.');
+}
 
 define('WP_INSTALLING', true);
 
@@ -15,8 +18,13 @@ if (!is_blog_installed()) {
     $admin_email = 'admin@example.com';
     $public = TRUE;
 
-    $result = wp_install($weblog_title, $user_name, $admin_email, $public);
+    $result = wp_install($weblog_title, $user_name, $admin_email, $public, '', 'testpassword123');
     update_user_meta( 1, 'default_password_nag', false );
+    // Suppress Gutenberg's welcome guide modal
+    update_user_meta( 1, 'wp_persisted_preferences', [
+        'core/edit-post' => [ 'welcomeGuide' => false ],
+        '_modified' => date( 'c' ),
+    ] );
 } else {
     echo 'WordPress is already installed.';
 }

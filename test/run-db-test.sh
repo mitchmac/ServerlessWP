@@ -1,4 +1,5 @@
 #!/bin/bash
+set -euo pipefail
 
 ./build-test.sh
 
@@ -14,9 +15,9 @@ docker run -d --name mariadb \
     -e "MYSQL_PASSWORD=testpass" \
     mariadb:latest
 
-# Wait for MariaDB to initialize
-echo "Waiting for MariaDB to initialize..."
-sleep 20
+# Wait for MariaDB to be ready
+echo "Waiting for MariaDB to be ready..."
+until docker exec mariadb mariadb -u testuser -ptestpass testdb -e "SELECT 1" >/dev/null 2>&1; do sleep 1; done
 
 # Run the application container with MariaDB environment variables
 docker run \
@@ -25,23 +26,37 @@ docker run \
     -e PASSWORD=testpass \
     -e HOST=mariadb \
     -e SKIP_MYSQL_SSL=1 \
+    -e SERVERLESSWP_TESTING=1 \
     -p 9000:8080 \
     --network serverlesswp-test-network \
     -d --name serverlesswp-test serverlesswp-test
 
-sleep 5
+node proxy.js &
+PROXY_PID=$!
 
-curl -s -XPOST "http://localhost:9000/2015-03-31/functions/function/invocations" -d '{"path":"/installer.php"}'| jq -e '.statusCode == 200'
+cleanup() {
+    kill $PROXY_PID 2>/dev/null || true
+    docker stop serverlesswp-test 2>/dev/null || true
+    docker rm serverlesswp-test 2>/dev/null || true
+    docker stop mariadb 2>/dev/null || true
+    docker rm mariadb 2>/dev/null || true
+    docker network rm serverlesswp-test-network 2>/dev/null || true
+}
+trap cleanup EXIT
 
-curl -s -XPOST "http://localhost:9000/2015-03-31/functions/function/invocations" -d '{"path":"/"}' | jq -e '.statusCode == 200'
+until curl -sf -XPOST http://localhost:9000/2015-03-31/functions/function/invocations \
+    -d '{"path":"/"}' > /dev/null 2>&1; do sleep 1; done
+until curl -sfk https://localhost:3000/ > /dev/null 2>&1; do sleep 1; done
 
-# Clean up
-docker stop serverlesswp-test
-#docker logs serverlesswp-test
-docker rm serverlesswp-test
+echo "Testing static file serving..."
+static_check=$(curl -sk -o /dev/null -w "%{http_code} %{content_type}" https://localhost:3000/wp-includes/css/classic-themes.css)
+http_code=${static_check%% *}
+content_type=${static_check#* }
+[[ "$http_code" == "200" ]] || { echo "Static file test FAILED: expected 200, got $http_code"; exit 1; }
+[[ "$content_type" == *"text/css"* ]] || { echo "Static file content-type FAILED: expected text/css, got $content_type"; exit 1; }
+echo "Static file test passed."
 
-docker stop mariadb
-#docker logs mariadb
-docker rm mariadb
-
-docker network rm serverlesswp-test-network
+npm install
+npx playwright install chromium
+ldconfig -p | grep -q libnspr4 || sudo env PATH="$PATH" node_modules/.bin/playwright install-deps chromium
+SCREENSHOTS=${SCREENSHOTS:-} npx playwright test e2e.spec.js "$@"
