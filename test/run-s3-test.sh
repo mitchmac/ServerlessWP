@@ -1,12 +1,12 @@
 #!/bin/bash
+set -euo pipefail
 
 ./build-test.sh
 
 VERCEL=${VERCEL:-1}
 VERCEL_GIT_COMMIT_REF=${VERCEL_GIT_COMMIT_REF:-test_branch}
 
-if ! command -v mc &> /dev/null
-then
+if ! command -v mc &> /dev/null; then
     wget https://dl.min.io/client/mc/release/linux-amd64/mc -O /usr/local/bin/mc
     chmod +x /usr/local/bin/mc
 fi
@@ -17,7 +17,7 @@ docker run -d --name minio \
     --network serverlesswp-test-network \
     -p 9010:9000 -p 9011:9011 \
     -e "MINIO_ROOT_USER=minioadmin" -e "MINIO_ROOT_PASSWORD=minioadmin" \
-    minio/minio server /data  --console-address ":9011"
+    minio/minio server /data --console-address ":9011"
 
 sleep 5
 
@@ -29,22 +29,39 @@ mc admin policy attach local-minio readwrite --user testuser
 docker run \
     -e SQLITE_S3_BUCKET=test-bucket \
     -e SQLITE_S3_API_KEY=testuser -e SQLITE_S3_API_SECRET=testpass \
-    -e SQLITE_S3_REGION=us-east-1  -e SQLITE_S3_ENDPOINT=http://minio:9000 -e SQLITE_S3_FORCE_PATH_STYLE=1 \
+    -e SQLITE_S3_REGION=us-east-1 -e SQLITE_S3_ENDPOINT=http://minio:9000 -e SQLITE_S3_FORCE_PATH_STYLE=1 \
     -e VERCEL=$VERCEL -e VERCEL_GIT_COMMIT_REF=$VERCEL_GIT_COMMIT_REF \
+    -e SERVERLESSWP_TESTING=1 \
     -p 9000:8080 \
     --network serverlesswp-test-network \
     -d --name serverlesswp-test serverlesswp-test
 
-curl -s -XPOST "http://localhost:9000/2015-03-31/functions/function/invocations" -d '{"path":"/installer.php"}' | jq -e '.statusCode == 200'
+node proxy.js &
+PROXY_PID=$!
 
-curl -s -XPOST "http://localhost:9000/2015-03-31/functions/function/invocations" -d '{"path":"/"}' | jq -e '.statusCode == 200'
+cleanup() {
+    kill $PROXY_PID 2>/dev/null || true
+    docker stop serverlesswp-test 2>/dev/null || true
+    docker rm serverlesswp-test 2>/dev/null || true
+    docker stop minio 2>/dev/null || true
+    docker rm minio 2>/dev/null || true
+    docker network rm serverlesswp-test-network 2>/dev/null || true
+}
+trap cleanup EXIT
 
-docker stop serverlesswp-test
-#docker logs serverlesswp-test
-docker rm serverlesswp-test
+until curl -sf -XPOST http://localhost:9000/2015-03-31/functions/function/invocations \
+    -d '{"path":"/"}' > /dev/null 2>&1; do sleep 1; done
+until curl -sfk https://localhost:3000/ > /dev/null 2>&1; do sleep 1; done
 
-docker stop minio
-#docker logs minio
-docker rm minio
+echo "Testing static file serving..."
+static_check=$(curl -sk -o /dev/null -w "%{http_code} %{content_type}" https://localhost:3000/wp-includes/css/classic-themes.css)
+http_code=${static_check%% *}
+content_type=${static_check#* }
+[[ "$http_code" == "200" ]] || { echo "Static file test FAILED: expected 200, got $http_code"; exit 1; }
+[[ "$content_type" == *"text/css"* ]] || { echo "Static file content-type FAILED: expected text/css, got $content_type"; exit 1; }
+echo "Static file test passed."
 
-docker network rm serverlesswp-test-network
+npm install
+npx playwright install chromium
+ldconfig -p | grep -q libnspr4 || sudo env PATH="$PATH" node_modules/.bin/playwright install-deps chromium
+SCREENSHOTS=${SCREENSHOTS:-} npx playwright test e2e.spec.js "$@"
