@@ -4,7 +4,7 @@ Contributors:      wordpressdotorg, aristath, janjakes, zieladam, berislav.grgic
 Requires at least: 6.4
 Tested up to:      6.9
 Requires PHP:      7.2
-Stable tag:        2.2.22
+Stable tag:        2.2.23
 License:           GPLv2 or later
 License URI:       https://www.gnu.org/licenses/gpl-2.0.html
 Tags:              performance, database
@@ -45,6 +45,11 @@ the wpdb API, while queries are internally adapted to be compatible
 with SQLite syntax and behavior.
 
 == Changelog ==
+
+= 2.2.23 =
+
+* Add Query Monitor 4.0 support ([#357](https://github.com/WordPress/sqlite-database-integration/pull/357))
+* Translate MySQL CONVERT() expressions to SQLite ([#356](https://github.com/WordPress/sqlite-database-integration/pull/356))
 
 = 2.2.22 =
 

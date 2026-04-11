@@ -16,6 +16,10 @@ mv amazon-s3-and-cloudfront wordpress/wp-content/plugins/
 git clone --depth 1 https://github.com/WordPress/sqlite-database-integration.git
 cp -rL sqlite-database-integration/packages/plugin-sqlite-database-integration wordpress/wp-content/plugins/sqlite-database-integration
 rm -rf sqlite-database-integration
+git clone https://github.com/pingcap/wordpress-tidb-plugin.git
+wget https://downloads.wordpress.org/plugin/tidb-compatibility.zip
+unzip tidb-compatibility
+mv tidb-compatibility wordpress/wp-content/plugins/
 rm -rf ../wp
 mv wordpress ../wp
 cd ..
