@@ -17,12 +17,16 @@ use DeliciousBrains\WP_Offload_Media\Aws3\Aws\Sts\RegionalEndpoints\Configuratio
  * @method \GuzzleHttp\Promise\Promise assumeRoleWithSAMLAsync(array $args = [])
  * @method \Aws\Result assumeRoleWithWebIdentity(array $args = [])
  * @method \GuzzleHttp\Promise\Promise assumeRoleWithWebIdentityAsync(array $args = [])
+ * @method \Aws\Result assumeRoot(array $args = [])
+ * @method \GuzzleHttp\Promise\Promise assumeRootAsync(array $args = [])
  * @method \Aws\Result decodeAuthorizationMessage(array $args = [])
  * @method \GuzzleHttp\Promise\Promise decodeAuthorizationMessageAsync(array $args = [])
  * @method \Aws\Result getAccessKeyInfo(array $args = [])
  * @method \GuzzleHttp\Promise\Promise getAccessKeyInfoAsync(array $args = [])
  * @method \Aws\Result getCallerIdentity(array $args = [])
  * @method \GuzzleHttp\Promise\Promise getCallerIdentityAsync(array $args = [])
+ * @method \Aws\Result getDelegatedAccessToken(array $args = [])
+ * @method \GuzzleHttp\Promise\Promise getDelegatedAccessTokenAsync(array $args = [])
  * @method \Aws\Result getFederationToken(array $args = [])
  * @method \GuzzleHttp\Promise\Promise getFederationTokenAsync(array $args = [])
  * @method \Aws\Result getSessionToken(array $args = [])
@@ -65,7 +69,7 @@ class StsClient extends AwsClient
      * @return Credentials
      * @throws \InvalidArgumentException if the result contains no credentials
      */
-    public function createCredentials(Result $result)
+    public function createCredentials(Result $result, $source = null)
     {
         if (!$result->hasKey('Credentials')) {
             throw new \InvalidArgumentException('Result contains no credentials');
@@ -80,7 +84,7 @@ class StsClient extends AwsClient
         }
         $credentials = $result['Credentials'];
         $expiration = isset($credentials['Expiration']) && $credentials['Expiration'] instanceof \DateTimeInterface ? (int) $credentials['Expiration']->format('U') : null;
-        return new Credentials($credentials['AccessKeyId'], $credentials['SecretAccessKey'], isset($credentials['SessionToken']) ? $credentials['SessionToken'] : null, $expiration, $accountId);
+        return new Credentials($credentials['AccessKeyId'], $credentials['SecretAccessKey'], isset($credentials['SessionToken']) ? $credentials['SessionToken'] : null, $expiration, $accountId, $source);
     }
     /**
      * Adds service-specific client built-in value

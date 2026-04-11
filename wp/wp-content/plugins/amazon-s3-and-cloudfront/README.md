@@ -2,11 +2,11 @@
 
 **Contributors:** wpengine, deliciousbrains, ianmjones, eriktorsner, kevinwhoffman, tysonreeder, dalewilliams, lewisia32, mattshaw, aaemnnosttv, a5hleyrich, polevaultweb, bradt, joetan \
 **Tags:** uploads, amazon, s3, amazon s3, digitalocean, digitalocean spaces, google cloud storage, gcs, mirror, admin, media, cdn, cloudfront \
-**Requires at least:** 5.5 \
-**Tested up to:** 6.8 \
-**Requires PHP:** 7.2 \
-**Stable tag:** 3.2.11 \
-**License:** GPLv3
+**Requires at least:** 5.9 \
+**Tested up to:** 6.9 \
+**Requires PHP:** 8.1 \
+**Stable tag:** 3.3.0 \
+**License:** GPLv2
 
 Copies files to Amazon S3, DigitalOcean Spaces or Google Cloud Storage as they are uploaded to the Media Library. Optionally configure Amazon CloudFront or another CDN for faster delivery.
 
@@ -63,19 +63,19 @@ If you upgrade to the pro version of [WP Offload Media](https://deliciousbrains.
 
 ### 1. Select Cloud Storage Provider
 
-![Select Cloud Storage Provider](https://ps.w.org/amazon-s3-and-cloudfront/assets/screenshot-1.png)
+[missing image]
 
 ### 2. Select or Create Bucket
 
-![Select or Create Bucket](https://ps.w.org/amazon-s3-and-cloudfront/assets/screenshot-2.png)
+[missing image]
 
 ### 3. Settings Screen
 
-![Settings Screen](https://ps.w.org/amazon-s3-and-cloudfront/assets/screenshot-3.png)
+[missing image]
 
 ### 4. Custom Domain Used With CDN
 
-![Custom Domain Used With CDN](https://ps.w.org/amazon-s3-and-cloudfront/assets/screenshot-4.png)
+[missing image]
 
 
 ## Upgrade Notice
@@ -102,6 +102,27 @@ This is a major change, which ensures S3 URLs are no longer saved in post conten
 This version requires PHP 5.3.3+ and the Amazon Web Services plugin
 
 ## Changelog
+
+### WP Offload Media Lite 3.3.0 - 2026-02-03
+
+* New: Amazon S3 regions Asia Pacific (Taipei) and Asia Pacific (New Zealand) are now selectable
+* New: Google Cloud Storage regions North America (Querétaro) and Europe (Stockholm) are now selectable
+* New: DigitalOcean Spaces region Atlanta (ATL1) is now selectable
+* New: WordPress 6.9 compatible
+* New: Requires WordPress 5.9+
+* New: PHP 8.4 compatible
+* New: PHP 8.5 compatible
+* New: Requires PHP 8.1+
+* New: AWS PHP SDK has been updated to v3.360.1
+* New: PHP and JS dependencies have been updated
+* Improvement: The filesize attachment metadata value is no longer removed when the item is downloaded
+* Bug fix: The legacy file size upgrade routine no longer throws an error if attachment metadata is missing
+* Bug fix: Deleting an item via the Media Library's grid mode now works when Rank Math SEO is installed
+* Bug fix: The plugin now protects against an invalid value being passed to the core `the_post` action
+
+### WP Offload Media Lite 3.2.12 - Unreleased
+
+* Pro only release
 
 ### WP Offload Media Lite 3.2.11 - 2025-01-22
 

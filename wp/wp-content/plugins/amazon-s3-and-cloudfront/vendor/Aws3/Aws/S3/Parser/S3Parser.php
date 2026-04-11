@@ -10,7 +10,6 @@ use DeliciousBrains\WP_Offload_Media\Aws3\Aws\Api\StructureShape;
 use DeliciousBrains\WP_Offload_Media\Aws3\Aws\CommandInterface;
 use DeliciousBrains\WP_Offload_Media\Aws3\Aws\Exception\AwsException;
 use DeliciousBrains\WP_Offload_Media\Aws3\Aws\ResultInterface;
-use DeliciousBrains\WP_Offload_Media\Aws3\GuzzleHttp\Psr7\Utils;
 use DeliciousBrains\WP_Offload_Media\Aws3\Psr\Http\Message\ResponseInterface;
 use DeliciousBrains\WP_Offload_Media\Aws3\Psr\Http\Message\StreamInterface;
 /**
@@ -78,8 +77,8 @@ final class S3Parser extends AbstractParser
     {
         // This error parsing should be just for 200 error responses
         // and operations where its output shape does not have a streaming
-        // member.
-        if (200 !== $response->getStatusCode() || !$this->shouldBeConsidered200Error($command->getName())) {
+        // member and the body of the response is seekable.
+        if (200 !== $response->getStatusCode() || !$this->shouldBeConsidered200Error($command->getName()) || !$response->getBody()->isSeekable()) {
             return;
         }
         // To guarantee we try the error parsing just for an Error xml response.

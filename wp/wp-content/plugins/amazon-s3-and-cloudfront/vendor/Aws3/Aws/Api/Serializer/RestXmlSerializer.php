@@ -16,7 +16,7 @@ class RestXmlSerializer extends RestSerializer
      * @param string  $endpoint Endpoint to connect to
      * @param XmlBody $xmlBody  Optional XML formatter to use
      */
-    public function __construct(Service $api, $endpoint, XmlBody $xmlBody = null)
+    public function __construct(Service $api, $endpoint, ?XmlBody $xmlBody = null)
     {
         parent::__construct($api, $endpoint);
         $this->xmlBody = $xmlBody ?: new XmlBody($api);
@@ -24,7 +24,9 @@ class RestXmlSerializer extends RestSerializer
     protected function payload(StructureShape $member, array $value, array &$opts)
     {
         $opts['headers']['Content-Type'] = 'application/xml';
-        $opts['body'] = $this->getXmlBody($member, $value);
+        $body = $this->getXmlBody($member, $value);
+        $opts['headers']['Content-Length'] = \strlen($body);
+        $opts['body'] = $body;
     }
     /**
      * @param StructureShape $member

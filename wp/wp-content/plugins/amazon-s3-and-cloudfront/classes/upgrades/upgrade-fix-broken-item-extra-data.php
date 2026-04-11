@@ -144,6 +144,7 @@ class Upgrade_Fix_Broken_Item_Extra_Data extends Upgrade {
 		if ( $count ) {
 			$sql = 'SELECT COUNT(source_id)' . $sql;
 
+			// phpcs:ignore WordPress.DB, PluginCheck.Security.DirectDB.UnescapedDBParameter -- safe query, must not be cached
 			return $wpdb->get_var( $sql );
 		}
 
@@ -154,6 +155,7 @@ class Upgrade_Fix_Broken_Item_Extra_Data extends Upgrade {
 			$sql .= sprintf( ' LIMIT %d', (int) $limit );
 		}
 
+		// phpcs:ignore WordPress.DB,PluginCheck.Security.DirectDB.UnescapedDBParameter -- safe query, must not be cached
 		return $wpdb->get_results( $sql, OBJECT );
 	}
 }

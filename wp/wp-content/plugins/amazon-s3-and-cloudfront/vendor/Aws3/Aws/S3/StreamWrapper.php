@@ -94,7 +94,7 @@ class StreamWrapper
      * @param string            $protocol Protocol to register as.
      * @param CacheInterface    $cache    Default cache for the protocol.
      */
-    public static function register(S3ClientInterface $client, $protocol = 's3', CacheInterface $cache = null, $v2Existence = \false)
+    public static function register(S3ClientInterface $client, $protocol = 's3', ?CacheInterface $cache = null, $v2Existence = \false)
     {
         self::$useV2Existence = $v2Existence;
         if (\in_array($protocol, \stream_get_wrappers())) {
@@ -215,7 +215,7 @@ class StreamWrapper
     {
         $this->initProtocol($path);
         // Some paths come through as S3:// for some reason.
-        $split = \explode('://', $path);
+        $split = \explode('://', $path, 2);
         $path = \strtolower($split[0]) . '://' . $split[1];
         // Check if this path is in the url_stat cache
         if ($value = $this->getCacheStorage()->get($path)) {
@@ -469,6 +469,23 @@ class StreamWrapper
     {
         return \false;
     }
+    public function stream_set_option($option, $arg1, $arg2)
+    {
+        return \false;
+    }
+    public function stream_metadata($path, $option, $value)
+    {
+        return \false;
+    }
+    public function stream_lock($operation)
+    {
+        \trigger_error('stream_lock() is not supported by the Amazon S3 stream wrapper', \E_USER_WARNING);
+        return \false;
+    }
+    public function stream_truncate($new_size)
+    {
+        return \false;
+    }
     /**
      * Validates the provided stream arguments for fopen and returns an array
      * of errors.
@@ -543,7 +560,7 @@ class StreamWrapper
     private function getBucketKey($path)
     {
         // Remove the protocol
-        $parts = \explode('://', $path);
+        $parts = \explode('://', $path, 2);
         // Get the bucket, key
         $parts = \explode('/', $parts[1], 2);
         return ['Bucket' => $parts[0], 'Key' => isset($parts[1]) ? $parts[1] : null];

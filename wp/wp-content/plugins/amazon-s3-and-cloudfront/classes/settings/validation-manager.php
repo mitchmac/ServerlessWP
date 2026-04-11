@@ -112,7 +112,19 @@ class Validation_Manager {
 			 * @param string   $section The setting section, e.g. storage, delivery or assets.
 			 * @param WP_Error $result  The result to be cached.
 			 */
-			$timeout = min( max( 3, (int) apply_filters( $this->base_last_validation_result_key . '_timeout', $timeout, $section, $result ) ), 7 * DAY_IN_SECONDS );
+			$timeout = min(
+				max(
+					3,
+					(int) apply_filters(
+					// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.DynamicHooknameFound -- is prefixed
+						$this->base_last_validation_result_key . '_timeout',
+						$timeout,
+						$section,
+						$result
+					)
+				),
+				7 * DAY_IN_SECONDS
+			);
 
 			set_site_transient( $transient_key, $this->validation_result[ $section ], $timeout );
 		}
@@ -176,7 +188,10 @@ class Validation_Manager {
 		static $deleted = array();
 
 		foreach ( $this->settings_validators as $section => $validator ) {
-			if ( in_array( $section, $deleted ) || ! in_array( current_action(), $validator->post_save_settings_actions() ) ) {
+			if (
+				in_array( $section, $deleted ) ||
+				! in_array( current_action(), $validator->post_save_settings_actions() )
+			) {
 				continue;
 			}
 
@@ -217,7 +232,11 @@ class Validation_Manager {
 	protected function update_relative_time() {
 		foreach ( array_keys( $this->validation_result ) as $key ) {
 			if ( ! isset( $this->validation_result[ $key ]['timestamp'] ) ) {
-				$this->validation_result[ $key ]['last_update'] = _x( 'Unknown', 'Relative time in settings notice', 'amazon-s3-and-cloudfront' );
+				$this->validation_result[ $key ]['last_update'] = _x(
+					'Unknown',
+					'Relative time in settings notice',
+					'amazon-s3-and-cloudfront'
+				);
 				continue;
 			}
 
@@ -237,6 +256,10 @@ class Validation_Manager {
 			return _x( 'Just now', 'Relative time in settings notice', 'amazon-s3-and-cloudfront' );
 		}
 
-		return sprintf( __( '%s ago', 'amazon-s3-and-cloudfront' ), human_time_diff( $timestamp ) );
+		return sprintf(
+		/* translators: %s is a relative time, e.g. "3 minutes". */
+			__( '%s ago', 'amazon-s3-and-cloudfront' ),
+			human_time_diff( $timestamp )
+		);
 	}
 }

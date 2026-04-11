@@ -114,7 +114,21 @@ class Media_Library_Item extends Item {
 			'private_prefix' => $private_prefix,
 		);
 
-		parent::__construct( $provider, $region, $bucket, $path, $is_private, $source_id, $source_path, $original_filename, $extra_info, $id, $originator, $is_verified, $use_object_versioning );
+		parent::__construct(
+			$provider,
+			$region,
+			$bucket,
+			$path,
+			$is_private,
+			$source_id,
+			$source_path,
+			$original_filename,
+			$extra_info,
+			$id,
+			$originator,
+			$is_verified,
+			$use_object_versioning
+		);
 	}
 
 	/**
@@ -150,7 +164,11 @@ class Media_Library_Item extends Item {
 		if ( empty( $source_id ) ) {
 			return new WP_Error(
 				'exception',
-				__( 'Empty Attachment ID passed to ' . __FUNCTION__, 'amazon-s3-and-cloudfront' )
+				sprintf(
+				/* translators: %s is a function name. */
+					__( 'Empty Attachment ID passed to %s', 'amazon-s3-and-cloudfront' ),
+					__FUNCTION__
+				)
 			);
 		}
 
@@ -165,7 +183,11 @@ class Media_Library_Item extends Item {
 		if ( ! in_array( $options['originator'], self::ORIGINATORS ) ) {
 			return new WP_Error(
 				'exception',
-				__( 'Invalid Originator passed to ' . __FUNCTION__, 'amazon-s3-and-cloudfront' )
+				sprintf(
+				/* translators: %s is a function name. */
+					__( 'Invalid Originator passed to %s', 'amazon-s3-and-cloudfront' ),
+					__FUNCTION__
+				)
 			);
 		}
 
@@ -178,7 +200,11 @@ class Media_Library_Item extends Item {
 		if ( ! is_string( $attached_file_meta ) ) {
 			return new WP_Error(
 				'exception',
-				sprintf( __( 'Media Library item with ID %d has damaged meta data', 'amazon-s3-and-cloudfront' ), $source_id )
+				sprintf(
+				/* translators: %d is an integer unique ID. */
+					__( 'Media Library item with ID %d has damaged meta data', 'amazon-s3-and-cloudfront' ),
+					$source_id
+				)
 			);
 		}
 		unset( $attached_file_meta );
@@ -189,7 +215,11 @@ class Media_Library_Item extends Item {
 		if ( empty( $source_path ) ) {
 			return new WP_Error(
 				'exception',
-				sprintf( __( 'Media Library item with ID %d does not have a valid file path', 'amazon-s3-and-cloudfront' ), $source_id )
+				sprintf(
+				/* translators: %d is an integer unique ID. */
+					__( 'Media Library item with ID %d does not have a valid file path', 'amazon-s3-and-cloudfront' ),
+					$source_id
+				)
 			);
 		}
 
@@ -356,7 +386,10 @@ class Media_Library_Item extends Item {
 	 * @return array Associative array of object_key => path
 	 */
 	public function full_source_paths() {
-		return array_intersect_key( AS3CF_Utils::get_attachment_file_paths( $this->source_id(), false ), $this->objects() );
+		return array_intersect_key(
+			AS3CF_Utils::get_attachment_file_paths( $this->source_id(), false ),
+			$this->objects()
+		);
 	}
 
 	/**
@@ -408,7 +441,7 @@ class Media_Library_Item extends Item {
 		}
 
 		$sql .= "
-			FROM {$wpdb->posts} AS posts
+			FROM $wpdb->posts AS posts
 			WHERE posts.post_type = 'attachment'
 			AND posts.ID NOT IN (
 			    SELECT items.source_id
@@ -439,11 +472,14 @@ class Media_Library_Item extends Item {
 			$args[] = $limit;
 		}
 
+		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
 		$sql = $wpdb->prepare( $sql, $args );
 
 		if ( $count ) {
+			// phpcs:ignore WordPress.DB, PluginCheck.Security.DirectDB.UnescapedDBParameter -- safe query, already prepared, must not be cached
 			return (int) $wpdb->get_var( $sql );
 		} else {
+			// phpcs:ignore WordPress.DB, PluginCheck.Security.DirectDB.UnescapedDBParameter -- safe query, already prepared, must not be cached
 			return array_map( 'intval', $wpdb->get_col( $sql ) );
 		}
 	}
@@ -454,27 +490,26 @@ class Media_Library_Item extends Item {
 	public function offload_duplicate_items() {
 		global $wpdb;
 
-		$sql = $wpdb->prepare(
-			"
-				SELECT m.post_id
-				FROM " . $wpdb->postmeta . " AS m
-				LEFT JOIN " . $wpdb->posts . " AS p ON m.post_id = p.ID AND p.`post_type` = 'attachment'
-				WHERE m.meta_key = '_wp_attached_file'
-				AND m.meta_value = %s
-				AND m.post_id != %d
-				AND m.post_id NOT IN (
-					SELECT i.source_id
-					FROM " . static::items_table() . " AS i
-					WHERE i.source_type = %s
-					AND i.source_id = m.post_id
-				)
-				;
-			",
-			$this->source_path(),
-			$this->source_id(),
-			static::$source_type
-		);
+		$sql = "
+			SELECT m.post_id
+			FROM " . $wpdb->postmeta . " AS m
+			LEFT JOIN " . $wpdb->posts . " AS p ON m.post_id = p.ID AND p.`post_type` = 'attachment'
+			WHERE m.meta_key = '_wp_attached_file'
+			AND m.meta_value = %s
+			AND m.post_id != %d
+			AND m.post_id NOT IN (
+				SELECT i.source_id
+				FROM " . static::items_table() . " AS i
+				WHERE i.source_type = %s
+				AND i.source_id = m.post_id
+			)
+			;
+		";
 
+		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+		$sql = $wpdb->prepare( $sql, $this->source_path(), $this->source_id(), static::$source_type );
+
+		// phpcs:ignore WordPress.DB, PluginCheck.Security.DirectDB.UnescapedDBParameter -- safe query, already prepared, must not be cached
 		$results = $wpdb->get_results( $sql );
 
 		// Nothing found, shortcut out.
@@ -545,6 +580,7 @@ class Media_Library_Item extends Item {
 		}
 
 		if ( empty( $time ) ) {
+			// phpcs:ignore WordPress.DateTime.RestrictedFunctions.date_date
 			$time = date( 'Y/m' );
 
 			if ( ! ( $attach = get_post( $this->source_id() ) ) ) {
@@ -560,6 +596,7 @@ class Media_Library_Item extends Item {
 			}
 
 			if ( substr( $post->post_date_gmt, 0, 4 ) > 0 ) {
+				// phpcs:ignore WordPress.DateTime.RestrictedFunctions.date_date
 				return date( 'Y/m', strtotime( $post->post_date_gmt . ' +0000' ) );
 			}
 		}
@@ -622,40 +659,21 @@ class Media_Library_Item extends Item {
 	public function update_filesize_after_remove_local( $original_size, $total_size ) {
 		update_post_meta( $this->source_id(), 'as3cf_filesize_total', $total_size );
 
+		// Update existing attachment metadata to add filesize if not present.
 		if ( 0 < $original_size && ( $data = get_post_meta( $this->source_id(), '_wp_attachment_metadata', true ) ) ) {
 			if ( is_array( $data ) && empty( $data['filesize'] ) ) {
 				$data['filesize'] = $original_size;
 
-				// Update metadata with filesize
 				update_post_meta( $this->source_id(), '_wp_attachment_metadata', $data );
 			}
 		}
 	}
 
 	/**
-	 * Cleanup filesize and as3cf_filesize_total metadata on the underlying media library item
-	 * after downloading a file back from the bucket
+	 * Cleanup as3cf_filesize_total metadata on the underlying media library item
+	 * after downloading a file back from the bucket.
 	 */
-	public function update_filesize_after_download_local() {
-		$data = get_post_meta( $this->source_id(), '_wp_attachment_metadata', true );
-
-		/*
-		 * Audio and video have a filesize added to metadata by default, but images and anything else don't.
-		 * Note: Could have used `wp_generate_attachment_metadata` here to test whether default metadata has 'filesize',
-		 * but it not only has side effects it also does a lot of work considering it's not a huge deal for this entry to hang around.
-		 */
-		if (
-			! empty( $data ) &&
-			(
-				empty( $data['mime_type'] ) ||
-				0 === strpos( $data['mime_type'], 'image/' ) ||
-				! ( 0 === strpos( $data['mime_type'], 'audio/' ) || 0 === strpos( $data['mime_type'], 'video/' ) )
-			)
-		) {
-			unset( $data['filesize'] );
-			update_post_meta( $this->source_id(), '_wp_attachment_metadata', $data );
-		}
-
+	public function update_filesize_after_download_local(): void {
 		delete_post_meta( $this->source_id(), 'as3cf_filesize_total' );
 	}
 
@@ -682,13 +700,19 @@ class Media_Library_Item extends Item {
 	 */
 	public function remove_duplicate_paths( Item $as3cf_item, $paths ) {
 		$full_size_paths        = AS3CF_Utils::fullsize_paths( $as3cf_item->full_source_paths() );
-		$as3cf_items_with_paths = static::get_by_source_path( $full_size_paths, array( $as3cf_item->source_id() ), false );
+		$as3cf_items_with_paths = static::get_by_source_path(
+			$full_size_paths,
+			array( $as3cf_item->source_id() ),
+			false
+		);
 
 		$duplicate_paths = array();
 
 		foreach ( $as3cf_items_with_paths as $as3cf_item_with_path ) {
 			/* @var Media_Library_Item $as3cf_item_with_path */
-			$duplicate_paths += array_values( AS3CF_Utils::get_attachment_file_paths( $as3cf_item_with_path->source_id(), false, false, true ) );
+			$duplicate_paths += array_values(
+				AS3CF_Utils::get_attachment_file_paths( $as3cf_item_with_path->source_id(), false )
+			);
 		}
 
 		if ( ! empty( $duplicate_paths ) ) {
@@ -720,11 +744,14 @@ class Media_Library_Item extends Item {
 	protected static function get_item_counts(): array {
 		global $wpdb;
 
-		$sql              = "SELECT count(id) FROM {$wpdb->posts} WHERE post_type = 'attachment'";
+		$sql = "SELECT count(id) FROM {$wpdb->posts} WHERE post_type = 'attachment'";
+		// phpcs:ignore WordPress.DB -- safe query, must not be cached
 		$attachment_count = (int) $wpdb->get_var( $sql );
 
-		$sql             = 'SELECT count(id) FROM ' . static::items_table() . ' WHERE source_type = %s';
-		$sql             = $wpdb->prepare( $sql, static::$source_type );
+		$sql = 'SELECT count(id) FROM ' . static::items_table() . ' WHERE source_type = %s';
+		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+		$sql = $wpdb->prepare( $sql, static::$source_type );
+		// phpcs:ignore WordPress.DB, PluginCheck.Security.DirectDB.UnescapedDBParameter -- safe query, must not be cached
 		$offloaded_count = (int) $wpdb->get_var( $sql );
 
 		return array(
@@ -800,7 +827,11 @@ class Media_Library_Item extends Item {
 			return false;
 		}
 
-		$provider_object = apply_filters( 'as3cf_get_attachment_s3_info', $provider_object, $post_id ); // Backwards compatibility
+		$provider_object = apply_filters(
+			'as3cf_get_attachment_s3_info',
+			$provider_object,
+			$post_id
+		); // Backwards compatibility
 
 		return apply_filters( 'as3cf_get_attachment_provider_info', $provider_object, $post_id );
 	}

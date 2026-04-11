@@ -316,7 +316,7 @@ class SignatureV4 implements SignatureInterface
     }
     private function removeIllegalV4aHeaders(&$request)
     {
-        $illegalV4aHeaders = [self::AMZ_CONTENT_SHA256_HEADER, "aws-sdk-invocation-id", "aws-sdk-retry", 'x-amz-region-set'];
+        static $illegalV4aHeaders = [self::AMZ_CONTENT_SHA256_HEADER, 'aws-sdk-invocation-id', 'aws-sdk-retry', 'x-amz-region-set', 'transfer-encoding'];
         $storedHeaders = [];
         foreach ($illegalV4aHeaders as $header) {
             if ($request->hasHeader($header)) {
@@ -345,7 +345,7 @@ class SignatureV4 implements SignatureInterface
      * @param SigningConfigAWS|null $signingConfig
      * @return RequestInterface
      */
-    protected function signWithV4a(CredentialsInterface $credentials, RequestInterface $request, $signingService, SigningConfigAWS $signingConfig = null)
+    protected function signWithV4a(CredentialsInterface $credentials, RequestInterface $request, $signingService, ?SigningConfigAWS $signingConfig = null)
     {
         $this->verifyCRTLoaded();
         $signingConfig = $signingConfig ?? new SigningConfigAWS(['algorithm' => SigningAlgorithm::SIGv4_ASYMMETRIC, 'signature_type' => SignatureType::HTTP_REQUEST_HEADERS, 'credentials_provider' => $this->createCRTStaticCredentialsProvider($credentials), 'signed_body_value' => $this->getPayload($request), 'should_normalize_uri_path' => \true, 'use_double_uri_encode' => \true, 'region' => $this->region, 'service' => $signingService, 'date' => \time()]);

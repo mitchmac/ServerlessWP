@@ -97,6 +97,7 @@ class DigitalOcean_Provider extends AWS_Provider {
 		'syd1' => 'Sydney',
 		'lon1' => 'London',
 		'tor1' => 'Toronto',
+		'atl1' => 'Atlanta',
 	);
 
 	/**
@@ -210,7 +211,7 @@ class DigitalOcean_Provider extends AWS_Provider {
 	 */
 	public function get_bucket_location( array $args ) {
 		// For some reason DigitalOcean Spaces returns an XML LocationConstraint segment prepended to the region key.
-		return strip_tags( parent::get_bucket_location( $args ) );
+		return wp_strip_all_tags( parent::get_bucket_location( $args ) );
 	}
 
 	/**
@@ -234,7 +235,11 @@ class DigitalOcean_Provider extends AWS_Provider {
 	 *
 	 * @return string
 	 */
-	protected function get_console_url_suffix_param( string $bucket = '', string $prefix = '', string $region = '' ): string {
+	protected function get_console_url_suffix_param(
+		string $bucket = '',
+		string $prefix = '',
+		string $region = ''
+	): string {
 		return '';
 	}
 

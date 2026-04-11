@@ -121,6 +121,7 @@ class AWS_Provider extends Storage_Provider {
 		'ca-west-1'      => 'Canada West (Calgary)',
 		'af-south-1'     => 'Africa (Cape Town)',
 		'ap-east-1'      => 'Asia Pacific (Hong Kong)',
+		'ap-east-2'      => 'Asia Pacific (Taipei)',
 		'ap-south-1'     => 'Asia Pacific (Mumbai)',
 		'ap-south-2'     => 'Asia Pacific (Hyderabad)',
 		'ap-northeast-1' => 'Asia Pacific (Tokyo)',
@@ -131,6 +132,7 @@ class AWS_Provider extends Storage_Provider {
 		'ap-southeast-3' => 'Asia Pacific (Jakarta)',
 		'ap-southeast-4' => 'Asia Pacific (Melbourne)',
 		'ap-southeast-5' => 'Asia Pacific (Malaysia)',
+		'ap-southeast-6' => 'Asia Pacific (New Zealand)',
 		'ap-southeast-7' => 'Asia Pacific (Thailand)',
 		'cn-north-1'     => 'China (Beijing)',
 		'cn-northwest-1' => 'China (Ningxia)',
@@ -238,6 +240,7 @@ class AWS_Provider extends Storage_Provider {
 		}
 
 		return sprintf(
+		/* translators: %1$s is a URL. */
 			__(
 				'Delivery provider is connected, but private media is currently exposed through unsigned URLs. Because Object Ownership is enforced on the bucket, access can only be controlled by editing the Amazon S3 bucket policy or by using a CDN that supports private media. <a href="%1$s" target="_blank">Read more</a>',
 				'amazon-s3-and-cloudfront'
@@ -292,14 +295,22 @@ class AWS_Provider extends Storage_Provider {
 	public function prepare_bucket_error( WP_Error $object, bool $single = true ): string {
 		if ( false !== strpos( $object->get_error_message(), 'InvalidAccessKeyId' ) ) {
 			return sprintf(
-				__( 'Media cannot be offloaded due to an invalid Access Key ID. <a href="%1$s">Update access keys</a>', 'amazon-s3-and-cloudfront' ),
+			/* translators: %1$s is a URL fragment. */
+				__(
+					'Media cannot be offloaded due to an invalid Access Key ID. <a href="%1$s">Update access keys</a>',
+					'amazon-s3-and-cloudfront'
+				),
 				'#/storage/provider'
 			);
 		}
 
 		if ( false !== strpos( $object->get_error_message(), 'SignatureDoesNotMatch' ) ) {
 			return sprintf(
-				__( 'Media cannot be offloaded due to an invalid Secret Access Key. <a href="%1$s">Update access keys</a>', 'amazon-s3-and-cloudfront' ),
+			/* translators: %1$s is a URL fragment. */
+				__(
+					'Media cannot be offloaded due to an invalid Secret Access Key. <a href="%1$s">Update access keys</a>',
+					'amazon-s3-and-cloudfront'
+				),
 				'#/storage/provider'
 			);
 		}
@@ -308,14 +319,20 @@ class AWS_Provider extends Storage_Provider {
 			false !== strpos( $object->get_error_message(), 'CreateBucket' ) &&
 			false !== strpos( $object->get_error_message(), 'BucketAlreadyOwnedByYou' )
 		) {
-			return __( 'The bucket name already exists in your account. To confirm you\'d like to use it, please select "Use Existing Bucket". Alternatively, enter a different bucket name.', 'amazon-s3-and-cloudfront' );
+			return __(
+				'The bucket name already exists in your account. To confirm you\'d like to use it, please select "Use Existing Bucket". Alternatively, enter a different bucket name.',
+				'amazon-s3-and-cloudfront'
+			);
 		}
 
 		if (
 			false !== strpos( $object->get_error_message(), 'CreateBucket' ) &&
 			false !== strpos( $object->get_error_message(), 'BucketAlreadyExists' )
 		) {
-			return __( 'The bucket name already exists in another account. Please enter a different bucket name.', 'amazon-s3-and-cloudfront' );
+			return __(
+				'The bucket name already exists in another account. Please enter a different bucket name.',
+				'amazon-s3-and-cloudfront'
+			);
 		}
 
 		if (
@@ -323,7 +340,11 @@ class AWS_Provider extends Storage_Provider {
 			false !== strpos( $object->get_error_message(), 'NoSuchBucket' )
 		) {
 			return sprintf(
-				__( 'Media cannot be offloaded because a bucket with the configured name does not exist. <a href="%1$s">Enter a different bucket</a>', 'amazon-s3-and-cloudfront' ),
+			/* translators: %1$s is a URL fragment. */
+				__(
+					'Media cannot be offloaded because a bucket with the configured name does not exist. <a href="%1$s">Enter a different bucket</a>',
+					'amazon-s3-and-cloudfront'
+				),
 				'#/storage/bucket'
 			);
 		}
@@ -333,7 +354,11 @@ class AWS_Provider extends Storage_Provider {
 			false !== strpos( $object->get_error_message(), 'InvalidBucketName' )
 		) {
 			return sprintf(
-				__( 'Media cannot be offloaded because the bucket name is not valid. <a href="%1$s">Enter a different bucket name</a>.', 'amazon-s3-and-cloudfront' ),
+			/* translators: %1$s is a URL fragment. */
+				__(
+					'Media cannot be offloaded because the bucket name is not valid. <a href="%1$s">Enter a different bucket name</a>.',
+					'amazon-s3-and-cloudfront'
+				),
 				'#/storage/bucket'
 			);
 		}
@@ -355,7 +380,9 @@ class AWS_Provider extends Storage_Provider {
 			'csm'                            => ! apply_filters( 'as3cf_disable_aws_csm', true ),
 			'use_arn_region'                 => ! apply_filters( 'as3cf_disable_aws_use_arn_region', true ),
 			's3_us_east_1_regional_endpoint' => apply_filters( 'as3cf_aws_s3_us_east_1_regional_endpoint', 'legacy' ),
-			'endpoint_discovery'             => apply_filters( 'as3cf_disable_aws_endpoint_discovery', true ) ? array( 'enabled' => false ) : array( 'enabled' => true ),
+			'endpoint_discovery'             => apply_filters( 'as3cf_disable_aws_endpoint_discovery', true )
+				? array( 'enabled' => false )
+				: array( 'enabled' => true ),
 			'sts_regional_endpoints'         => apply_filters( 'as3cf_aws_sts_regional_endpoints', 'legacy' ),
 			'use_aws_shared_config_files'    => apply_filters( 'as3cf_aws_use_shared_config_files', false ),
 		);
@@ -878,7 +905,10 @@ class AWS_Provider extends Storage_Provider {
 			return true;
 		} catch ( Exception $e ) {
 			// If we encounter an error that isn't access denied, throw that error.
-			if ( ! $e instanceof S3Exception || ! in_array( $e->getAwsErrorCode(), array( 'AccessDenied', 'NoSuchBucket' ) ) ) {
+			if (
+				! $e instanceof S3Exception ||
+				! in_array( $e->getAwsErrorCode(), array( 'AccessDenied', 'NoSuchBucket' ) )
+			) {
 				return $e->getMessage();
 			}
 		}
@@ -916,7 +946,12 @@ class AWS_Provider extends Storage_Provider {
 	 * @return string
 	 */
 	protected function url_domain( $domain, $bucket, $region = '', $expires = null, $args = array() ) {
-		if ( apply_filters( 'as3cf_' . static::get_provider_key_name() . '_' . static::get_service_key_name() . '_bucket_in_path', false !== strpos( $bucket, '.' ) ) ) {
+		if (
+			apply_filters(
+				'as3cf_' . static::get_provider_key_name() . '_' . static::get_service_key_name() . '_bucket_in_path',
+				false !== strpos( $bucket, '.' )
+			)
+		) {
 			// TODO: This mode is going away, kinda, sorta, one day.
 			// TODO: When AWS sort out HTTPS for bucket in domain with dots we can remove this format.
 			// @see https://aws.amazon.com/blogs/aws/amazon-s3-path-deprecation-plan-the-rest-of-the-story/
@@ -937,7 +972,11 @@ class AWS_Provider extends Storage_Provider {
 	 *
 	 * @return string
 	 */
-	protected function get_console_url_suffix_param( string $bucket = '', string $prefix = '', string $region = '' ): string {
+	protected function get_console_url_suffix_param(
+		string $bucket = '',
+		string $prefix = '',
+		string $region = ''
+	): string {
 		return empty( $region ) ? '' : '?region=' . $region;
 	}
 
@@ -955,7 +994,11 @@ class AWS_Provider extends Storage_Provider {
 		);
 
 		$bucket_access_blocked_message = sprintf(
-			__( 'If you\'re following our documentation on <a href="%1$s">setting up Amazon CloudFront</a> for delivery, you can ignore this warning and continue.<br> If you\'re not planning on using Amazon CloudFront for delivery, you need to <a href="%2$s">disable Block All Public Access</a>.', 'amazon-s3-and-cloudfront' ),
+		/* translators: %1$s is a URL, %2$s is a URL fragment. */
+			__(
+				'If you\'re following our documentation on <a href="%1$s">setting up Amazon CloudFront</a> for delivery, you can ignore this warning and continue.<br> If you\'re not planning on using Amazon CloudFront for delivery, you need to <a href="%2$s">disable Block All Public Access</a>.',
+				'amazon-s3-and-cloudfront'
+			),
 			$cloudfront_setup_doc,
 			'#/storage/security'
 		);
@@ -974,7 +1017,10 @@ class AWS_Provider extends Storage_Provider {
 	public static function get_block_public_access_enabled_unsupported_desc() {
 		global $as3cf;
 
-		$mesg = __( 'Block All Public Access should only been enabled when Amazon CloudFront is configured for delivery.', 'amazon-s3-and-cloudfront' );
+		$mesg = __(
+			'Block All Public Access should only been enabled when Amazon CloudFront is configured for delivery.',
+			'amazon-s3-and-cloudfront'
+		);
 		$mesg .= '&nbsp;';
 		$mesg .= $as3cf::settings_more_info_link( 'bucket', '', 'change+bucket+access' );
 
@@ -1000,7 +1046,11 @@ class AWS_Provider extends Storage_Provider {
 		);
 
 		return sprintf(
-			__( 'If you\'re following our documentation on <a href="%1$s">setting up Amazon CloudFront</a> for delivery, you can ignore this warning and continue. If you\'re not planning on using Amazon CloudFront for delivery, you need to <a href="%2$s">disable Block All Public Access</a>.', 'amazon-s3-and-cloudfront' ),
+		/* translators: %1$s is a URL, %2$s is a different URL. */
+			__(
+				'If you\'re following our documentation on <a href="%1$s">setting up Amazon CloudFront</a> for delivery, you can ignore this warning and continue. If you\'re not planning on using Amazon CloudFront for delivery, you need to <a href="%2$s">disable Block All Public Access</a>.',
+				'amazon-s3-and-cloudfront'
+			),
 			$cloudfront_setup_doc,
 			$bucket_settings_doc
 		);
@@ -1014,7 +1064,10 @@ class AWS_Provider extends Storage_Provider {
 	public static function get_block_public_access_disabled_unsupported_desc() {
 		global $as3cf;
 
-		$mesg = __( 'Since you\'re not using Amazon CloudFront for delivery, we recommend you keep Block All Public Access disabled unless you have a very good reason to enable it.', 'amazon-s3-and-cloudfront' );
+		$mesg = __(
+			'Since you\'re not using Amazon CloudFront for delivery, we recommend you keep Block All Public Access disabled unless you have a very good reason to enable it.',
+			'amazon-s3-and-cloudfront'
+		);
 		$mesg .= '&nbsp;';
 		$mesg .= $as3cf::settings_more_info_link( 'bucket', '', 'change+bucket+access' );
 
@@ -1037,7 +1090,11 @@ class AWS_Provider extends Storage_Provider {
 		);
 
 		$bucket_access_blocked_message = sprintf(
-			__( 'If you\'re following our documentation on <a href="%1$s">setting up Amazon CloudFront</a> for delivery, you can ignore this warning and continue.<br>If you\'re not planning on using Amazon CloudFront for delivery, you need to <a href="%2$s">turn off Object Ownership enforcement</a>.', 'amazon-s3-and-cloudfront' ),
+		/* translators: %1$s is a URL, %2$s is a URL fragment. */
+			__(
+				'If you\'re following our documentation on <a href="%1$s">setting up Amazon CloudFront</a> for delivery, you can ignore this warning and continue.<br>If you\'re not planning on using Amazon CloudFront for delivery, you need to <a href="%2$s">turn off Object Ownership enforcement</a>.',
+				'amazon-s3-and-cloudfront'
+			),
 			$cloudfront_setup_doc,
 			'#/storage/security'
 		);
@@ -1056,7 +1113,10 @@ class AWS_Provider extends Storage_Provider {
 	public static function get_object_ownership_enforced_unsupported_desc(): string {
 		global $as3cf;
 
-		$mesg = __( 'Object Ownership should only been enforced when Amazon CloudFront is configured for delivery.', 'amazon-s3-and-cloudfront' );
+		$mesg = __(
+			'Object Ownership should only been enforced when Amazon CloudFront is configured for delivery.',
+			'amazon-s3-and-cloudfront'
+		);
 		$mesg .= '&nbsp;';
 		$mesg .= $as3cf::settings_more_info_link( 'bucket', '', 'change+bucket+access' );
 
@@ -1082,7 +1142,11 @@ class AWS_Provider extends Storage_Provider {
 		);
 
 		return sprintf(
-			__( 'If you\'re following our documentation on <a href="%1$s">setting up Amazon CloudFront</a> for delivery, you can ignore this warning and continue.<br>If you\'re not planning on using Amazon CloudFront for delivery, you need to edit the bucket\'s Object Ownership setting and <a href="%2$s">enable ACLs</a> or add a <a href="%3$s">Bucket Policy</a>.', 'amazon-s3-and-cloudfront' ),
+		/* translators: %1$s is a URL, %2$s is a different URL, %3$s is another URL. */
+			__(
+				'If you\'re following our documentation on <a href="%1$s">setting up Amazon CloudFront</a> for delivery, you can ignore this warning and continue.<br>If you\'re not planning on using Amazon CloudFront for delivery, you need to edit the bucket\'s Object Ownership setting and <a href="%2$s">enable ACLs</a> or add a <a href="%3$s">Bucket Policy</a>.',
+				'amazon-s3-and-cloudfront'
+			),
 			$cloudfront_setup_doc,
 			$object_ownership_doc . '#acls',
 			$object_ownership_doc . '#bucket-policy'
@@ -1097,7 +1161,10 @@ class AWS_Provider extends Storage_Provider {
 	public static function get_object_ownership_not_enforced_unsupported_desc(): string {
 		global $as3cf;
 
-		$mesg = __( 'Since you\'re not using Amazon CloudFront for delivery, we recommend you do not enforce Object Ownership unless you have a very good reason to do so.', 'amazon-s3-and-cloudfront' );
+		$mesg = __(
+			'Since you\'re not using Amazon CloudFront for delivery, we recommend you do not enforce Object Ownership unless you have a very good reason to do so.',
+			'amazon-s3-and-cloudfront'
+		);
 		$mesg .= '&nbsp;';
 		$mesg .= $as3cf::settings_more_info_link( 'bucket', '', 'change+bucket+access' );
 

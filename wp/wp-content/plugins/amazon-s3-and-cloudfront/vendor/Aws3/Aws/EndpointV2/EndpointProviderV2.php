@@ -3,6 +3,7 @@
 namespace DeliciousBrains\WP_Offload_Media\Aws3\Aws\EndpointV2;
 
 use DeliciousBrains\WP_Offload_Media\Aws3\Aws\EndpointV2\Ruleset\Ruleset;
+use DeliciousBrains\WP_Offload_Media\Aws3\Aws\EndpointV2\Ruleset\RulesetEndpoint;
 use DeliciousBrains\WP_Offload_Media\Aws3\Aws\Exception\UnresolvedEndpointException;
 use DeliciousBrains\WP_Offload_Media\Aws3\Aws\LruArrayCache;
 /**

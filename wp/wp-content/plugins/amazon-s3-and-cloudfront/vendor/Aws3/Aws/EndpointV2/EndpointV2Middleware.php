@@ -6,8 +6,11 @@ use DeliciousBrains\WP_Offload_Media\Aws3\Aws\Api\Operation;
 use DeliciousBrains\WP_Offload_Media\Aws3\Aws\Api\Service;
 use DeliciousBrains\WP_Offload_Media\Aws3\Aws\Auth\Exception\UnresolvedAuthSchemeException;
 use DeliciousBrains\WP_Offload_Media\Aws3\Aws\CommandInterface;
+use DeliciousBrains\WP_Offload_Media\Aws3\Aws\MetricsBuilder;
 use Closure;
 use DeliciousBrains\WP_Offload_Media\Aws3\GuzzleHttp\Promise\Promise;
+use DeliciousBrains\WP_Offload_Media\Aws3\Aws\EndpointV2\Ruleset\RulesetEndpoint;
+use function DeliciousBrains\WP_Offload_Media\Aws3\JmesPath\search;
 /**
  * Handles endpoint rule evaluation and endpoint resolution.
  *
@@ -53,7 +56,7 @@ class EndpointV2Middleware
      * @param Service $api
      * @param array $args
      */
-    public function __construct(callable $nextHandler, EndpointProviderV2 $endpointProvider, Service $api, array $args, callable $credentialProvider = null)
+    public function __construct(callable $nextHandler, EndpointProviderV2 $endpointProvider, Service $api, array $args, ?callable $credentialProvider = null)
     {
         $this->nextHandler = $nextHandler;
         $this->endpointProvider = $endpointProvider;
@@ -73,6 +76,7 @@ class EndpointV2Middleware
         $commandArgs = $command->toArray();
         $providerArgs = $this->resolveArgs($commandArgs, $operation);
         $endpoint = $this->endpointProvider->resolveEndpoint($providerArgs);
+        $this->appendEndpointMetrics($providerArgs, $endpoint, $command);
         if (!empty($authSchemes = $endpoint->getProperty('authSchemes'))) {
             $this->applyAuthScheme($authSchemes, $command);
         }
@@ -96,7 +100,8 @@ class EndpointV2Middleware
         $endpointCommandArgs = $this->filterEndpointCommandArgs($rulesetParams, $commandArgs);
         $staticContextParams = $this->bindStaticContextParams($operation->getStaticContextParams());
         $contextParams = $this->bindContextParams($commandArgs, $operation->getContextParams());
-        return \array_merge($this->clientArgs, $contextParams, $staticContextParams, $endpointCommandArgs);
+        $operationContextParams = $this->bindOperationContextParams($commandArgs, $operation->getOperationContextParams());
+        return \array_merge($this->clientArgs, $operationContextParams, $contextParams, $staticContextParams, $endpointCommandArgs);
     }
     /**
      * Compares Ruleset parameters against Command arguments
@@ -158,6 +163,26 @@ class EndpointV2Middleware
         foreach ($contextParams as $name => $spec) {
             if (isset($commandArgs[$spec['shape']])) {
                 $scopedParams[$name] = $commandArgs[$spec['shape']];
+            }
+        }
+        return $scopedParams;
+    }
+    /**
+     * Binds context params to their corresponding values found in
+     * command arguments.
+     *
+     * @param array $commandArgs
+     * @param array $contextParams
+     *
+     * @return array
+     */
+    private function bindOperationContextParams(array $commandArgs, array $operationContextParams) : array
+    {
+        $scopedParams = [];
+        foreach ($operationContextParams as $name => $spec) {
+            $scopedValue = search($spec['path'], $commandArgs);
+            if ($scopedValue) {
+                $scopedParams[$name] = $scopedValue;
             }
         }
         return $scopedParams;
@@ -257,5 +282,18 @@ class EndpointV2Middleware
         $identityProviderFn = $this->credentialProvider;
         $identity = $identityProviderFn()->wait();
         return $identity->getAccountId();
+    }
+    private function appendEndpointMetrics(array $providerArgs, RulesetEndpoint $endpoint, CommandInterface $command) : void
+    {
+        // Resolved AccountId Metric
+        if (!empty($providerArgs[self::ACCOUNT_ID_PARAM])) {
+            $command->getMetricsBuilder()->append(MetricsBuilder::RESOLVED_ACCOUNT_ID);
+        }
+        // AccountIdMode Metric
+        if (!empty($providerArgs[self::ACCOUNT_ID_ENDPOINT_MODE_PARAM])) {
+            $command->getMetricsBuilder()->identifyMetricByValueAndAppend('account_id_endpoint_mode', $providerArgs[self::ACCOUNT_ID_ENDPOINT_MODE_PARAM]);
+        }
+        // AccountId Endpoint Metric
+        $command->getMetricsBuilder()->identifyMetricByValueAndAppend('account_id_endpoint', $endpoint->getUrl());
     }
 }

@@ -14,11 +14,10 @@
 	<testsuites>
 		<!-- Default test suite to run all tests. -->
 		<testsuite name="default">
-			<directory suffix=".php">tests/</directory>
-			<!-- Exclude test tools. -->
-			<exclude>tests/tools</exclude>
-			<!-- Exclude new parser tests for now. -->
-			<exclude>tests/parser</exclude>
+			<directory suffix="_Tests.php">tests/</directory>
+			<directory suffix="_Tests.php">tests/e2e/</directory>
+			<exclude>packages/</exclude>
+			<exclude>wordpress/</exclude>
 		</testsuite>
 	</testsuites>
 </phpunit>

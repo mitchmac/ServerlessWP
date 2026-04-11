@@ -19,7 +19,7 @@ abstract class AbstractErrorParser
     /**
      * @param Service $api
      */
-    public function __construct(Service $api = null)
+    public function __construct(?Service $api = null)
     {
         $this->api = $api;
     }
@@ -34,7 +34,7 @@ abstract class AbstractErrorParser
             return $response->getBody();
         }
     }
-    protected function populateShape(array &$data, ResponseInterface $response, CommandInterface $command = null)
+    protected function populateShape(array &$data, ResponseInterface $response, ?CommandInterface $command = null)
     {
         $data['body'] = [];
         if (!empty($command) && !empty($this->api)) {
@@ -43,7 +43,7 @@ abstract class AbstractErrorParser
                 $errors = $this->api->getOperation($command->getName())->getErrors();
                 foreach ($errors as $key => $error) {
                     // If error code matches a known error shape, populate the body
-                    if ($data['code'] == $error['name'] && $error instanceof StructureShape) {
+                    if ($this->errorCodeMatches($data, $error)) {
                         $modeledError = $error;
                         $data['body'] = $this->extractPayload($modeledError, $response);
                         $data['error_shape'] = $modeledError;
@@ -66,5 +66,9 @@ abstract class AbstractErrorParser
             }
         }
         return $data;
+    }
+    private function errorCodeMatches(array $data, $error) : bool
+    {
+        return $data['code'] == $error['name'] || isset($error['error']['code']) && $data['code'] === $error['error']['code'];
     }
 }

@@ -28,7 +28,7 @@ class JsonRpcSerializer
      * @param string   $endpoint      Endpoint to connect to
      * @param JsonBody $jsonFormatter Optional JSON formatter to use
      */
-    public function __construct(Service $api, $endpoint, JsonBody $jsonFormatter = null)
+    public function __construct(Service $api, $endpoint, ?JsonBody $jsonFormatter = null)
     {
         $this->endpoint = $endpoint;
         $this->api = $api;
@@ -50,10 +50,13 @@ class JsonRpcSerializer
         $operationName = $command->getName();
         $operation = $this->api->getOperation($operationName);
         $commandArgs = $command->toArray();
-        $headers = ['X-Amz-Target' => $this->api->getMetadata('targetPrefix') . '.' . $operationName, 'Content-Type' => $this->contentType];
+        $body = $this->jsonFormatter->build($operation->getInput(), $commandArgs);
+        $headers = ['X-Amz-Target' => $this->api->getMetadata('targetPrefix') . '.' . $operationName, 'Content-Type' => $this->contentType, 'Content-Length' => \strlen($body)];
         if ($endpoint instanceof RulesetEndpoint) {
             $this->setEndpointV2RequestOptions($endpoint, $headers);
         }
-        return new Request($operation['http']['method'], $this->endpoint, $headers, $this->jsonFormatter->build($operation->getInput(), $commandArgs));
+        $requestUri = $operation['http']['requestUri'] ?? null;
+        $absoluteUri = \str_ends_with($this->endpoint, '/') ? $this->endpoint : $this->endpoint . $requestUri;
+        return new Request($operation['http']['method'], $absoluteUri, $headers, $body);
     }
 }

@@ -107,9 +107,18 @@ abstract class Item {
 
 		// Set offload data from previous duplicate if exact match by source path exists.
 		if ( empty( $path ) ) {
-			$prev_items = static::get_by_source_path( array( $this->source_path, $this->original_source_path ), $this->source_id, true, true );
+			$prev_items = static::get_by_source_path(
+				array( $this->source_path, $this->original_source_path ),
+				$this->source_id,
+				true,
+				true
+			);
 
-			if ( ! is_wp_error( $prev_items ) && ! empty( $prev_items[0] ) && is_a( $prev_items[0], get_class( $this ) ) ) {
+			if (
+				! is_wp_error( $prev_items ) &&
+				! empty( $prev_items[0] ) &&
+				is_a( $prev_items[0], get_class( $this ) )
+			) {
 				/** @var Item $prev_item */
 				$prev_item  = $prev_items[0];
 				$provider   = $prev_item->provider();
@@ -134,7 +143,9 @@ abstract class Item {
 		if ( ! isset( $extra_info['private_prefix'] ) || is_null( $extra_info['private_prefix'] ) ) {
 			$extra_info['private_prefix'] = '';
 			if ( $as3cf->private_prefix_enabled() ) {
-				$extra_info['private_prefix'] = AS3CF_Utils::trailingslash_prefix( $as3cf->get_setting( 'signed-urls-object-prefix', '' ) );
+				$extra_info['private_prefix'] = AS3CF_Utils::trailingslash_prefix(
+					$as3cf->get_setting( 'signed-urls-object-prefix' )
+				);
 			}
 		}
 
@@ -650,6 +661,7 @@ abstract class Item {
 		$update = false;
 
 		if ( empty( $this->id ) ) {
+			// phpcs:ignore WordPress.DB -- safe query, must not be cached
 			$result = $wpdb->insert( static::items_table(), $this->key_values(), $this->formats() );
 
 			if ( $result ) {
@@ -666,7 +678,14 @@ abstract class Item {
 			static::remove_from_object_cache( $old_item );
 			unset( $old_item );
 
-			$result = $wpdb->update( static::items_table(), $this->key_values(), array( 'id' => $this->id ), $this->formats(), array( '%d' ) );
+			// phpcs:ignore WordPress.DB -- safe query, must not be cached
+			$result = $wpdb->update(
+				static::items_table(),
+				$this->key_values(),
+				array( 'id' => $this->id ),
+				$this->formats(),
+				array( '%d' )
+			);
 		}
 
 		if ( false !== $result ) {
@@ -680,7 +699,10 @@ abstract class Item {
 
 		// If one or more duplicate exists that still has the same source paths, keep them in step.
 		if ( $update && $update_duplicates ) {
-			$duplicates = static::get_by_source_path( array( $this->source_path, $this->original_source_path ), $this->source_id );
+			$duplicates = static::get_by_source_path(
+				array( $this->source_path, $this->original_source_path ),
+				$this->source_id
+			);
 
 			if ( ! empty( $duplicates ) && ! is_wp_error( $duplicates ) ) {
 				/** @var Item $duplicate */
@@ -723,6 +745,7 @@ abstract class Item {
 		if ( empty( $this->id ) ) {
 			return new WP_Error( 'item_delete', 'Error trying to delete item with no id.' );
 		} else {
+			// phpcs:ignore WordPress.DB -- safe query, must not be cached
 			$result = $wpdb->delete( static::items_table(), array( 'id' => $this->id ), array( '%d' ) );
 		}
 
@@ -753,7 +776,13 @@ abstract class Item {
 		}
 
 		if ( ! empty( static::$source_type ) && static::$source_type !== $object->source_type ) {
-			AS3CF_Error::log( sprintf( 'Doing it wrong! Trying to create a %s class instance with data representing a %s', __CLASS__, $object->source_type ) );
+			AS3CF_Error::log(
+				sprintf(
+					'Doing it wrong! Trying to create a %s class instance with data representing a %s',
+					__CLASS__,
+					$object->source_type
+				)
+			);
 		}
 
 		if ( empty( static::$source_type ) ) {
@@ -806,8 +835,11 @@ abstract class Item {
 			return $item;
 		}
 
-		$sql = $wpdb->prepare( "SELECT * FROM " . static::items_table() . " WHERE source_type = %s AND id = %d", static::$source_type, $id );
+		$sql = "SELECT * FROM " . static::items_table() . " WHERE source_type = %s AND id = %d";
+		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+		$sql = $wpdb->prepare( $sql, static::$source_type, $id );
 
+		// phpcs:ignore WordPress.DB,PluginCheck.Security.DirectDB.UnescapedDBParameter -- already prepared, must not be cached
 		$object = $wpdb->get_row( $sql );
 
 		if ( empty( $object ) ) {
@@ -845,8 +877,11 @@ abstract class Item {
 			return $item;
 		}
 
-		$sql = $wpdb->prepare( "SELECT * FROM " . static::items_table() . " WHERE source_id = %d AND source_type = %s", $source_id, static::$source_type );
+		$sql = "SELECT * FROM " . static::items_table() . " WHERE source_id = %d AND source_type = %s";
+		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+		$sql = $wpdb->prepare( $sql, $source_id, static::$source_type );
 
+		// phpcs:ignore WordPress.DB,PluginCheck.Security.DirectDB.UnescapedDBParameter -- already prepared, must not be cached
 		$object = $wpdb->get_row( $sql );
 
 		if ( empty( $object ) ) {
@@ -1248,6 +1283,8 @@ abstract class Item {
 	 * @param string $filename Just a filename without any path.
 	 *
 	 * @return string
+	 *
+	 * phpcs:disable PEAR.Functions.FunctionCallSignature.Indent
 	 */
 	public function full_source_path_for_filename( $filename ) {
 		if ( empty( $filename ) ) {
@@ -1262,7 +1299,11 @@ abstract class Item {
 		 */
 		$basedir = trailingslashit( apply_filters( 'as3cf_item_basedir', wp_upload_dir()['basedir'], $this ) );
 
-		return $basedir . str_replace( wp_basename( $this->source_path ), wp_basename( trim( $filename ) ), $this->source_path );
+		return $basedir . str_replace(
+				wp_basename( $this->source_path ),
+				wp_basename( trim( $filename ) ),
+				$this->source_path
+			);
 	}
 
 	/**
@@ -1360,20 +1401,18 @@ abstract class Item {
 			return $item->source_id();
 		}
 
-		$sql = $wpdb->prepare(
-			"
-				SELECT source_id FROM " . static::items_table() . "
-				WHERE source_type = %s
-				AND bucket = %s
-				AND (path = %s OR original_path = %s)
-				ORDER BY source_id LIMIT 1
-			",
-			static::$source_type,
-			$bucket,
-			$path,
-			$path
-		);
+		$sql = "
+			SELECT source_id FROM " . static::items_table() . "
+			WHERE source_type = %s
+			AND bucket = %s
+			AND (path = %s OR original_path = %s)
+			ORDER BY source_id LIMIT 1
+		";
 
+		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+		$sql = $wpdb->prepare( $sql, static::$source_type, $bucket, $path, $path );
+
+		// phpcs:ignore WordPress.DB,PluginCheck.Security.DirectDB.UnescapedDBParameter -- already prepared, must not be cached
 		$result = $wpdb->get_var( $sql );
 
 		return empty( $result ) ? false : (int) $result;
@@ -1410,7 +1449,10 @@ abstract class Item {
 			// SQL query is already troublesome on some sites with badly behaved themes/plugins.
 			if ( count( $path ) && $as3cf->get_delivery_provider()->use_signed_urls_key_file() ) {
 				// We have to be able to handle multi-segment private prefixes such as "private/downloads/".
-				$private_prefixes = explode( '/', untrailingslashit( $as3cf->get_setting( 'signed-urls-object-prefix' ) ) );
+				$private_prefixes = explode(
+					'/',
+					untrailingslashit( $as3cf->get_setting( 'signed-urls-object-prefix' ) )
+				);
 
 				foreach ( $private_prefixes as $private_prefix ) {
 					if ( $private_prefix === $path[0] ) {
@@ -1425,12 +1467,12 @@ abstract class Item {
 			$path = implode( '/', $path );
 		}
 
-		$sql = $wpdb->prepare(
-			"SELECT * FROM " . static::items_table() . " WHERE (path LIKE %s OR original_path LIKE %s);",
-			'%' . $path,
-			'%' . $path
-		);
+		$sql = "SELECT * FROM " . static::items_table() . " WHERE (path LIKE %s OR original_path LIKE %s);";
 
+		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+		$sql = $wpdb->prepare( $sql, '%' . $path, '%' . $path );
+
+		// phpcs:ignore WordPress.DB,PluginCheck.Security.DirectDB.UnescapedDBParameter -- already prepared, must not be cached
 		$results = $wpdb->get_results( $sql );
 
 		// Nothing found, shortcut out.
@@ -1455,8 +1497,14 @@ abstract class Item {
 			}
 
 			// If item's private prefix matches first segment of URL path, remove it from URL path before checking match.
-			if ( ! empty( $as3cf_item->private_prefix() ) && 0 === strpos( $match_path, $as3cf_item->private_prefix() ) ) {
-				$match_path = ltrim( substr_replace( $match_path, '', 0, strlen( $as3cf_item->private_prefix() ) ), '/' );
+			if (
+				! empty( $as3cf_item->private_prefix() ) &&
+				0 === strpos( $match_path, $as3cf_item->private_prefix() )
+			) {
+				$match_path = ltrim(
+					substr_replace( $match_path, '', 0, strlen( $as3cf_item->private_prefix() ) ),
+					'/'
+				);
 			}
 
 			// Exact match, return ID.
@@ -1484,7 +1532,13 @@ abstract class Item {
 	 *
 	 * @return array|int
 	 */
-	public static function get_source_ids( $upper_bound, $limit, $count = false, $originator = null, $is_verified = null ) {
+	public static function get_source_ids(
+		$upper_bound,
+		$limit,
+		$count = false,
+		$originator = null,
+		$is_verified = null
+	) {
 		global $wpdb;
 
 		if ( $count ) {
@@ -1530,11 +1584,14 @@ abstract class Item {
 			$args[] = $limit;
 		}
 
+		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
 		$sql = $wpdb->prepare( $sql, $args );
 
 		if ( $count ) {
+			// phpcs:ignore WordPress.DB,PluginCheck.Security.DirectDB.UnescapedDBParameter -- already prepared, must not be cached
 			return $wpdb->get_var( $sql );
 		} else {
+			// phpcs:ignore WordPress.DB,PluginCheck.Security.DirectDB.UnescapedDBParameter -- already prepared, must not be cached
 			return array_map( 'intval', $wpdb->get_col( $sql ) );
 		}
 	}
@@ -1644,7 +1701,11 @@ abstract class Item {
 	public static function create_from_source_id( $source_id, $options = array() ) {
 		return new WP_Error(
 			'exception',
-			sprintf( 'Doing it wrong! Trying to create a base %s class instance from source ID %d', __CLASS__, $source_id )
+			sprintf(
+				'Doing it wrong! Trying to create a base %s class instance from source ID %d',
+				__CLASS__,
+				$source_id
+			)
 		);
 	}
 
@@ -1721,7 +1782,12 @@ abstract class Item {
 	 *
 	 * @return array
 	 */
-	public static function get_by_source_path( $paths, $exclude_source_ids = array(), $exact_match = true, $first_only = false ) {
+	public static function get_by_source_path(
+		$paths,
+		$exclude_source_ids = array(),
+		$exact_match = true,
+		$first_only = false
+	) {
 		global $wpdb;
 
 		if ( ! is_array( $paths ) && is_string( $paths ) && ! empty( $paths ) ) {
@@ -1770,6 +1836,7 @@ abstract class Item {
 			$sql .= ' ORDER BY items.source_id LIMIT 1';
 		}
 
+		// phpcs:ignore WordPress.DB,PluginCheck.Security.DirectDB.UnescapedDBParameter -- safe query, must not be cached
 		return array_map( static::class . '::create', $wpdb->get_results( $sql ) );
 	}
 
@@ -1804,7 +1871,12 @@ abstract class Item {
 	 *
 	 * @return bool
 	 */
-	public function served_by_provider( $skip_rewrite_check = false, $skip_current_provider_check = false, Storage_Provider $provider = null, $check_is_verified = false ) {
+	public function served_by_provider(
+		bool $skip_rewrite_check = false,
+		bool $skip_current_provider_check = false,
+		?Storage_Provider $provider = null,
+		bool $check_is_verified = false
+	): bool {
 		/** @var Amazon_S3_And_CloudFront $as3cf */
 		global $as3cf;
 
@@ -1854,7 +1926,11 @@ abstract class Item {
 	 *
 	 * @return string|WP_Error|bool
 	 */
-	public function get_provider_url( string $object_key = null, int $expires = null, array $headers = array() ) {
+	public function get_provider_url(
+		?string $object_key = null,
+		?int $expires = null,
+		array $headers = array()
+	): WP_Error|bool|string {
 		/** @var Amazon_S3_And_CloudFront $as3cf */
 		global $as3cf;
 
@@ -1881,7 +1957,13 @@ abstract class Item {
 				return $region;
 			}
 
-			$delivery_domain = $as3cf->get_storage_provider_instance( $this->provider() )->get_url_domain( $this->bucket(), $region, $expires );
+			$delivery_domain = $as3cf->get_storage_provider_instance(
+				$this->provider()
+			)->get_url_domain(
+				$this->bucket(),
+				$region,
+				$expires
+			);
 		} else {
 			$delivery_domain = AS3CF_Utils::sanitize_custom_domain( $delivery_domain );
 		}
@@ -1894,7 +1976,14 @@ abstract class Item {
 				 * @param int $expires The expires time in seconds
 				 */
 				$timestamp = time() + apply_filters( 'as3cf_expires', $expires );
-				$url       = $as3cf->get_delivery_provider()->get_signed_url( $this, $item_path, $delivery_domain, $scheme, $timestamp, $headers );
+				$url       = $as3cf->get_delivery_provider()->get_signed_url(
+					$this,
+					$item_path,
+					$delivery_domain,
+					$scheme,
+					$timestamp,
+					$headers
+				);
 
 				/**
 				 * Filters the secure URL for private content
@@ -1905,13 +1994,26 @@ abstract class Item {
 				 * @param int    $timestamp   Expiry timestamp
 				 * @param array  $headers     Optional extra http headers
 				 */
-				return apply_filters( 'as3cf_get_item_secure_url', $url, $this, $this->get_item_source_array(), $timestamp, $headers );
+				return apply_filters(
+					'as3cf_get_item_secure_url',
+					$url,
+					$this,
+					$this->get_item_source_array(),
+					$timestamp,
+					$headers
+				);
 			} catch ( Exception $e ) {
 				return new WP_Error( 'exception', $e->getMessage() );
 			}
 		} else {
 			try {
-				$url = $as3cf->get_delivery_provider()->get_url( $this, $item_path, $delivery_domain, $scheme, $headers );
+				$url = $as3cf->get_delivery_provider()->get_url(
+					$this,
+					$item_path,
+					$delivery_domain,
+					$scheme,
+					$headers
+				);
 
 				/**
 				 * Filters the URL for public content
@@ -1923,7 +2025,14 @@ abstract class Item {
 				 * @param int    $timestamp   Expiry timestamp
 				 * @param array  $headers     Optional extra http headers
 				 */
-				return apply_filters( 'as3cf_get_item_url', $url, $this, $this->get_item_source_array(), $expires, $headers );
+				return apply_filters(
+					'as3cf_get_item_url',
+					$url,
+					$this,
+					$this->get_item_source_array(),
+					$expires,
+					$headers
+				);
 			} catch ( Exception $e ) {
 				return new WP_Error( 'exception', $e->getMessage() );
 			}
@@ -1999,7 +2108,9 @@ abstract class Item {
 
 				$new_object = array(
 					'source_file' => wp_basename( $file ),
-					'is_private'  => self::primary_object_key() === $object_key ? $is_private : in_array( $object_key, $private_sizes ),
+					'is_private'  => self::primary_object_key() === $object_key
+						? $is_private
+						: in_array( $object_key, $private_sizes ),
 				);
 
 				$extra_info['objects'][ $object_key ] = $new_object;
@@ -2136,7 +2247,13 @@ abstract class Item {
 			 *
 			 * @retun int
 			 */
-			$min = min( max( 0, (int) apply_filters( 'as3cf_blog_media_counts_timeout_min', $min, $blog_id, static::source_type() ) ), 1440 );
+			$min = min(
+				max(
+					0,
+					(int) apply_filters( 'as3cf_blog_media_counts_timeout_min', $min, $blog_id, static::source_type() )
+				),
+				1440
+			);
 			$max = max( $min, $max );
 
 			/**
@@ -2154,7 +2271,13 @@ abstract class Item {
 			 *
 			 * @retun int
 			 */
-			$max = min( max( $min, (int) apply_filters( 'as3cf_blog_media_counts_timeout_max', $max, $blog_id, static::source_type() ) ), 1440 );
+			$max = min(
+				max(
+					$min,
+					(int) apply_filters( 'as3cf_blog_media_counts_timeout_max', $max, $blog_id, static::source_type() )
+				),
+				1440
+			);
 
 			// We lied, our real minimums are min 3 and max 15 seconds
 			// to ensure there's at least a tiny bit of caching,
@@ -2163,7 +2286,11 @@ abstract class Item {
 			$min = max( $min, 0.05 );
 			$max = max( $max, 0.25 );
 
-			set_site_transient( $transient_key, $result, rand( $min * MINUTE_IN_SECONDS, $max * MINUTE_IN_SECONDS ) );
+			set_site_transient(
+				$transient_key,
+				$result,
+				wp_rand( $min * MINUTE_IN_SECONDS, $max * MINUTE_IN_SECONDS )
+			);
 
 			// One way or another we've skipped the transient.
 			static::$item_count_skips[ $transient_key ] = true;

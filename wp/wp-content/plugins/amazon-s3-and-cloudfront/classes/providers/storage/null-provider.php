@@ -17,7 +17,7 @@ class Null_Provider {
 	 */
 	public function __call( $name, $arguments ) {
 		AS3CF_Error::log( $arguments, __CLASS__ . "->$name()" );
-		throw new Exception( 'Failed to instantiate the provider client. Check your error log. Function called:- ' . __CLASS__ . "->$name()" );
+		throw new Exception( wp_kses_post( 'Failed to instantiate the provider client. Check your error log. Function called:- ' . __CLASS__ . "->$name()" ) );
 	}
 
 	/**
@@ -30,6 +30,6 @@ class Null_Provider {
 	 */
 	public static function __callStatic( $name, $arguments ) {
 		AS3CF_Error::log( $arguments, __CLASS__ . "::$name()" );
-		throw new Exception( 'Failed to instantiate the provider client. Check your error log. Function called:- ' . __CLASS__ . "->$name()" );
+		throw new Exception( wp_kses_post( 'Failed to instantiate the provider client. Check your error log. Function called:- ' . __CLASS__ . "->$name()" ) );
 	}
 }

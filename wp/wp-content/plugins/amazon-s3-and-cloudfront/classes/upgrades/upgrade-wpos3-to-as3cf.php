@@ -33,7 +33,10 @@ class Upgrade_WPOS3_To_AS3CF extends Upgrade {
 	 * @return string
 	 */
 	protected function get_running_update_text() {
-		return __( 'and updating the metadata to use key names compatible with the current version.', 'amazon-s3-and-cloudfront' );
+		return __(
+			'and updating the metadata to use key names compatible with the current version.',
+			'amazon-s3-and-cloudfront'
+		);
 	}
 
 	/**
@@ -50,7 +53,12 @@ class Upgrade_WPOS3_To_AS3CF extends Upgrade {
 		$new = substr_replace( $old, 'as3cf_', 0, strlen( 'wpos3_' ) );
 
 		try {
-			$result = $wpdb->update( $wpdb->{$item->the_table}, array( $item->the_field => $new ), array( $item->the_field => $old ) );
+			// phpcs:ignore WordPress.DB -- safe query, must not be cached
+			$result = $wpdb->update(
+				$wpdb->{$item->the_table},
+				array( $item->the_field => $new ),
+				array( $item->the_field => $old )
+			);
 		} catch ( Exception $e ) {
 			AS3CF_Error::log( 'Error updating ' . $item->the_table . ' records with key ' . $old . ' to use key ' . $new . ': ' . $e->getMessage() );
 			$this->error_count++;
@@ -102,6 +110,7 @@ class Upgrade_WPOS3_To_AS3CF extends Upgrade {
 			$sql .= sprintf( ' LIMIT %d', (int) $limit );
 		}
 
+		// phpcs:ignore WordPress.DB, PluginCheck.Security.DirectDB.UnescapedDBParameter -- safe query, must not be cached
 		return $wpdb->get_results( $sql, OBJECT );
 	}
 }

@@ -47,21 +47,37 @@ class Upload_Handler extends Item_Handler {
 
 		// Check for valid file path before attempting upload
 		if ( empty( $as3cf_item->source_path() ) ) {
-			$error_msg = sprintf( __( '%1$s with id %2$d does not have a valid file path', 'amazon-s3-and-cloudfront' ), $source_type_name, $as3cf_item->source_id() );
+			$error_msg = sprintf(
+			/* translators: %1$s is a media source, e.g. "Media Library", %2$d is its unique ID. */
+				__( '%1$s with id %2$d does not have a valid file path', 'amazon-s3-and-cloudfront' ),
+				$source_type_name,
+				$as3cf_item->source_id()
+			);
 
 			return $this->return_handler_error( $error_msg );
 		}
 
 		// Ensure path is a string
 		if ( ! is_string( $as3cf_item->source_path() ) ) {
-			$error_msg = sprintf( __( '%1$s with id %2$d. Provided path is not a string', 'amazon-s3-and-cloudfront' ), $source_type_name, $as3cf_item->source_id() );
+			$error_msg = sprintf(
+			/* translators: %1$s is a media source, e.g. "Media Library", %2$d is its unique ID. */
+				__( '%1$s with id %2$d. Provided path is not a string', 'amazon-s3-and-cloudfront' ),
+				$source_type_name,
+				$as3cf_item->source_id()
+			);
 
 			return $this->return_handler_error( $error_msg );
 		}
 
 		// Ensure primary source file exists for new offload.
 		if ( empty( $as3cf_item->id() ) && ! file_exists( $as3cf_item->full_source_path( $primary_key ) ) ) {
-			$error_msg = sprintf( __( 'Primary file %1$s for %2$s with id %3$s does not exist', 'amazon-s3-and-cloudfront' ), $as3cf_item->full_source_path( $primary_key ), $source_type_name, $as3cf_item->source_id() );
+			$error_msg = sprintf(
+			/* translators: %1$s is file path, %2$s is a media source, e.g. "Media Library", %3$d is its unique ID. */
+				__( 'Primary file %1$s for %2$s with id %3$d does not exist', 'amazon-s3-and-cloudfront' ),
+				$as3cf_item->full_source_path( $primary_key ),
+				$source_type_name,
+				$as3cf_item->source_id()
+			);
 
 			return $this->return_handler_error( $error_msg );
 		}
@@ -73,7 +89,13 @@ class Upload_Handler extends Item_Handler {
 
 		// check mime type of file is in allowed provider mime types
 		if ( ! in_array( $file_type['type'], $allowed_types, true ) ) {
-			$error_msg = sprintf( __( 'Mime type "%1$s" is not allowed (%2$s with id %3$s)', 'amazon-s3-and-cloudfront' ), $file_type['type'], $source_type_name, $as3cf_item->source_id() );
+			$error_msg = sprintf(
+			/* translators: %1$s is mime type, %2$s is a media source, e.g. "Media Library", %3$d is its unique ID. */
+				__( 'Mime type "%1$s" is not allowed (%2$s with id %3$d)', 'amazon-s3-and-cloudfront' ),
+				$file_type['type'],
+				$source_type_name,
+				$as3cf_item->source_id()
+			);
 
 			return $this->return_handler_error( $error_msg );
 		}
@@ -105,7 +127,12 @@ class Upload_Handler extends Item_Handler {
 			 *
 			 * @return bool
 			 */
-			$is_private = apply_filters( 'as3cf_upload_object_key_as_private', $as3cf_item->is_private( $object_key ), $object_key, $as3cf_item );
+			$is_private = apply_filters(
+				'as3cf_upload_object_key_as_private',
+				$as3cf_item->is_private( $object_key ),
+				$object_key,
+				$as3cf_item
+			);
 			$as3cf_item->set_is_private( $is_private, $object_key );
 
 			$object_acl = $as3cf_item->is_private( $object_key ) ? $private_acl : $default_acl;
@@ -119,7 +146,10 @@ class Upload_Handler extends Item_Handler {
 			);
 
 			// Only set ACL if actually required, some storage provider and bucket settings disable changing ACL.
-			if ( ! empty( $object_acl ) && $this->as3cf->use_acl_for_intermediate_size( 0, $object_key, $as3cf_item->bucket(), $as3cf_item ) ) {
+			if (
+				! empty( $object_acl ) &&
+				$this->as3cf->use_acl_for_intermediate_size( 0, $object_key, $as3cf_item->bucket(), $as3cf_item )
+			) {
 				$args['ACL'] = $object_acl;
 			}
 
@@ -155,6 +185,7 @@ class Upload_Handler extends Item_Handler {
 
 				if ( empty( $bucket ) || empty( $region ) ) {
 					$mesg = sprintf(
+					/* translators: %1$s is bucket name, %2$s is a different bucket name. */
 						__( 'Bucket name "%1$s" is invalid, using "%2$s" instead.', 'amazon-s3-and-cloudfront' ),
 						$args['Bucket'],
 						$as3cf_item->bucket()
@@ -170,7 +201,12 @@ class Upload_Handler extends Item_Handler {
 				unset( $bucket, $region );
 			} elseif ( $primary_key === $object_key && $as3cf_item->bucket() !== $args['Bucket'] && ! empty( $as3cf_item->id() ) ) {
 				$args['Bucket'] = $as3cf_item->bucket();
-				AS3CF_Error::log( __( 'The bucket may not be changed via filters for a previously offloaded item.', 'amazon-s3-and-cloudfront' ) );
+				AS3CF_Error::log(
+					__(
+						'The bucket may not be changed via filters for a previously offloaded item.',
+						'amazon-s3-and-cloudfront'
+					)
+				);
 			} elseif ( $primary_key !== $object_key && $as3cf_item->bucket() !== $args['Bucket'] ) {
 				$args['Bucket'] = $as3cf_item->bucket();
 			}
@@ -188,7 +224,11 @@ class Upload_Handler extends Item_Handler {
 				// If the filter tried to use a different filename too, log it.
 				if ( wp_basename( $args['Key'] ) !== wp_basename( $as3cf_item->path( $object_key ) ) ) {
 					$mesg = sprintf(
-						__( 'The offloaded filename must not be changed, "%1$s" has been used instead of "%2$s".', 'amazon-s3-and-cloudfront' ),
+					/* translators: %1$s is file path, %2$s is a different file path. */
+						__(
+							'The offloaded filename must not be changed, "%1$s" has been used instead of "%2$s".',
+							'amazon-s3-and-cloudfront'
+						),
 						wp_basename( $as3cf_item->path( $object_key ) ),
 						wp_basename( $args['Key'] )
 					);
@@ -196,7 +236,12 @@ class Upload_Handler extends Item_Handler {
 				}
 			} elseif ( $primary_key === $object_key && $as3cf_item->path( $object_key ) !== $args['Key'] && ! empty( $as3cf_item->id() ) ) {
 				$args['Key'] = $as3cf_item->path( $object_key );
-				AS3CF_Error::log( __( 'The key may not be changed via filters for a previously offloaded item.', 'amazon-s3-and-cloudfront' ) );
+				AS3CF_Error::log(
+					__(
+						'The key may not be changed via filters for a previously offloaded item.',
+						'amazon-s3-and-cloudfront'
+					)
+				);
 			} elseif ( $primary_key !== $object_key && $as3cf_item->path( $object_key ) !== $args['Key'] ) {
 				$args['Key'] = $as3cf_item->path( $object_key );
 			}
@@ -206,7 +251,10 @@ class Upload_Handler extends Item_Handler {
 			$as3cf_item->set_is_private( $is_private, $object_key );
 
 			// Protect against filter use and only set ACL if actually required, some storage provider and bucket settings disable changing ACL.
-			if ( isset( $args['ACL'] ) && ! $this->as3cf->use_acl_for_intermediate_size( 0, $object_key, $as3cf_item->bucket(), $as3cf_item ) ) {
+			if (
+				isset( $args['ACL'] ) &&
+				! $this->as3cf->use_acl_for_intermediate_size( 0, $object_key, $as3cf_item->bucket(), $as3cf_item )
+			) {
 				unset( $args['ACL'] );
 			}
 
@@ -269,7 +317,13 @@ class Upload_Handler extends Item_Handler {
 			);
 
 			if ( ! file_exists( $args['SourceFile'] ) ) {
-				$error_msg = sprintf( __( 'File %1$s does not exist (%2$s with id %3$s)', 'amazon-s3-and-cloudfront' ), $args['SourceFile'], $source_type_name, $as3cf_item->source_id() );
+				$error_msg = sprintf(
+				/* translators: %1$s is a file path, %2$s is a media source, e.g. "Media Library", %3$d is its unique ID. */
+					__( 'File %1$s does not exist (%2$s with id %3$d)', 'amazon-s3-and-cloudfront' ),
+					$args['SourceFile'],
+					$source_type_name,
+					$as3cf_item->source_id()
+				);
 
 				$object['upload_result']['status']  = self::STATUS_FAILED;
 				$object['upload_result']['message'] = $error_msg;
@@ -290,7 +344,14 @@ class Upload_Handler extends Item_Handler {
 
 				$object['upload_result']['status'] = self::STATUS_OK;
 			} catch ( Exception $e ) {
-				$error_msg = sprintf( __( 'Error offloading %1$s to provider: %2$s (%3$s with id %4$s)', 'amazon-s3-and-cloudfront' ), $args['SourceFile'], $e->getMessage(), $source_type_name, $as3cf_item->source_id() );
+				$error_msg = sprintf(
+				/* translators: %1$s is file path, %2$s is an error message, %3$s is a media source, e.g. "Media Library", %4$d is its unique ID. */
+					__( 'Error offloading %1$s to provider: %2$s (%3$s with id %4$d)', 'amazon-s3-and-cloudfront' ),
+					$args['SourceFile'],
+					$e->getMessage(),
+					$source_type_name,
+					$as3cf_item->source_id()
+				);
 
 				$object['upload_result']['status']  = self::STATUS_FAILED;
 				$object['upload_result']['message'] = $error_msg;
@@ -334,7 +395,10 @@ class Upload_Handler extends Item_Handler {
 				if ( empty( $options['offloaded_files'][ $object['source_file'] ] ) ) {
 					unset( $item_objects[ $object_key ] );
 				}
-				$errors->add( 'upload-object-' . ( $i++ ), $manifest->objects[ $object_key ]['upload_result']['message'] );
+				$errors->add(
+					'upload-object-' . ( $i++ ),
+					$manifest->objects[ $object_key ]['upload_result']['message']
+				);
 			}
 		}
 
@@ -343,7 +407,11 @@ class Upload_Handler extends Item_Handler {
 
 		// Only save if we have the primary file uploaded.
 		if ( isset( $item_objects[ Item::primary_object_key() ] ) ) {
-			$as3cf_item->save();
+			$result = $as3cf_item->save();
+
+			if ( is_wp_error( $result ) ) {
+				$errors->merge_from( $result );
+			}
 		}
 
 		/**

@@ -160,8 +160,14 @@ abstract class Upgrade {
 		$this->cron_schedule_key   = 'as3cf_update_' . $this->upgrade_name . '_interval';
 
 		$this->cron_interval_in_minutes = apply_filters( 'as3cf_update_' . $this->upgrade_name . '_interval', 2 );
-		$this->error_threshold          = apply_filters( 'as3cf_update_' . $this->upgrade_name . '_error_threshold', 20 );
-		$this->max_items_processable    = apply_filters( 'as3cf_update_' . $this->upgrade_name . '_batch_size', $this->size_limit );
+		$this->error_threshold          = apply_filters(
+			'as3cf_update_' . $this->upgrade_name . '_error_threshold',
+			20
+		);
+		$this->max_items_processable    = apply_filters(
+			'as3cf_update_' . $this->upgrade_name . '_batch_size',
+			$this->size_limit
+		);
 
 		if ( $this->is_completed() ) {
 			return;
@@ -305,7 +311,6 @@ abstract class Upgrade {
 				if ( $this->upgrade_blog() ) {
 					$this->blog_upgrade_completed();
 				} else {
-
 					// If the blog didn't complete, break and try again next time before moving on.
 					break;
 				}
@@ -451,7 +456,12 @@ abstract class Upgrade {
 	 * @return string
 	 */
 	protected function get_running_message() {
-		return sprintf( __( '<strong>Running %1$s Update%2$s</strong> &mdash; We&#8217;re going through all the offloaded Media Library items %3$s This will be done quietly in the background, processing a small batch of Media Library items every %4$d minutes. There should be no noticeable impact on your server&#8217;s performance.', 'amazon-s3-and-cloudfront' ),
+		return sprintf(
+		/* translators: %1$s is the type of data being updated, title cased, %2$s is formatted progress info, %3$s is extra info about the process, %4$d is an integer. */
+			__(
+				'<strong>Running %1$s Update%2$s</strong> &mdash; We&#8217;re going through all the offloaded Media Library items %3$s This will be done quietly in the background, processing a small batch of Media Library items every %4$d minutes. There should be no noticeable impact on your server&#8217;s performance.',
+				'amazon-s3-and-cloudfront'
+			),
 			ucwords( $this->upgrade_type ),
 			$this->get_progress_text(),
 			$this->running_update_text,
@@ -465,7 +475,12 @@ abstract class Upgrade {
 	 * @return string
 	 */
 	protected function get_paused_message() {
-		return sprintf( __( '<strong>%1$s Update Paused%2$s</strong> &mdash; Updating Media Library %3$s has been paused.', 'amazon-s3-and-cloudfront' ),
+		return sprintf(
+		/* translators: %1$s is the type of data being updated, title cased, %2$s is formatted progress info, %3$s is also the type of data being updated. */
+			__(
+				'<strong>%1$s Update Paused%2$s</strong> &mdash; Updating Media Library %3$s has been paused.',
+				'amazon-s3-and-cloudfront'
+			),
 			ucwords( $this->upgrade_type ),
 			$this->get_progress_text(),
 			$this->upgrade_type
@@ -478,7 +493,12 @@ abstract class Upgrade {
 	 * @return string
 	 */
 	protected function get_error_message() {
-		return sprintf( __( '<strong>Error Updating %1$s</strong> &mdash; We ran into some errors attempting to update the %2$s for all your Media Library items that have been offloaded. Please check your error log for details. (#%3$d)', 'amazon-s3-and-cloudfront' ),
+		return sprintf(
+		/* translators: %1$s is the type of data being updated, title cased, %2$s is also the type of data being updated, %3$d is an integer. */
+			__(
+				'<strong>Error Updating %1$s</strong> &mdash; We ran into some errors attempting to update the %2$s for all your Media Library items that have been offloaded. Please check your error log for details. (#%3$d)',
+				'amazon-s3-and-cloudfront'
+			),
 			ucwords( $this->upgrade_type ),
 			$this->upgrade_type,
 			$this->upgrade_id
@@ -502,7 +522,11 @@ abstract class Upgrade {
 			$progress = 100;
 		}
 
-		return sprintf( __( ' (%s%% Complete)', 'amazon-s3-and-cloudfront' ), $progress );
+		return sprintf(
+		/* translators: %s is a numeric string. */
+			__( ' (%s%% Complete)', 'amazon-s3-and-cloudfront' ),
+			$progress
+		);
 	}
 
 	/**
@@ -539,18 +563,22 @@ abstract class Upgrade {
 	 * Handler for the running upgrade actions
 	 */
 	public function maybe_handle_action() {
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- existence/equality check, admin_init
 		if ( ! isset( $_GET['page'] ) || sanitize_key( $_GET['page'] ) !== $this->as3cf->get_plugin_slug() ) { // input var okay
 			return;
 		}
 
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- existence check, admin_init
 		if ( ! isset( $_GET['action'] ) ) {
 			return;
 		}
 
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- existence/equality check, admin_init
 		if ( ! isset( $_GET['update'] ) || sanitize_key( $_GET['update'] ) !== $this->upgrade_name ) { // input var okay
 			return;
 		}
 
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- sanitized, admin_init
 		$method_name = 'action_' . sanitize_key( $_GET['action'] ); // input var okay
 
 		if ( method_exists( $this, $method_name ) ) {
@@ -607,7 +635,7 @@ abstract class Upgrade {
 		$this->maybe_display_notices();
 
 		$url = $this->as3cf->get_plugin_page_url( array(), 'self' );
-		wp_redirect( $url );
+		wp_safe_redirect( $url );
 		exit;
 	}
 
@@ -647,7 +675,11 @@ abstract class Upgrade {
 		// Add the upgrade interval to the existing schedules.
 		$schedules[ $this->cron_schedule_key ] = array(
 			'interval' => $this->cron_interval_in_minutes * 60,
-			'display'  => sprintf( __( 'Every %d Minutes', 'amazon-s3-and-cloudfront' ), $this->cron_interval_in_minutes ),
+			'display'  => sprintf(
+			/* translators: %s is an integer. */
+				__( 'Every %d Minutes', 'amazon-s3-and-cloudfront' ),
+				$this->cron_interval_in_minutes
+			),
 		);
 
 		return $schedules;
@@ -779,9 +811,14 @@ abstract class Upgrade {
 
 	/**
 	 * Set the time when the upgrade must finish by.
+	 *
+	 * phpcs:disable PEAR.Functions.FunctionCallSignature.Indent
 	 */
 	protected function start_timer() {
-		$this->finish = time() + apply_filters( 'as3cf_update_' . $this->upgrade_name . '_time_limit', $this->time_limit );
+		$this->finish = time() + apply_filters(
+				'as3cf_update_' . $this->upgrade_name . '_time_limit',
+				$this->time_limit
+			);
 	}
 
 	/**
@@ -804,7 +841,7 @@ abstract class Upgrade {
 		}
 
 		if ( $this->as3cf->memory_exceeded( 'as3cf_update_' . $this->upgrade_name . '_memory_exceeded' ) ) {
-			throw new Batch_Limits_Exceeded_Exception( 'Memory limit exceeded with ' . memory_get_usage( true ) / 1024 / 1024 . 'MB' );
+			throw new Batch_Limits_Exceeded_Exception( esc_html( 'Memory limit exceeded with ' . memory_get_usage( true ) / 1024 / 1024 . 'MB' ) );
 		}
 	}
 
@@ -838,6 +875,7 @@ abstract class Upgrade {
 		global $wpdb;
 
 		if ( is_multisite() ) {
+			// phpcs:ignore WordPress.DB -- safe query, must not be cached
 			return $wpdb->get_var( "SELECT MAX(blog_id) FROM {$wpdb->blogs}" );
 		}
 
@@ -977,6 +1015,7 @@ abstract class Upgrade {
 	 */
 	public function get_locked_notification() {
 		return sprintf(
+		/* translators: %s is the type of data being updated, title cased. */
 			__(
 				'<strong>Settings Locked</strong> &mdash; You can\'t change any of your settings until the "%s" update has completed.',
 				'amazon-s3-and-cloudfront'

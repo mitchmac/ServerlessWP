@@ -1,0 +1,66 @@
+name: Deploy to WordPress.org
+
+on:
+  workflow_call:
+    inputs:
+      tag:
+        required: true
+        type: string
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to deploy (e.g., v2.2.21)'
+        required: true
+        type: string
+
+concurrency:
+  group: release-wporg
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy plugin to WordPress.org
+    if: github.repository == 'WordPress/sqlite-database-integration'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: bin/
+          sparse-checkout-cone-mode: false
+
+      - name: Resolve tag
+        id: resolve
+        run: |
+          TAG="${{ inputs.tag }}"
+          # Ensure the tag has a "v" prefix.
+          [[ "$TAG" == v* ]] || TAG="v$TAG"
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          echo "version=${TAG#v}" >> $GITHUB_OUTPUT
+
+      - name: Download plugin zip from release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.resolve.outputs.tag }}
+        run: |
+          gh release download "$TAG" \
+            --repo "${{ github.repository }}" \
+            --pattern "plugin-sqlite-database-integration.zip" \
+            --dir .
+          unzip plugin-sqlite-database-integration.zip
+
+      - name: Verify release metadata
+        run: |
+          bash bin/verify-release-metadata.sh plugin-sqlite-database-integration "${{ steps.resolve.outputs.version }}"
+
+      - name: Deploy to WordPress.org
+        uses: 10up/action-wordpress-plugin-deploy@2.3.0
+        env:
+          SVN_USERNAME: ${{ secrets.SVN_USERNAME }}
+          SVN_PASSWORD: ${{ secrets.SVN_PASSWORD }}
+          VERSION: ${{ steps.resolve.outputs.version }}
+          SLUG: sqlite-database-integration
+          BUILD_DIR: plugin-sqlite-database-integration

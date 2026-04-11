@@ -36,15 +36,24 @@ class Remove_Provider_Handler extends Item_Handler {
 		$paths    = array();
 
 		if ( ! empty( $options['object_keys'] ) && ! is_array( $options['object_keys'] ) ) {
-			return $this->return_handler_error( __( 'Invalid object_keys option provided.', 'amazon-s3-and-cloudfront' ) );
+			return $this->return_handler_error(
+				__( 'Invalid object_keys option provided.', 'amazon-s3-and-cloudfront' )
+			);
 		}
 
 		if ( ! empty( $options['offloaded_files'] ) && ! is_array( $options['offloaded_files'] ) ) {
-			return $this->return_handler_error( __( 'Invalid offloaded_files option provided.', 'amazon-s3-and-cloudfront' ) );
+			return $this->return_handler_error(
+				__( 'Invalid offloaded_files option provided.', 'amazon-s3-and-cloudfront' )
+			);
 		}
 
 		if ( ! empty( $options['object_keys'] ) && ! empty( $options['offloaded_files'] ) ) {
-			return $this->return_handler_error( __( 'Providing both object_keys and offloaded_files options is not supported.', 'amazon-s3-and-cloudfront' ) );
+			return $this->return_handler_error(
+				__(
+					'Providing both object_keys and offloaded_files options is not supported.',
+					'amazon-s3-and-cloudfront'
+				)
+			);
 		}
 
 		if ( empty( $options['offloaded_files'] ) ) {
@@ -67,7 +76,12 @@ class Remove_Provider_Handler extends Item_Handler {
 		 * @param Item  $as3cf_item  The Item object
 		 * @param array $item_source The item source descriptor array
 		 */
-		$paths = apply_filters( 'as3cf_remove_source_files_from_provider', $paths, $as3cf_item, $as3cf_item->get_item_source_array() );
+		$paths = apply_filters(
+			'as3cf_remove_source_files_from_provider',
+			$paths,
+			$as3cf_item,
+			$as3cf_item->get_item_source_array()
+		);
 		$paths = array_unique( $paths );
 
 		// Remove local source paths that other items may have offloaded.
@@ -87,7 +101,10 @@ class Remove_Provider_Handler extends Item_Handler {
 		} else {
 			foreach ( $paths as $filename => $path ) {
 				$manifest->objects[] = array(
-					'Key' => $as3cf_item->provider_key_for_filename( $filename, $options['offloaded_files'][ $filename ]['is_private'] ),
+					'Key' => $as3cf_item->provider_key_for_filename(
+						$filename,
+						$options['offloaded_files'][ $filename ]['is_private']
+					),
 				);
 			}
 		}
@@ -111,7 +128,11 @@ class Remove_Provider_Handler extends Item_Handler {
 		$current_provider = $this->as3cf->get_storage_provider();
 		if ( ! is_null( $current_provider ) && $current_provider::get_provider_key_name() !== $as3cf_item->provider() ) {
 			$error_msg = sprintf(
-				__( '%1$s with ID %2$d is offloaded to a different provider than currently configured', 'amazon-s3-and-cloudfront' ),
+			/* translators: %1$s is a media source, e.g. "Media Library", %2$d is its unique ID. */
+				__(
+					'%1$s with ID %2$d is offloaded to a different provider than currently configured',
+					'amazon-s3-and-cloudfront'
+				),
 				$this->as3cf->get_source_type_name( $as3cf_item->source_type() ),
 				$as3cf_item->source_id()
 			);
@@ -131,7 +152,11 @@ class Remove_Provider_Handler extends Item_Handler {
 				) );
 			}
 		} catch ( Exception $e ) {
-			$error_msg = sprintf( __( 'Error removing files from bucket: %s', 'amazon-s3-and-cloudfront' ), $e->getMessage() );
+			$error_msg = sprintf(
+			/* translators: %s is a bucket name. */
+				__( 'Error removing files from bucket: %s', 'amazon-s3-and-cloudfront' ),
+				$e->getMessage()
+			);
 
 			return $this->return_handler_error( $error_msg );
 		}

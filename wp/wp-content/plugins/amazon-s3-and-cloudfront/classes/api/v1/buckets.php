@@ -291,6 +291,7 @@ class Buckets extends API {
 			return new WP_Error(
 				'exception',
 				sprintf(
+				/* translators: %s is a storage provider name, e.g. "Amazon S3". */
 					_x(
 						"Can't change Block All Public Access setting for %s buckets.",
 						"Trying to change public access setting for given provider's bucket.",
@@ -358,9 +359,15 @@ class Buckets extends API {
 
 			if ( empty( $block ) !== empty( $public_access_blocked ) ) {
 				if ( $block ) {
-					$notice_message = __( '<strong>Failed to Enable Block All Public Access</strong> &mdash; We could not enable Block All Public Access. You will need to log in to the AWS Console and do it manually.', 'amazon-s3-and-cloudfront' );
+					$notice_message = __(
+						'<strong>Failed to Enable Block All Public Access</strong> &mdash; We could not enable Block All Public Access. You will need to log in to the AWS Console and do it manually.',
+						'amazon-s3-and-cloudfront'
+					);
 				} else {
-					$notice_message = __( '<strong>Failed to Disable Block All Public Access</strong> &mdash; We could not disable Block All Public Access. You will need to log in to the AWS Console and do it manually.', 'amazon-s3-and-cloudfront' );
+					$notice_message = __(
+						'<strong>Failed to Disable Block All Public Access</strong> &mdash; We could not disable Block All Public Access. You will need to log in to the AWS Console and do it manually.',
+						'amazon-s3-and-cloudfront'
+					);
 				}
 				$notice_message .= ' ' . $this->as3cf->settings_more_info_link( 'bucket' );
 
@@ -390,6 +397,7 @@ class Buckets extends API {
 			return new WP_Error(
 				'exception',
 				sprintf(
+				/* translators: %s is a storage provider name, e.g. "Amazon S3". */
 					_x(
 						"Can't change Object Ownership setting for %s buckets.",
 						"Trying to change object ownership setting for given provider's bucket.",
@@ -456,9 +464,15 @@ class Buckets extends API {
 
 			if ( empty( $enforce ) !== empty( $object_ownership_enforced ) ) {
 				if ( $enforce ) {
-					$notice_message = __( '<strong>Failed to Enforce Object Ownership</strong> &mdash; We could not enforce Object Ownership. You will need to log in to the AWS Console and do it manually.', 'amazon-s3-and-cloudfront' );
+					$notice_message = __(
+						'<strong>Failed to Enforce Object Ownership</strong> &mdash; We could not enforce Object Ownership. You will need to log in to the AWS Console and do it manually.',
+						'amazon-s3-and-cloudfront'
+					);
 				} else {
-					$notice_message = __( '<strong>Failed to turn off Object Ownership Enforcement</strong> &mdash; We could not turn off Object Ownership enforcement. You will need to log in to the AWS Console and do it manually.', 'amazon-s3-and-cloudfront' );
+					$notice_message = __(
+						'<strong>Failed to turn off Object Ownership Enforcement</strong> &mdash; We could not turn off Object Ownership enforcement. You will need to log in to the AWS Console and do it manually.',
+						'amazon-s3-and-cloudfront'
+					);
 				}
 				$notice_message .= ' ' . $this->as3cf->settings_more_info_link( 'bucket' );
 

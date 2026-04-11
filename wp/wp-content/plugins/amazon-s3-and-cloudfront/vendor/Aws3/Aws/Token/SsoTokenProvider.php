@@ -28,7 +28,7 @@ class SsoTokenProvider implements RefreshableTokenProviderInterface
      * @param string|null $configFilePath Name of the config file to sso profile from
      * @param SSOOIDCClient|null $ssoOidcClient The sso client for generating a new token
      */
-    public function __construct($profileName, $configFilePath = null, SSOOIDCClient $ssoOidcClient = null)
+    public function __construct($profileName, $configFilePath = null, ?SSOOIDCClient $ssoOidcClient = null)
     {
         $this->profileName = $this->resolveProfileName($profileName);
         $this->configFilePath = $this->resolveConfigFile($configFilePath);

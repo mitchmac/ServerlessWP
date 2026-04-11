@@ -42,6 +42,14 @@ class Upgrade_Filter_Post_Excerpt extends Upgrade_Filter_Post {
 	 * @return string
 	 */
 	protected function get_running_message() {
-		return sprintf( __( '<strong>Running Excerpts Upgrade%1$s</strong><br>A find &amp; replace is running in the background to update URLs in your post excerpts. %2$s', 'amazon-s3-and-cloudfront' ), $this->get_progress_text(), $this->get_generic_message() );
+		return sprintf(
+		/* translators: %1$s is a % complete string, %2$s is a documentation link. */
+			__(
+				'<strong>Running Excerpts Upgrade%1$s</strong><br>A find &amp; replace is running in the background to update URLs in your post excerpts. %2$s',
+				'amazon-s3-and-cloudfront'
+			),
+			$this->get_progress_text(),
+			$this->get_generic_message()
+		);
 	}
 }
