@@ -25,6 +25,7 @@ mc alias set local-minio http://localhost:9010 minioadmin minioadmin
 mc mb local-minio/test-bucket
 mc admin user add local-minio testuser testpass
 mc admin policy attach local-minio readwrite --user testuser
+mc anonymous set download local-minio/test-bucket
 
 docker run \
     -e SQLITE_S3_BUCKET=test-bucket \
@@ -32,6 +33,11 @@ docker run \
     -e SQLITE_S3_REGION=us-east-1 -e SQLITE_S3_ENDPOINT=http://minio:9000 -e SQLITE_S3_FORCE_PATH_STYLE=1 \
     -e VERCEL=$VERCEL -e VERCEL_GIT_COMMIT_REF=$VERCEL_GIT_COMMIT_REF \
     -e SERVERLESSWP_TESTING=1 \
+    -e S3_KEY_ID=testuser -e S3_ACCESS_KEY=testpass \
+    -e S3_OFFLOAD_BUCKET=test-bucket \
+    -e S3_OFFLOAD_REGION=us-east-2 \
+    -e S3_OFFLOAD_ENDPOINT=http://minio:9000 \
+    -e S3_OFFLOAD_PUBLIC_DOMAIN=localhost:9010 \
     -p 9000:8080 \
     --network serverlesswp-test-network \
     -d --name serverlesswp-test serverlesswp-test
@@ -64,4 +70,4 @@ echo "Static file test passed."
 npm install
 npx playwright install chromium
 ldconfig -p | grep -q libnspr4 || sudo env PATH="$PATH" node_modules/.bin/playwright install-deps chromium
-SCREENSHOTS=${SCREENSHOTS:-} npx playwright test e2e.spec.js "$@"
+SCREENSHOTS=${SCREENSHOTS:-} npx playwright test e2e.spec.js e2e-s3-offload.spec.js "$@"

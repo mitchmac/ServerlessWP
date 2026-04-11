@@ -2,6 +2,7 @@ const { defineConfig } = require('@playwright/test');
 
 module.exports = defineConfig({
     globalSetup: './global-setup.js',
+    workers: 1,
     use: {
         baseURL: 'https://localhost:3000',
         ignoreHTTPSErrors: true,

@@ -25,6 +25,23 @@ if (!is_blog_installed()) {
         'core/edit-post' => [ 'welcomeGuide' => false ],
         '_modified' => date( 'c' ),
     ] );
+
+    if (!empty($_ENV['S3_OFFLOAD_BUCKET'])) {
+        // Activate WP Offload Media
+        $active = get_option('active_plugins', []);
+        $plugin = 'amazon-s3-and-cloudfront/wordpress-s3.php';
+        if (!in_array($plugin, $active)) {
+            $active[] = $plugin;
+            update_option('active_plugins', $active);
+        }
+        // Configure bucket/region and enable copy + serve
+        update_option('tantan_wordpress_s3', [
+            'bucket'        => $_ENV['S3_OFFLOAD_BUCKET'],
+            'region'        => $_ENV['S3_OFFLOAD_REGION'] ?? 'us-east-2',
+            'copy-to-s3'    => '1',
+            'serve-from-s3' => '1',
+        ]);
+    }
 } else {
     echo 'WordPress is already installed.';
 }

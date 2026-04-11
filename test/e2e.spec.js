@@ -41,9 +41,17 @@ test('create and view a post', async ({ page }) => {
     await page.locator('.editor-post-publish-panel').getByRole('button', { name: 'Publish', exact: true }).click();
     await expect(page.locator('.components-snackbar')).toBeVisible({ timeout: 15000 });
 
-    await page.locator('.components-snackbar').getByRole('link', { name: 'View Post' }).click();
-    await expect(page.locator('h1.wp-block-post-title')).toHaveText('Playwright Test Post');
-    await expect(page.getByText('Hello from Playwright.')).toBeVisible();
+    const [postPage] = await Promise.all([
+        page.waitForEvent('popup'),
+        page.locator('.components-snackbar').getByRole('link', { name: 'View Post' }).click(),
+    ]);
+    await expect(postPage.locator('h1.wp-block-post-title')).toHaveText('Playwright Test Post');
+    await expect(postPage.getByText('Hello from Playwright.')).toBeVisible();
+});
+
+test('search for a post', async ({ page }) => {
+    await page.goto('/?s=Playwright+Test+Post');
+    await expect(page.locator('.wp-block-query.alignfull').getByRole('heading', { name: /Playwright Test Post/i })).toBeVisible();
 });
 
 test('edit a post', async ({ page }) => {
@@ -59,8 +67,11 @@ test('edit a post', async ({ page }) => {
     await page.getByRole('button', { name: 'Save', exact: true }).click();
     await expect(page.locator('.components-snackbar')).toBeVisible({ timeout: 15000 });
 
-    await page.locator('.components-snackbar').getByRole('link', { name: 'View Post' }).click();
-    await expect(page.locator('h1.wp-block-post-title')).toHaveText('Playwright Test Post (edited)');
+    const [editedPage] = await Promise.all([
+        page.waitForEvent('popup'),
+        page.locator('.components-snackbar').getByRole('link', { name: 'View Post' }).click(),
+    ]);
+    await expect(editedPage.locator('h1.wp-block-post-title')).toHaveText('Playwright Test Post (edited)');
 });
 
 test('delete a post', async ({ page }) => {
