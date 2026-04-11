@@ -17,7 +17,6 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 if ( ! class_exists( 'AS3CF_Utils' ) ) {
-
 	/**
 	 * AS3CF_Utils Class
 	 *
@@ -164,7 +163,7 @@ if ( ! class_exists( 'AS3CF_Utils' ) ) {
 				$url = 'http:' . $url;
 			}
 
-			$parts = parse_url( $url, $component );
+			$parts = wp_parse_url( $url, $component );
 
 			if ( 0 < $component ) {
 				return $parts;
@@ -223,7 +222,12 @@ if ( ! class_exists( 'AS3CF_Utils' ) ) {
 		 *
 		 * @return array
 		 */
-		public static function get_attachment_file_paths( $attachment_id, $exists_locally = true, $meta = false, $include_backups = true ) {
+		public static function get_attachment_file_paths(
+			$attachment_id,
+			$exists_locally = true,
+			$meta = false,
+			$include_backups = true
+		) {
 			$file_path = get_attached_file( $attachment_id, true );
 			$paths     = array(
 				Item::primary_object_key() => $file_path,
@@ -376,7 +380,7 @@ if ( ! class_exists( 'AS3CF_Utils' ) ) {
 		 * @return string|false
 		 */
 		public static function current_domain() {
-			return parse_url( home_url(), PHP_URL_HOST );
+			return wp_parse_url( home_url(), PHP_URL_HOST );
 		}
 
 		/**
@@ -452,7 +456,7 @@ if ( ! class_exists( 'AS3CF_Utils' ) ) {
 		 * @return bool
 		 */
 		public static function seo_friendly_url( $url ) {
-			$domain      = static::base_domain( parse_url( $url, PHP_URL_HOST ) );
+			$domain      = static::base_domain( wp_parse_url( $url, PHP_URL_HOST ) );
 			$base_domain = static::current_base_domain();
 
 			// If either domain is not a public domain then skip checks.
@@ -545,7 +549,7 @@ if ( ! class_exists( 'AS3CF_Utils' ) ) {
 		 * @return string
 		 */
 		public static function decode_filename_in_path( $file ) {
-			$url = parse_url( $file );
+			$url = wp_parse_url( $file );
 
 			if ( ! isset( $url['path'] ) ) {
 				// Can't determine path, return original
@@ -575,7 +579,14 @@ if ( ! class_exists( 'AS3CF_Utils' ) ) {
 		 */
 		public static function fullsize_paths( $paths ) {
 			if ( is_array( $paths ) && ! empty( $paths ) ) {
-				return array_values( array_unique( array_intersect_key( $paths, array_flip( array( Item::primary_object_key(), 'file', 'full-orig', 'original_image' ) ) ) ) );
+				return array_values(
+					array_unique(
+						array_intersect_key(
+							$paths,
+							array_flip( array( Item::primary_object_key(), 'file', 'full-orig', 'original_image' ) )
+						)
+					)
+				);
 			} else {
 				return array();
 			}
@@ -620,7 +631,7 @@ if ( ! class_exists( 'AS3CF_Utils' ) ) {
 		 * @return string Encoded filename
 		 */
 		public static function encode_filename_in_path( $file ) {
-			$url = parse_url( $file );
+			$url = wp_parse_url( $file );
 
 			if ( ! isset( $url['path'] ) ) {
 				// Can't determine path, return original

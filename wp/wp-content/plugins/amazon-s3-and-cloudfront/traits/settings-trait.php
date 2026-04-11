@@ -143,6 +143,7 @@ trait Settings_Trait {
 			// If only legacy defines are in use, we can fake new style to allow for key based monitoring and db settings cleanup.
 			if ( ! static::settings_constant() ) {
 				static::$legacy_defines = true;
+				// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.VariableConstantNameFound -- is prefixed
 				define( static::preferred_settings_constant(), serialize( $this->defined_settings ) );
 			}
 

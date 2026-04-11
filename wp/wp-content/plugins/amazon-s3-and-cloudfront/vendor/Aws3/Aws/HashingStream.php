@@ -22,7 +22,7 @@ class HashingStream implements StreamInterface
      * @param callable        $onComplete Optional function invoked when the
      *                                    hash calculation is completed.
      */
-    public function __construct(StreamInterface $stream, HashInterface $hash, callable $onComplete = null)
+    public function __construct(StreamInterface $stream, HashInterface $hash, ?callable $onComplete = null)
     {
         $this->stream = $stream;
         $this->hash = $hash;

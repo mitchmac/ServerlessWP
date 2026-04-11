@@ -220,11 +220,14 @@ async function exists(path) {
 exports.prepPlugin = async function (wpContentPath, sqlitePluginPath) {
     if (!init) {
         try {
-            let oldPath = sqlitePluginPath + '/db.copy';
+            let pluginPackagePath = sqlitePluginPath;
+            let oldPath = pluginPackagePath + '/db.copy';
             let newPath = wpContentPath + '/db.php';
             await fs.copyFile(oldPath, newPath);
             const content = await fs.readFile(newPath, 'utf8');
-            const modifiedContent = content.replace(new RegExp(/{SQLITE_IMPLEMENTATION_FOLDER_PATH}/, 'g'), sqlitePluginPath);
+            const modifiedContent = content
+                .replace(new RegExp(/{SQLITE_IMPLEMENTATION_FOLDER_PATH}/, 'g'), pluginPackagePath)
+                .replace(new RegExp(/{SQLITE_PLUGIN}/, 'g'), 'sqlite-database-integration/load.php');
 
             await fs.writeFile(newPath, modifiedContent);
             init = true;

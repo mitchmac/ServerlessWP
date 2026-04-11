@@ -44,7 +44,7 @@ class S3SignatureV4 extends SignatureV4
      * Instantiates a separate sigv4a signing config.  All services except S3
      * use double encoding.  All services except S3 require path normalization.
      */
-    protected function signWithV4a(CredentialsInterface $credentials, RequestInterface $request, $signingService, SigningConfigAWS $signingConfig = null)
+    protected function signWithV4a(CredentialsInterface $credentials, RequestInterface $request, $signingService, ?SigningConfigAWS $signingConfig = null)
     {
         $this->verifyCRTLoaded();
         $credentials_provider = $this->createCRTStaticCredentialsProvider($credentials);

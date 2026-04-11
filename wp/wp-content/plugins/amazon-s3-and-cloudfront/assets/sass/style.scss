@@ -1,4 +1,14 @@
-@import "buttons", "icons", "input", "navigation", "notifications", "progress-bar", "providers", "sidebar", "typography", "ui", "variables";
+@use "buttons";
+@use "icons";
+@use "input";
+@use "navigation";
+@use "notifications";
+@use "progress-bar";
+@use "providers";
+@use "sidebar";
+@use "typography";
+@use "ui";
+@use "variables";
 
 //WordPress overrides.
 body.settings_page_amazon-s3-and-cloudfront {

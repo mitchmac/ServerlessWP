@@ -66,7 +66,7 @@ class RetryMiddleware
         if (\extension_loaded('curl')) {
             $retryCurlErrors[\CURLE_RECV_ERROR] = \true;
         }
-        return function ($retries, CommandInterface $command, RequestInterface $request, ResultInterface $result = null, $error = null) use($maxRetries, $retryCurlErrors, $extraConfig) {
+        return function ($retries, CommandInterface $command, RequestInterface $request, ?ResultInterface $result = null, $error = null) use($maxRetries, $retryCurlErrors, $extraConfig) {
             // Allow command-level options to override this value
             $maxRetries = null !== $command['@retries'] ? $command['@retries'] : $maxRetries;
             $isRetryable = self::isRetryable($result, $error, $retryCurlErrors, $extraConfig);
@@ -151,7 +151,7 @@ class RetryMiddleware
      *
      * @return PromiseInterface
      */
-    public function __invoke(CommandInterface $command, RequestInterface $request = null)
+    public function __invoke(CommandInterface $command, ?RequestInterface $request = null)
     {
         $retries = 0;
         $requestStats = [];

@@ -138,6 +138,8 @@ abstract class API {
 	 * @return WP_REST_Response|mixed If response generated an error, WP_Error, if response
 	 *                                is already an instance, WP_HTTP_Response, otherwise
 	 *                                returns a new WP_REST_Response instance.
+	 *
+	 * phpcs:disable WordPress.NamingConventions.PrefixAllGlobals.DynamicHooknameFound -- is prefixed
 	 */
 	protected function rest_ensure_response( $method, $endpoint, $response, $prefix = '' ) {
 		$method   = empty( $method ) ? 'method' : strtolower( trim( $method ) );

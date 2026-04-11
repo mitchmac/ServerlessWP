@@ -133,6 +133,7 @@ define('DISALLOW_FILE_MODS', true );
 if (isset($_ENV['SQLITE_S3_BUCKET']) || isset($_ENV['SERVERLESSWP_DATA_SECRET'])) {
   define('DB_DIR', '/tmp');
   define('DB_FILE', 'wp-sqlite-s3.sqlite');
+  define('DB_NAME', 'wp-sqlite');
 
   // Auto-cron can cause db race conditions on these urls, don't bother with it.
   if (strpos($_SERVER['REQUEST_URI'], 'wp-admin') !== false || strpos($_SERVER['REQUEST_URI'], 'wp-login') !== false) {

@@ -246,7 +246,10 @@ class Amazon_S3_And_CloudFront extends AS3CF_Plugin_Base {
 
 		// Listen for settings changes.
 		if ( false !== static::settings_constant() ) {
-			add_action( 'as3cf_constant_' . static::settings_constant() . '_changed_bucket', array( $this, 'process_bucket_change_after_init' ) );
+			add_action(
+				'as3cf_constant_' . static::settings_constant() . '_changed_bucket',
+				array( $this, 'process_bucket_change_after_init' )
+			);
 		}
 
 		$this->set_storage_provider();
@@ -300,8 +303,6 @@ class Amazon_S3_And_CloudFront extends AS3CF_Plugin_Base {
 		// Content filtering
 		$this->filter_local    = new AS3CF_Local_To_S3( $this );
 		$this->filter_provider = new AS3CF_S3_To_Local( $this );
-
-		load_plugin_textdomain( 'amazon-s3-and-cloudfront', false, dirname( plugin_basename( $plugin_file_path ) ) . '/languages/' );
 
 		// Register modal scripts and styles
 		$this->register_modal_assets();
@@ -462,7 +463,10 @@ class Amazon_S3_And_CloudFront extends AS3CF_Plugin_Base {
 		}
 
 		if ( ! empty( $this->storage_provider ) ) {
-			$this->validation_manager->register_validator( $this->storage_provider::VALIDATOR_KEY, $this->storage_provider );
+			$this->validation_manager->register_validator(
+				$this->storage_provider::VALIDATOR_KEY,
+				$this->storage_provider
+			);
 		}
 	}
 
@@ -510,7 +514,10 @@ class Amazon_S3_And_CloudFront extends AS3CF_Plugin_Base {
 		}
 
 		if ( ! empty( $this->delivery_provider ) ) {
-			$this->validation_manager->register_validator( $this->delivery_provider::VALIDATOR_KEY, $this->delivery_provider );
+			$this->validation_manager->register_validator(
+				$this->delivery_provider::VALIDATOR_KEY,
+				$this->delivery_provider
+			);
 		}
 	}
 
@@ -786,11 +793,13 @@ class Amazon_S3_And_CloudFront extends AS3CF_Plugin_Base {
 	}
 
 	/**
-	 * Gets arguements used to render a setting view.
+	 * Gets arguments used to render a setting view.
 	 *
 	 * @param string $key
 	 *
 	 * @return array
+	 *
+	 * phpcs:disable PEAR.Functions.FunctionCallSignature.Indent
 	 */
 	function get_setting_args( $key ) {
 		$is_defined = $this->get_defined_setting( $key, false );
@@ -799,7 +808,11 @@ class Amazon_S3_And_CloudFront extends AS3CF_Plugin_Base {
 			'key'           => $key,
 			'disabled'      => false,
 			'disabled_attr' => '',
-			'tr_class'      => 'as3cf-settings-container ' . str_replace( '_', '-', $this->get_plugin_prefix() . '-' . $key . '-container' ),
+			'tr_class'      => 'as3cf-settings-container ' . str_replace(
+					'_',
+					'-',
+					$this->get_plugin_prefix() . '-' . $key . '-container'
+				),
 			'setting_msg'   => '',
 			'is_defined'    => false,
 		);
@@ -809,7 +822,10 @@ class Amazon_S3_And_CloudFront extends AS3CF_Plugin_Base {
 			$args['disabled']      = true;
 			$args['disabled_attr'] = 'disabled="disabled"';
 			$args['tr_class']      .= ' as3cf-defined-setting';
-			$args['setting_msg']   = '<span class="as3cf-defined-in-config">' . __( 'defined in wp-config.php', 'as3cf' ) . '</span>';
+			$args['setting_msg']   = '<span class="as3cf-defined-in-config">' . __(
+					'defined in wp-config.php',
+					'amazon-s3-and-cloudfront'
+				) . '</span>';
 		}
 
 		return $args;
@@ -1261,7 +1277,7 @@ class Amazon_S3_And_CloudFront extends AS3CF_Plugin_Base {
 		}
 
 		$uploads = wp_upload_dir();
-		$parts   = parse_url( $uploads['baseurl'] );
+		$parts   = wp_parse_url( $uploads['baseurl'] );
 		$path    = ltrim( $parts['path'], '/' );
 
 		return trailingslashit( $path );
@@ -1349,7 +1365,11 @@ class Amazon_S3_And_CloudFront extends AS3CF_Plugin_Base {
 	 *
 	 * @return string|array
 	 */
-	public function get_url_preview( bool $get_parts = false, string $suffix = null, array $settings = null ) {
+	public function get_url_preview(
+		bool $get_parts = false,
+		?string $suffix = null,
+		?array $settings = null
+	): array|string {
 		if (
 			! empty( $settings ) &&
 			empty( array_diff( $this->get_allowed_settings_keys(), array_keys( $settings ) ) )
@@ -1390,7 +1410,7 @@ class Amazon_S3_And_CloudFront extends AS3CF_Plugin_Base {
 		 */
 		$url_parts = array();
 
-		$parts = parse_url( $url );
+		$parts = wp_parse_url( $url );
 
 		if ( empty( $parts ) ) {
 			return $url_parts;
@@ -1527,6 +1547,7 @@ class Amazon_S3_And_CloudFront extends AS3CF_Plugin_Base {
 		// Use current time so that object version is unique
 		$time = current_time( 'timestamp' );
 
+		// phpcs:ignore WordPress.DateTime.RestrictedFunctions.date_date
 		$object_version = date( $date_format, $time ) . '/';
 		$object_version = apply_filters( 'as3cf_get_object_version_string', $object_version );
 
@@ -1716,7 +1737,13 @@ class Amazon_S3_And_CloudFront extends AS3CF_Plugin_Base {
 	 *
 	 * @return bool|Media_Library_Item
 	 */
-	public function is_attachment_served_by_provider( $attachment_id, $skip_rewrite_check = false, $skip_current_provider_check = false, Storage_Provider $provider = null, $check_is_verified = false ) {
+	public function is_attachment_served_by_provider(
+		int $attachment_id,
+		bool $skip_rewrite_check = false,
+		bool $skip_current_provider_check = false,
+		?Storage_Provider $provider = null,
+		bool $check_is_verified = false
+	): Media_Library_Item|bool {
 		if ( ! $skip_rewrite_check && ! $this->get_setting( 'serve-from-s3' ) ) {
 			// Not serving provider URLs
 			return false;
@@ -1768,7 +1795,11 @@ class Amazon_S3_And_CloudFront extends AS3CF_Plugin_Base {
 
 		if ( ! is_admin() ) { // input var okay
 			$msg = __( 'This action can only be performed through an admin screen.', 'amazon-s3-and-cloudfront' );
-		} elseif ( empty( $_POST['_nonce'] ) || empty( $_POST['action'] ) || ! wp_verify_nonce( sanitize_key( $_POST['_nonce'] ), sanitize_key( $_POST['action'] ) ) ) { // input var okay
+		} elseif (
+			empty( $_POST['_nonce'] ) ||
+			empty( $_POST['action'] ) ||
+			! wp_verify_nonce( sanitize_key( $_POST['_nonce'] ), sanitize_key( $_POST['action'] ) )
+		) { // input var okay
 			$msg = __( 'Cheatin&#8217; eh?', 'amazon-s3-and-cloudfront' );
 		} elseif ( ! current_user_can( $capability ) ) {
 			$msg = __( 'You do not have sufficient permissions to access this page.', 'amazon-s3-and-cloudfront' );
@@ -1780,7 +1811,7 @@ class Amazon_S3_And_CloudFront extends AS3CF_Plugin_Base {
 			if ( $return ) {
 				return false;
 			} else {
-				wp_die( $msg );
+				wp_die( wp_kses_post( $msg ) );
 			}
 		}
 
@@ -1854,7 +1885,7 @@ class Amazon_S3_And_CloudFront extends AS3CF_Plugin_Base {
 	 *
 	 * @return bool
 	 */
-	public function our_screen( WP_Screen $screen = null ) {
+	public function our_screen( ?WP_Screen $screen = null ): bool {
 		if ( ! is_admin() || empty( $this->hook_suffix ) ) {
 			return false;
 		}
@@ -1996,9 +2027,15 @@ class Amazon_S3_And_CloudFront extends AS3CF_Plugin_Base {
 		try {
 			$region = $this->get_provider_client( false, true )->get_bucket_location( array( 'Bucket' => $bucket ) );
 		} catch ( Exception $e ) {
-			$bucket_error = $this->get_storage_provider()->prepare_bucket_error( new WP_Error( 'exception', $e->getMessage() ) );
+			$bucket_error = $this->get_storage_provider()->prepare_bucket_error(
+				new WP_Error( 'exception', $e->getMessage() )
+			);
 			$error_msg    = sprintf(
-				__( '<strong>Error Getting Bucket Region</strong> &mdash; There was an error attempting to get the region of the bucket %1$s: %2$s', 'amazon-s3-and-cloudfront' ),
+			/* translators: %1$s is a bucket name, %2$s is an error message. */
+				__(
+					'<strong>Error Getting Bucket Region</strong> &mdash; There was an error attempting to get the region of the bucket %1$s: %2$s',
+					'amazon-s3-and-cloudfront'
+				),
 				$bucket,
 				$bucket_error
 			);
@@ -2041,8 +2078,11 @@ class Amazon_S3_And_CloudFront extends AS3CF_Plugin_Base {
 		try {
 			$result = $this->get_provider_client( $region )->list_buckets();
 		} catch ( Exception $e ) {
-			$bucket_error = $this->get_storage_provider()->prepare_bucket_error( new WP_Error( 'exception', $e->getMessage() ) );
+			$bucket_error = $this->get_storage_provider()->prepare_bucket_error(
+				new WP_Error( 'exception', $e->getMessage() )
+			);
 			$error_msg    = sprintf(
+			/* translators: %s is an error message. */
 				__( '<strong>Error Getting Buckets</strong> &mdash; %s', 'amazon-s3-and-cloudfront' ),
 				$bucket_error
 			);
@@ -2100,10 +2140,17 @@ class Amazon_S3_And_CloudFront extends AS3CF_Plugin_Base {
 
 		if ( $force || ( ! $can_write && ! get_site_transient( $this->get_plugin_prefix() . '_can_write_checked_' . $hash ) ) ) {
 			// Guard against checking an invalid bucket more than once every two minutes.
-			set_site_transient( $this->get_plugin_prefix() . '_can_write_checked_' . $hash, true, 2 * MINUTE_IN_SECONDS );
+			set_site_transient(
+				$this->get_plugin_prefix() . '_can_write_checked_' . $hash,
+				true,
+				2 * MINUTE_IN_SECONDS
+			);
 
 			$key           = $this->get_simple_file_prefix() . 'as3cf-permission-check.txt';
-			$file_contents = __( 'This is a test file to check if the user has write permission to the bucket. Delete me if found.', 'amazon-s3-and-cloudfront' );
+			$file_contents = __(
+				'This is a test file to check if the user has write permission to the bucket. Delete me if found.',
+				'amazon-s3-and-cloudfront'
+			);
 
 			try {
 				$can_write = $this->get_provider_client( $region, true )->can_write( $bucket, $key, $file_contents );
@@ -2115,7 +2162,15 @@ class Amazon_S3_And_CloudFront extends AS3CF_Plugin_Base {
 
 			// If we get back an unexpected error message, throw an error.
 			if ( is_string( $can_write ) ) {
-				$error_msg = sprintf( __( 'There was an error attempting to check the permissions of the bucket %s: %s', 'amazon-s3-and-cloudfront' ), $bucket, $can_write );
+				$error_msg = sprintf(
+				/* translators: %1$s is a bucket name, %2$s is an error message. */
+					__(
+						'There was an error attempting to check the permissions of the bucket %1$s: %2$s',
+						'amazon-s3-and-cloudfront'
+					),
+					$bucket,
+					$can_write
+				);
 				AS3CF_Error::log( $error_msg );
 
 				return new WP_Error( 'exception', $error_msg );
@@ -2140,7 +2195,7 @@ class Amazon_S3_And_CloudFront extends AS3CF_Plugin_Base {
 	 *
 	 * @return bool
 	 */
-	public function bucket_writable( string $bucket = null, string $region = null, bool $force = false ): bool {
+	public function bucket_writable( ?string $bucket = null, ?string $region = null, bool $force = false ): bool {
 		$bucket_writable = $this->check_write_permission( $bucket, $region, $force );
 
 		if ( is_wp_error( $bucket_writable ) ) {
@@ -2158,6 +2213,7 @@ class Amazon_S3_And_CloudFront extends AS3CF_Plugin_Base {
 	 * @return array
 	 */
 	public function settings_validation_status(): array {
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- within authenticated REST-API call
 		$force = isset( $_REQUEST['revalidateSettings'] ) && 'true' === $_REQUEST['revalidateSettings'];
 
 		// If we're in the middle of saving settings, don't force.
@@ -2221,6 +2277,11 @@ class Amazon_S3_And_CloudFront extends AS3CF_Plugin_Base {
 
 	/**
 	 * On plugin load.
+	 *
+	 * phpcs:disable Universal.WhiteSpace.PrecisionAlignment.Found
+	 * phpcs:disable Generic.WhiteSpace.DisallowSpaceIndent.SpacesUsed
+	 * phpcs:disable Generic.Formatting.MultipleStatementAlignment.NotSameWarning
+	 * phpcs:disable PEAR.Functions.FunctionCallSignature.OpeningIndent
 	 */
 	public function plugin_load() {
 		/*
@@ -2229,7 +2290,7 @@ class Amazon_S3_And_CloudFront extends AS3CF_Plugin_Base {
 		 * This works because the hook suffix is the same for both, regardless of parent page.
 		 */
 		if ( $this->get_plugin_pagenow() !== $GLOBALS['pagenow'] ) {
-			wp_redirect( $this->get_plugin_page_url() );
+			wp_safe_redirect( $this->get_plugin_page_url() );
 			exit;
 		}
 
@@ -2238,10 +2299,23 @@ class Amazon_S3_And_CloudFront extends AS3CF_Plugin_Base {
 		// Base style for settings page.
 		$this->enqueue_style( 'as3cf-style', 'assets/css/style' );
 
-		$remove_local_link = static::more_info_link( '/wp-offload-media/doc/compatibility-with-other-plugins/', 'error-media+remove+files+from+server' );
-		$remove_local_msg  = sprintf( __( '<strong>Warning</strong> &mdash; Some plugins depend on the file being present on the local server and may not work when the file is removed. %s', 'amazon-s3-and-cloudfront' ), $remove_local_link );
+		$remove_local_link = static::more_info_link(
+			'/wp-offload-media/doc/compatibility-with-other-plugins/',
+			'error-media+remove+files+from+server'
+		);
+		$remove_local_msg  = sprintf(
+		/* translators: %s is a URL. */
+			__(
+				'<strong>Warning</strong> &mdash; Some plugins depend on the file being present on the local server and may not work when the file is removed. %s',
+				'amazon-s3-and-cloudfront'
+			),
+			$remove_local_link
+		);
 		$remove_local_msg  .= "<br/><br />";
-		$remove_local_msg  .= __( 'If you have a backup system in place (as you should) that backs up your site files, media, and database, your media will no longer be backed up as it will no longer be present on the filesystem.', 'amazon-s3-and-cloudfront' );
+		$remove_local_msg  .= __(
+			'If you have a backup system in place (as you should) that backs up your site files, media, and database, your media will no longer be backed up as it will no longer be present on the filesystem.',
+			'amazon-s3-and-cloudfront'
+		);
 
 		$config = array(
 			'strings'                          => array(
@@ -2250,224 +2324,709 @@ class Amazon_S3_And_CloudFront extends AS3CF_Plugin_Base {
 				'create_bucket_name_missing'            => __( 'Bucket name not entered.', 'amazon-s3-and-cloudfront' ),
 				'create_bucket_name_short'              => __( 'Bucket name too short.', 'amazon-s3-and-cloudfront' ),
 				'create_bucket_name_long'               => __( 'Bucket name too long.', 'amazon-s3-and-cloudfront' ),
-				'create_bucket_invalid_chars'           => __( 'Invalid character. Bucket names can contain lowercase letters, numbers, periods and hyphens.', 'amazon-s3-and-cloudfront' ),
-				'select_bucket_invalid_chars'           => __( 'Invalid character. Bucket names can contain lowercase letters, numbers, periods and hyphens. Legacy buckets may also include uppercase letters and underscores.', 'amazon-s3-and-cloudfront' ),
+				'create_bucket_invalid_chars'           => __(
+					'Invalid character. Bucket names can contain lowercase letters, numbers, periods and hyphens.',
+					'amazon-s3-and-cloudfront'
+				),
+				'select_bucket_invalid_chars'           => __(
+					'Invalid character. Bucket names can contain lowercase letters, numbers, periods and hyphens. Legacy buckets may also include uppercase letters and underscores.',
+					'amazon-s3-and-cloudfront'
+				),
 				'no_bucket_selected'                    => __( 'No bucket selected.', 'amazon-s3-and-cloudfront' ),
-				'defined_region_invalid'                => __( 'Invalid region defined in wp-config.', 'amazon-s3-and-cloudfront' ),
+				'defined_region_invalid'                => __(
+					'Invalid region defined in wp-config.',
+					'amazon-s3-and-cloudfront'
+				),
 				'save_bucket_error'                     => __( 'Error saving bucket', 'amazon-s3-and-cloudfront' ),
 				'get_buckets_error'                     => __( 'Error fetching buckets', 'amazon-s3-and-cloudfront' ),
-				'get_url_preview_error'                 => __( 'Error getting URL preview: ', 'amazon-s3-and-cloudfront' ),
-				'save_alert'                            => __( 'The changes you made will be lost if you navigate away from this page', 'amazon-s3-and-cloudfront' ),
+				'get_url_preview_error'                 => __(
+					'Error getting URL preview: ',
+					'amazon-s3-and-cloudfront'
+				),
+				'save_alert'                            => __(
+					'The changes you made will be lost if you navigate away from this page',
+					'amazon-s3-and-cloudfront'
+				),
 				'api_error_notice_heading'              => __( 'Error From Server', 'amazon-s3-and-cloudfront' ),
 				'get_diagnostic_info'                   => __( 'Getting diagnostic info…', 'amazon-s3-and-cloudfront' ),
-				'get_diagnostic_info_error'             => __( 'Error getting diagnostic info: ', 'amazon-s3-and-cloudfront' ),
-				'not_shown_placeholder'                 => _x( '-- not shown --', 'placeholder for hidden access key, 39 char max', 'amazon-s3-and-cloudfront' ),
+				'get_diagnostic_info_error'             => __(
+					'Error getting diagnostic info: ',
+					'amazon-s3-and-cloudfront'
+				),
+				'not_shown_placeholder'                 => _x(
+					'-- not shown --',
+					'placeholder for hidden access key, 39 char max',
+					'amazon-s3-and-cloudfront'
+				),
 				'defined_in_wp_config'                  => __( 'Defined in wp-config.php', 'amazon-s3-and-cloudfront' ),
 				'settings_locked'                       => __( 'Settings locked', 'amazon-s3-and-cloudfront' ),
 				'needs_refresh'                         => sprintf(
-					__( '<strong>Settings Locked</strong> &mdash; Settings have been changed by someone else, please <a href="%s">refresh the page</a>.', 'amazon-s3-and-cloudfront' ),
+				/* translators: %s is a URL. */
+					__(
+						'<strong>Settings Locked</strong> &mdash; Settings have been changed by someone else, please <a href="%s">refresh the page</a>.',
+						'amazon-s3-and-cloudfront'
+					),
 					$this->get_plugin_page_url()
 				),
 				'get_licence_discount_text'             => __( 'Get up to 40% off', 'amazon-s3-and-cloudfront' ),
 				// Settings
-				'change'                                => _x( 'Change', 'Change link title', 'amazon-s3-and-cloudfront' ),
+				'change'                                => _x(
+					'Change',
+					'Change link title',
+					'amazon-s3-and-cloudfront'
+				),
 				'edit'                                  => _x( 'Edit', 'Edit button text', 'amazon-s3-and-cloudfront' ),
-				'toggle'                                => _x( 'Toggle', 'Toggle switch fallback text', 'amazon-s3-and-cloudfront' ),
+				'toggle'                                => _x(
+					'Toggle',
+					'Toggle switch fallback text',
+					'amazon-s3-and-cloudfront'
+				),
 				'back'                                  => _x( 'Back', 'Back button text', 'amazon-s3-and-cloudfront' ),
 				'skip'                                  => _x( 'Skip', 'Skip button text', 'amazon-s3-and-cloudfront' ),
 				'next'                                  => _x( 'Next', 'Next button text', 'amazon-s3-and-cloudfront' ),
 				'yes'                                   => _x( 'Yes', 'Yes button text', 'amazon-s3-and-cloudfront' ),
 				'no'                                    => _x( 'No', 'No button text', 'amazon-s3-and-cloudfront' ),
-				'help_desc'                             => _x( 'Click to view help doc on our site', 'Help icon alt text', 'amazon-s3-and-cloudfront' ),
-				'selected_desc'                         => _x( 'Option selected', 'Selected option icon alt text', 'amazon-s3-and-cloudfront' ),
+				'help_desc'                             => _x(
+					'Click to view help doc on our site',
+					'Help icon alt text',
+					'amazon-s3-and-cloudfront'
+				),
+				'selected_desc'                         => _x(
+					'Option selected',
+					'Selected option icon alt text',
+					'amazon-s3-and-cloudfront'
+				),
 				'media_tab_title'                       => _x( 'Media', 'Tab title', 'amazon-s3-and-cloudfront' ),
 				'assets_tab_title'                      => _x( 'Assets', 'Tab title', 'amazon-s3-and-cloudfront' ),
 				'tools_tab_title'                       => _x( 'Tools', 'Tab title', 'amazon-s3-and-cloudfront' ),
 				'support_tab_title'                     => _x( 'Support', 'Tab title', 'amazon-s3-and-cloudfront' ),
 				'loading'                               => __( 'Loading…', 'amazon-s3-and-cloudfront' ),
 				'nothing_found'                         => __( 'Nothing Found', 'amazon-s3-and-cloudfront' ),
-				'save_changes'                          => _x( 'Save Changes', 'Button text', 'amazon-s3-and-cloudfront' ),
+				'save_changes'                          => _x(
+					'Save Changes',
+					'Button text',
+					'amazon-s3-and-cloudfront'
+				),
 				'cancel_button'                         => _x( 'Cancel', 'Button text', 'amazon-s3-and-cloudfront' ),
-				'save_and_continue'                     => _x( 'Save & Continue', 'Button text', 'amazon-s3-and-cloudfront' ),
+				'save_and_continue'                     => _x(
+					'Save & Continue',
+					'Button text',
+					'amazon-s3-and-cloudfront'
+				),
 				// OffloadStatus
-				'offloaded'                             => _x( 'Offloaded', 'Label in nav bar status indicator', 'amazon-s3-and-cloudfront' ),
-				'show_details'                          => _x( 'Show Details', 'Button title', 'amazon-s3-and-cloudfront' ),
-				'hide_details'                          => _x( 'Hide Details', 'Button title', 'amazon-s3-and-cloudfront' ),
-				'offload_status_title'                  => _x( 'Offload Status', 'Panel title', 'amazon-s3-and-cloudfront' ),
+				'offloaded'                             => _x(
+					'Offloaded',
+					'Label in nav bar status indicator',
+					'amazon-s3-and-cloudfront'
+				),
+				'show_details'                          => _x(
+					'Show Details',
+					'Button title',
+					'amazon-s3-and-cloudfront'
+				),
+				'hide_details'                          => _x(
+					'Hide Details',
+					'Button title',
+					'amazon-s3-and-cloudfront'
+				),
+				'offload_status_title'                  => _x(
+					'Offload Status',
+					'Panel title',
+					'amazon-s3-and-cloudfront'
+				),
 				'refresh_title'                         => _x( 'Refresh', 'Button title', 'amazon-s3-and-cloudfront' ),
-				'refresh_media_counts_desc'             => _x( 'Force refresh all media counts, may be resource intensive.', 'Button description', 'amazon-s3-and-cloudfront' ),
+				'refresh_media_counts_desc'             => _x(
+					'Force refresh all media counts, may be resource intensive.',
+					'Button description',
+					'amazon-s3-and-cloudfront'
+				),
 				'summary_type_title'                    => _x( 'Source', 'Column title', 'amazon-s3-and-cloudfront' ),
-				'summary_offloaded_title'               => _x( 'Offloaded', 'Column title', 'amazon-s3-and-cloudfront' ),
-				'summary_not_offloaded_title'           => _x( 'Not Offloaded', 'Column title', 'amazon-s3-and-cloudfront' ),
+				'summary_offloaded_title'               => _x(
+					'Offloaded',
+					'Column title',
+					'amazon-s3-and-cloudfront'
+				),
+				'summary_not_offloaded_title'           => _x(
+					'Not Offloaded',
+					'Column title',
+					'amazon-s3-and-cloudfront'
+				),
 				'summary_total_row_title'               => _x( 'Total', 'Row title', 'amazon-s3-and-cloudfront' ),
-				'offload_remaining_upsell_cta'          => _x( 'Upgrade now', 'Upsell call to action', 'amazon-s3-and-cloudfront' ),
-				'no_media'                              => _x( 'There are no media items', 'Status message', 'amazon-s3-and-cloudfront' ),
-				'all_media_offloaded'                   => _x( 'All media items have been offloaded', 'Status message', 'amazon-s3-and-cloudfront' ),
+				'offload_remaining_upsell_cta'          => _x(
+					'Upgrade now',
+					'Upsell call to action',
+					'amazon-s3-and-cloudfront'
+				),
+				'no_media'                              => _x(
+					'There are no media items',
+					'Status message',
+					'amazon-s3-and-cloudfront'
+				),
+				'all_media_offloaded'                   => _x(
+					'All media items have been offloaded',
+					'Status message',
+					'amazon-s3-and-cloudfront'
+				),
 				// MediaLibraryPage
-				'url_preview_title'                     => _x( 'URL Preview', 'Section title', 'amazon-s3-and-cloudfront' ),
-				'url_preview_desc'                      => _x( 'When a media URL is rewritten, it will use the following structure based on the current Storage and Delivery settings:', 'Description of URL Preview', 'amazon-s3-and-cloudfront' ),
+				'url_preview_title'                     => _x(
+					'URL Preview',
+					'Section title',
+					'amazon-s3-and-cloudfront'
+				),
+				'url_preview_desc'                      => _x(
+					'When a media URL is rewritten, it will use the following structure based on the current Storage and Delivery settings:',
+					'Description of URL Preview',
+					'amazon-s3-and-cloudfront'
+				),
 				// StorageSettings
-				'storage_provider_title'                => _x( 'Storage Provider', 'Section title', 'amazon-s3-and-cloudfront' ),
-				'edit_storage_provider'                 => _x( 'Change cloud storage provider or location', 'Edit storage provider button tooltip', 'amazon-s3-and-cloudfront' ),
-				'view_provider_console'                 => _x( 'View in provider\'s console', 'Provider console link alt text', 'amazon-s3-and-cloudfront' ),
+				'storage_provider_title'                => _x(
+					'Storage Provider',
+					'Section title',
+					'amazon-s3-and-cloudfront'
+				),
+				'edit_storage_provider'                 => _x(
+					'Change cloud storage provider or location',
+					'Edit storage provider button tooltip',
+					'amazon-s3-and-cloudfront'
+				),
+				'view_provider_console'                 => _x(
+					'View in provider\'s console',
+					'Provider console link alt text',
+					'amazon-s3-and-cloudfront'
+				),
 				// BucketPanel
 				'bucket_title'                          => _x( 'Bucket', 'Section title', 'amazon-s3-and-cloudfront' ),
-				'change_bucket'                         => _x( 'Change bucket', 'Change link description', 'amazon-s3-and-cloudfront' ),
-				'bapa_enabled'                          => __( 'Block All Public Access Enabled', 'amazon-s3-and-cloudfront' ),
-				'bapa_enabled_title'                    => __( 'Public access to bucket has been blocked at either account or bucket level.', 'amazon-s3-and-cloudfront' ),
-				'bapa_disabled'                         => __( 'Block All Public Access Disabled', 'amazon-s3-and-cloudfront' ),
-				'bapa_disabled_title'                   => __( 'Public access to bucket has not been blocked at either account or bucket level.', 'amazon-s3-and-cloudfront' ),
-				'bapa_unknown'                          => __( 'Block All Public Access Status Unknown', 'amazon-s3-and-cloudfront' ),
-				'bapa_unknown_title'                    => __( 'Public access to bucket status unknown, please grant IAM User the s3:GetBucketPublicAccessBlock permission.', 'amazon-s3-and-cloudfront' ),
-				'object_ownership_enforced'             => __( 'Object Ownership Enforced', 'amazon-s3-and-cloudfront' ),
-				'object_ownership_enforced_title'       => __( 'Object Ownership has been enforced on the bucket.', 'amazon-s3-and-cloudfront' ),
-				'object_ownership_not_enforced'         => __( 'Object Ownership Not Enforced', 'amazon-s3-and-cloudfront' ),
-				'object_ownership_not_enforced_title'   => __( 'Object Ownership has not been enforced on the bucket.', 'amazon-s3-and-cloudfront' ),
-				'object_ownership_unknown'              => __( 'Object Ownership Status Unknown', 'amazon-s3-and-cloudfront' ),
-				'object_ownership_unknown_title'        => __( 'Object Ownership status in the bucket unknown, please grant IAM User the s3:GetBucketPublicAccessBlock permission.', 'amazon-s3-and-cloudfront' ),
-				'unknown'                               => _x( 'Unknown', 'Used when region, provider etc is not in reference data', 'amazon-s3-and-cloudfront' ),
+				'change_bucket'                         => _x(
+					'Change bucket',
+					'Change link description',
+					'amazon-s3-and-cloudfront'
+				),
+				'bapa_enabled'                          => __(
+					'Block All Public Access Enabled',
+					'amazon-s3-and-cloudfront'
+				),
+				'bapa_enabled_title'                    => __(
+					'Public access to bucket has been blocked at either account or bucket level.',
+					'amazon-s3-and-cloudfront'
+				),
+				'bapa_disabled'                         => __(
+					'Block All Public Access Disabled',
+					'amazon-s3-and-cloudfront'
+				),
+				'bapa_disabled_title'                   => __(
+					'Public access to bucket has not been blocked at either account or bucket level.',
+					'amazon-s3-and-cloudfront'
+				),
+				'bapa_unknown'                          => __(
+					'Block All Public Access Status Unknown',
+					'amazon-s3-and-cloudfront'
+				),
+				'bapa_unknown_title'                    => __(
+					'Public access to bucket status unknown, please grant IAM User the s3:GetBucketPublicAccessBlock permission.',
+					'amazon-s3-and-cloudfront'
+				),
+				'object_ownership_enforced'             => __(
+					'Object Ownership Enforced',
+					'amazon-s3-and-cloudfront'
+				),
+				'object_ownership_enforced_title'       => __(
+					'Object Ownership has been enforced on the bucket.',
+					'amazon-s3-and-cloudfront'
+				),
+				'object_ownership_not_enforced'         => __(
+					'Object Ownership Not Enforced',
+					'amazon-s3-and-cloudfront'
+				),
+				'object_ownership_not_enforced_title'   => __(
+					'Object Ownership has not been enforced on the bucket.',
+					'amazon-s3-and-cloudfront'
+				),
+				'object_ownership_unknown'              => __(
+					'Object Ownership Status Unknown',
+					'amazon-s3-and-cloudfront'
+				),
+				'object_ownership_unknown_title'        => __(
+					'Object Ownership status in the bucket unknown, please grant IAM User the s3:GetBucketPublicAccessBlock permission.',
+					'amazon-s3-and-cloudfront'
+				),
+				'unknown'                               => _x(
+					'Unknown',
+					'Used when region, provider etc is not in reference data',
+					'amazon-s3-and-cloudfront'
+				),
 				// StorageSettingsPanel
-				'storage_settings_title'                => _x( 'Storage Settings', 'Section title', 'amazon-s3-and-cloudfront' ),
-				'copy_files_to_bucket'                  => _x( 'Offload Media', 'Setting title', 'amazon-s3-and-cloudfront' ),
-				'copy_files_to_bucket_desc'             => _x( 'Copies media files to the storage provider after being uploaded, edited, or optimized.', 'Setting description', 'amazon-s3-and-cloudfront' ) . ' ' . $this->settings_more_info_link( 'copy-to-s3', 'How offloading media works' ),
-				'path'                                  => _x( 'Add Prefix to Bucket Path', 'Setting title', 'amazon-s3-and-cloudfront' ),
-				'path_desc'                             => _x( 'Groups media from this site together by using a common prefix in the bucket path of offloaded media files.', 'Setting description', 'amazon-s3-and-cloudfront' ) . ' ' . $this->settings_more_info_link( 'object-prefix', 'Why bucket prefixes are useful' ),
-				'year_month'                            => _x( 'Add Year & Month to Bucket Path', 'Setting title', 'amazon-s3-and-cloudfront' ),
-				'year_month_desc'                       => _x( 'Provides another level of organization within the bucket by including the year & month in which the file was uploaded to the site.', 'Setting description', 'amazon-s3-and-cloudfront' ),
-				'object_versioning'                     => _x( 'Add Object Version to Bucket Path', 'Setting title', 'amazon-s3-and-cloudfront' ),
-				'object_versioning_desc'                => _x( 'Ensures the latest version of a media item gets delivered by adding a unique timestamp to the bucket path.', 'Setting description', 'amazon-s3-and-cloudfront' ),
-				'remove_local_file'                     => _x( 'Remove Local Media', 'Setting title', 'amazon-s3-and-cloudfront' ),
-				'remove_local_file_desc'                => _x( 'Frees up storage space by deleting local media files after they have been offloaded.', 'Setting description', 'amazon-s3-and-cloudfront' ),
+				'storage_settings_title'                => _x(
+					'Storage Settings',
+					'Section title',
+					'amazon-s3-and-cloudfront'
+				),
+				'copy_files_to_bucket'                  => _x(
+					'Offload Media',
+					'Setting title',
+					'amazon-s3-and-cloudfront'
+				),
+				'copy_files_to_bucket_desc'             => _x(
+					                                           'Copies media files to the storage provider after being uploaded, edited, or optimized.',
+					                                           'Setting description',
+					                                           'amazon-s3-and-cloudfront'
+				                                           ) . ' ' . $this->settings_more_info_link(
+						'copy-to-s3',
+						'How offloading media works'
+					),
+				'path'                                  => _x(
+					'Add Prefix to Bucket Path',
+					'Setting title',
+					'amazon-s3-and-cloudfront'
+				),
+				'path_desc'                             => _x(
+					                                           'Groups media from this site together by using a common prefix in the bucket path of offloaded media files.',
+					                                           'Setting description',
+					                                           'amazon-s3-and-cloudfront'
+				                                           ) . ' ' . $this->settings_more_info_link(
+						'object-prefix',
+						'Why bucket prefixes are useful'
+					),
+				'year_month'                            => _x(
+					'Add Year & Month to Bucket Path',
+					'Setting title',
+					'amazon-s3-and-cloudfront'
+				),
+				'year_month_desc'                       => _x(
+					'Provides another level of organization within the bucket by including the year & month in which the file was uploaded to the site.',
+					'Setting description',
+					'amazon-s3-and-cloudfront'
+				),
+				'object_versioning'                     => _x(
+					'Add Object Version to Bucket Path',
+					'Setting title',
+					'amazon-s3-and-cloudfront'
+				),
+				'object_versioning_desc'                => _x(
+					'Ensures the latest version of a media item gets delivered by adding a unique timestamp to the bucket path.',
+					'Setting description',
+					'amazon-s3-and-cloudfront'
+				),
+				'remove_local_file'                     => _x(
+					'Remove Local Media',
+					'Setting title',
+					'amazon-s3-and-cloudfront'
+				),
+				'remove_local_file_desc'                => _x(
+					'Frees up storage space by deleting local media files after they have been offloaded.',
+					'Setting description',
+					'amazon-s3-and-cloudfront'
+				),
 				'remove_local_file_message'             => $remove_local_msg,
-				'lost_files_notice_heading'             => _x( 'Broken URLs', 'warning heading', 'amazon-s3-and-cloudfront' ),
-				'lost_files_notice_message'             => __( 'There will be broken URLs for files that don\'t exist locally. You can fix this by enabling <strong>Deliver Offloaded Media</strong> to use the offloaded media.', 'amazon-s3-and-cloudfront' ),
+				'lost_files_notice_heading'             => _x(
+					'Broken URLs',
+					'warning heading',
+					'amazon-s3-and-cloudfront'
+				),
+				'lost_files_notice_message'             => __(
+					'There will be broken URLs for files that don\'t exist locally. You can fix this by enabling <strong>Deliver Offloaded Media</strong> to use the offloaded media.',
+					'amazon-s3-and-cloudfront'
+				),
 				// DeliverySettings
-				'delivery_provider_title'               => _x( 'Delivery Provider', 'Section title', 'amazon-s3-and-cloudfront' ),
-				'edit_delivery_provider'                => _x( 'Change delivery provider', 'Edit delivery provider button tooltip', 'amazon-s3-and-cloudfront' ),
+				'delivery_provider_title'               => _x(
+					'Delivery Provider',
+					'Section title',
+					'amazon-s3-and-cloudfront'
+				),
+				'edit_delivery_provider'                => _x(
+					'Change delivery provider',
+					'Edit delivery provider button tooltip',
+					'amazon-s3-and-cloudfront'
+				),
 				// DeliverySettingsPanel
-				'delivery_settings_title'               => _x( 'Delivery Settings', 'Section title', 'amazon-s3-and-cloudfront' ),
-				'rewrite_media_urls'                    => _x( 'Deliver Offloaded Media', 'Setting title', 'amazon-s3-and-cloudfront' ),
-				'delivery_domain'                       => _x( 'Use Custom Domain Name (CNAME)', 'Setting title', 'amazon-s3-and-cloudfront' ),
+				'delivery_settings_title'               => _x(
+					'Delivery Settings',
+					'Section title',
+					'amazon-s3-and-cloudfront'
+				),
+				'rewrite_media_urls'                    => _x(
+					'Deliver Offloaded Media',
+					'Setting title',
+					'amazon-s3-and-cloudfront'
+				),
+				'delivery_domain'                       => _x(
+					'Use Custom Domain Name (CNAME)',
+					'Setting title',
+					'amazon-s3-and-cloudfront'
+				),
 				'domain_blank'                          => __( 'Domain cannot be blank.', 'amazon-s3-and-cloudfront' ),
-				'domain_invalid_content'                => __( 'Domain can only contain letters, numbers, hyphens (-), and periods (.)', 'amazon-s3-and-cloudfront' ),
+				'domain_invalid_content'                => __(
+					'Domain can only contain letters, numbers, hyphens (-), and periods (.)',
+					'amazon-s3-and-cloudfront'
+				),
 				'domain_too_short'                      => __( 'Domain too short.', 'amazon-s3-and-cloudfront' ),
-				'force_https'                           => _x( 'Force HTTPS', 'Setting title', 'amazon-s3-and-cloudfront' ),
-				'force_https_desc'                      => _x( 'Uses HTTPS for every offloaded media item instead of using the scheme of the current page.', 'Setting description', 'amazon-s3-and-cloudfront' ),
+				'force_https'                           => _x(
+					'Force HTTPS',
+					'Setting title',
+					'amazon-s3-and-cloudfront'
+				),
+				'force_https_desc'                      => _x(
+					'Uses HTTPS for every offloaded media item instead of using the scheme of the current page.',
+					'Setting description',
+					'amazon-s3-and-cloudfront'
+				),
 				// Settings notices
-				'check_again_title'                     => _x( 'Check again', 'Check again button title', 'amazon-s3-and-cloudfront' ),
-				'check_again_active'                    => _x( 'Checking…', 'Check again button title while checking ', 'amazon-s3-and-cloudfront' ),
-				'check_again_desc'                      => _x( 'Check settings again, may be resource intensive.', 'Check again button description ', 'amazon-s3-and-cloudfront' ),
+				'check_again_title'                     => _x(
+					'Check again',
+					'Check again button title',
+					'amazon-s3-and-cloudfront'
+				),
+				'check_again_active'                    => _x(
+					'Checking…',
+					'Check again button title while checking ',
+					'amazon-s3-and-cloudfront'
+				),
+				'check_again_desc'                      => _x(
+					'Check settings again, may be resource intensive.',
+					'Check again button description ',
+					'amazon-s3-and-cloudfront'
+				),
 				// StoragePage
 				'storage_title'                         => _x( 'Storage', 'Page title', 'amazon-s3-and-cloudfront' ),
-				'storage_provider_tab_title'            => _x( 'Storage Provider', 'Tab title', 'amazon-s3-and-cloudfront' ),
+				'storage_provider_tab_title'            => _x(
+					'Storage Provider',
+					'Tab title',
+					'amazon-s3-and-cloudfront'
+				),
 				'bucket_tab_title'                      => _x( 'Bucket', 'Tab title', 'amazon-s3-and-cloudfront' ),
 				'security_tab_title'                    => _x( 'Security', 'Tab title', 'amazon-s3-and-cloudfront' ),
 				'copy_files_tab_title'                  => _x( 'Copy Files', 'Tab title', 'amazon-s3-and-cloudfront' ),
 				// StorageProviderSubPage
-				'select_storage_provider_title'         => _x( '1. Select Provider', 'Section title', 'amazon-s3-and-cloudfront' ),
-				'select_auth_method_title'              => _x( '2. Connection Method', 'Section title', 'amazon-s3-and-cloudfront' ),
+				'select_storage_provider_title'         => _x(
+					'1. Select Provider',
+					'Section title',
+					'amazon-s3-and-cloudfront'
+				),
+				'select_auth_method_title'              => _x(
+					'2. Connection Method',
+					'Section title',
+					'amazon-s3-and-cloudfront'
+				),
 				'auth_method_title'                     => array(
 					'define'      => _x( '3. Add Credentials', 'Section title', 'amazon-s3-and-cloudfront' ),
 					'server-role' => _x( '3. Save Setting', 'Section title', 'amazon-s3-and-cloudfront' ),
 					'database'    => _x( '3. Add Credentials', 'Section title', 'amazon-s3-and-cloudfront' ),
 				),
-				'define_access_keys'                    => __( 'Define access keys in wp-config.php', 'amazon-s3-and-cloudfront' ),
-				'define_key_file_path'                  => __( 'Define key file path in wp-config.php', 'amazon-s3-and-cloudfront' ),
-				'store_access_keys_in_db'               => __( 'I understand the risks but I\'d like to store access keys in the database anyway (not recommended)', 'amazon-s3-and-cloudfront' ),
-				'access_key_id'                         => _x( 'Access Key ID', 'Setting title', 'amazon-s3-and-cloudfront' ),
-				'secret_access_key'                     => _x( 'Secret Access Key', 'Setting title', 'amazon-s3-and-cloudfront' ),
-				'store_key_file_in_db'                  => __( 'I understand the risks but I\'d like to store the key file\'s contents in the database anyway (not recommended)', 'amazon-s3-and-cloudfront' ),
-				'key_file'                              => _x( 'Key File', 'Setting title', 'amazon-s3-and-cloudfront' ),
+				'define_access_keys'                    => __(
+					'Define access keys in wp-config.php',
+					'amazon-s3-and-cloudfront'
+				),
+				'define_key_file_path'                  => __(
+					'Define key file path in wp-config.php',
+					'amazon-s3-and-cloudfront'
+				),
+				'store_access_keys_in_db'               => __(
+					'I understand the risks but I\'d like to store access keys in the database anyway (not recommended)',
+					'amazon-s3-and-cloudfront'
+				),
+				'access_key_id'                         => _x(
+					'Access Key ID',
+					'Setting title',
+					'amazon-s3-and-cloudfront'
+				),
+				'secret_access_key'                     => _x(
+					'Secret Access Key',
+					'Setting title',
+					'amazon-s3-and-cloudfront'
+				),
+				'store_key_file_in_db'                  => __(
+					'I understand the risks but I\'d like to store the key file\'s contents in the database anyway (not recommended)',
+					'amazon-s3-and-cloudfront'
+				),
+				'key_file'                              => _x(
+					'Key File',
+					'Setting title',
+					'amazon-s3-and-cloudfront'
+				),
 				// BucketSettingsSubPage
-				'bucket_source_title'                   => _x( '1. New or Existing Bucket?', 'Section title', 'amazon-s3-and-cloudfront' ),
-				'use_existing_bucket'                   => _x( 'Use Existing Bucket', 'Option title', 'amazon-s3-and-cloudfront' ),
-				'create_new_bucket'                     => _x( 'Create New Bucket', 'Option title', 'amazon-s3-and-cloudfront' ),
-				'existing_bucket_title'                 => _x( '2. Select Bucket', 'Section title', 'amazon-s3-and-cloudfront' ),
-				'new_bucket_title'                      => _x( '2. Bucket Details', 'Section title', 'amazon-s3-and-cloudfront' ),
-				'enter_bucket'                          => _x( 'Enter bucket name', 'Option title', 'amazon-s3-and-cloudfront' ),
-				'select_bucket'                         => _x( 'Browse existing buckets', 'Option title', 'amazon-s3-and-cloudfront' ),
-				'bucket_name'                           => _x( 'Bucket Name', 'Setting title', 'amazon-s3-and-cloudfront' ),
-				'bucket_icon'                           => _x( 'Bucket icon', 'Bucket icon alt text', 'amazon-s3-and-cloudfront' ),
+				'bucket_source_title'                   => _x(
+					'1. New or Existing Bucket?',
+					'Section title',
+					'amazon-s3-and-cloudfront'
+				),
+				'use_existing_bucket'                   => _x(
+					'Use Existing Bucket',
+					'Option title',
+					'amazon-s3-and-cloudfront'
+				),
+				'create_new_bucket'                     => _x(
+					'Create New Bucket',
+					'Option title',
+					'amazon-s3-and-cloudfront'
+				),
+				'existing_bucket_title'                 => _x(
+					'2. Select Bucket',
+					'Section title',
+					'amazon-s3-and-cloudfront'
+				),
+				'new_bucket_title'                      => _x(
+					'2. Bucket Details',
+					'Section title',
+					'amazon-s3-and-cloudfront'
+				),
+				'enter_bucket'                          => _x(
+					'Enter bucket name',
+					'Option title',
+					'amazon-s3-and-cloudfront'
+				),
+				'select_bucket'                         => _x(
+					'Browse existing buckets',
+					'Option title',
+					'amazon-s3-and-cloudfront'
+				),
+				'bucket_name'                           => _x(
+					'Bucket Name',
+					'Setting title',
+					'amazon-s3-and-cloudfront'
+				),
+				'bucket_icon'                           => _x(
+					'Bucket icon',
+					'Bucket icon alt text',
+					'amazon-s3-and-cloudfront'
+				),
 				'region'                                => _x( 'Region', 'Setting title', 'amazon-s3-and-cloudfront' ),
-				'enter_bucket_name_placeholder'         => _x( 'Enter bucket name…', 'Placeholder', 'amazon-s3-and-cloudfront' ),
-				'save_enter_bucket'                     => _x( 'Save Bucket Settings', 'Button text', 'amazon-s3-and-cloudfront' ),
-				'save_select_bucket'                    => _x( 'Save Selected Bucket', 'Button text', 'amazon-s3-and-cloudfront' ),
-				'save_new_bucket'                       => _x( 'Create New Bucket', 'Button text', 'amazon-s3-and-cloudfront' ),
+				'enter_bucket_name_placeholder'         => _x(
+					'Enter bucket name…',
+					'Placeholder',
+					'amazon-s3-and-cloudfront'
+				),
+				'save_enter_bucket'                     => _x(
+					'Save Bucket Settings',
+					'Button text',
+					'amazon-s3-and-cloudfront'
+				),
+				'save_select_bucket'                    => _x(
+					'Save Selected Bucket',
+					'Button text',
+					'amazon-s3-and-cloudfront'
+				),
+				'save_new_bucket'                       => _x(
+					'Create New Bucket',
+					'Button text',
+					'amazon-s3-and-cloudfront'
+				),
 				// SecuritySubPage
-				'block_public_access_title'             => _x( 'Block All Public Access', 'Section title', 'amazon-s3-and-cloudfront' ),
-				'block_public_access_disabled_sub'      => __( 'Block All Public Access is currently <strong>disabled</strong>', 'amazon-s3-and-cloudfront' ),
-				'block_public_access_enabled_sub'       => __( 'Block All Public Access is currently <strong>enabled</strong>', 'amazon-s3-and-cloudfront' ),
-				'block_public_access_enabled_setup_sub' => __( '<strong>Warning:</strong> Block All Public Access is currently <strong>enabled</strong>', 'amazon-s3-and-cloudfront' ),
-				'object_ownership_title'                => _x( 'Object Ownership', 'Section title', 'amazon-s3-and-cloudfront' ),
-				'object_ownership_not_enforced_sub'     => __( 'Object Ownership is currently <strong>not enforced</strong>', 'amazon-s3-and-cloudfront' ),
-				'object_ownership_enforced_sub'         => __( 'Object Ownership is currently <strong>enforced</strong>', 'amazon-s3-and-cloudfront' ),
-				'object_ownership_enforced_setup_sub'   => __( '<strong>Warning:</strong> Object Ownership is currently <strong>enforced</strong>', 'amazon-s3-and-cloudfront' ),
-				'update_bucket_security'                => _x( 'Update Bucket Security', 'Button text', 'amazon-s3-and-cloudfront' ),
-				'keep_bucket_security'                  => _x( 'Keep Bucket Security As Is', 'Button text', 'amazon-s3-and-cloudfront' ),
+				'block_public_access_title'             => _x(
+					'Block All Public Access',
+					'Section title',
+					'amazon-s3-and-cloudfront'
+				),
+				'block_public_access_disabled_sub'      => __(
+					'Block All Public Access is currently <strong>disabled</strong>',
+					'amazon-s3-and-cloudfront'
+				),
+				'block_public_access_enabled_sub'       => __(
+					'Block All Public Access is currently <strong>enabled</strong>',
+					'amazon-s3-and-cloudfront'
+				),
+				'block_public_access_enabled_setup_sub' => __(
+					'<strong>Warning:</strong> Block All Public Access is currently <strong>enabled</strong>',
+					'amazon-s3-and-cloudfront'
+				),
+				'object_ownership_title'                => _x(
+					'Object Ownership',
+					'Section title',
+					'amazon-s3-and-cloudfront'
+				),
+				'object_ownership_not_enforced_sub'     => __(
+					'Object Ownership is currently <strong>not enforced</strong>',
+					'amazon-s3-and-cloudfront'
+				),
+				'object_ownership_enforced_sub'         => __(
+					'Object Ownership is currently <strong>enforced</strong>',
+					'amazon-s3-and-cloudfront'
+				),
+				'object_ownership_enforced_setup_sub'   => __(
+					'<strong>Warning:</strong> Object Ownership is currently <strong>enforced</strong>',
+					'amazon-s3-and-cloudfront'
+				),
+				'update_bucket_security'                => _x(
+					'Update Bucket Security',
+					'Button text',
+					'amazon-s3-and-cloudfront'
+				),
+				'keep_bucket_security'                  => _x(
+					'Keep Bucket Security As Is',
+					'Button text',
+					'amazon-s3-and-cloudfront'
+				),
 				// DeliveryPage
 				'delivery_title'                        => _x( 'Delivery', 'Page title', 'amazon-s3-and-cloudfront' ),
-				'select_delivery_provider_title'        => _x( '1. Select Delivery Provider', 'Section title', 'amazon-s3-and-cloudfront' ),
-				'enter_other_cdn_name_title'            => _x( '2. Use Another CDN', 'Section title', 'amazon-s3-and-cloudfront' ),
-				'enter_other_cdn_name_placeholder'      => _x( 'Enter CDN name…', 'Placeholder', 'amazon-s3-and-cloudfront' ),
+				'select_delivery_provider_title'        => _x(
+					'1. Select Delivery Provider',
+					'Section title',
+					'amazon-s3-and-cloudfront'
+				),
+				'enter_other_cdn_name_title'            => _x(
+					'2. Use Another CDN',
+					'Section title',
+					'amazon-s3-and-cloudfront'
+				),
+				'enter_other_cdn_name_placeholder'      => _x(
+					'Enter CDN name…',
+					'Placeholder',
+					'amazon-s3-and-cloudfront'
+				),
 				'quick_start_guide'                     => __( 'Quick Start Guide', 'amazon-s3-and-cloudfront' ),
-				'view_quick_start_guide'                => _x( 'View quick start guide', 'Help icon tooltip', 'amazon-s3-and-cloudfront' ),
-				'save_delivery_provider'                => _x( 'Save Delivery Provider', 'Button text', 'amazon-s3-and-cloudfront' ),
+				'view_quick_start_guide'                => _x(
+					'View quick start guide',
+					'Help icon tooltip',
+					'amazon-s3-and-cloudfront'
+				),
+				'save_delivery_provider'                => _x(
+					'Save Delivery Provider',
+					'Button text',
+					'amazon-s3-and-cloudfront'
+				),
 				'nothing_to_save'                       => __( 'No changes to save', 'amazon-s3-and-cloudfront' ),
-				'no_delivery_provider_name'             => __( 'A CDN name has not been entered.', 'amazon-s3-and-cloudfront' ),
+				'no_delivery_provider_name'             => __(
+					'A CDN name has not been entered.',
+					'amazon-s3-and-cloudfront'
+				),
 				'delivery_provider_name_short'          => __( 'CDN name too short.', 'amazon-s3-and-cloudfront' ),
 				// AssetsPage
-				'assets_title'                          => _x( 'Asset Settings', 'Page title', 'amazon-s3-and-cloudfront' ),
-				'assets_upsell_heading'                 => __( 'Media Files Are Only the Beginning…', 'amazon-s3-and-cloudfront' ),
+				'assets_title'                          => _x(
+					'Asset Settings',
+					'Page title',
+					'amazon-s3-and-cloudfront'
+				),
+				'assets_upsell_heading'                 => __(
+					'Media Files Are Only the Beginning…',
+					'amazon-s3-and-cloudfront'
+				),
 				'assets_upsell_description'             => sprintf(
-					__( 'Assets such as scripts, styles, and fonts can also be served from a Content Delivery Network (CDN) to improve website load times. <a href="%s">Upgrade to a qualifying license of WP Offload Media</a> to speed up the delivery of these critical assets today.', 'amazon-s3-and-cloudfront' ),
-					$this->dbrains_url( '/wp-offload-media/pricing/', array( 'utm_campaign' => 'WP+Offload+S3', 'utm_content' => 'upsell_assets' ) )
+				/* translators: %s is a URL. */
+					__(
+						'Assets such as scripts, styles, and fonts can also be served from a Content Delivery Network (CDN) to improve website load times. <a href="%s">Upgrade to a qualifying license of WP Offload Media</a> to speed up the delivery of these critical assets today.',
+						'amazon-s3-and-cloudfront'
+					),
+					$this->dbrains_url(
+						'/wp-offload-media/pricing/',
+						array( 'utm_campaign' => 'WP+Offload+S3', 'utm_content' => 'upsell_assets' )
+					)
 				),
-				'assets_uppsell_benefits'               => array(
-					'css'   => _x( 'Cascading style sheets (CSS)', 'Assets uppsell benefit', 'amazon-s3-and-cloudfront' ),
-					'js'    => _x( 'JavaScript (JS)', 'Assets uppsell benefit', 'amazon-s3-and-cloudfront' ),
-					'fonts' => _x( 'Fonts', 'Assets uppsell benefit', 'amazon-s3-and-cloudfront' ),
+				'assets_upsell_benefits'                => array(
+					'css'   => _x(
+						'Cascading style sheets (CSS)',
+						'Assets upsell benefit',
+						'amazon-s3-and-cloudfront'
+					),
+					'js'    => _x( 'JavaScript (JS)', 'Assets upsell benefit', 'amazon-s3-and-cloudfront' ),
+					'fonts' => _x( 'Fonts', 'Assets upsell benefit', 'amazon-s3-and-cloudfront' ),
 				),
-				'assets_upsell_cta'                     => _x( 'Upgrade now', 'Upsell call to action', 'amazon-s3-and-cloudfront' ),
-				'assets_upsell_cta_note'                => __( 'Already have a qualifying license? <a href="#/license">Enter License Key</a>', 'amazon-s3-and-cloudfront' ),
+				'assets_upsell_cta'                     => _x(
+					'Upgrade now',
+					'Upsell call to action',
+					'amazon-s3-and-cloudfront'
+				),
+				'assets_upsell_cta_note'                => __(
+					'Already have a qualifying license? <a href="#/license">Enter License Key</a>',
+					'amazon-s3-and-cloudfront'
+				),
 
 				// ToolsPage
-				'tools_title'                           => _x( 'Bulk Management Tools', 'Page title', 'amazon-s3-and-cloudfront' ),
-				'tools_upsell_heading'                  => __( 'Easily Manage Local and Offloaded Media', 'amazon-s3-and-cloudfront' ),
+				'tools_title'                           => _x(
+					'Bulk Management Tools',
+					'Page title',
+					'amazon-s3-and-cloudfront'
+				),
+				'tools_upsell_heading'                  => __(
+					'Easily Manage Local and Offloaded Media',
+					'amazon-s3-and-cloudfront'
+				),
 				'tools_upsell_description'              => sprintf(
-					__( 'Whether you need to offload a library of existing media items or return offloaded files back to your local server, there\'s a tool for every job. <a href="%s">Upgrade to any license of WP Offload Media</a> to take advantage of these powerful tools today.', 'amazon-s3-and-cloudfront' ),
-					$this->dbrains_url( '/wp-offload-media/pricing/', array( 'utm_campaign' => 'WP+Offload+S3', 'utm_content' => 'upsell_tools' ) )
+				/* translators: %s is a URL. */
+					__(
+						'Whether you need to offload a library of existing media items or return offloaded files back to your local server, there\'s a tool for every job. <a href="%s">Upgrade to any license of WP Offload Media</a> to take advantage of these powerful tools today.',
+						'amazon-s3-and-cloudfront'
+					),
+					$this->dbrains_url(
+						'/wp-offload-media/pricing/',
+						array( 'utm_campaign' => 'WP+Offload+S3', 'utm_content' => 'upsell_tools' )
+					)
 				),
-				'tools_uppsell_benefits'                => array(
-					'offload'       => _x( 'Offload remaining media', 'Assets uppsell benefit', 'amazon-s3-and-cloudfront' ),
-					'download'      => _x( 'Download files from bucket to server', 'Assets uppsell benefit', 'amazon-s3-and-cloudfront' ),
-					'remove_bucket' => _x( 'Remove all files from bucket', 'amazon-s3-and-cloudfront' ),
-					'remove_server' => _x( 'Remove all files from server', 'amazon-s3-and-cloudfront' ),
+				'tools_upsell_benefits'                 => array(
+					'offload'       => _x(
+						'Offload remaining media',
+						'Tools upsell benefit',
+						'amazon-s3-and-cloudfront'
+					),
+					'download'      => _x(
+						'Download files from bucket to server',
+						'Tools upsell benefit',
+						'amazon-s3-and-cloudfront'
+					),
+					'remove_bucket' => _x(
+						'Remove all files from bucket',
+						'Tools upsell benefit',
+						'amazon-s3-and-cloudfront'
+					),
+					'remove_server' => _x(
+						'Remove all files from server',
+						'Tools upsell benefit',
+						'amazon-s3-and-cloudfront'
+					),
 				),
-				'tools_upsell_cta'                      => _x( 'Upgrade now', 'Upsell call to action', 'amazon-s3-and-cloudfront' ),
+				'tools_upsell_cta'                      => _x(
+					'Upgrade now',
+					'Upsell call to action',
+					'amazon-s3-and-cloudfront'
+				),
 
 				// SupportPage
-				'no_support'                            => __( 'As this is a free plugin, we do not provide support.', 'amazon-s3-and-cloudfront' ),
+				'no_support'                            => __(
+					'As this is a free plugin, we do not provide support.',
+					'amazon-s3-and-cloudfront'
+				),
 				'community_support'                     => sprintf(
-					__( 'You may ask the WordPress community for help by posting to the <a href="%s">WordPress.org support forum</a>. Response time can range from a few days to a few weeks and will likely be from a non-developer.', 'amazon-s3-and-cloudfront' ),
+				/* translators: %s is a URL. */
+					__(
+						'You may ask the WordPress community for help by posting to the <a href="%s">WordPress.org support forum</a>. Response time can range from a few days to a few weeks and will likely be from a non-developer.',
+						'amazon-s3-and-cloudfront'
+					),
 					'https://wordpress.org/plugins/amazon-s3-and-cloudfront/'
 				),
 				'upgrade_for_support'                   => sprintf(
-					__( 'If you want a <strong>timely response via email from a developer</strong> who works on this plugin, <a href="%s">upgrade</a> and send us an email.', 'amazon-s3-and-cloudfront' ),
-					$this->dbrains_url( '/wp-offload-media/', array( 'utm_campaign' => 'WP+Offload+S3', 'utm_content' => 'support+tab' ) )
+				/* translators: %s is a URL. */
+					__(
+						'If you want a <strong>timely response via email from a developer</strong> who works on this plugin, <a href="%s">upgrade</a> and send us an email.',
+						'amazon-s3-and-cloudfront'
+					),
+					$this->dbrains_url(
+						'/wp-offload-media/',
+						array( 'utm_campaign' => 'WP+Offload+S3', 'utm_content' => 'support+tab' )
+					)
 				),
 				'report_a_bug'                          => sprintf(
-					__( 'If you\'ve found a bug, please <a href="%s">submit an issue on GitHub</a>.', 'amazon-s3-and-cloudfront' ),
+				/* translators: %s is a URL. */
+					__(
+						'If you\'ve found a bug, please <a href="%s">submit an issue on GitHub</a>.',
+						'amazon-s3-and-cloudfront'
+					),
 					'https://github.com/deliciousbrains/wp-amazon-s3-and-cloudfront/issues'
 				),
-				'diagnostic_info_title'                 => _x( 'Diagnostic Info', 'Section title', 'amazon-s3-and-cloudfront' ),
-				'download_diagnostics'                  => _x( 'Download', 'Download diagnostics button text', 'amazon-s3-and-cloudfront' ),
+				'diagnostic_info_title'                 => _x(
+					'Diagnostic Info',
+					'Section title',
+					'amazon-s3-and-cloudfront'
+				),
+				'download_diagnostics'                  => _x(
+					'Download',
+					'Download diagnostics button text',
+					'amazon-s3-and-cloudfront'
+				),
 				// Mimic WP Core's notice text, therefore no translation needed here.
-				'settings_saved'                        => __( 'Settings saved.' ),
-				'dismiss_notice'                        => __( 'Dismiss this notice.' ),
+				'settings_saved'                        => __( 'Settings saved.', 'amazon-s3-and-cloudfront' ),
+				'dismiss_notice'                        => __( 'Dismiss this notice.', 'amazon-s3-and-cloudfront' ),
 			),
 			'settings'                         => $this->obfuscate_sensitive_settings( $this->get_all_settings() ),
 			'defined_settings'                 => array_keys( $this->get_defined_settings() ),
-			'default_storage_provider'         => static::get_default_storage_provider(), // Hoisted up as needed before providers derived
+			'default_storage_provider'         => static::get_default_storage_provider(),
+			// Hoisted up as needed before providers derived
 			'storage_providers'                => $this->get_available_storage_provider_details(),
 			'default_delivery_provider'        => static::get_default_delivery_provider(),
 			'delivery_providers'               => $this->get_available_delivery_provider_details(),
@@ -2892,9 +3451,13 @@ class Amazon_S3_And_CloudFront extends AS3CF_Plugin_Base {
 	 * @param string $time
 	 *
 	 * @return string
+	 *
+	 * phpcs:disable WordPress.Security.NonceVerification.Missing
+	 * phpcs:disable WordPress.Security.ValidatedSanitizedInput.MissingUnslash
+	 * phpcs:disable WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
 	 */
-	function get_year_month_directory_name( $time = null ) {
-		if ( ! $time && isset( $_POST['post_id'] ) ) {
+	private function get_year_month_directory_name( $time = null ) {
+		if ( ! $time && ! empty( $_POST['post_id'] ) && is_int( $_POST['post_id'] ) ) {
 			$time = get_post_field( 'post_date', $_POST['post_id'] );
 		}
 
@@ -2923,7 +3486,12 @@ class Amazon_S3_And_CloudFront extends AS3CF_Plugin_Base {
 		$filename = wp_basename( $as3cf_item->path( $size ) );
 		$acl      = $as3cf_item->is_private( $size ) ? $this->get_storage_provider()->get_private_acl() : $this->get_storage_provider()->get_default_acl();
 		$acl_name = $this->get_acl_display_name( $acl );
-		$text     = sprintf( __( 'The file %s has been given %s permissions in the bucket.', 'amazon-s3-and-cloudfront' ), "<strong>{$filename}</strong>", "<strong>{$acl_name}</strong>" );
+		$text     = sprintf(
+		/* translators: %1$s is a file name, %2$s is an ACL name, e.g. "private" . */
+			__( 'The file %1$s has been given %2$s permissions in the bucket.', 'amazon-s3-and-cloudfront' ),
+			"<strong>{$filename}</strong>",
+			"<strong>{$acl_name}</strong>"
+		);
 
 		$this->notices->add_notice( $text );
 	}
@@ -2942,7 +3510,10 @@ class Amazon_S3_And_CloudFront extends AS3CF_Plugin_Base {
 
 		if ( ! $gd_enabled && ! $imagick_enabled ) {
 			$this->notices->add_notice(
-				__( '<strong>WP Offload Media Requirement Missing</strong> &mdash; Looks like you don\'t have an image manipulation library installed on this server and configured with PHP. You may run into trouble if you try to edit images. Please setup GD or ImageMagick.', 'amazon-s3-and-cloudfront' ),
+				__(
+					'<strong>WP Offload Media Requirement Missing</strong> &mdash; Looks like you don\'t have an image manipulation library installed on this server and configured with PHP. You may run into trouble if you try to edit images. Please setup GD or ImageMagick.',
+					'amazon-s3-and-cloudfront'
+				),
 				array( 'flash' => false, 'only_show_to_user' => false, 'only_show_in_settings' => true )
 			);
 		}
@@ -2966,7 +3537,11 @@ class Amazon_S3_And_CloudFront extends AS3CF_Plugin_Base {
 		if ( count( $missing_tables ) !== 0 ) {
 			$this->notices->add_notice(
 				sprintf(
-					__( '<strong>Missing Table</strong> &mdash; One or more required database tables are missing, please check the Diagnostic Info in the Support tab for details. %s', 'amazon-s3-and-cloudfront' ),
+				/* translators: %s is a URL. */
+					__(
+						'<strong>Missing Table</strong> &mdash; One or more required database tables are missing, please check the Diagnostic Info in the Support tab for details. %s',
+						'amazon-s3-and-cloudfront'
+					),
 					static::more_info_link(
 						'/wp-offload-media/doc/missing-table-error-notice',
 						'missing-table'
@@ -3057,7 +3632,9 @@ class Amazon_S3_And_CloudFront extends AS3CF_Plugin_Base {
 		$output .= "\r\n";
 
 		$output .= 'Web Server: ';
-		$output .= esc_html( ! empty( $_SERVER['SERVER_SOFTWARE'] ) ? $_SERVER['SERVER_SOFTWARE'] : '' );
+		$output .= esc_html(
+			! empty( $_SERVER['SERVER_SOFTWARE'] ) ? sanitize_text_field( $_SERVER['SERVER_SOFTWARE'] ) : ''
+		);
 		$output .= "\r\n";
 
 		$output .= 'PHP: ';
@@ -3642,7 +4219,13 @@ class Amazon_S3_And_CloudFront extends AS3CF_Plugin_Base {
 			return basename( $plugin_path );
 		}
 
-		return sprintf( "%s%s (v%s) by %s\r\n", $plugin_data['Name'], $suffix, $plugin_data['Version'], strip_tags( $plugin_data['AuthorName'] ) );
+		return sprintf(
+			"%s%s (v%s) by %s\r\n",
+			$plugin_data['Name'],
+			$suffix,
+			$plugin_data['Version'],
+			wp_strip_all_tags( $plugin_data['AuthorName'] )
+		);
 	}
 
 	/**
@@ -3666,16 +4249,21 @@ class Amazon_S3_And_CloudFront extends AS3CF_Plugin_Base {
 	 * @return void
 	 */
 	private function http_prepare_download_log() {
-		if ( isset( $_GET['as3cf-download-log'] ) && wp_verify_nonce( $_GET['nonce'], 'as3cf-download-log' ) ) {
-			$log      = $this->output_diagnostic_info();
-			$url      = parse_url( home_url() );
-			$host     = sanitize_file_name( $url['host'] );
+		if (
+			isset( $_GET['nonce'] ) &&
+			isset( $_GET['as3cf-download-log'] ) &&
+			wp_verify_nonce( $_GET['nonce'], 'as3cf-download-log' )
+		) {
+			$log  = $this->output_diagnostic_info();
+			$url  = wp_parse_url( home_url() );
+			$host = sanitize_file_name( $url['host'] );
+			// phpcs:ignore WordPress.DateTime.RestrictedFunctions.date_date
 			$filename = sprintf( '%s-diagnostic-log-%s.txt', $host, date( 'YmdHis' ) );
 			header( 'Content-Description: File Transfer' );
 			header( 'Content-Type: application/octet-stream' );
 			header( 'Content-Length: ' . strlen( $log ) );
 			header( 'Content-Disposition: attachment; filename=' . $filename );
-			echo $log;
+			echo wp_kses_post( $log );
 			exit;
 		}
 	}
@@ -3792,10 +4380,13 @@ class Amazon_S3_And_CloudFront extends AS3CF_Plugin_Base {
 		global $wpdb;
 
 		// Sum the total file size (including image sizes) for all S3 attachments
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
 		$sql = "SELECT SUM( meta_value ) AS bytes_total
-				FROM {$wpdb->postmeta}
-				WHERE meta_key = 'as3cf_filesize_total'";
+			FROM {$wpdb->postmeta}
+			WHERE meta_key = 'as3cf_filesize_total'
+		";
 
+		// phpcs:ignore WordPress.DB -- safe query
 		$space_used = $wpdb->get_var( $sql );
 
 		// Get local upload sizes
@@ -3813,7 +4404,7 @@ class Amazon_S3_And_CloudFront extends AS3CF_Plugin_Base {
 	/**
 	 * Memory exceeded
 	 *
-	 * Ensures the a process never exceeds 90% of the maximum WordPress memory.
+	 * Ensures the process never exceeds 90% of the maximum WordPress memory.
 	 *
 	 * @param null|string $filter_name Name of filter to apply to the return
 	 *
@@ -3832,6 +4423,7 @@ class Amazon_S3_And_CloudFront extends AS3CF_Plugin_Base {
 			return $return;
 		}
 
+		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.DynamicHooknameFound
 		return apply_filters( $filter_name, $return );
 	}
 
@@ -3927,7 +4519,12 @@ class Amazon_S3_And_CloudFront extends AS3CF_Plugin_Base {
 				}
 
 				// Let other parts of the plugin add/update the media counts on a per-blog basis.
-				$attachment_counts = apply_filters( 'as3cf_media_counts_for_blog', $attachment_counts, $blog_id, $table_prefix );
+				$attachment_counts = apply_filters(
+					'as3cf_media_counts_for_blog',
+					$attachment_counts,
+					$blog_id,
+					$table_prefix
+				);
 
 				$this->restore_current_blog();
 			}
@@ -3998,6 +4595,7 @@ class Amazon_S3_And_CloudFront extends AS3CF_Plugin_Base {
 					'status' => false,
 				);
 
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery
 				if ( $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $table_name ) ) === $table_name ) {
 					$db_init_status[ $blog_id ]['status'] = true;
 				}
@@ -4022,10 +4620,16 @@ class Amazon_S3_And_CloudFront extends AS3CF_Plugin_Base {
 		if ( false !== ( $deactivated_notice_id = get_transient( 'as3cf_deactivated_notice_id' ) ) ) {
 			if ( '1' === $deactivated_notice_id ) {
 				$title   = __( 'WP Offload Media Activation', 'amazon-s3-and-cloudfront' );
-				$message = __( "WP Offload Media Lite and WP Offload Media cannot both be active. We've automatically deactivated WP Offload Media Lite.", 'amazon-s3-and-cloudfront' );
+				$message = __(
+					"WP Offload Media Lite and WP Offload Media cannot both be active. We've automatically deactivated WP Offload Media Lite.",
+					'amazon-s3-and-cloudfront'
+				);
 			} else {
 				$title   = __( 'WP Offload Media Lite Activation', 'amazon-s3-and-cloudfront' );
-				$message = __( "WP Offload Media Lite and WP Offload Media cannot both be active. We've automatically deactivated WP Offload Media.", 'amazon-s3-and-cloudfront' );
+				$message = __(
+					"WP Offload Media Lite and WP Offload Media cannot both be active. We've automatically deactivated WP Offload Media.",
+					'amazon-s3-and-cloudfront'
+				);
 			}
 
 			$message = sprintf( '<strong>%s</strong> &mdash; %s', esc_html( $title ), esc_html( $message ) );
@@ -4081,7 +4685,14 @@ class Amazon_S3_And_CloudFront extends AS3CF_Plugin_Base {
 	 *
 	 * @return string
 	 */
-	public static function more_info_link( $path, $utm_content = '', $hash = '', $text = '', $prefix = '', $suffix = '' ) {
+	public static function more_info_link(
+		$path,
+		$utm_content = '',
+		$hash = '',
+		$text = '',
+		$prefix = '',
+		$suffix = ''
+	) {
 		$args = array(
 			'utm_campaign' => 'support+docs',
 		);
@@ -4109,7 +4720,11 @@ class Amazon_S3_And_CloudFront extends AS3CF_Plugin_Base {
 	 *
 	 * @return string
 	 */
-	public static function settings_more_info_link( string $hash, string $text = '', string $utm_content = '' ): string {
+	public static function settings_more_info_link(
+		string $hash,
+		string $text = '',
+		string $utm_content = ''
+	): string {
 		return static::more_info_link( '/wp-offload-media/doc/settings/', $utm_content, $hash, $text );
 	}
 
@@ -4127,7 +4742,8 @@ class Amazon_S3_And_CloudFront extends AS3CF_Plugin_Base {
 			// Storage Settings.
 			'storage-provider'          => array( 'doc' => 'settings', 'hash' => 'storage-provider' ),
 			'bucket'                    => array( 'doc' => 'settings', 'hash' => 'bucket' ),
-			'region'                    => array( 'doc' => 'settings', 'hash' => 'bucket' ), // bucket section references region
+			'region'                    => array( 'doc' => 'settings', 'hash' => 'bucket' ),
+			// bucket section references region
 			'copy-to-s3'                => array( 'doc' => 'settings', 'hash' => 'copy-to-s3' ),
 			'enable-object-prefix'      => array( 'doc' => 'settings', 'hash' => 'object-prefix' ),
 			'object-prefix'             => array( 'doc' => 'settings', 'hash' => 'object-prefix' ),
@@ -4152,6 +4768,7 @@ class Amazon_S3_And_CloudFront extends AS3CF_Plugin_Base {
 			$_docs_data = array_merge( $_docs_data, $docs_data );
 		}
 
+		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.DynamicHooknameFound
 		foreach ( apply_filters( $this->get_plugin_prefix() . '_docs_data', $_docs_data ) as $key => $data ) {
 			$args = array( 'utm_campaign' => 'support+docs' );
 			$hash = '';
@@ -4182,6 +4799,7 @@ class Amazon_S3_And_CloudFront extends AS3CF_Plugin_Base {
 			);
 		}
 
+		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.DynamicHooknameFound
 		return apply_filters( $this->get_plugin_prefix() . '_get_docs', $docs );
 	}
 
@@ -4232,10 +4850,20 @@ class Amazon_S3_And_CloudFront extends AS3CF_Plugin_Base {
 		$doc_url  = $this->dbrains_url( '/wp-offload-media/doc/force-http-setting/', array(
 			'utm_campaign' => 'support+docs',
 		) );
-		$doc_link = AS3CF_Utils::dbrains_link( $doc_url, __( 'this doc' ) );
+		$doc_link = AS3CF_Utils::dbrains_link( $doc_url, __( 'this doc', 'amazon-s3-and-cloudfront' ) );
 
-		$message = sprintf( '<strong>%s</strong> &mdash; ', __( 'WP Offload Media Feature Removed', 'amazon-s3-and-cloudfront' ) );
-		$message .= sprintf( __( 'You had the "Always non-SSL" option selected in your settings, but we\'ve removed this option in version 1.3. We\'ll now use HTTPS when the request is HTTPS and regular HTTP when the request is HTTP. This should work fine for your site, but please take a poke around and make sure things are working ok. See %s for more details on why we did this and how you can revert back to the old behavior.', 'amazon-s3-and-cloudfront' ), $doc_link );
+		$message = sprintf(
+			'<strong>%s</strong> &mdash; ',
+			__( 'WP Offload Media Feature Removed', 'amazon-s3-and-cloudfront' )
+		);
+		$message .= sprintf(
+		/* translators: %s is a URL. */
+			__(
+				'You had the "Always non-SSL" option selected in your settings, but we\'ve removed this option in version 1.3. We\'ll now use HTTPS when the request is HTTPS and regular HTTP when the request is HTTP. This should work fine for your site, but please take a poke around and make sure things are working ok. See %s for more details on why we did this and how you can revert back to the old behavior.',
+				'amazon-s3-and-cloudfront'
+			),
+			$doc_link
+		);
 
 		$this->notices->add_notice( $message, $notice_args );
 	}
@@ -4253,7 +4881,12 @@ class Amazon_S3_And_CloudFront extends AS3CF_Plugin_Base {
 	 */
 	public function maybe_update_delivery_path( $path, $domain, $timestamp = null ) {
 		if ( static::get_default_delivery_provider() !== $this->get_delivery_provider()->get_provider_key_name() ) {
-			$path_parts = apply_filters( 'as3cf_cloudfront_path_parts', explode( '/', $path ), $domain, $timestamp ); // Backwards compatibility.
+			$path_parts = apply_filters(
+				'as3cf_cloudfront_path_parts',
+				explode( '/', $path ),
+				$domain,
+				$timestamp
+			); // Backwards compatibility.
 			$path_parts = apply_filters( 'as3cf_delivery_domain_path_parts', $path_parts, $domain, $timestamp );
 
 			if ( ! empty( $path_parts ) ) {
@@ -4305,12 +4938,17 @@ class Amazon_S3_And_CloudFront extends AS3CF_Plugin_Base {
 	 *
 	 * @param int                     $attachment_id
 	 * @param string                  $size
-	 * @param string                  $bucket     Optional bucket that ACL is potentially to be used with.
+	 * @param string|null             $bucket     Optional bucket that ACL is potentially to be used with.
 	 * @param Media_Library_Item|null $as3cf_item Optional item.
 	 *
 	 * @return string|null
 	 */
-	public function get_acl_for_intermediate_size( $attachment_id, $size, $bucket = null, Media_Library_Item $as3cf_item = null ) {
+	public function get_acl_for_intermediate_size(
+		int $attachment_id,
+		string $size,
+		?string $bucket = null,
+		?Media_Library_Item $as3cf_item = null
+	): ?string {
 		if ( empty( $as3cf_item ) ) {
 			$as3cf_item = Media_Library_Item::get_by_source_id( $attachment_id );
 		}
@@ -4331,14 +4969,19 @@ class Amazon_S3_And_CloudFront extends AS3CF_Plugin_Base {
 	/**
 	 * Are ACLs in use for intermediate size on bucket?
 	 *
-	 * @param int       $attachment_id
-	 * @param string    $size
-	 * @param string    $bucket     Optional bucket that ACL is potentially to be used with.
-	 * @param Item|null $as3cf_item Optional item.
+	 * @param int         $attachment_id
+	 * @param string      $size
+	 * @param string|null $bucket     Optional bucket that ACL is potentially to be used with.
+	 * @param Item|null   $as3cf_item Optional item.
 	 *
 	 * @return bool
 	 */
-	public function use_acl_for_intermediate_size( $attachment_id, $size, $bucket = null, Item $as3cf_item = null ) {
+	public function use_acl_for_intermediate_size(
+		int $attachment_id,
+		string $size,
+		?string $bucket = null,
+		?Item $as3cf_item = null
+	): bool {
 		// If this function is used without passing in an Item object, we're assuming $attachment
 		if ( empty( $as3cf_item ) ) {
 			$as3cf_item = Media_Library_Item::get_by_source_id( $attachment_id );
@@ -4352,8 +4995,22 @@ class Amazon_S3_And_CloudFront extends AS3CF_Plugin_Base {
 			$bucket = $this->get_setting( 'bucket', null );
 		}
 
-		$use_acl            = apply_filters( 'as3cf_use_bucket_acls_for_intermediate_size', $this->get_setting( 'use-bucket-acls', true ), $attachment_id, $size, $bucket, $as3cf_item );
-		$use_private_prefix = apply_filters( 'as3cf_enable_signed_urls_for_intermediate_size', $this->private_prefix_enabled(), $attachment_id, $size, $bucket, $as3cf_item );
+		$use_acl            = apply_filters(
+			'as3cf_use_bucket_acls_for_intermediate_size',
+			$this->get_setting( 'use-bucket-acls', true ),
+			$attachment_id,
+			$size,
+			$bucket,
+			$as3cf_item
+		);
+		$use_private_prefix = apply_filters(
+			'as3cf_enable_signed_urls_for_intermediate_size',
+			$this->private_prefix_enabled(),
+			$attachment_id,
+			$size,
+			$bucket,
+			$as3cf_item
+		);
 
 		// If signed custom URLs are in play, and we have a private object, usually you can not use ACLs.
 		if ( $use_acl && $use_private_prefix && ! empty( $as3cf_item ) && $as3cf_item->is_private( $size ) ) {
@@ -4361,7 +5018,14 @@ class Amazon_S3_And_CloudFront extends AS3CF_Plugin_Base {
 		}
 
 		// Allow complete override if signed custom URLs and ACLs do play nice together some how, or other factors in play.
-		return apply_filters( 'as3cf_use_acl_for_intermediate_size', $use_acl, $attachment_id, $size, $bucket, $as3cf_item );
+		return apply_filters(
+			'as3cf_use_acl_for_intermediate_size',
+			$use_acl,
+			$attachment_id,
+			$size,
+			$bucket,
+			$as3cf_item
+		);
 	}
 
 	/**
@@ -4411,9 +5075,15 @@ class Amazon_S3_And_CloudFront extends AS3CF_Plugin_Base {
 	 * @see https://github.com/WordPress/WordPress/blob/9b68e5953406024c75b92f7ebe2aef0385c8956e/wp-admin/options-head.php#L13-L16
 	 */
 	public function settings_saved_notice() {
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
 		if ( isset( $_GET['updated'] ) && isset( $_GET['page'] ) ) {
 			// For back-compat with plugins that don't use the Settings API and just set updated=1 in the redirect.
-			add_settings_error( 'general', 'settings_updated', __( 'Settings saved.' ), 'updated' );
+			add_settings_error(
+				'general',
+				'settings_updated',
+				__( 'Settings saved.', 'amazon-s3-and-cloudfront' ),
+				'updated'
+			);
 		}
 
 		settings_errors();
@@ -4427,18 +5097,29 @@ class Amazon_S3_And_CloudFront extends AS3CF_Plugin_Base {
 			add_action( 'aws_access_key_form_header', array( $this, 'handle_aws_access_key_form_header' ) );
 
 			$message = sprintf(
-				__( '<strong>Amazon Web Services Plugin No Longer Required</strong> &mdash; As of version 1.6 of WP Offload Media, the <a href="%1$s">Amazon Web Services</a> plugin is no longer required. We have removed the dependency by bundling a small portion of the AWS SDK into WP Offload Media. As long as none of your other active plugins or themes depend on the Amazon Web Services plugin, it should be safe to deactivate and delete it. %2$s', 'amazon-s3-and-cloudfront' ),
+			/* translators: %1$s is a URL, %2$s is a different URL. */
+				__(
+					'<strong>Amazon Web Services Plugin No Longer Required</strong> &mdash; As of version 1.6 of WP Offload Media, the <a href="%1$s">Amazon Web Services</a> plugin is no longer required. We have removed the dependency by bundling a small portion of the AWS SDK into WP Offload Media. As long as none of your other active plugins or themes depend on the Amazon Web Services plugin, it should be safe to deactivate and delete it. %2$s',
+					'amazon-s3-and-cloudfront'
+				),
 				'https://wordpress.org/plugins/amazon-web-services/',
 				static::more_info_link( '/wp-offload-s3-1-6-released/', 'os3+settings+aws+active' )
 			);
-			$args    = array(
+
+			$args = array(
 				'only_show_to_user'     => false,
 				'only_show_in_settings' => true,
 				'custom_id'             => 'aws-plugin-no-longer-required',
 			);
 			$this->notices->add_notice( $message, $args );
 
-			if ( is_a( $this->get_storage_provider(), '\DeliciousBrains\WP_Offload_Media\Providers\Storage\AWS_Provider' ) && $this->get_storage_provider()->needs_access_keys() ) {
+			if (
+				is_a(
+					$this->get_storage_provider(),
+					'\DeliciousBrains\WP_Offload_Media\Providers\Storage\AWS_Provider'
+				) &&
+				$this->get_storage_provider()->needs_access_keys()
+			) {
 				// Have access keys been defined in still active AWS plugin's database settings?
 				$aws_settings = get_site_option( 'aws_settings' );
 
@@ -4459,11 +5140,16 @@ class Amazon_S3_And_CloudFront extends AS3CF_Plugin_Base {
 	 */
 	public function handle_aws_access_key_form_header() {
 		$notice['message'] = sprintf(
-			__( '<strong>WP Offload Media Settings Moved</strong> &mdash; You now define your AWS keys for WP Offload Media in the new <a href="%1$s">Settings tab</a>. Saving settings in the form below will have no effect on WP Offload Media. %2$s', 'amazon-s3-and-cloudfront' ),
+		/* translators: %1$s is a URL, %2$s is a different URL. */
+			__(
+				'<strong>WP Offload Media Settings Moved</strong> &mdash; You now define your AWS keys for WP Offload Media in the new <a href="%1$s">Settings tab</a>. Saving settings in the form below will have no effect on WP Offload Media. %2$s',
+				'amazon-s3-and-cloudfront'
+			),
 			$this->get_plugin_page_url( array( 'hash' => 'settings' ) ),
 			static::more_info_link( '/wp-offload-s3-1-6-released/', 'aws+os3+access+keys+setting+moved' )
 		);
-		$notice['inline']  = true;
+
+		$notice['inline'] = true;
 
 		$this->render_view( 'notice', $notice );
 	}
@@ -4719,47 +5405,71 @@ class Amazon_S3_And_CloudFront extends AS3CF_Plugin_Base {
 			$region = '';
 		}
 
-		return apply_filters( 'as3cf_js_urls', array(
-			'api'                                    => esc_url_raw( rest_url() ),
-			'settings'                               => $this->get_plugin_page_url(),
-			'home'                                   => network_home_url(),
-			'home_domain'                            => parse_url( network_home_url(), PHP_URL_HOST ),
-			'admin'                                  => network_admin_url(),
-			'assets'                                 => plugins_url( 'assets/', $this->get_plugin_file_path() ),
-			'url_example'                            => $this->get_url_preview(),
-			'url_parts'                              => $this->get_url_preview( true ),
-			'storage_provider_console_base'          => $this->get_storage_provider()->get_console_url(),
-			'storage_provider_console_prefix_param'  => $this->get_storage_provider()->get_console_url_prefix_param(),
-			'storage_provider_console_url'           => $this->get_storage_provider()->get_console_url(
-				$this->get_setting( 'bucket' ),
-				$this->get_object_prefix(),
-				$region
-			),
-			'delivery_provider_console_base'         => $this->get_delivery_provider()->get_console_url(),
-			'delivery_provider_console_prefix_param' => $this->get_delivery_provider()->get_console_url_prefix_param(),
-			'delivery_provider_console_url'          => $this->get_delivery_provider()->get_console_url(
-				$this->get_setting( 'bucket' ),
-				$this->get_object_prefix(),
-				$region
-			),
-			'pricing'                                => $this->dbrains_url( '/wp-offload-media/pricing/', array( 'utm_campaign' => 'WP+Offload+S3' ) ),
-			'header_discount'                        => $this->dbrains_url( '/wp-offload-media/pricing/', array( 'utm_campaign' => 'WP+Offload+S3', 'utm_content' => 'header' ) ),
-			'upsell_discount'                        => $this->dbrains_url( '/wp-offload-media/pricing/', array( 'utm_campaign' => 'WP+Offload+S3', 'utm_content' => 'upsell' ) ),
-			'sidebar_plugin'                         => $this->dbrains_url( '/wp-offload-media/', array( 'utm_campaign' => 'WP+Offload+S3', 'utm_content' => 'sidebar' ) ),
-			'sidebar_discount'                       => $this->dbrains_url( '/wp-offload-media/pricing/', array( 'utm_campaign' => 'WP+Offload+S3', 'utm_content' => 'sidebar' ) ),
-			'upsell_discount_assets'                 => $this->dbrains_url( '/wp-offload-media/pricing/', array( 'utm_campaign' => 'WP+Offload+S3', 'utm_content' => 'upsell_assets' ) ),
-			'upsell_discount_tools'                  => $this->dbrains_url( '/wp-offload-media/pricing/', array( 'utm_campaign' => 'WP+Offload+S3', 'utm_content' => 'upsell_tools' ) ),
-			'sidebar_dbi'                            => 'https://wpengine.com/developers/',
-			'download_diagnostics'                   => $this->get_plugin_page_url(
-				array(
-					'nonce'              => wp_create_nonce( 'as3cf-download-log' ),
-					'as3cf-download-log' => '1',
-					'hash'               => '/support',
+		return apply_filters(
+			'as3cf_js_urls',
+			array(
+				'api'                                    => esc_url_raw( rest_url() ),
+				'settings'                               => $this->get_plugin_page_url(),
+				'home'                                   => network_home_url(),
+				'home_domain'                            => wp_parse_url( network_home_url(), PHP_URL_HOST ),
+				'admin'                                  => network_admin_url(),
+				'assets'                                 => plugins_url( 'assets/', $this->get_plugin_file_path() ),
+				'url_example'                            => $this->get_url_preview(),
+				'url_parts'                              => $this->get_url_preview( true ),
+				'storage_provider_console_base'          => $this->get_storage_provider()->get_console_url(),
+				'storage_provider_console_prefix_param'  => $this->get_storage_provider()->get_console_url_prefix_param(),
+				'storage_provider_console_url'           => $this->get_storage_provider()->get_console_url(
+					$this->get_setting( 'bucket' ),
+					$this->get_object_prefix(),
+					$region
 				),
-				'network',
-				false
-			),
-		) );
+				'delivery_provider_console_base'         => $this->get_delivery_provider()->get_console_url(),
+				'delivery_provider_console_prefix_param' => $this->get_delivery_provider()->get_console_url_prefix_param(),
+				'delivery_provider_console_url'          => $this->get_delivery_provider()->get_console_url(
+					$this->get_setting( 'bucket' ),
+					$this->get_object_prefix(),
+					$region
+				),
+				'pricing'                                => $this->dbrains_url(
+					'/wp-offload-media/pricing/',
+					array( 'utm_campaign' => 'WP+Offload+S3' )
+				),
+				'header_discount'                        => $this->dbrains_url(
+					'/wp-offload-media/pricing/',
+					array( 'utm_campaign' => 'WP+Offload+S3', 'utm_content' => 'header' )
+				),
+				'upsell_discount'                        => $this->dbrains_url(
+					'/wp-offload-media/pricing/',
+					array( 'utm_campaign' => 'WP+Offload+S3', 'utm_content' => 'upsell' )
+				),
+				'sidebar_plugin'                         => $this->dbrains_url(
+					'/wp-offload-media/',
+					array( 'utm_campaign' => 'WP+Offload+S3', 'utm_content' => 'sidebar' )
+				),
+				'sidebar_discount'                       => $this->dbrains_url(
+					'/wp-offload-media/pricing/',
+					array( 'utm_campaign' => 'WP+Offload+S3', 'utm_content' => 'sidebar' )
+				),
+				'upsell_discount_assets'                 => $this->dbrains_url(
+					'/wp-offload-media/pricing/',
+					array( 'utm_campaign' => 'WP+Offload+S3', 'utm_content' => 'upsell_assets' )
+				),
+				'upsell_discount_tools'                  => $this->dbrains_url(
+					'/wp-offload-media/pricing/',
+					array( 'utm_campaign' => 'WP+Offload+S3', 'utm_content' => 'upsell_tools' )
+				),
+				'sidebar_dbi'                            => 'https://wpengine.com/developers/',
+				'download_diagnostics'                   => $this->get_plugin_page_url(
+					array(
+						'nonce'              => wp_create_nonce( 'as3cf-download-log' ),
+						'as3cf-download-log' => '1',
+						'hash'               => '/support',
+					),
+					'network',
+					false
+				),
+			)
+		);
 	}
 
 	/**
@@ -4772,9 +5482,17 @@ class Amazon_S3_And_CloudFront extends AS3CF_Plugin_Base {
 
 		if ( ! empty( $counts['not_offloaded'] ) ) {
 			if ( 1 === $counts['not_offloaded'] ) {
-				return sprintf( __( 'Upgrade to offload %d remaining media item', 'amazon-s3-and-cloudfront' ), number_format_i18n( $counts['not_offloaded'] ) );
+				return sprintf(
+				/* translators: %s is a localized number. */
+					__( 'Upgrade to offload %s remaining media item', 'amazon-s3-and-cloudfront' ),
+					number_format_i18n( $counts['not_offloaded'] )
+				);
 			} else {
-				return sprintf( __( 'Upgrade to offload %d remaining media items', 'amazon-s3-and-cloudfront' ), number_format_i18n( $counts['not_offloaded'] ) );
+				return sprintf(
+				/* translators: %s is a localized number. */
+					__( 'Upgrade to offload %s remaining media items', 'amazon-s3-and-cloudfront' ),
+					number_format_i18n( $counts['not_offloaded'] )
+				);
 			}
 		}
 

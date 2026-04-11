@@ -50,8 +50,15 @@ class Upgrade_Clear_Postmeta_Cache extends Upgrade {
 	protected function upgrade_item( $item ) {
 		global $wpdb;
 
-		$sql = "DELETE FROM {$item}postmeta WHERE meta_key = 'amazonS3_cache' AND meta_id <= %d LIMIT {$this->batch_limit}";
-		$wpdb->query( $wpdb->prepare( $sql, array( $this->session[ $item ] ) ) );
+		if ( empty( $item ) || ! is_string( $item ) || empty( $this->session[ $item ] ) || ! is_int( $this->session[ $item ] ) ) {
+			return false;
+		}
+
+		$meta_id = $this->session[ $item ];
+
+		$sql = "DELETE FROM {$item}postmeta WHERE meta_key = 'amazonS3_cache' AND meta_id <= %d LIMIT $this->batch_limit";
+		// phpcs:ignore WordPress.DB, PluginCheck.Security.DirectDB.UnescapedDBParameter
+		$wpdb->query( $wpdb->prepare( $sql, $meta_id ) );
 
 		return true;
 	}
@@ -66,7 +73,8 @@ class Upgrade_Clear_Postmeta_Cache extends Upgrade {
 
 		// Store the highest known meta_id at the time we begin processing.
 		if ( empty( $this->session[ $this->blog_prefix ] ) ) {
-			$sql  = "SELECT meta_id FROM {$this->blog_prefix}postmeta WHERE meta_key = 'amazonS3_cache' ORDER BY meta_id DESC LIMIT 0, 1;";
+			$sql = "SELECT meta_id FROM {$this->blog_prefix}postmeta WHERE meta_key = 'amazonS3_cache' ORDER BY meta_id DESC LIMIT 0, 1;";
+			// phpcs:ignore WordPress.DB, PluginCheck.Security.DirectDB -- safe query, must not be cached
 			$last = $wpdb->get_var( $sql );
 
 			$this->session[ $this->blog_prefix ] = $last;
@@ -105,8 +113,15 @@ class Upgrade_Clear_Postmeta_Cache extends Upgrade {
 	private function get_real_count( $prefix ) {
 		global $wpdb;
 
-		$sql   = "SELECT count(meta_id) FROM {$prefix}postmeta WHERE meta_key = 'amazonS3_cache' AND meta_id <= %d";
-		$count = $wpdb->get_var( $wpdb->prepare( $sql, $this->session[ $prefix ] ) );
+		if ( empty( $prefix ) || ! is_string( $prefix ) || empty( $this->session[ $prefix ] ) || ! is_int( $this->session[ $prefix ] ) ) {
+			return 0;
+		}
+
+		$meta_id = $this->session[ $prefix ];
+
+		$sql = "SELECT count(meta_id) FROM {$prefix}postmeta WHERE meta_key = 'amazonS3_cache' AND meta_id <= %d";
+		// phpcs:ignore WordPress.DB, PluginCheck.Security.DirectDB -- safe query, must not be cached
+		$count = $wpdb->get_var( $wpdb->prepare( $sql, $meta_id ) );
 
 		return (int) $count;
 	}

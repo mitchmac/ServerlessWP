@@ -5,6 +5,7 @@ namespace DeliciousBrains\WP_Offload_Media\Aws3\Aws\S3\Crypto;
 use DeliciousBrains\WP_Offload_Media\Aws3\Aws\Crypto\DecryptionTraitV2;
 use DeliciousBrains\WP_Offload_Media\Aws3\Aws\Exception\CryptoException;
 use DeliciousBrains\WP_Offload_Media\Aws3\Aws\HashingStream;
+use DeliciousBrains\WP_Offload_Media\Aws3\Aws\MetricsBuilder;
 use DeliciousBrains\WP_Offload_Media\Aws3\Aws\PhpHash;
 use DeliciousBrains\WP_Offload_Media\Aws3\Aws\Crypto\AbstractCryptoClientV2;
 use DeliciousBrains\WP_Offload_Media\Aws3\Aws\Crypto\EncryptionTraitV2;
@@ -100,10 +101,10 @@ class S3EncryptionClientV2 extends AbstractCryptoClientV2
      */
     public function __construct(S3Client $client, $instructionFileSuffix = null)
     {
-        $this->appendUserAgent($client, 'feat/s3-encrypt/' . self::CRYPTO_VERSION);
         $this->client = $client;
         $this->instructionFileSuffix = $instructionFileSuffix;
         $this->legacyWarningCount = 0;
+        MetricsBuilder::appendMetricsCaptureMiddleware($this->client->getHandlerList(), MetricsBuilder::S3_CRYPTO_V2);
     }
     private static function getDefaultStrategy()
     {

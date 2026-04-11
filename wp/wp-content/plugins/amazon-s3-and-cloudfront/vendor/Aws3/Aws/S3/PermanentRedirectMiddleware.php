@@ -34,7 +34,7 @@ class PermanentRedirectMiddleware
     {
         $this->nextHandler = $nextHandler;
     }
-    public function __invoke(CommandInterface $command, RequestInterface $request = null)
+    public function __invoke(CommandInterface $command, ?RequestInterface $request = null)
     {
         $next = $this->nextHandler;
         return $next($command, $request)->then(function (ResultInterface $result) use($command) {

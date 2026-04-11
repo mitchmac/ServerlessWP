@@ -146,7 +146,7 @@ class ConfigurationProvider extends AbstractConfigurationProvider implements Con
                 $data[$profile]['csm_host'] = self::DEFAULT_HOST;
             }
             // port is optional
-            if (empty($data[$profile]['csm_port'])) {
+            if (!\filter_var($data[$profile]['csm_port'] ?? null, \FILTER_VALIDATE_INT)) {
                 $data[$profile]['csm_port'] = self::DEFAULT_PORT;
             }
             // client_id is optional

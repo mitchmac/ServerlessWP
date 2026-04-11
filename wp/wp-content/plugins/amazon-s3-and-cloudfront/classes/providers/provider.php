@@ -182,7 +182,11 @@ abstract class Provider {
 	 * Note: For accessibility reasons, returned string should differ from `get_provider_service_name`.
 	 */
 	public static function get_icon_desc( $override_allowed = true ) {
-		return sprintf( _x( '%s logo', 'Provider icon\'s alt text', 'amazon-s3-and-cloudfront' ), static::get_provider_service_name( $override_allowed ) );
+		return sprintf(
+		/* translators: %s is a provider service name, e.g. "Amazon S3". */
+			_x( '%s logo', 'Provider icon\'s alt text', 'amazon-s3-and-cloudfront' ),
+			static::get_provider_service_name( $override_allowed )
+		);
 	}
 
 	/**
@@ -222,7 +226,10 @@ abstract class Provider {
 	 * @return string
 	 */
 	public function get_domain() {
-		return apply_filters( 'as3cf_' . static::$provider_key_name . '_' . static::$service_key_name . '_domain', $this->default_domain );
+		return apply_filters(
+			'as3cf_' . static::$provider_key_name . '_' . static::$service_key_name . '_domain',
+			$this->default_domain
+		);
 	}
 
 	/**
@@ -233,15 +240,28 @@ abstract class Provider {
 	 * @param string $region
 	 *
 	 * @return string
+	 *
+	 * phpcs:disable PEAR.Functions.FunctionCallSignature.Indent
+	 * phpcs:disable Universal.WhiteSpace.PrecisionAlignment.Found
+	 * phpcs:disable Generic.WhiteSpace.DisallowSpaceIndent.SpacesUsed
 	 */
 	public function get_console_url( string $bucket = '', string $prefix = '', string $region = '' ): string {
 		if ( '' !== $prefix ) {
-			$prefix = $this->get_console_url_prefix_param() . apply_filters( 'as3cf_' . static::$provider_key_name . '_' . static::$service_key_name . '_console_url_prefix_value', $prefix );
+			$prefix = $this->get_console_url_prefix_param() . apply_filters(
+					'as3cf_' . static::$provider_key_name . '_' . static::$service_key_name . '_console_url_prefix_value',
+					$prefix
+				);
 		}
 
-		$suffix = apply_filters( 'as3cf_' . static::$provider_key_name . '_' . static::$service_key_name . '_console_url_suffix_param', $this->get_console_url_suffix_param( $bucket, $prefix, $region ) );
+		$suffix = apply_filters(
+			'as3cf_' . static::$provider_key_name . '_' . static::$service_key_name . '_console_url_suffix_param',
+			$this->get_console_url_suffix_param( $bucket, $prefix, $region )
+		);
 
-		return apply_filters( 'as3cf_' . static::$provider_key_name . '_' . static::$service_key_name . '_console_url', $this->console_url ) . $bucket . $prefix . $suffix;
+		return apply_filters(
+			       'as3cf_' . static::$provider_key_name . '_' . static::$service_key_name . '_console_url',
+			       $this->console_url
+		       ) . $bucket . $prefix . $suffix;
 	}
 
 	/**
@@ -250,7 +270,10 @@ abstract class Provider {
 	 * @return string
 	 */
 	public function get_console_url_prefix_param(): string {
-		return apply_filters( 'as3cf_' . static::$provider_key_name . '_' . static::$service_key_name . '_console_url_prefix_param', $this->console_url_prefix_param );
+		return apply_filters(
+			'as3cf_' . static::$provider_key_name . '_' . static::$service_key_name . '_console_url_prefix_param',
+			$this->console_url_prefix_param
+		);
 	}
 
 	/**
@@ -392,5 +415,9 @@ abstract class Provider {
 	 *
 	 * @return string
 	 */
-	abstract protected function get_console_url_suffix_param( string $bucket = '', string $prefix = '', string $region = '' ): string;
+	abstract protected function get_console_url_suffix_param(
+		string $bucket = '',
+		string $prefix = '',
+		string $region = ''
+	): string;
 }

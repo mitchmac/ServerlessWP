@@ -3,7 +3,9 @@
 namespace DeliciousBrains\WP_Offload_Media\Aws3\Aws\S3;
 
 use DeliciousBrains\WP_Offload_Media\Aws3\Aws\Api\Service;
+use DeliciousBrains\WP_Offload_Media\Aws3\Aws\Api\Shape;
 use DeliciousBrains\WP_Offload_Media\Aws3\Aws\CommandInterface;
+use DeliciousBrains\WP_Offload_Media\Aws3\Aws\MetricsBuilder;
 use DeliciousBrains\WP_Offload_Media\Aws3\GuzzleHttp\Psr7;
 use InvalidArgumentException;
 use DeliciousBrains\WP_Offload_Media\Aws3\Psr\Http\Message\RequestInterface;
@@ -18,9 +20,20 @@ use DeliciousBrains\WP_Offload_Media\Aws3\Psr\Http\Message\StreamInterface;
 class ApplyChecksumMiddleware
 {
     use CalculatesChecksumTrait;
-    private static $sha256AndMd5 = ['PutObject', 'UploadPart'];
+    public const DEFAULT_CALCULATION_MODE = 'when_supported';
+    public const DEFAULT_ALGORITHM = 'crc32';
+    /**
+     * @var true[]
+     *
+     * S3 Operations for which pre-calculated SHA256
+     * Checksums can be added to the command
+     */
+    public static $sha256 = ['PutObject' => \true, 'UploadPart' => \true];
     /** @var Service */
     private $api;
+    /** @var array */
+    private $config;
+    /** @var callable */
     private $nextHandler;
     /**
      * Create a middleware wrapper function.
@@ -28,80 +41,122 @@ class ApplyChecksumMiddleware
      * @param Service $api
      * @return callable
      */
-    public static function wrap(Service $api)
+    public static function wrap(Service $api, array $config = [])
     {
-        return function (callable $handler) use($api) {
-            return new self($handler, $api);
+        return function (callable $handler) use($api, $config) {
+            return new self($handler, $api, $config);
         };
     }
-    public function __construct(callable $nextHandler, Service $api)
+    public function __construct(callable $nextHandler, Service $api, array $config = [])
     {
         $this->api = $api;
         $this->nextHandler = $nextHandler;
+        $this->config = $config;
     }
     public function __invoke(CommandInterface $command, RequestInterface $request)
     {
         $next = $this->nextHandler;
         $name = $command->getName();
         $body = $request->getBody();
-        //Checks if AddContentMD5 has been specified for PutObject or UploadPart
-        $addContentMD5 = $command['AddContentMD5'] ?? null;
-        $op = $this->api->getOperation($command->getName());
-        $checksumInfo = $op['httpChecksum'] ?? [];
-        $checksumMemberName = \array_key_exists('requestAlgorithmMember', $checksumInfo) ? $checksumInfo['requestAlgorithmMember'] : "";
+        $operation = $this->api->getOperation($name);
+        $mode = $this->config['request_checksum_calculation'] ?? self::DEFAULT_CALCULATION_MODE;
+        $command->getMetricsBuilder()->identifyMetricByValueAndAppend('request_checksum_calculation', $mode);
+        // Trigger warning if AddContentMD5 is specified for PutObject or UploadPart
+        $this->handleDeprecatedAddContentMD5($command);
+        $checksumInfo = $operation['httpChecksum'] ?? [];
+        $checksumMemberName = $checksumInfo['requestAlgorithmMember'] ?? '';
+        $checksumMember = !empty($checksumMemberName) ? $operation->getInput()->getMember($checksumMemberName) : null;
+        $checksumRequired = $checksumInfo['requestChecksumRequired'] ?? \false;
         $requestedAlgorithm = $command[$checksumMemberName] ?? null;
-        if (!empty($checksumMemberName) && !empty($requestedAlgorithm)) {
-            $requestedAlgorithm = \strtolower($requestedAlgorithm);
-            $checksumMember = $op->getInput()->getMember($checksumMemberName);
-            $supportedAlgorithms = isset($checksumMember['enum']) ? \array_map('strtolower', $checksumMember['enum']) : null;
-            if (\is_array($supportedAlgorithms) && \in_array($requestedAlgorithm, $supportedAlgorithms)) {
-                $request = $this->addAlgorithmHeader($requestedAlgorithm, $request, $body);
-            } else {
-                throw new InvalidArgumentException("Unsupported algorithm supplied for input variable {$checksumMemberName}." . "  Supported checksums for this operation include: " . \implode(", ", $supportedAlgorithms) . ".");
-            }
-            return $next($command, $request);
-        }
-        if (!empty($checksumInfo)) {
-            //if the checksum member is absent, check if it's required
-            $checksumRequired = $checksumInfo['requestChecksumRequired'] ?? null;
-            if (!empty($checksumRequired) || \in_array($name, self::$sha256AndMd5) && $addContentMD5) {
-                //S3Express doesn't support MD5; default to crc32 instead
-                if ($this->isS3Express($command)) {
-                    $request = $this->addAlgorithmHeader('crc32', $request, $body);
-                } elseif (!$request->hasHeader('Content-MD5')) {
-                    // Set the content MD5 header for operations that require it.
-                    $request = $request->withHeader('Content-MD5', \base64_encode(Psr7\Utils::hash($body, 'md5', \true)));
-                }
-                return $next($command, $request);
+        $shouldAddChecksum = $this->shouldAddChecksum($mode, $checksumRequired, $checksumMember, $requestedAlgorithm);
+        if ($shouldAddChecksum) {
+            if (!$this->hasAlgorithmHeader($request)) {
+                $supportedAlgorithms = \array_map('strtolower', $checksumMember['enum'] ?? []);
+                $algorithm = $this->determineChecksumAlgorithm($supportedAlgorithms, $requestedAlgorithm, $checksumMemberName);
+                $request = $this->addAlgorithmHeader($algorithm, $request, $body);
+                $command->getMetricsBuilder()->identifyMetricByValueAndAppend('request_checksum', $algorithm);
             }
         }
-        if (\in_array($name, self::$sha256AndMd5) && $command['ContentSHA256']) {
-            // Set the content hash header if provided in the parameters.
+        // Set the content hash header if ContentSHA256 is provided
+        if (isset(self::$sha256[$name]) && $command['ContentSHA256']) {
             $request = $request->withHeader('X-Amz-Content-Sha256', $command['ContentSHA256']);
+            $command->getMetricsBuilder()->append(MetricsBuilder::FLEXIBLE_CHECKSUMS_REQ_SHA256);
         }
         return $next($command, $request);
+    }
+    /**
+     * @param CommandInterface $command
+     *
+     * @return void
+     */
+    private function handleDeprecatedAddContentMD5(CommandInterface $command) : void
+    {
+        if (!empty($command['AddContentMD5'])) {
+            \trigger_error('S3 no longer supports MD5 checksums. ' . 'A CRC32 checksum will be computed and applied on your behalf.', \E_USER_DEPRECATED);
+            $command['ChecksumAlgorithm'] = self::DEFAULT_ALGORITHM;
+        }
+    }
+    /**
+     * @param string $mode
+     * @param Shape|null $checksumMember
+     * @param string $name
+     * @param bool $checksumRequired
+     * @param string|null $requestedAlgorithm
+     *
+     * @return bool
+     */
+    private function shouldAddChecksum(string $mode, bool $checksumRequired, ?Shape $checksumMember, ?string $requestedAlgorithm) : bool
+    {
+        return $mode === 'when_supported' && $checksumMember || $mode === 'when_required' && ($checksumRequired || $checksumMember && $requestedAlgorithm);
+    }
+    /**
+     * @param Shape|null $checksumMember
+     * @param string|null $requestedAlgorithm
+     * @param string|null $checksumMemberName
+     *
+     * @return string
+     */
+    private function determineChecksumAlgorithm(array $supportedAlgorithms, ?string $requestedAlgorithm, ?string $checksumMemberName) : string
+    {
+        $algorithm = self::DEFAULT_ALGORITHM;
+        if ($requestedAlgorithm) {
+            $requestedAlgorithm = \strtolower($requestedAlgorithm);
+            if (!\in_array($requestedAlgorithm, $supportedAlgorithms)) {
+                throw new InvalidArgumentException("Unsupported algorithm supplied for input variable {$checksumMemberName}. " . "Supported checksums for this operation include: " . \implode(", ", $supportedAlgorithms) . ".");
+            }
+            $algorithm = $requestedAlgorithm;
+        }
+        return $algorithm;
     }
     /**
      * @param string $requestedAlgorithm
      * @param RequestInterface $request
      * @param StreamInterface $body
+     *
      * @return RequestInterface
      */
-    private function addAlgorithmHeader(string $requestedAlgorithm, RequestInterface $request, StreamInterface $body)
+    private function addAlgorithmHeader(string $requestedAlgorithm, RequestInterface $request, StreamInterface $body) : RequestInterface
     {
         $headerName = "x-amz-checksum-{$requestedAlgorithm}";
         if (!$request->hasHeader($headerName)) {
-            $encoded = $this->getEncodedValue($requestedAlgorithm, $body);
+            $encoded = self::getEncodedValue($requestedAlgorithm, $body);
             $request = $request->withHeader($headerName, $encoded);
         }
         return $request;
     }
     /**
-     * @param CommandInterface $command
+     * @param RequestInterface $request
+     *
      * @return bool
      */
-    private function isS3Express(CommandInterface $command) : bool
+    private function hasAlgorithmHeader(RequestInterface $request) : bool
     {
-        return isset($command['@context']['signing_service']) && $command['@context']['signing_service'] === 's3express';
+        $headers = $request->getHeaders();
+        foreach ($headers as $name => $values) {
+            if (\stripos($name, 'x-amz-checksum-') === 0) {
+                return \true;
+            }
+        }
+        return \false;
     }
 }

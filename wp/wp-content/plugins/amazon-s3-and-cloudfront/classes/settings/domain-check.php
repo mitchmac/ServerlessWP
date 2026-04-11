@@ -60,30 +60,44 @@ class Domain_Check {
 	public function validate() {
 		if ( ! is_string( $this->domain ) ) {
 			throw new InvalidArgumentException(
-				sprintf(
-					__( 'Domain must be a string, [%s] given.', 'amazon-s3-and-cloudfront' ),
-					gettype( $this->domain )
+				wp_kses_post(
+					sprintf(
+					/* translators: %s is a domain. */
+						__( 'Domain must be a string, [%s] given.', 'amazon-s3-and-cloudfront' ),
+						gettype( $this->domain )
+					)
 				)
 			);
 		}
 
 		if ( ! trim( $this->domain ) ) {
 			throw new InvalidArgumentException(
-				__( 'Domain cannot be blank.', 'amazon-s3-and-cloudfront' )
+				wp_kses_post( __( 'Domain cannot be blank.', 'amazon-s3-and-cloudfront' ) )
 			);
 		}
 
 		if ( preg_match( '/[^a-z0-9-\.]/i', $this->domain ) ) {
 			throw new InvalidArgumentException(
-				__( 'Domain can only contain letters, numbers, hyphens (-), and periods (.)', 'amazon-s3-and-cloudfront' )
+				wp_kses_post(
+					__(
+						'Domain can only contain letters, numbers, hyphens (-), and periods (.)',
+						'amazon-s3-and-cloudfront'
+					)
+				)
 			);
 		}
 
-		if ( $this->domain === parse_url( network_home_url(), PHP_URL_HOST ) ) {
+		if ( $this->domain === wp_parse_url( network_home_url(), PHP_URL_HOST ) ) {
 			throw new InvalidArgumentException(
-				sprintf(
-					__( '<code>%s</code> must not be the same as the site domain. Use a subdomain instead.', 'amazon-s3-and-cloudfront' ),
-					$this->domain
+				wp_kses_post(
+					sprintf(
+					/* translators: %s is a domain. */
+						__(
+							'<code>%s</code> must not be the same as the site domain. Use a subdomain instead.',
+							'amazon-s3-and-cloudfront'
+						),
+						$this->domain
+					)
 				)
 			);
 		}
@@ -191,9 +205,12 @@ class Domain_Check {
 
 		if ( ! WP_Http::is_ip_address( $this->domain ) && $this->domain === gethostbyname( $this->domain ) ) {
 			throw new Unresolveable_Hostname_Exception(
-				sprintf(
-					__( '<code>%s</code> did not resolve to an IP address.', 'amazon-s3-and-cloudfront' ),
-					$this->domain
+				wp_kses_post(
+					sprintf(
+					/* translators: %s is a domain. */
+						__( '<code>%s</code> did not resolve to an IP address.', 'amazon-s3-and-cloudfront' ),
+						$this->domain
+					)
 				)
 			);
 		}
@@ -202,21 +219,34 @@ class Domain_Check {
 	}
 
 	/**
-	 * Convert a WP_Error to the appropriate exception.
+	 * Convert a WP_Error to the appropriate exception and throw it.
 	 *
 	 * @param WP_Error $error
 	 *
-	 * @return Domain_Check_Exception
+	 * @throws Ssl_Connection_Exception
+	 * @throws HTTP_Response_Exception
 	 */
-	protected function get_exception_for_wp_error( WP_Error $error ) {
+	protected function throw_exception_for_wp_error( WP_Error $error ) {
 		if ( preg_match( '/SSL (certificate problem|operation failed)/i', $error->get_error_message() ) ) {
-			return new Ssl_Connection_Exception(
-				sprintf( __( 'An HTTPS connection error was encountered: <code>%s</code>.', 'amazon-s3-and-cloudfront' ), $error->get_error_message() )
+			throw new Ssl_Connection_Exception(
+				wp_kses_post(
+					sprintf(
+					/* translators: %s is an error message. */
+						__( 'An HTTPS connection error was encountered: <code>%s</code>.', 'amazon-s3-and-cloudfront' ),
+						$error->get_error_message()
+					)
+				)
 			);
 		}
 
-		return new HTTP_Response_Exception(
-			sprintf( __( 'An HTTP connection error was encountered: <code>%s</code>.', 'amazon-s3-and-cloudfront' ), $error->get_error_message() )
+		throw new HTTP_Response_Exception(
+			wp_kses_post(
+				sprintf(
+				/* translators: %s is an error message. */
+					__( 'An HTTP connection error was encountered: <code>%s</code>.', 'amazon-s3-and-cloudfront' ),
+					$error->get_error_message()
+				)
+			)
 		);
 	}
 
@@ -230,9 +260,15 @@ class Domain_Check {
 	protected function check_response_code( int $response_code ) {
 		if ( $response_code < 200 || $response_code > 399 ) {
 			throw new Invalid_Response_Code_Exception(
-				sprintf(
-					__( 'An error was encountered while testing the domain: <code>Received %d from endpoint</code>.', 'amazon-s3-and-cloudfront' ),
-					$response_code
+				wp_kses_post(
+					sprintf(
+					/* translators: %d is an integer. */
+						__(
+							'An error was encountered while testing the domain: <code>Received %d from endpoint</code>.',
+							'amazon-s3-and-cloudfront'
+						),
+						$response_code
+					)
 				)
 			);
 		}
@@ -248,9 +284,15 @@ class Domain_Check {
 	protected function check_response_type( $content_type ) {
 		if ( is_array( $content_type ) || ! preg_match( '/^application\/json/i', $content_type ) ) {
 			throw new Invalid_Response_Type_Exception(
-				sprintf(
-					__( 'An error was encountered while testing the domain: <code>Invalid response type: %s</code>.', 'amazon-s3-and-cloudfront' ),
-					join( ', ', (array) $content_type )
+				wp_kses_post(
+					sprintf(
+					/* translators: %s is a content type, e.g. "application/json". */
+						__(
+							'An error was encountered while testing the domain: <code>Invalid response type: %s</code>.',
+							'amazon-s3-and-cloudfront'
+						),
+						join( ', ', (array) $content_type )
+					)
 				)
 			);
 		}
@@ -291,7 +333,7 @@ class Domain_Check {
 		) );
 
 		if ( is_wp_error( $response ) ) {
-			throw $this->get_exception_for_wp_error( $response );
+			$this->throw_exception_for_wp_error( $response );
 		}
 
 		return $response;
@@ -310,13 +352,23 @@ class Domain_Check {
 
 		if ( null === $raw_body ) {
 			throw new Malformed_Response_Exception(
-				__( 'An error was encountered while testing the domain: <code>Malformed response from endpoint</code>.', 'amazon-s3-and-cloudfront' )
+				wp_kses_post(
+					__(
+						'An error was encountered while testing the domain: <code>Malformed response from endpoint</code>.',
+						'amazon-s3-and-cloudfront'
+					)
+				)
 			);
 		}
 
 		if ( empty( $raw_body['ver'] ) ) {
 			throw new Malformed_Query_String_Exception(
-				__( 'An error was encountered while testing the domain: <code>Query string missing "ver" parameter</code>.', 'amazon-s3-and-cloudfront' )
+				wp_kses_post(
+					__(
+						'An error was encountered while testing the domain: <code>Query string missing "ver" parameter</code>.',
+						'amazon-s3-and-cloudfront'
+					)
+				)
 			);
 		}
 	}
@@ -331,7 +383,12 @@ class Domain_Check {
 	public static function check_response_headers( $response_headers ) {
 		if ( ! empty( $response_headers['server'] ) && 'AmazonS3' === $response_headers['server'] ) {
 			throw new S3_Bucket_Origin_Exception(
-				__( 'An error was encountered while testing the domain: <code>S3 bucket set as CDN origin</code>.', 'amazon-s3-and-cloudfront' )
+				wp_kses_post(
+					__(
+						'An error was encountered while testing the domain: <code>S3 bucket set as CDN origin</code>.',
+						'amazon-s3-and-cloudfront'
+					)
+				)
 			);
 		}
 	}

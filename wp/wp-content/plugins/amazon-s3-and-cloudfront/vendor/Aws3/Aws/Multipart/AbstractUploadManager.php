@@ -33,6 +33,8 @@ abstract class AbstractUploadManager implements Promise\PromisorInterface
     protected $promise;
     /** @var UploadState State used to manage the upload. */
     protected $state;
+    /** @var bool Configuration used to indicate if upload progress will be displayed. */
+    protected $displayProgress;
     /**
      * @param Client $client
      * @param array  $config
@@ -43,6 +45,9 @@ abstract class AbstractUploadManager implements Promise\PromisorInterface
         $this->info = $this->loadUploadWorkflowInfo();
         $this->config = $config + self::$defaultConfig;
         $this->state = $this->determineState();
+        if (isset($config['display_progress']) && \is_bool($config['display_progress'])) {
+            $this->displayProgress = $config['display_progress'];
+        }
     }
     /**
      * Returns the current state of the upload
@@ -186,7 +191,7 @@ abstract class AbstractUploadManager implements Promise\PromisorInterface
             }
             $id[$param] = $this->config[$key];
         }
-        $state = new UploadState($id);
+        $state = new UploadState($id, $this->config);
         $state->setPartSize($this->determinePartSize());
         return $state;
     }
@@ -225,7 +230,7 @@ abstract class AbstractUploadManager implements Promise\PromisorInterface
     protected function getResultHandler(&$errors = [])
     {
         return function (callable $handler) use(&$errors) {
-            return function (CommandInterface $command, RequestInterface $request = null) use($handler, &$errors) {
+            return function (CommandInterface $command, ?RequestInterface $request = null) use($handler, &$errors) {
                 return $handler($command, $request)->then(function (ResultInterface $result) use($command) {
                     $this->handleResult($command, $result);
                     return $result;

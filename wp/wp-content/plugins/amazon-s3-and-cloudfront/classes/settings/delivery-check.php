@@ -57,13 +57,16 @@ class Delivery_Check extends Domain_Check {
 	 */
 	public function setup_test_file( bool $is_private ): AS3CF_Result {
 		if ( empty( $this->as3cf_item ) || $this->as3cf_item->is_private() !== (bool) $is_private ) {
-			$mode = $is_private ? __( 'Private', 'amazon-s3-and-cloudfront' ) : __( 'Public', 'amazon-s3-and-cloudfront' );
+			$mode = $is_private
+				? __( 'Private', 'amazon-s3-and-cloudfront' )
+				: __( 'Public', 'amazon-s3-and-cloudfront' );
 
 			if ( ! $this->create_local_file( $is_private ) ) {
 				return new AS3CF_Result(
 					Validator_Interface::AS3CF_STATUS_MESSAGE_WARNING,
 					sprintf(
-						_x(
+					/* translators: %1$s is a file access mode, either "Private" or "Public". */
+						__(
 							'Delivery provider status cannot be determined. An error was encountered while attempting to create a temporary file for %1$s delivery.',
 							'amazon-s3-and-cloudfront'
 						),
@@ -78,7 +81,8 @@ class Delivery_Check extends Domain_Check {
 				return new AS3CF_Result(
 					Validator_Interface::AS3CF_STATUS_MESSAGE_WARNING,
 					sprintf(
-						_x(
+					/* translators: %1$s is a file access mode, either "Private" or "Public". */
+						__(
 							'Delivery provider status cannot be determined. An error was encountered while attempting to offload a temporary file for %1$s delivery.',
 							'amazon-s3-and-cloudfront'
 						),
@@ -266,7 +270,7 @@ class Delivery_Check extends Domain_Check {
 	 */
 	public function remove_test_files() {
 		if ( file_exists( $this->local_file_path ) ) {
-			unlink( $this->local_file_path );
+			wp_delete_file( $this->local_file_path );
 		}
 
 		if ( ! is_null( $this->as3cf_item ) ) {
@@ -293,7 +297,10 @@ class Delivery_Check extends Domain_Check {
 
 		$this->test_file_name  = "as3cf-delivery-check-$visibility-" . time() . '.txt';
 		$this->local_file_path = $uploads_dir['basedir'] . '/' . $this->test_file_name;
-		$file_contents         = __( 'This is a test file to check delivery. Delete me if found.', 'amazon-s3-and-cloudfront' );
+		$file_contents         = __(
+			'This is a test file to check delivery. Delete me if found.',
+			'amazon-s3-and-cloudfront'
+		);
 
 		return (bool) file_put_contents( $this->local_file_path, $file_contents );
 	}

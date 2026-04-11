@@ -125,7 +125,10 @@ abstract class Storage_Provider extends Provider implements Validator_Interface 
 
 		$this->add_validation_issue( 'miss_access_key_id', empty( $this->get_access_key_id() ) );
 		$this->add_validation_issue( 'miss_secret_access_key', empty( $this->get_secret_access_key() ) );
-		$this->add_validation_issue( 'miss_both_access_keys', empty( $this->get_access_key_id() ) && empty( $this->get_secret_access_key() ) );
+		$this->add_validation_issue(
+			'miss_both_access_keys',
+			empty( $this->get_access_key_id() ) && empty( $this->get_secret_access_key() )
+		);
 
 		return true;
 	}
@@ -369,7 +372,10 @@ abstract class Storage_Provider extends Provider implements Validator_Interface 
 		}
 
 		if ( ! file_exists( $key_file_path ) ) {
-			$this->as3cf->notices->add_notice( __( 'Media cannot be offloaded due to an invalid key file path.', 'amazon-s3-and-cloudfront' ), $notice_args );
+			$this->as3cf->notices->add_notice(
+				__( 'Media cannot be offloaded due to an invalid key file path.', 'amazon-s3-and-cloudfront' ),
+				$notice_args
+			);
 
 			return false;
 		}
@@ -379,12 +385,18 @@ abstract class Storage_Provider extends Provider implements Validator_Interface 
 
 			// An exception isn't always thrown, so check value instead.
 			if ( empty( $value ) ) {
-				$this->as3cf->notices->add_notice( __( 'Media cannot be offloaded due to an unreadable key file.', 'amazon-s3-and-cloudfront' ), $notice_args );
+				$this->as3cf->notices->add_notice(
+					__( 'Media cannot be offloaded due to an unreadable key file.', 'amazon-s3-and-cloudfront' ),
+					$notice_args
+				);
 
 				return false;
 			}
 		} catch ( Exception $e ) {
-			$this->as3cf->notices->add_notice( __( 'Media cannot be offloaded due to an unreadable key file.', 'amazon-s3-and-cloudfront' ), $notice_args );
+			$this->as3cf->notices->add_notice(
+				__( 'Media cannot be offloaded due to an unreadable key file.', 'amazon-s3-and-cloudfront' ),
+				$notice_args
+			);
 
 			return false;
 		}
@@ -441,7 +453,10 @@ abstract class Storage_Provider extends Provider implements Validator_Interface 
 	 * @return string|null
 	 */
 	public function get_default_acl() {
-		return apply_filters( 'as3cf_' . static::$provider_key_name . '_' . static::$service_key_name . '_default_acl', $this->get_public_acl() );
+		return apply_filters(
+			'as3cf_' . static::$provider_key_name . '_' . static::$service_key_name . '_default_acl',
+			$this->get_public_acl()
+		);
 	}
 
 	/**
@@ -520,7 +535,9 @@ abstract class Storage_Provider extends Provider implements Validator_Interface 
 	 * @return array Keys are region slug, values their name
 	 */
 	public static function get_regions() {
-		$regions = apply_filters( static::$provider_key_name . '_get_regions', static::$regions ); // Backwards compatibility, e.g. 'aws_get_regions'.
+		// Backwards compatibility, e.g. 'aws_get_regions'.
+		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals -- backwards compatibility
+		$regions = apply_filters( static::$provider_key_name . '_get_regions', static::$regions );
 		$regions = apply_filters( 'as3cf_' . static::$provider_key_name . '_get_regions', $regions );
 
 		natsort( $regions );
@@ -577,7 +594,7 @@ abstract class Storage_Provider extends Provider implements Validator_Interface 
 	 */
 	private function _init_client( array $args ) {
 		if ( $this->needs_access_keys() ) {
-			throw new Exception( static::get_needs_access_keys_desc() );
+			throw new Exception( wp_kses_post( static::get_needs_access_keys_desc() ) );
 		}
 
 		if ( is_null( $this->client ) ) {
@@ -613,8 +630,13 @@ abstract class Storage_Provider extends Provider implements Validator_Interface 
 
 			// Add credentials and given args to default client args and then let user override.
 			$args = array_merge( $this->default_client_args(), $args );
-			$args = apply_filters( 'as3cf_' . static::$provider_key_name . '_init_client_args', $this->init_client_args( $args ) );
-			$args = apply_filters( static::$provider_key_name . '_get_client_args', $args ); // Backwards compatibility, e.g. 'aws_get_client_args'.
+			$args = apply_filters(
+				'as3cf_' . static::$provider_key_name . '_init_client_args',
+				$this->init_client_args( $args )
+			);
+			// Backwards compatibility, e.g. 'aws_get_client_args'.
+			// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals -- backwards compatibility
+			$args = apply_filters( static::$provider_key_name . '_get_client_args', $args );
 
 			$this->client = $this->init_client( $args );
 		}
@@ -636,7 +658,10 @@ abstract class Storage_Provider extends Provider implements Validator_Interface 
 
 		$this->_init_client( $args );
 
-		$args = apply_filters( 'as3cf_' . static::$provider_key_name . '_' . static::$service_key_name . '_client_args', $this->init_service_client_args( $args ) );
+		$args = apply_filters(
+			'as3cf_' . static::$provider_key_name . '_' . static::$service_key_name . '_client_args',
+			$this->init_service_client_args( $args )
+		);
 
 		$this->client = $this->init_service_client( $args );
 
@@ -666,7 +691,11 @@ abstract class Storage_Provider extends Provider implements Validator_Interface 
 
 			if ( ! empty( $region_keys ) ) {
 				foreach ( $region_keys as $attachment_id => $found_keys ) {
-					$keys[ $attachment_id ] = AS3CF_Utils::validate_attachment_keys( $attachment_id, $found_keys, $source_type );
+					$keys[ $attachment_id ] = AS3CF_Utils::validate_attachment_keys(
+						$attachment_id,
+						$found_keys,
+						$source_type
+					);
 				}
 			}
 		}
@@ -707,7 +736,12 @@ abstract class Storage_Provider extends Provider implements Validator_Interface 
 		 *
 		 * @return string
 		 */
-		return apply_filters( 'as3cf_' . static::$provider_key_name . '_' . static::$service_key_name . '_url_prefix', $this->url_prefix( $region, $expires ), $region, $expires );
+		return apply_filters(
+			'as3cf_' . static::$provider_key_name . '_' . static::$service_key_name . '_url_prefix',
+			$this->url_prefix( $region, $expires ),
+			$region,
+			$expires
+		);
 	}
 
 	/**
@@ -755,7 +789,14 @@ abstract class Storage_Provider extends Provider implements Validator_Interface 
 	public static function get_needs_access_keys_desc() {
 		global $as3cf;
 
-		return sprintf( __( 'Media cannot be offloaded due to missing access keys. <a href="%s">Update access keys</a>', 'amazon-s3-and-cloudfront' ), $as3cf::get_plugin_page_url() . '#/storage/provider' );
+		return sprintf(
+		/* translators: %s is a URL. */
+			__(
+				'Media cannot be offloaded due to missing access keys. <a href="%s">Update access keys</a>',
+				'amazon-s3-and-cloudfront'
+			),
+			$as3cf::get_plugin_page_url() . '#/storage/provider'
+		);
 	}
 
 	/**
@@ -766,7 +807,14 @@ abstract class Storage_Provider extends Provider implements Validator_Interface 
 	private static function get_needs_access_key_id_desc(): string {
 		global $as3cf;
 
-		return sprintf( __( 'Media cannot be offloaded due to a missing Access Key ID. <a href="%s">Update access keys</a>', 'amazon-s3-and-cloudfront' ), $as3cf::get_plugin_page_url() . '#/storage/provider' );
+		return sprintf(
+		/* translators: %s is a URL. */
+			__(
+				'Media cannot be offloaded due to a missing Access Key ID. <a href="%s">Update access keys</a>',
+				'amazon-s3-and-cloudfront'
+			),
+			$as3cf::get_plugin_page_url() . '#/storage/provider'
+		);
 	}
 
 	/**
@@ -777,7 +825,14 @@ abstract class Storage_Provider extends Provider implements Validator_Interface 
 	private static function get_needs_secret_access_key_desc(): string {
 		global $as3cf;
 
-		return sprintf( __( 'Media cannot be offloaded due to a missing Secret Access Key. <a href="%s">Update access keys</a>', 'amazon-s3-and-cloudfront' ), $as3cf::get_plugin_page_url() . '#/storage/provider' );
+		return sprintf(
+		/* translators: %s is a URL. */
+			__(
+				'Media cannot be offloaded due to a missing Secret Access Key. <a href="%s">Update access keys</a>',
+				'amazon-s3-and-cloudfront'
+			),
+			$as3cf::get_plugin_page_url() . '#/storage/provider'
+		);
 	}
 
 	/**
@@ -790,7 +845,10 @@ abstract class Storage_Provider extends Provider implements Validator_Interface 
 	public static function get_block_public_access_warning() {
 		return array(
 			'heading' => _x( 'Block All Public Access is Enabled', 'warning heading', 'amazon-s3-and-cloudfront' ),
-			'message' => __( 'The current Delivery Provider does not support Block All Public Access.', 'amazon-s3-and-cloudfront' ),
+			'message' => __(
+				'The current Delivery Provider does not support Block All Public Access.',
+				'amazon-s3-and-cloudfront'
+			),
 		);
 	}
 
@@ -804,7 +862,10 @@ abstract class Storage_Provider extends Provider implements Validator_Interface 
 	public static function get_object_ownership_enforced_warning() {
 		return array(
 			'heading' => _x( 'Object Ownership is Enforced', 'warning heading', 'amazon-s3-and-cloudfront' ),
-			'message' => __( 'The current Delivery Provider does not support Object Ownership enforcement.', 'amazon-s3-and-cloudfront' ),
+			'message' => __(
+				'The current Delivery Provider does not support Object Ownership enforcement.',
+				'amazon-s3-and-cloudfront'
+			),
 		);
 	}
 
@@ -824,13 +885,33 @@ abstract class Storage_Provider extends Provider implements Validator_Interface 
 	public static function get_media_already_offloaded_warning( $offloaded = 0 ) {
 		global $as3cf;
 
-		$message = __( 'You should remove them from the bucket before changing storage provider.', 'amazon-s3-and-cloudfront' );
+		$message = __(
+			'You should remove them from the bucket before changing storage provider.',
+			'amazon-s3-and-cloudfront'
+		);
 
 		if ( 1 === $offloaded ) {
-			$heading = sprintf( __( '<strong>Warning:</strong> You have %d offloaded media item.', 'amazon-s3-and-cloudfront' ), $offloaded );
-			$message = __( 'You should remove it from the bucket before changing storage provider.', 'amazon-s3-and-cloudfront' );
+			$heading = sprintf(
+			/* translators: %d is an integer. */
+				__(
+					'<strong>Warning:</strong> You have %d offloaded media item.',
+					'amazon-s3-and-cloudfront'
+				),
+				$offloaded
+			);
+			$message = __(
+				'You should remove it from the bucket before changing storage provider.',
+				'amazon-s3-and-cloudfront'
+			);
 		} elseif ( 1 < $offloaded ) {
-			$heading = sprintf( __( '<strong>Warning:</strong> You have %d offloaded media items.', 'amazon-s3-and-cloudfront' ), $offloaded );
+			$heading = sprintf(
+			/* translators: %d is an integer. */
+				__(
+					'<strong>Warning:</strong> You have %d offloaded media items.',
+					'amazon-s3-and-cloudfront'
+				),
+				$offloaded
+			);
 		} else {
 			$heading = __( '<strong>Warning:</strong> You have offloaded media items.', 'amazon-s3-and-cloudfront' );
 		}
@@ -848,7 +929,11 @@ abstract class Storage_Provider extends Provider implements Validator_Interface 
 	 * @return string
 	 */
 	public static function get_use_server_roles_title() {
-		return sprintf( __( 'My server is on %s and I\'d like to use IAM Roles', 'amazon-s3-and-cloudfront' ), static::get_provider_name() );
+		return sprintf(
+		/* translators: %s is a provider name, e.g. "Amazon Web Services". */
+			__( 'My server is on %s and I\'d like to use IAM Roles', 'amazon-s3-and-cloudfront' ),
+			static::get_provider_name()
+		);
 	}
 
 	/**
@@ -859,7 +944,10 @@ abstract class Storage_Provider extends Provider implements Validator_Interface 
 	public static function get_define_access_keys_desc() {
 		global $as3cf;
 
-		$mesg = __( 'Copy the following snippet to <strong>near the top</strong> of your wp-config.php and replace the stars with the keys.', 'amazon-s3-and-cloudfront' );
+		$mesg = __(
+			'Copy the following snippet to <strong>near the top</strong> of your wp-config.php and replace the stars with the keys.',
+			'amazon-s3-and-cloudfront'
+		);
 		$mesg .= '&nbsp;';
 		$mesg .= $as3cf::more_info_link( '/wp-offload-media/doc/' . static::get_provider_service_quick_start_slug() . '/#save-access-keys' );
 
@@ -890,7 +978,10 @@ abstract class Storage_Provider extends Provider implements Validator_Interface 
 	public static function get_enter_access_keys_desc() {
 		global $as3cf;
 
-		$mesg = __( 'Storing your access keys in the database is less secure than the other options, but if you\'re ok with that, go ahead and enter your keys in the form below.', 'amazon-s3-and-cloudfront' );
+		$mesg = __(
+			'Storing your access keys in the database is less secure than the other options, but if you\'re ok with that, go ahead and enter your keys in the form below.',
+			'amazon-s3-and-cloudfront'
+		);
 		$mesg .= '&nbsp;';
 		$mesg .= $as3cf::more_info_link( '/wp-offload-media/doc/' . static::get_provider_service_quick_start_slug() . '/#save-access-keys' );
 
@@ -906,7 +997,11 @@ abstract class Storage_Provider extends Provider implements Validator_Interface 
 		global $as3cf;
 
 		return sprintf(
-			__( 'Need help configuring your chosen storage provider? <a href="%s" target="_blank">View the Quick Start Guide</a>', 'amazon-s3-and-cloudfront' ),
+		/* translators: %s is a URL. */
+			__(
+				'Need help configuring your chosen storage provider? <a href="%s" target="_blank">View the Quick Start Guide</a>',
+				'amazon-s3-and-cloudfront'
+			),
 			$as3cf::dbrains_url(
 				'/wp-offload-media/doc/' . static::get_provider_service_quick_start_slug(),
 				array(
@@ -924,7 +1019,10 @@ abstract class Storage_Provider extends Provider implements Validator_Interface 
 	public static function get_define_key_file_desc() {
 		global $as3cf;
 
-		$mesg = __( 'Copy the following snippet to <strong>near the top</strong> of your wp-config.php and replace "<strong>/path/to/key/file.json</strong>".', 'amazon-s3-and-cloudfront' );
+		$mesg = __(
+			'Copy the following snippet to <strong>near the top</strong> of your wp-config.php and replace "<strong>/path/to/key/file.json</strong>".',
+			'amazon-s3-and-cloudfront'
+		);
 		$mesg .= '&nbsp;';
 		$mesg .= $as3cf::more_info_link( '/wp-offload-media/doc/' . static::get_provider_service_quick_start_slug() . '/#save-key-file' );
 
@@ -954,7 +1052,10 @@ abstract class Storage_Provider extends Provider implements Validator_Interface 
 	public static function get_enter_key_file_desc() {
 		global $as3cf;
 
-		$mesg = __( 'Storing your key file\'s contents in the database is less secure than the other options, but if you\'re ok with that, go ahead and enter your key file\'s JSON data in the field below.', 'amazon-s3-and-cloudfront' );
+		$mesg = __(
+			'Storing your key file\'s contents in the database is less secure than the other options, but if you\'re ok with that, go ahead and enter your key file\'s JSON data in the field below.',
+			'amazon-s3-and-cloudfront'
+		);
 		$mesg .= '&nbsp;';
 		$mesg .= $as3cf::more_info_link( '/wp-offload-media/doc/' . static::get_provider_service_quick_start_slug() . '/#save-key-file' );
 
@@ -970,11 +1071,18 @@ abstract class Storage_Provider extends Provider implements Validator_Interface 
 		global $as3cf;
 
 		$mesg = sprintf(
-			__( 'If you host your WordPress site on %s, click the <strong>Next</strong> button to make use of IAM Roles.', 'amazon-s3-and-cloudfront' ),
+		/* translators: %s is a provider name, e.g. "Amazon Web Services". */
+			__(
+				'If you host your WordPress site on %s, click the <strong>Next</strong> button to make use of IAM Roles.',
+				'amazon-s3-and-cloudfront'
+			),
 			static::get_provider_name()
 		);
 		$mesg .= '<br><br>';
-		$mesg .= __( 'Optionally, copy the following snippet to <strong>near the top</strong> of your wp-config.php.', 'amazon-s3-and-cloudfront' );
+		$mesg .= __(
+			'Optionally, copy the following snippet to <strong>near the top</strong> of your wp-config.php.',
+			'amazon-s3-and-cloudfront'
+		);
 		$mesg .= '&nbsp;';
 		$mesg .= $as3cf::more_info_link(
 			'/wp-offload-media/doc/' . static::get_provider_service_quick_start_slug() . '/#iam-roles'
@@ -1014,7 +1122,10 @@ abstract class Storage_Provider extends Provider implements Validator_Interface 
 		}
 
 		// Access Keys defined in standard settings constant.
-		if ( in_array( 'access-key-id', $as3cf->get_non_legacy_defined_settings_keys() ) || in_array( 'secret-access-key', $as3cf->get_non_legacy_defined_settings_keys() ) ) {
+		if (
+			in_array( 'access-key-id', $as3cf->get_non_legacy_defined_settings_keys() ) ||
+			in_array( 'secret-access-key', $as3cf->get_non_legacy_defined_settings_keys() )
+		) {
 			$defines[] = $as3cf::settings_constant();
 		}
 
@@ -1097,12 +1208,26 @@ abstract class Storage_Provider extends Provider implements Validator_Interface 
 				$mesg .= '<br>';
 
 				if ( count( $defines ) > 1 ) {
-					$mesg .= _x( 'To select a different option here, simply comment out or remove the "%1$s" defines in your wp-config.php.', 'Access Keys defined in multiple defines.', 'amazon-s3-and-cloudfront' );
+					/* translators: %1$s is a list of settings constants. */
+					$mesg .= _x(
+						'To select a different option here, simply comment out or remove the "%1$s" defines in your wp-config.php.',
+						'Access Keys defined in multiple defines.',
+						'amazon-s3-and-cloudfront'
+					);
 				} else {
-					$mesg .= _x( 'To select a different option here, simply comment out or remove the "%1$s" define in your wp-config.php.', 'Access Keys defined in single define.', 'amazon-s3-and-cloudfront' );
+					/* translators: %1$s is a settings constant. */
+					$mesg .= _x(
+						'To select a different option here, simply comment out or remove the "%1$s" define in your wp-config.php.',
+						'Access Keys defined in single define.',
+						'amazon-s3-and-cloudfront'
+					);
 				}
 
-				$multiple_defines_glue = _x( '" & "', 'joins multiple define keys in notice', 'amazon-s3-and-cloudfront' );
+				$multiple_defines_glue = _x(
+					'" & "',
+					'joins multiple define keys in notice',
+					'amazon-s3-and-cloudfront'
+				);
 				$defined_constants_str = join( $multiple_defines_glue, $defines );
 				$mesg                  = sprintf( $mesg, $defined_constants_str );
 				$mesg                  .= '&nbsp;';
@@ -1118,12 +1243,26 @@ abstract class Storage_Provider extends Provider implements Validator_Interface 
 				$mesg .= '<br>';
 
 				if ( count( $defines ) > 1 ) {
-					$mesg .= _x( 'To select a different option here, simply comment out or remove the "%1$s" defines in your wp-config.php.', 'Key File Path defined in multiple defines.', 'amazon-s3-and-cloudfront' );
+					/* translators: %1$s is a list of settings constants. */
+					$mesg .= _x(
+						'To select a different option here, simply comment out or remove the "%1$s" defines in your wp-config.php.',
+						'Key File Path defined in multiple defines.',
+						'amazon-s3-and-cloudfront'
+					);
 				} else {
-					$mesg .= _x( 'To select a different option here, simply comment out or remove the "%1$s" define in your wp-config.php.', 'Key File Path defined in single define.', 'amazon-s3-and-cloudfront' );
+					/* translators: %1$s is a settings constant. */
+					$mesg .= _x(
+						'To select a different option here, simply comment out or remove the "%1$s" define in your wp-config.php.',
+						'Key File Path defined in single define.',
+						'amazon-s3-and-cloudfront'
+					);
 				}
 
-				$multiple_defines_glue = _x( '" & "', 'joins multiple define keys in notice', 'amazon-s3-and-cloudfront' );
+				$multiple_defines_glue = _x(
+					'" & "',
+					'joins multiple define keys in notice',
+					'amazon-s3-and-cloudfront'
+				);
 				$defined_constants_str = join( $multiple_defines_glue, $defines );
 				$mesg                  = sprintf( $mesg, $defined_constants_str );
 				$mesg                  .= '&nbsp;';
@@ -1141,12 +1280,26 @@ abstract class Storage_Provider extends Provider implements Validator_Interface 
 				$mesg .= '<br>';
 
 				if ( count( $defines ) > 1 ) {
-					$mesg .= _x( 'To select a different option here, simply comment out or remove the "%1$s" defines in your wp-config.php.', 'Key File Path defined in multiple defines.', 'amazon-s3-and-cloudfront' );
+					/* translators: %1$s is a list of settings constants. */
+					$mesg .= _x(
+						'To select a different option here, simply comment out or remove the "%1$s" defines in your wp-config.php.',
+						'Key File Path defined in multiple defines.',
+						'amazon-s3-and-cloudfront'
+					);
 				} else {
-					$mesg .= _x( 'To select a different option here, simply comment out or remove the "%1$s" define in your wp-config.php.', 'Key File Path defined in single define.', 'amazon-s3-and-cloudfront' );
+					/* translators: %1$s is a settings constant. */
+					$mesg .= _x(
+						'To select a different option here, simply comment out or remove the "%1$s" define in your wp-config.php.',
+						'Key File Path defined in single define.',
+						'amazon-s3-and-cloudfront'
+					);
 				}
 
-				$multiple_defines_glue = _x( '" & "', 'joins multiple define keys in notice', 'amazon-s3-and-cloudfront' );
+				$multiple_defines_glue = _x(
+					'" & "',
+					'joins multiple define keys in notice',
+					'amazon-s3-and-cloudfront'
+				);
 				$defined_constants_str = join( $multiple_defines_glue, $defines );
 				$mesg                  = sprintf( $mesg, $defined_constants_str );
 				$mesg                  .= '&nbsp;';
@@ -1211,11 +1364,29 @@ abstract class Storage_Provider extends Provider implements Validator_Interface 
 			'utm_campaign' => 'error+messages',
 		), 'bucket-restrictions' );
 
-		$quick_start = sprintf( '<a class="js-link" href="%s" target="_blank">%s</a>', $url, __( 'How to set permissions', 'amazon-s3-and-cloudfront' ) );
+		$quick_start = sprintf(
+			'<a class="js-link" href="%s" target="_blank">%s</a>',
+			$url,
+			__( 'How to set permissions', 'amazon-s3-and-cloudfront' )
+		);
 
-		$message = sprintf( __( 'Media cannot be offloaded due to access restrictions on the provided bucket. The provided credentials may not have the correct permissions. %s', 'amazon-s3-and-cloudfront' ), $quick_start );
+		$message = sprintf(
+		/* translators: %s is a URL. */
+			__(
+				'Media cannot be offloaded due to access restrictions on the provided bucket. The provided credentials may not have the correct permissions. %s',
+				'amazon-s3-and-cloudfront'
+			),
+			$quick_start
+		);
 		if ( ! $single ) {
-			$message = sprintf( __( 'Media cannot be offloaded due to access restrictions on the provided buckets. The provided credentials may not have the correct permissions. %s', 'amazon-s3-and-cloudfront' ), $quick_start );
+			$message = sprintf(
+			/* translators: %s is a URL. */
+				__(
+					'Media cannot be offloaded due to access restrictions on the provided buckets. The provided credentials may not have the correct permissions. %s',
+					'amazon-s3-and-cloudfront'
+				),
+				$quick_start
+			);
 		}
 
 		return $message;
@@ -1235,8 +1406,13 @@ abstract class Storage_Provider extends Provider implements Validator_Interface 
 			return new AS3CF_Result(
 				Validator_Interface::AS3CF_STATUS_MESSAGE_ERROR,
 				sprintf(
+				/* translators: %s is a comma separated list of storage providers. */
 					__( 'An invalid storage provider has been defined. Please use %s.', 'amazon-s3-and-cloudfront' ),
-					"<code>" . AS3CF_Utils::human_readable_join( "</code>, <code>", "</code> or <code>", $valid_providers ) . "</code>"
+					"<code>" . AS3CF_Utils::human_readable_join(
+						"</code>, <code>",
+						"</code> or <code>",
+						$valid_providers
+					) . "</code>"
 				)
 			);
 		}
@@ -1315,13 +1491,19 @@ abstract class Storage_Provider extends Provider implements Validator_Interface 
 		if ( ! $this->as3cf->get_core_setting( 'copy-to-s3', false ) ) {
 			return new AS3CF_Result(
 				Validator_Interface::AS3CF_STATUS_MESSAGE_WARNING,
-				__( 'Storage provider is successfully connected, but new media will not be offloaded until <strong>Offload Media</strong> is enabled.', 'amazon-s3-and-cloudfront' )
+				__(
+					'Storage provider is successfully connected, but new media will not be offloaded until <strong>Offload Media</strong> is enabled.',
+					'amazon-s3-and-cloudfront'
+				)
 			);
 		}
 
 		return new AS3CF_Result(
 			Validator_Interface::AS3CF_STATUS_MESSAGE_SUCCESS,
-			__( 'Storage provider is successfully connected and ready to offload new media.', 'amazon-s3-and-cloudfront' )
+			__(
+				'Storage provider is successfully connected and ready to offload new media.',
+				'amazon-s3-and-cloudfront'
+			)
 		);
 	}
 
@@ -1345,7 +1527,12 @@ abstract class Storage_Provider extends Provider implements Validator_Interface 
 	 *
 	 * @return array
 	 */
-	public static function filter_object_meta( array $args, Item $as3cf_item = null, string $object_key = null, bool $copy = false ) {
+	public static function filter_object_meta(
+		array $args,
+		?Item $as3cf_item = null,
+		?string $object_key = null,
+		bool $copy = false
+	): array {
 		$source_id   = 0;
 		$item_source = array(
 			'id'          => $source_id,

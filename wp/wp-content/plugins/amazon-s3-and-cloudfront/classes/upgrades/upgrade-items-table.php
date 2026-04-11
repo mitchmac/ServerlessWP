@@ -45,7 +45,10 @@ class Upgrade_Items_Table extends Upgrade {
 	 * @return string
 	 */
 	protected function get_running_update_text() {
-		return __( 'and updating the plugin\'s metadata to use a faster storage method. During the update the site\'s total offloaded media count may be inaccurate but will settle down shortly after completing.', 'amazon-s3-and-cloudfront' );
+		return __(
+			'and updating the plugin\'s metadata to use a faster storage method. During the update the site\'s total offloaded media count may be inaccurate but will settle down shortly after completing.',
+			'amazon-s3-and-cloudfront'
+		);
 	}
 
 	/**
@@ -78,7 +81,15 @@ class Upgrade_Items_Table extends Upgrade {
 
 		if ( $fixed ) {
 			if ( update_post_meta( $item->ID, 'amazonS3_info', $provider_object ) ) {
-				$msg = sprintf( __( 'Fixed legacy amazonS3_info metadata when moved to %1$s table, please check bucket and path for attachment ID %2$s', 'amazon-s3-and-cloudfront' ), Media_Library_Item::items_table(), $item->ID );
+				$msg = sprintf(
+				/* translators: %1$s is a database table name, %2$s is a unique ID string. */
+					__(
+						'Fixed legacy amazonS3_info metadata when moved to %1$s table, please check bucket and path for attachment ID %2$s',
+						'amazon-s3-and-cloudfront'
+					),
+					Media_Library_Item::items_table(),
+					$item->ID
+				);
 				AS3CF_Error::log( $msg );
 			} else {
 				AS3CF_Error::log( 'Failed to fix broken serialized legacy offload metadata for attachment ' . $item->ID . ': ' . $item->provider_object );
@@ -174,6 +185,7 @@ class Upgrade_Items_Table extends Upgrade {
 		if ( $count ) {
 			$sql = 'SELECT COUNT(DISTINCT p.post_id)' . $sql;
 
+			// phpcs:ignore WordPress.DB, PluginCheck.Security.DirectDB.UnescapedDBParameter -- safe query, must not be cached
 			return $wpdb->get_var( $sql );
 		}
 
@@ -184,6 +196,7 @@ class Upgrade_Items_Table extends Upgrade {
 			$sql .= sprintf( ' LIMIT %d', (int) $limit );
 		}
 
+		// phpcs:ignore WordPress.DB, PluginCheck.Security.DirectDB.UnescapedDBParameter -- safe query, must not be cached
 		return $wpdb->get_results( $sql, OBJECT );
 	}
 }

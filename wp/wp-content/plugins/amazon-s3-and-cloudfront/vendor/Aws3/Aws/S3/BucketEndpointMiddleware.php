@@ -3,6 +3,7 @@
 namespace DeliciousBrains\WP_Offload_Media\Aws3\Aws\S3;
 
 use DeliciousBrains\WP_Offload_Media\Aws3\Aws\CommandInterface;
+use DeliciousBrains\WP_Offload_Media\Aws3\GuzzleHttp\Psr7\Uri;
 use DeliciousBrains\WP_Offload_Media\Aws3\Psr\Http\Message\RequestInterface;
 /**
  * Used to update the host used for S3 requests in the case of using a
@@ -16,20 +17,27 @@ class BucketEndpointMiddleware
 {
     private static $exclusions = ['GetBucketLocation' => \true];
     private $nextHandler;
+    private bool $useEndpointV2;
+    private ?string $endpoint;
     /**
      * Create a middleware wrapper function.
      *
+     * @param bool $useEndpointV2
+     * @param string|null $endpoint
+     *
      * @return callable
      */
-    public static function wrap()
+    public static function wrap(bool $useEndpointV2 = \false, ?string $endpoint = null) : callable
     {
-        return function (callable $handler) {
-            return new self($handler);
+        return function (callable $handler) use($useEndpointV2, $endpoint) {
+            return new self($handler, $useEndpointV2, $endpoint);
         };
     }
-    public function __construct(callable $nextHandler)
+    public function __construct(callable $nextHandler, bool $useEndpointV2, ?string $endpoint = null)
     {
         $this->nextHandler = $nextHandler;
+        $this->useEndpointV2 = $useEndpointV2;
+        $this->endpoint = $endpoint;
     }
     public function __invoke(CommandInterface $command, RequestInterface $request)
     {
@@ -41,62 +49,41 @@ class BucketEndpointMiddleware
         return $nextHandler($command, $request);
     }
     /**
-     * Performs a one-time removal of Bucket from path, then if
-     * the bucket name is duplicated in the path, performs additional
-     * removal which is dependent on the number of occurrences of the bucket
-     * name in a path-like format in the key name.
+     * @param string $path
+     * @param string $bucket
      *
      * @return string
      */
-    private function removeBucketFromPath($path, $bucket, $key)
+    private function removeBucketFromPath(string $path, string $bucket) : string
     {
-        $occurrencesInKey = $this->getBucketNameOccurrencesInKey($key, $bucket);
-        do {
-            $len = \strlen($bucket) + 1;
-            if (\substr($path, 0, $len) === "/{$bucket}") {
-                $path = \substr($path, $len);
-            }
-        } while (\substr_count($path, "/{$bucket}") > $occurrencesInKey + 1);
+        $len = \strlen($bucket) + 1;
+        if (\str_starts_with($path, "/{$bucket}")) {
+            $path = \substr($path, $len);
+        }
         return $path ?: '/';
     }
-    private function removeDuplicateBucketFromHost($host, $bucket)
+    /**
+     * @param RequestInterface $request
+     * @param CommandInterface $command
+     *
+     * @return RequestInterface
+     */
+    private function modifyRequest(RequestInterface $request, CommandInterface $command) : RequestInterface
     {
-        if (\substr_count($host, $bucket) > 1) {
-            while (\strpos($host, "{$bucket}.{$bucket}") === 0) {
-                $hostArr = \explode('.', $host);
-                \array_shift($hostArr);
-                $host = \implode('.', $hostArr);
-            }
-        }
-        return $host;
-    }
-    private function getBucketNameOccurrencesInKey($key, $bucket)
-    {
-        $occurrences = 0;
-        if (empty($key)) {
-            return $occurrences;
-        }
-        $segments = \explode('/', $key);
-        foreach ($segments as $segment) {
-            if (\strpos($segment, $bucket) === 0) {
-                $occurrences++;
-            }
-        }
-        return $occurrences;
-    }
-    private function modifyRequest(RequestInterface $request, CommandInterface $command)
-    {
-        $key = isset($command['Key']) ? $command['Key'] : null;
         $uri = $request->getUri();
         $path = $uri->getPath();
         $host = $uri->getHost();
         $bucket = $command['Bucket'];
-        $path = $this->removeBucketFromPath($path, $bucket, $key);
-        $host = $this->removeDuplicateBucketFromHost($host, $bucket);
+        if ($this->useEndpointV2 && !empty($this->endpoint)) {
+            // V2 provider adds bucket name to host by default
+            // preserve original host
+            $host = (new Uri($this->endpoint))->getHost();
+        }
+        $path = $this->removeBucketFromPath($path, $bucket);
         // Modify the Key to make sure the key is encoded, but slashes are not.
-        if ($key) {
+        if ($command['Key']) {
             $path = S3Client::encodeKey(\rawurldecode($path));
         }
-        return $request->withUri($uri->withHost($host)->withPath($path));
+        return $request->withUri($uri->withPath($path)->withHost($host));
     }
 }

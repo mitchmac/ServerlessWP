@@ -70,9 +70,13 @@ class AS3CF_Local_To_S3 extends AS3CF_Filter {
 	/**
 	 * Filter post data.
 	 *
-	 * @param WP_Post $post
+	 * @param WP_Post|mixed $post
 	 */
 	public function filter_post_data( $post ) {
+		if ( empty( $post ) || ! is_a( $post, 'WP_Post' ) ) {
+			return;
+		}
+
 		global $pages;
 
 		$cache    = $this->get_post_cache( $post->ID );
@@ -292,7 +296,9 @@ class AS3CF_Local_To_S3 extends AS3CF_Filter {
 				continue;
 			}
 
-			$path = AS3CF_Utils::decode_filename_in_path( ltrim( str_replace( $this->get_bare_upload_base_urls(), '', $bare_url ), '/' ) );
+			$path = AS3CF_Utils::decode_filename_in_path(
+				ltrim( str_replace( $this->get_bare_upload_base_urls(), '', $bare_url ), '/' )
+			);
 
 			$paths[ $path ]           = $full_url;
 			$full_urls[ $full_url ][] = $url;
@@ -307,7 +313,12 @@ class AS3CF_Local_To_S3 extends AS3CF_Filter {
 					// Each returned item may have matched on either the source_path or original_source_path.
 					// Because the base image file name of a thumbnail might match the primary rather scaled or rotated full image
 					// it's possible that both source paths are used by separate URLs.
-					foreach ( array( $as3cf_item->source_path(), $as3cf_item->original_source_path() ) as $source_path ) {
+					foreach (
+						array(
+							$as3cf_item->source_path(),
+							$as3cf_item->original_source_path(),
+						) as $source_path
+					) {
 						if ( ! empty( $paths[ $source_path ] ) ) {
 							$matched_full_url = $paths[ $source_path ];
 
@@ -435,7 +446,10 @@ class AS3CF_Local_To_S3 extends AS3CF_Filter {
 			}
 
 			$ours = false;
-			if ( $this->as3cf->get_setting( 'enable-delivery-domain' ) && $this->as3cf->get_setting( 'delivery-domain', '' ) === $parts['host'] ) {
+			if (
+				$this->as3cf->get_setting( 'enable-delivery-domain' ) &&
+				$this->as3cf->get_setting( 'delivery-domain', '' ) === $parts['host']
+			) {
 				$ours = true;
 			} elseif ( false !== strpos( $parts['host'], $this->as3cf->get_storage_provider()->get_domain() ) ) {
 				$ours = true;

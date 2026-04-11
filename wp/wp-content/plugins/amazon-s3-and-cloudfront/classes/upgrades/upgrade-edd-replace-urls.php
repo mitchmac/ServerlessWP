@@ -61,6 +61,7 @@ class Upgrade_EDD_Replace_URLs extends Upgrade {
 			$sql .= sprintf( ' LIMIT %d', (int) $limit );
 		}
 
+		// phpcs:ignore WordPress.DB,PluginCheck.Security.DirectDB.UnescapedDBParameter -- safe query, must not be cached
 		return $wpdb->get_results( $sql );
 	}
 

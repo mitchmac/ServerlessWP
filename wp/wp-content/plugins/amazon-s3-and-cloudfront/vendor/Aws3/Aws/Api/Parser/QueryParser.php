@@ -23,7 +23,7 @@ class QueryParser extends AbstractParser
      *                                      back of result wrappers from the
      *                                      output structure.
      */
-    public function __construct(Service $api, XmlParser $xmlParser = null, $honorResultWrapper = \true)
+    public function __construct(Service $api, ?XmlParser $xmlParser = null, $honorResultWrapper = \true)
     {
         parent::__construct($api);
         $this->parser = $xmlParser ?: new XmlParser();
@@ -32,7 +32,12 @@ class QueryParser extends AbstractParser
     public function __invoke(CommandInterface $command, ResponseInterface $response)
     {
         $output = $this->api->getOperation($command->getName())->getOutput();
-        $xml = $this->parseXml($response->getBody(), $response);
+        $body = $response->getBody();
+        $xml = !$body->isSeekable() || $body->getSize() ? $this->parseXml($body, $response) : null;
+        // Empty request bodies should not be deserialized.
+        if (\is_null($xml)) {
+            return new Result();
+        }
         if ($this->honorResultWrapper && $output['resultWrapper']) {
             $xml = $xml->{$output['resultWrapper']};
         }
