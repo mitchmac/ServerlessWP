@@ -4,6 +4,7 @@ const { validate } = require('../util/install.js');
 const { setup } = require('../util/directory.js');
 const sqliteS3 = require('../util/sqliteS3.js');
 const sandbox = require('../util/sandbox.js');
+const readOnly = require('../util/readOnly.js');
 
 const pathToWP = '/tmp/wp';
 let initSqliteS3 = false;
@@ -76,6 +77,11 @@ exports.handler = async function (event, context, callback) {
         // Return the response for serving.
         return response;
     }
+}
+
+if (process.env['SERVERLESSWP_READ_ONLY_MODE']) {
+    // Register the read only mode plugin before sqliteS3 so mutations are blocked early.
+    serverlesswp.registerPlugin(readOnly);
 }
 
 if (process.env['SQLITE_S3_BUCKET'] || process.env['SERVERLESSWP_DATA_SECRET']) {

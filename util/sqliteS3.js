@@ -27,6 +27,13 @@ exports.config = function(config) {
 }
 
 exports.preRequest = async function(event) {
+    // In read-only mode, skip the S3 fetch if the local db file already exists.
+    if (process.env['SERVERLESSWP_READ_ONLY_MODE'] && await exists(sqliteFilePath)) {
+        db = new sqlite3.Database(sqliteFilePath);
+        dataVersion = await getDataVersion();
+        return;
+    }
+
     if (!_config?.bucket) {
         throw new Error("S3 bucket is required");
     }
