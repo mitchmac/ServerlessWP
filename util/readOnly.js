@@ -24,6 +24,7 @@ exports.postRequest = async function(event, response) {
 
     const contentType = response.headers['content-type'] || response.headers['Content-Type'] || '';
     if (contentType.includes('text/html') && !response.headers['cache-control']) {
-        response.headers['cache-control'] = 'max-age=86400, s-maxage=86400';
+        const maxAge = process.env.READ_ONLY_CACHE_MAX_AGE || 86400;
+        response.headers['cache-control'] = `max-age=${maxAge}, s-maxage=${maxAge}`;
     }
 };
