@@ -97,4 +97,4 @@ docker run \
 
 until curl -sfk https://localhost:3000/; do sleep 1; done
 
-SKIP_AUTH=1 SCREENSHOTS=${SCREENSHOTS:-} SERVERLESSWP_READ_ONLY_CACHE_MAX_AGE=3600 npx playwright test e2e-read-only.spec.js "$@"
+SKIP_AUTH=1 SCREENSHOTS=${SCREENSHOTS:-} npx playwright test e2e-read-only.spec.js "$@"
