@@ -83,6 +83,8 @@ echo "Starting read-only mode tests..."
 docker stop serverlesswp-test
 docker rm serverlesswp-test
 
+SERVERLESSWP_READ_ONLY_CACHE_MAX_AGE=${SERVERLESSWP_READ_ONLY_CACHE_MAX_AGE:-3600}
+
 docker run \
     -e SQLITE_S3_BUCKET=test-bucket \
     -e SQLITE_S3_API_KEY=testuser -e SQLITE_S3_API_SECRET=testpass \
@@ -90,10 +92,11 @@ docker run \
     -e VERCEL=$VERCEL -e VERCEL_GIT_COMMIT_REF=$VERCEL_GIT_COMMIT_REF \
     -e SERVERLESSWP_TESTING=1 \
     -e SERVERLESSWP_READ_ONLY_MODE=1 \
+    -e SERVERLESSWP_READ_ONLY_CACHE_MAX_AGE=$SERVERLESSWP_READ_ONLY_CACHE_MAX_AGE \
     -p 9000:8080 \
     --network serverlesswp-test-network \
     -d --name serverlesswp-test-readonly serverlesswp-test
 
 until curl -sfk https://localhost:3000/; do sleep 1; done
 
-SKIP_AUTH=1 SCREENSHOTS=${SCREENSHOTS:-} npx playwright test e2e-read-only.spec.js "$@"
+SKIP_AUTH=1 SCREENSHOTS=${SCREENSHOTS:-} SERVERLESSWP_READ_ONLY_CACHE_MAX_AGE=$SERVERLESSWP_READ_ONLY_CACHE_MAX_AGE npx playwright test e2e-read-only.spec.js "$@"

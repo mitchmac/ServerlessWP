@@ -12,7 +12,8 @@ test.afterEach(async ({ page }, testInfo) => {
 test('homepage loads', async ({ page }) => {
     const response = await page.goto('/');
     await expect(page).toHaveTitle(/.+/);
-    expect(response.headers()['cache-control']).toMatch(/max-age=86400/);
+    const expectedMaxAge = process.env.SERVERLESSWP_READ_ONLY_CACHE_MAX_AGE || 86400;
+    expect(response.headers()['cache-control']).toMatch(new RegExp(`max-age=${expectedMaxAge}`));
 });
 
 test('GET requests are allowed', async ({ page }) => {
