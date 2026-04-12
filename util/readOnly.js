@@ -23,7 +23,9 @@ exports.postRequest = async function(event, response) {
     }
 
     const contentType = response.headers['content-type'] || response.headers['Content-Type'] || '';
-    if (contentType.includes('text/html') && !response.headers['cache-control']) {
+    const cacheControl = response.headers['cache-control'] || response.headers['Cache-Control'];
+    const setCookie = response.headers['set-cookie'] || response.headers['Set-Cookie'];
+    if (contentType.includes('text/html') && !cacheControl && !setCookie) {
         const maxAge = process.env.SERVERLESSWP_READ_ONLY_CACHE_MAX_AGE || 86400;
         response.headers['cache-control'] = `max-age=${maxAge}, s-maxage=${maxAge}`;
     }
