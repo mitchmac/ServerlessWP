@@ -79,15 +79,14 @@ exports.handler = async function (event, context, callback) {
     }
 }
 
+if (process.env['SERVERLESSWP_READ_ONLY_MODE']) {
+    // Register before sqliteS3 so blocked requests force a response before the S3 fetch.
+    serverlesswp.registerPlugin(readOnly);
+}
+
 if (process.env['SQLITE_S3_BUCKET'] || process.env['SERVERLESSWP_DATA_SECRET']) {
     // Register the sqlite serverlesswp plugin.
     serverlesswp.registerPlugin(sqliteS3);
-}
-
-if (process.env['SERVERLESSWP_READ_ONLY_MODE']) {
-    // Register after sqliteS3 so readOnly runs last in the preRequest chain.
-    // Each plugin's return value overwrites the previous, so the last non-null response wins.
-    serverlesswp.registerPlugin(readOnly);
 }
 
 if (process.env['SERVERLESSWP_DATA_SECRET']) {

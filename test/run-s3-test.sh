@@ -3,6 +3,12 @@ set -euo pipefail
 
 ./build-test.sh
 
+# Clean up any leftovers from a previous run
+pkill -f "node proxy.js" 2>/dev/null || true
+docker stop serverlesswp-test serverlesswp-test-readonly minio 2>/dev/null || true
+docker rm serverlesswp-test serverlesswp-test-readonly minio 2>/dev/null || true
+docker network rm serverlesswp-test-network 2>/dev/null || true
+
 VERCEL=${VERCEL:-1}
 VERCEL_GIT_COMMIT_REF=${VERCEL_GIT_COMMIT_REF:-test_branch}
 
@@ -57,9 +63,7 @@ cleanup() {
 }
 trap cleanup EXIT
 
-until curl -sf -XPOST http://localhost:9000/2015-03-31/functions/function/invocations \
-    -d '{"path":"/"}' > /dev/null 2>&1; do sleep 1; done
-until curl -sfk https://localhost:3000/ > /dev/null 2>&1; do sleep 1; done
+until curl -sfk https://localhost:3000/; do sleep 1; done
 
 echo "Testing static file serving..."
 static_check=$(curl -sk -o /dev/null -w "%{http_code} %{content_type}" https://localhost:3000/wp-includes/css/classic-themes.css)
@@ -90,7 +94,6 @@ docker run \
     --network serverlesswp-test-network \
     -d --name serverlesswp-test-readonly serverlesswp-test
 
-until curl -sf -XPOST http://localhost:9000/2015-03-31/functions/function/invocations \
-    -d '{"path":"/"}' > /dev/null 2>&1; do sleep 1; done
+until curl -sfk https://localhost:3000/; do sleep 1; done
 
 SKIP_AUTH=1 SCREENSHOTS=${SCREENSHOTS:-} npx playwright test e2e-read-only.spec.js "$@"
