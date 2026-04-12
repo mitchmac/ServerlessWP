@@ -1,6 +1,7 @@
 const { request } = require('@playwright/test');
 
 module.exports = async function globalSetup() {
+    if (process.env['SKIP_AUTH']) return;
     const api = await request.newContext({
         baseURL: 'https://localhost:3000',
         ignoreHTTPSErrors: true,
