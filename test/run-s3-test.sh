@@ -49,6 +49,8 @@ cleanup() {
     kill $PROXY_PID 2>/dev/null || true
     docker stop serverlesswp-test 2>/dev/null || true
     docker rm serverlesswp-test 2>/dev/null || true
+    docker stop serverlesswp-test-readonly 2>/dev/null || true
+    docker rm serverlesswp-test-readonly 2>/dev/null || true
     docker stop minio 2>/dev/null || true
     docker rm minio 2>/dev/null || true
     docker network rm serverlesswp-test-network 2>/dev/null || true
@@ -71,3 +73,24 @@ npm install
 npx playwright install chromium
 ldconfig -p | grep -q libnspr4 || sudo env PATH="$PATH" node_modules/.bin/playwright install-deps chromium
 SCREENSHOTS=${SCREENSHOTS:-} npx playwright test e2e.spec.js e2e-s3-offload.spec.js "$@"
+
+# Read-only mode tests — reuse the same populated S3 bucket from above.
+echo "Starting read-only mode tests..."
+docker stop serverlesswp-test
+docker rm serverlesswp-test
+
+docker run \
+    -e SQLITE_S3_BUCKET=test-bucket \
+    -e SQLITE_S3_API_KEY=testuser -e SQLITE_S3_API_SECRET=testpass \
+    -e SQLITE_S3_REGION=us-east-1 -e SQLITE_S3_ENDPOINT=http://minio:9000 -e SQLITE_S3_FORCE_PATH_STYLE=1 \
+    -e VERCEL=$VERCEL -e VERCEL_GIT_COMMIT_REF=$VERCEL_GIT_COMMIT_REF \
+    -e SERVERLESSWP_TESTING=1 \
+    -e SERVERLESSWP_READ_ONLY_MODE=1 \
+    -p 9000:8080 \
+    --network serverlesswp-test-network \
+    -d --name serverlesswp-test-readonly serverlesswp-test
+
+until curl -sf -XPOST http://localhost:9000/2015-03-31/functions/function/invocations \
+    -d '{"path":"/"}' > /dev/null 2>&1; do sleep 1; done
+
+SKIP_AUTH=1 SCREENSHOTS=${SCREENSHOTS:-} npx playwright test e2e-read-only.spec.js "$@"
