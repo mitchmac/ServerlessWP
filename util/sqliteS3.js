@@ -105,7 +105,7 @@ exports.postRequest = async function(event, response) {
         let versionNow = await getDataVersion();
 
         // See if the db has been mutated, if so, send the changes to s3
-        if (!process.env['SERVERLESSWP_READ_ONLY_MODE'] && dataVersion !== versionNow) {
+        if ((!process.env['SERVERLESSWP_READ_ONLY_MODE'] || ['false', '0', 'no'].includes(process.env['SERVERLESSWP_READ_ONLY_MODE'].toLowerCase())) && dataVersion !== versionNow) {
             if (dbExists) {
                 try {
                     await dbClose();

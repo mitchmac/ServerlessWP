@@ -12,7 +12,8 @@ test.afterEach(async ({ page }, testInfo) => {
 test('homepage loads', async ({ page }) => {
     const response = await page.goto('/');
     await expect(page).toHaveTitle(/.+/);
-    expect(response.headers()['cache-control']).toMatch(/max-age=3600/);
+    expect(response.headers()['cache-control']).toMatch(/max-age=0/);
+    expect(response.headers()['cache-control']).toMatch(/s-maxage=3600/);
 });
 
 test('GET requests are allowed', async ({ page }) => {
