@@ -79,7 +79,7 @@ exports.handler = async function (event, context, callback) {
     }
 }
 
-if (process.env['SERVERLESSWP_READ_ONLY_MODE']) {
+if (process.env['SERVERLESSWP_READ_ONLY_MODE'] && !['false', '0', 'no'].includes(process.env['SERVERLESSWP_READ_ONLY_MODE'].toLowerCase())) {
     // Register before sqliteS3 so blocked requests force a response before the S3 fetch.
     serverlesswp.registerPlugin(readOnly);
 }

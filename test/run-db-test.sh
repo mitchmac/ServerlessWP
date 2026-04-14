@@ -37,7 +37,7 @@ docker run \
     --network serverlesswp-test-network \
     -d --name serverlesswp-test serverlesswp-test
 
-node proxy.js &
+node proxy.js > /dev/null 2>&1 &
 PROXY_PID=$!
 
 cleanup() {
@@ -50,7 +50,7 @@ cleanup() {
 }
 trap cleanup EXIT
 
-until curl -sfk https://localhost:3000/; do sleep 1; done
+until curl -sfko /dev/null https://localhost:3000/; do sleep 1; done
 
 echo "Testing static file serving..."
 static_check=$(curl -sk -o /dev/null -w "%{http_code} %{content_type}" https://localhost:3000/wp-includes/css/classic-themes.css)

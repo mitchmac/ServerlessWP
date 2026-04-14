@@ -28,6 +28,6 @@ exports.postRequest = async function(event, response) {
     const requestCookies = event.headers?.cookie || event.headers?.Cookie || '';
     if (contentType.includes('text/html') && !cacheControl && !setCookie && !requestCookies) {
         const maxAge = process.env.SERVERLESSWP_READ_ONLY_CACHE_MAX_AGE || 86400;
-        response.headers['cache-control'] = `max-age=${maxAge}, s-maxage=${maxAge}`;
+        response.headers['cache-control'] = `max-age=0, s-maxage=${maxAge}`;
     }
 };

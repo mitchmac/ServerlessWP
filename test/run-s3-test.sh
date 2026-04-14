@@ -39,6 +39,7 @@ docker run \
     -e SQLITE_S3_REGION=us-east-1 -e SQLITE_S3_ENDPOINT=http://minio:9000 -e SQLITE_S3_FORCE_PATH_STYLE=1 \
     -e VERCEL=$VERCEL -e VERCEL_GIT_COMMIT_REF=$VERCEL_GIT_COMMIT_REF \
     -e SERVERLESSWP_TESTING=1 \
+    -e SERVERLESSWP_READ_ONLY_MODE=false \
     -e S3_KEY_ID=testuser -e S3_ACCESS_KEY=testpass \
     -e S3_OFFLOAD_BUCKET=test-bucket \
     -e S3_OFFLOAD_REGION=us-east-2 \
@@ -48,7 +49,7 @@ docker run \
     --network serverlesswp-test-network \
     -d --name serverlesswp-test serverlesswp-test
 
-node proxy.js &
+node proxy.js > /dev/null 2>&1 &
 PROXY_PID=$!
 
 cleanup() {
@@ -63,7 +64,7 @@ cleanup() {
 }
 trap cleanup EXIT
 
-until curl -sfk https://localhost:3000/; do sleep 1; done
+until curl -sfko /dev/null https://localhost:3000/; do sleep 1; done
 
 echo "Testing static file serving..."
 static_check=$(curl -sk -o /dev/null -w "%{http_code} %{content_type}" https://localhost:3000/wp-includes/css/classic-themes.css)
@@ -95,6 +96,6 @@ docker run \
     --network serverlesswp-test-network \
     -d --name serverlesswp-test-readonly serverlesswp-test
 
-until curl -sfk https://localhost:3000/; do sleep 1; done
+until curl -sfko /dev/null https://localhost:3000/; do sleep 1; done
 
 SKIP_AUTH=1 SCREENSHOTS=${SCREENSHOTS:-} npx playwright test e2e-read-only.spec.js "$@"
