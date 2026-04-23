@@ -129,8 +129,8 @@ if (isset($_ENV['S3_KEY_ID']) && isset($_ENV['S3_ACCESS_KEY'])) {
 define('DISALLOW_FILE_EDIT', true );
 define('DISALLOW_FILE_MODS', true );
 
-// If using SQLite + S3 instead of MySQL/MariaDB.
-if (isset($_ENV['SQLITE_S3_BUCKET']) || isset($_ENV['SERVERLESSWP_DATA_SECRET'])) {
+// If using SQLite + S3 or SQLite + Vercel Blob instead of MySQL/MariaDB.
+if (isset($_ENV['SQLITE_S3_BUCKET']) || isset($_ENV['SERVERLESSWP_DATA_SECRET']) || isset($_ENV['BLOB_READ_WRITE_TOKEN'])) {
   define('DB_DIR', '/tmp');
   define('DB_FILE', 'wp-sqlite-s3.sqlite');
   define('DB_NAME', 'wp-sqlite');
