@@ -1,11 +1,16 @@
 exports.validate = function(response) {
   let hasSqliteS3 = false;
+  let hasVercelBlob = false;
   let hasSQL = false;
   let platform = 'AWS';
   let dashboardLink;
 
   if (process.env['SQLITE_S3_BUCKET'] || process.env['SERVERLESSWP_DATA_SECRET']) {
     hasSqliteS3 = true;
+  }
+
+  if (process.env['BLOB_READ_WRITE_TOKEN']) {
+    hasVercelBlob = true;
   }
 
   if (process.env['DATABASE'] && process.env['USERNAME'] && process.env['PASSWORD'] && process.env['HOST']) {
@@ -24,7 +29,7 @@ exports.validate = function(response) {
     dashboardLink = 'https://console.aws.amazon.com/console/home';
   }
 
-  if (!hasSQL && !hasSqliteS3) {
+  if (!hasSQL && !hasSqliteS3 && !hasVercelBlob) {
     let data = {};
     data.dashboardLink = dashboardLink;
     data.platform = platform;

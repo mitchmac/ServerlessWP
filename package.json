@@ -5,6 +5,7 @@
   "license": "MIT",
   "dependencies": {
     "@aws-sdk/client-s3": "^3.772.0",
+    "@vercel/blob": "^2.3.3",
     "serverlesswp": "^0.5.1",
     "sqlite3": "^5.1.7"
   },
