@@ -1,10 +1,5 @@
 <script>
-	import {
-		createEventDispatcher,
-		getContext,
-		hasContext,
-		onMount
-	} from "svelte";
+	import {getContext, hasContext, onMount} from "svelte";
 	import {writable} from "svelte/store";
 	import {slide} from "svelte/transition";
 	import {
@@ -17,7 +12,7 @@
 		current_settings,
 		needs_refresh,
 		revalidatingSettings,
-		state
+		appState
 	} from "../js/stores";
 	import {scrollIntoView} from "../js/scrollIntoView";
 	import {
@@ -33,10 +28,16 @@
 	import Loading from "./Loading.svelte";
 	import DefinedInWPConfig from "./DefinedInWPConfig.svelte";
 
-	const dispatch = createEventDispatcher();
+	/**
+	 * @typedef {Object} Props
+	 * @property {function} [onRouteEvent]
+	 */
+
+	/** @type {Props} */
+	let { onRouteEvent } = $props();
 
 	// Parent page may want to be locked.
-	let settingsLocked = writable( false );
+	let settingsLocked = $state( writable( false ) );
 
 	if ( hasContext( "settingsLocked" ) ) {
 		settingsLocked = getContext( "settingsLocked" );
@@ -52,31 +53,36 @@
 	// As this page does not directly alter the settings store until done,
 	// we need to keep track of any changes made elsewhere and prompt
 	// the user to refresh the page.
-	let saving = false;
+	let saving = $state( false );
 	const previousSettings = { ...$current_settings };
 	const previousDefines = { ...$defined_settings };
 
-	$: {
+	$effect.pre( () => {
 		$needs_refresh = $needs_refresh || needsRefresh( saving, previousSettings, $current_settings, previousDefines, $defined_settings );
-	}
+	} );
 
-	let bucketSource = "existing";
-	let enterOrSelectExisting = "enter";
+	let bucketSource = $state( "existing" );
+	let enterOrSelectExisting = $state( "enter" );
 
 	// If $defined_settings.bucket set, must use it, and disable change.
-	let newBucket = $settings.bucket;
-	$: defined = $defined_settings.includes( "bucket" );
-	$: disabled = defined || $needs_refresh || $settingsLocked;
+	let newBucket = $state( $settings.bucket );
+	let defined = $derived( $defined_settings.includes( "bucket" ) );
+	let disabled = $derived( defined || $needs_refresh || $settingsLocked );
 
 	// If $defined_settings.region set, must use it, and disable change.
-	let newRegion = $settings.region;
-	$: newRegionDefined = $defined_settings.includes( "region" );
-	$: newRegionDisabled = newRegionDefined || $needs_refresh || $settingsLocked;
+	let newRegion = $state( $settings.region );
+	let newRegionRequired = $state( $storage_provider.region_required );
+	let newRegionDefined = $derived( $defined_settings.includes( "region" ) );
+	let newRegionDisabled = $derived( newRegionDefined || $needs_refresh || $settingsLocked );
 
 	/**
 	 * Handles clicking the Existing radio button.
+	 *
+	 * @property {Event} [event]
 	 */
-	function handleExisting() {
+	function handleExisting( event ) {
+		event.preventDefault();
+
 		if ( disabled ) {
 			return;
 		}
@@ -86,8 +92,12 @@
 
 	/**
 	 * Handles clicking the New radio button.
+	 *
+	 * @property {Event} [event]
 	 */
-	function handleNew() {
+	function handleNew( event ) {
+		event.preventDefault();
+
 		if ( disabled ) {
 			return;
 		}
@@ -96,7 +106,12 @@
 	}
 
 	/**
-	 * Calls the API to get a list of existing buckets for the currently selected storage provider and region (if applicable).
+	 * Calls the API to get a list of existing buckets for the currently selected
+	 * storage provider and region (if applicable).
+	 *
+	 * NOTE: This is used from an #await, which is an effect in Svelte 5,
+	 *       and so should not access a store that might be updated dynamically,
+	 *       otherwise the #await will be reanalyzed every time the store is updated.
 	 *
 	 * @param {string} region
 	 *
@@ -105,7 +120,7 @@
 	async function getBuckets( region ) {
 		let params = {};
 
-		if ( $storage_provider.region_required ) {
+		if ( newRegionRequired ) {
 			params = { region: region };
 		}
 
@@ -133,7 +148,7 @@
 		let data = await api.post( "buckets", {
 			bucket: newBucket,
 			region: newRegion
-		} )
+		} );
 
 		if ( data.hasOwnProperty( "saved" ) ) {
 			return data.saved;
@@ -179,7 +194,7 @@
 		return message;
 	}
 
-	$: invalidBucketNameMessage = getInvalidBucketNameMessage( newBucket, bucketSource, enterOrSelectExisting );
+	let invalidBucketNameMessage = $derived( getInvalidBucketNameMessage( newBucket, bucketSource, enterOrSelectExisting ) );
 
 	/**
 	 * Returns text to be used on Next button.
@@ -205,7 +220,7 @@
 		return $strings.next;
 	}
 
-	$: nextText = getNextText( bucketSource, enterOrSelectExisting );
+	let nextText = $derived( getNextText( bucketSource, enterOrSelectExisting ) );
 
 	/**
 	 * Handles a Next button click.
@@ -219,7 +234,7 @@
 		}
 
 		saving = true;
-		state.pausePeriodicFetch();
+		appState.pausePeriodicFetch();
 
 		$settings.bucket = newBucket;
 		$settings.region = newRegion;
@@ -229,19 +244,19 @@
 		if ( result.hasOwnProperty( "saved" ) && !result.saved ) {
 			settings.reset();
 			saving = false;
-			await state.resumePeriodicFetch();
+			await appState.resumePeriodicFetch();
 
 			scrollNotificationsIntoView();
 			return;
 		}
 
 		$revalidatingSettings = true;
-		const statePromise = state.resumePeriodicFetch();
+		const statePromise = appState.resumePeriodicFetch();
 
 		result.bucketSource = bucketSource;
 		result.initialSettings = initialSettings;
 
-		dispatch( "routeEvent", {
+		onRouteEvent( {
 			event: "settings.save",
 			data: result,
 			default: "/"
@@ -268,13 +283,13 @@
 				active={bucketSource === "existing"}
 				{disabled}
 				text={$strings.use_existing_bucket}
-				on:click={handleExisting}
+				onclick={handleExisting}
 			/>
 			<TabButton
 				active={bucketSource === "new"}
 				{disabled}
 				text={$strings.create_new_bucket}
-				on:click={handleNew}
+				onclick={handleNew}
 			/>
 		</PanelRow>
 	</Panel>
@@ -303,7 +318,7 @@
 								{disabled}
 							>
 						</div>
-						{#if $storage_provider.region_required}
+						{#if newRegionRequired}
 							<div class="region flex-column">
 								<label class="input-label" for="region">
 									{$strings.region}&nbsp;<DefinedInWPConfig defined={newRegionDefined}/>
@@ -324,7 +339,7 @@
 				{/if}
 
 				{#if enterOrSelectExisting === "select"}
-					{#if $storage_provider.region_required}
+					{#if newRegionRequired}
 						<label class="input-label" for="list-region">
 							{$strings.region}&nbsp;<DefinedInWPConfig defined={newRegionDefined}/>
 						</label>
@@ -346,12 +361,12 @@
 							{#if buckets.length}
 								{#each buckets as bucket}
 									<!-- TODO: Fix a11y. -->
-									<!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
-									<!-- svelte-ignore a11y-click-events-have-key-events -->
+									<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+									<!-- svelte-ignore a11y_click_events_have_key_events -->
 									<li
 										class="row"
 										class:active={newBucket === bucket.Name}
-										on:click={() => newBucket = bucket.Name}
+										onclick={() => newBucket = bucket.Name}
 										use:scrollIntoView={newBucket === bucket.Name}
 										data-bucket-name={bucket.Name}
 									>
@@ -419,7 +434,7 @@
 	{/if}
 
 	<BackNextButtonsRow
-		on:next={handleNext}
+		onNext={handleNext}
 		{nextText}
 		nextDisabled={invalidBucketNameMessage || $needs_refresh || $settingsLocked}
 		nextTitle={invalidBucketNameMessage}

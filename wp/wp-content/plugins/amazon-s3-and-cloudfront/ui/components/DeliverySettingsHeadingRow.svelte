@@ -13,14 +13,14 @@
 	import Button from "./Button.svelte";
 
 	// Parent page may want to be locked.
-	let settingsLocked = writable( false );
+	let settingsLocked = $state( writable( false ) );
 
 	if ( hasContext( "settingsLocked" ) ) {
 		settingsLocked = getContext( "settingsLocked" );
 	}
 
-	$: providerType = $settings[ 'delivery-provider' ] === 'storage' ? 'storage' : 'delivery';
-	$: providerKey = providerType === 'storage' ? $storage_provider.provider_key_name : $delivery_provider.provider_key_name;
+	let providerType = $derived( $settings[ "delivery-provider" ] === "storage" ? "storage" : "delivery" );
+	let providerKey = $derived( providerType === "storage" ? $storage_provider.provider_key_name : $delivery_provider.provider_key_name );
 </script>
 
 <PanelRow header gradient class="delivery {providerType} {providerKey}">
@@ -31,7 +31,7 @@
 			<a href={$urls.delivery_provider_console_url} class="console" target="_blank" title={$strings.view_provider_console}>{$delivery_provider.console_title}</a>
 		</p>
 	</div>
-	<Button outline on:click={() => push('/delivery/provider')} title={$strings.edit_delivery_provider} disabled={$settingsLocked}>{$strings.edit}</Button>
+	<Button outline onclick={() => push('/delivery/provider')} title={$strings.edit_delivery_provider} disabled={$settingsLocked}>{$strings.edit}</Button>
 </PanelRow>
 
 <style>

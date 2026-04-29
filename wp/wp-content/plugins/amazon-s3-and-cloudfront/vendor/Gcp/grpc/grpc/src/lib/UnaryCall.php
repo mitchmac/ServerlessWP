@@ -22,6 +22,8 @@ namespace DeliciousBrains\WP_Offload_Media\Gcp\Grpc;
 /**
  * Represents an active call that sends a single message and then gets a
  * single response.
+ * 
+ * @template T of \Google\Protobuf\Internal\Message
  */
 class UnaryCall extends AbstractCall
 {
@@ -45,7 +47,7 @@ class UnaryCall extends AbstractCall
     /**
      * Wait for the server to respond with data and a status.
      *
-     * @return array [response data, status]
+     * @return array{0: T|null, 1: \stdClass} [response data, status]
      */
     public function wait()
     {

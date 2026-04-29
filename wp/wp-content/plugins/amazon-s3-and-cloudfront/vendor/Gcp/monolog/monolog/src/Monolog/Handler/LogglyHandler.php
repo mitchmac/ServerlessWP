@@ -11,11 +11,11 @@ declare (strict_types=1);
  */
 namespace DeliciousBrains\WP_Offload_Media\Gcp\Monolog\Handler;
 
-use DeliciousBrains\WP_Offload_Media\Gcp\Monolog\Logger;
+use DeliciousBrains\WP_Offload_Media\Gcp\Monolog\Level;
 use DeliciousBrains\WP_Offload_Media\Gcp\Monolog\Formatter\FormatterInterface;
 use DeliciousBrains\WP_Offload_Media\Gcp\Monolog\Formatter\LogglyFormatter;
-use function array_key_exists;
 use CurlHandle;
+use DeliciousBrains\WP_Offload_Media\Gcp\Monolog\LogRecord;
 /**
  * Sends errors to Loggly.
  *
@@ -31,19 +31,18 @@ class LogglyHandler extends AbstractProcessingHandler
     /**
      * Caches the curl handlers for every given endpoint.
      *
-     * @var resource[]|CurlHandle[]
+     * @var CurlHandle[]
      */
-    protected $curlHandlers = [];
-    /** @var string */
-    protected $token;
+    protected array $curlHandlers = [];
+    protected string $token;
     /** @var string[] */
-    protected $tag = [];
+    protected array $tag = [];
     /**
      * @param string $token API token supplied by Loggly
      *
      * @throws MissingExtensionException If the curl extension is missing
      */
-    public function __construct(string $token, $level = Logger::DEBUG, bool $bubble = \true)
+    public function __construct(string $token, int|string|Level $level = Level::Debug, bool $bubble = \true)
     {
         if (!\extension_loaded('curl')) {
             throw new MissingExtensionException('The curl extension is needed to use the LogglyHandler');
@@ -53,26 +52,18 @@ class LogglyHandler extends AbstractProcessingHandler
     }
     /**
      * Loads and returns the shared curl handler for the given endpoint.
-     *
-     * @param string $endpoint
-     *
-     * @return resource|CurlHandle
      */
-    protected function getCurlHandler(string $endpoint)
+    protected function getCurlHandler(string $endpoint) : CurlHandle
     {
-        if (!array_key_exists($endpoint, $this->curlHandlers)) {
+        if (!\array_key_exists($endpoint, $this->curlHandlers)) {
             $this->curlHandlers[$endpoint] = $this->loadCurlHandle($endpoint);
         }
         return $this->curlHandlers[$endpoint];
     }
     /**
      * Starts a fresh curl session for the given endpoint and returns its handler.
-     *
-     * @param string $endpoint
-     *
-     * @return resource|CurlHandle
      */
-    private function loadCurlHandle(string $endpoint)
+    private function loadCurlHandle(string $endpoint) : CurlHandle
     {
         $url = \sprintf("https://%s/%s/%s/", static::HOST, $endpoint, $this->token);
         $ch = \curl_init();
@@ -82,36 +73,41 @@ class LogglyHandler extends AbstractProcessingHandler
         return $ch;
     }
     /**
-     * @param string[]|string $tag
+     * @param  string[]|string $tag
+     * @return $this
      */
-    public function setTag($tag) : self
+    public function setTag(string|array $tag) : self
     {
-        $tag = !empty($tag) ? $tag : [];
-        $this->tag = \is_array($tag) ? $tag : [$tag];
+        if ('' === $tag || [] === $tag) {
+            $this->tag = [];
+        } else {
+            $this->tag = \is_array($tag) ? $tag : [$tag];
+        }
         return $this;
     }
     /**
-     * @param string[]|string $tag
+     * @param  string[]|string $tag
+     * @return $this
      */
-    public function addTag($tag) : self
+    public function addTag(string|array $tag) : self
     {
-        if (!empty($tag)) {
+        if ('' !== $tag) {
             $tag = \is_array($tag) ? $tag : [$tag];
             $this->tag = \array_unique(\array_merge($this->tag, $tag));
         }
         return $this;
     }
-    protected function write(array $record) : void
+    protected function write(LogRecord $record) : void
     {
-        $this->send($record["formatted"], static::ENDPOINT_SINGLE);
+        $this->send($record->formatted, static::ENDPOINT_SINGLE);
     }
     public function handleBatch(array $records) : void
     {
         $level = $this->level;
         $records = \array_filter($records, function ($record) use($level) {
-            return $record['level'] >= $level;
+            return $record->level->value >= $level->value;
         });
-        if ($records) {
+        if (\count($records) > 0) {
             $this->send($this->getFormatter()->formatBatch($records), static::ENDPOINT_BATCH);
         }
     }
@@ -119,12 +115,12 @@ class LogglyHandler extends AbstractProcessingHandler
     {
         $ch = $this->getCurlHandler($endpoint);
         $headers = ['Content-Type: application/json'];
-        if (!empty($this->tag)) {
+        if (\count($this->tag) > 0) {
             $headers[] = 'X-LOGGLY-TAG: ' . \implode(',', $this->tag);
         }
         \curl_setopt($ch, \CURLOPT_POSTFIELDS, $data);
         \curl_setopt($ch, \CURLOPT_HTTPHEADER, $headers);
-        Curl\Util::execute($ch, 5, \false);
+        Curl\Util::execute($ch, 5);
     }
     protected function getDefaultFormatter() : FormatterInterface
     {

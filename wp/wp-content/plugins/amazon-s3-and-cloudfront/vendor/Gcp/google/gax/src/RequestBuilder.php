@@ -48,7 +48,7 @@ class RequestBuilder
     use ArrayTrait;
     use UriTrait;
     use ValidationTrait;
-    private $baseUri;
+    protected $baseUri;
     private $restConfig;
     /**
      * @param string $baseUri
@@ -94,7 +94,7 @@ class RequestBuilder
                 list($body, $queryParams) = $this->constructBodyAndQueryParameters($message, $config);
                 // Request enum fields will be encoded as numbers rather than strings  (in the response).
                 if ($numericEnums) {
-                    $queryParams['$alt'] = "json;enum-encoding=int";
+                    $queryParams['$alt'] = 'json;enum-encoding=int';
                 }
                 $uri = $this->buildUri($pathTemplate, $queryParams);
                 return new Request($config['method'], $uri, ['Content-Type' => 'application/json'] + $headers, $body);
@@ -105,7 +105,7 @@ class RequestBuilder
         foreach ($uriTemplateConfigs as $config) {
             $uriTemplates[] = $config['uriTemplate'];
         }
-        throw new ValidationException("Could not map bindings for {$path} to any Uri template.\n" . "Bindings: " . \print_r($bindings, \true) . "UriTemplates: " . \print_r($uriTemplates, \true));
+        throw new ValidationException("Could not map bindings for {$path} to any Uri template.\n" . 'Bindings: ' . \print_r($bindings, \true) . 'UriTemplates: ' . \print_r($uriTemplates, \true));
     }
     /**
      * Create a list of all possible configs using the additionalBindings
@@ -192,8 +192,8 @@ class RequestBuilder
     {
         $bindings = [];
         foreach ($placeholders as $placeholder => $metadata) {
-            $value = \array_reduce($metadata['getters'], function (Message $result = null, $getter) {
-                if ($result) {
+            $value = \array_reduce($metadata['getters'], function (?Message $result = null, $getter = null) {
+                if ($result && $getter) {
                     return $result->{$getter}();
                 }
             }, $message);
@@ -223,7 +223,7 @@ class RequestBuilder
      * @param array $queryParams
      * @return UriInterface
      */
-    private function buildUri(string $path, array $queryParams)
+    protected function buildUri(string $path, array $queryParams)
     {
         $uri = Utils::uriFor(\sprintf('https://%s%s', $this->baseUri, $path));
         if ($queryParams) {

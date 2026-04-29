@@ -17,10 +17,9 @@
  */
 namespace DeliciousBrains\WP_Offload_Media\Gcp\Google\Cloud\Core;
 
-use DeliciousBrains\WP_Offload_Media\Gcp\Google\Auth\HttpHandler\HttpHandlerFactory;
-use DeliciousBrains\WP_Offload_Media\Gcp\Google\Cloud\Core\Exception;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\ApiCore\ApiException;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\ApiCore\Serializer;
+use DeliciousBrains\WP_Offload_Media\Gcp\Google\Auth\HttpHandler\HttpHandlerFactory;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Rpc\Code;
 /**
  * The GrpcRequestWrapper is responsible for delivering gRPC requests.

@@ -7,7 +7,7 @@
     ],
     "homepage": "https:\/\/grpc.io",
     "license": "Apache-2.0",
-    "version": "1.57.0",
+    "version": "1.74.0",
     "require": {
         "php": ">=7.0.0"
     },

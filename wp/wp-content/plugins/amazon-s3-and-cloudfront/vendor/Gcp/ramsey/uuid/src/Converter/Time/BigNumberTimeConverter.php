@@ -17,19 +17,16 @@ use DeliciousBrains\WP_Offload_Media\Gcp\Ramsey\Uuid\Math\BrickMathCalculator;
 use DeliciousBrains\WP_Offload_Media\Gcp\Ramsey\Uuid\Type\Hexadecimal;
 use DeliciousBrains\WP_Offload_Media\Gcp\Ramsey\Uuid\Type\Time;
 /**
- * Previously used to integrate moontoast/math as a bignum arithmetic library,
- * BigNumberTimeConverter is deprecated in favor of GenericTimeConverter
+ * Previously used to integrate moontoast/math as a bignum arithmetic library, BigNumberTimeConverter is deprecated in
+ * favor of GenericTimeConverter
  *
- * @deprecated Transition to {@see GenericTimeConverter}.
+ * @deprecated Please transition to {@see GenericTimeConverter}.
  *
- * @psalm-immutable
+ * @immutable
  */
 class BigNumberTimeConverter implements TimeConverterInterface
 {
-    /**
-     * @var TimeConverterInterface
-     */
-    private $converter;
+    private TimeConverterInterface $converter;
     public function __construct()
     {
         $this->converter = new GenericTimeConverter(new BrickMathCalculator());

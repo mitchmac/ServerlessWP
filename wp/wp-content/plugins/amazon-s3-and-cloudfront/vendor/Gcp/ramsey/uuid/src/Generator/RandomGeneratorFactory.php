@@ -13,8 +13,7 @@ declare (strict_types=1);
 namespace DeliciousBrains\WP_Offload_Media\Gcp\Ramsey\Uuid\Generator;
 
 /**
- * RandomGeneratorFactory retrieves a default random generator, based on the
- * environment
+ * RandomGeneratorFactory retrieves a default random generator, based on the environment
  */
 class RandomGeneratorFactory
 {

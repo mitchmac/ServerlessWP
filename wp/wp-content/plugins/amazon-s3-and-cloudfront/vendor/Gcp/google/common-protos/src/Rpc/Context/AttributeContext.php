@@ -5,8 +5,8 @@
 namespace DeliciousBrains\WP_Offload_Media\Gcp\Google\Rpc\Context;
 
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Internal\GPBType;
-use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Internal\RepeatedField;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Internal\GPBUtil;
+use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\RepeatedField;
 /**
  * This message defines the standard attribute vocabulary for Google APIs.
  * An attribute is a piece of metadata that describes an activity on a network
@@ -110,7 +110,7 @@ class AttributeContext extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Prot
      *           primary one.
      *     @type \Google\Rpc\Context\AttributeContext\Api $api
      *           Represents an API operation that is involved to a network activity.
-     *     @type array<\Google\Protobuf\Any>|\Google\Protobuf\Internal\RepeatedField $extensions
+     *     @type \Google\Protobuf\Any[] $extensions
      *           Supports extensions for advanced use cases, such as logs and metrics.
      * }
      */
@@ -356,7 +356,7 @@ class AttributeContext extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Prot
      * Supports extensions for advanced use cases, such as logs and metrics.
      *
      * Generated from protobuf field <code>repeated .google.protobuf.Any extensions = 8;</code>
-     * @return \Google\Protobuf\Internal\RepeatedField
+     * @return RepeatedField<\Google\Protobuf\Any>
      */
     public function getExtensions()
     {
@@ -366,7 +366,7 @@ class AttributeContext extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Prot
      * Supports extensions for advanced use cases, such as logs and metrics.
      *
      * Generated from protobuf field <code>repeated .google.protobuf.Any extensions = 8;</code>
-     * @param array<\Google\Protobuf\Any>|\Google\Protobuf\Internal\RepeatedField $var
+     * @param \Google\Protobuf\Any[] $var
      * @return $this
      */
     public function setExtensions($var)

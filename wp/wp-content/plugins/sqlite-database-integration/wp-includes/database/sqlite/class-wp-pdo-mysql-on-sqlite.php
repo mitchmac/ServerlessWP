@@ -883,10 +883,32 @@ class WP_PDO_MySQL_On_SQLite extends PDO {
 				null === $child_node
 				|| 'beginWork' === $child_node->rule_name
 				|| $child_node->has_child_node( 'transactionOrLockingStatement' )
+				|| $child_node->has_child_node( 'selectStatement' )
 			) {
 				$wrap_in_transaction = false;
 			} else {
 				$wrap_in_transaction = true;
+			}
+
+			/*
+			 * Detect read-only statements before opening the wrapper transaction.
+			 *
+			 * [GRAMMAR]
+			 * simpleStatement: selectStatement | showStatement | utilityStatement | ...
+			 */
+			if ( null !== $child_node && $child_node->has_child_node() ) {
+				$statement_node = $child_node->get_first_child_node();
+				if (
+					'selectStatement' === $statement_node->rule_name
+					|| 'showStatement' === $statement_node->rule_name
+				) {
+					$this->is_readonly = true;
+				} elseif ( 'utilityStatement' === $statement_node->rule_name ) {
+					$utility_subnode = $statement_node->get_first_child_node();
+					if ( null !== $utility_subnode && 'describeStatement' === $utility_subnode->rule_name ) {
+						$this->is_readonly = true;
+					}
+				}
 			}
 
 			if ( $wrap_in_transaction ) {
@@ -1366,7 +1388,6 @@ class WP_PDO_MySQL_On_SQLite extends PDO {
 				$this->execute_transaction_or_locking_statement( $node );
 				break;
 			case 'selectStatement':
-				$this->is_readonly = true;
 				$this->execute_select_statement( $node );
 				break;
 			case 'insertStatement':
@@ -1444,14 +1465,12 @@ class WP_PDO_MySQL_On_SQLite extends PDO {
 				$this->execute_set_statement( $node );
 				break;
 			case 'showStatement':
-				$this->is_readonly = true;
 				$this->execute_show_statement( $node );
 				break;
 			case 'utilityStatement':
 				$subtree = $node->get_first_child_node();
 				switch ( $subtree->rule_name ) {
 					case 'describeStatement':
-						$this->is_readonly = true;
 						$this->execute_describe_statement( $subtree );
 						break;
 					case 'useCommand':
@@ -2289,6 +2308,38 @@ class WP_PDO_MySQL_On_SQLite extends PDO {
 			throw $this->new_access_denied_to_information_schema_exception();
 		}
 
+		/*
+		 * SQLite doesn't support DELETE with ORDER BY/LIMIT.
+		 * We need to use a subquery to emulate this behavior.
+		 *
+		 * For instance, the following query:
+		 *   DELETE FROM t WHERE c = 2 LIMIT 1;
+		 * Will be rewritten to:
+		 *   DELETE FROM t WHERE rowid IN ( SELECT rowid FROM t WHERE c = 2 LIMIT 1 );
+		 */
+		$has_order = $node->has_child_node( 'orderClause' );
+		$has_limit = $node->has_child_node( 'simpleLimitClause' );
+		if ( $has_order || $has_limit ) {
+			$where_subquery = 'SELECT rowid FROM ' . $this->translate_sequence(
+				array(
+					$table_ref,
+					$node->get_first_child_node( 'tableAlias' ),
+					$node->get_first_child_node( 'whereClause' ),
+					$node->get_first_child_node( 'orderClause' ),
+					$node->get_first_child_node( 'simpleLimitClause' ),
+				)
+			);
+
+			$query = sprintf(
+				'DELETE FROM %s WHERE rowid IN ( %s )',
+				$this->translate( $table_ref ),
+				$where_subquery
+			);
+
+			$this->last_result_statement = $this->execute_sqlite_query( $query );
+			return;
+		}
+
 		$query                       = $this->translate( $node );
 		$this->last_result_statement = $this->execute_sqlite_query( $query );
 	}
@@ -2359,6 +2410,9 @@ class WP_PDO_MySQL_On_SQLite extends PDO {
 		foreach ( $constraint_queries as $query ) {
 			$this->execute_sqlite_query( $query );
 		}
+
+		// Apply AUTO_INCREMENT = N table option, if any.
+		$this->apply_auto_increment_table_option( $table_is_temporary, $table_name, $node );
 	}
 
 	/**
@@ -2432,8 +2486,18 @@ class WP_PDO_MySQL_On_SQLite extends PDO {
 			}
 		}
 
-		$this->information_schema_builder->record_alter_table( $node );
-		$this->recreate_table_from_information_schema( $table_is_temporary, $table_name, $column_map );
+		/*
+		 * Skip the expensive table rebuild when the statement only carries
+		 * table options (e.g. ALTER TABLE t AUTO_INCREMENT = N). These don't
+		 * change the schema, so the recreate would be a pointless full copy.
+		 */
+		if ( count( $node->get_descendant_nodes( 'alterListItem' ) ) > 0 ) {
+			$this->information_schema_builder->record_alter_table( $node );
+			$this->recreate_table_from_information_schema( $table_is_temporary, $table_name, $column_map );
+		}
+
+		// Apply AUTO_INCREMENT = N table option, if any.
+		$this->apply_auto_increment_table_option( $table_is_temporary, $table_name, $node );
 
 		// @TODO: Consider using a "fast path" for ALTER TABLE statements that
 		//        consist only of operations that SQLite's ALTER TABLE supports.
@@ -2939,41 +3003,64 @@ class WP_PDO_MySQL_On_SQLite extends PDO {
 		// LIKE and WHERE clauses.
 		$like_or_where = $node->get_first_child_node( 'likeOrWhere' );
 		if ( null !== $like_or_where ) {
-			$condition = $this->translate_show_like_or_where_condition( $like_or_where, 'table_name' );
+			$condition = $this->translate_show_like_or_where_condition( $like_or_where, 'Name' );
 		}
 
-		// Fetch table information.
-		$tables_tables = $this->information_schema_builder->get_table_name(
-			false, // SHOW TABLE STATUS lists only non-temporary tables.
-			'tables'
+		// SHOW TABLE STATUS lists only non-temporary tables.
+		$tables_table  = $this->information_schema_builder->get_table_name( false, 'tables' );
+		$columns_table = $this->information_schema_builder->get_table_name( false, 'columns' );
+
+		// Compose a subquery to compute auto-increment values.
+		$has_sequence_table = (bool) $this->execute_sqlite_query(
+			"SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'sqlite_sequence'"
+		)->fetchColumn();
+
+		$auto_increment_subquery = sprintf(
+			"(
+				SELECT COALESCE(s.seq + 1, 1)
+				FROM %s AS c
+				%s
+				WHERE c.extra = 'auto_increment'
+				AND c.table_schema = t.table_schema
+				AND c.table_name = t.table_name
+			)",
+			$this->quote_sqlite_identifier( $columns_table ),
+			$has_sequence_table
+				? 'LEFT JOIN main.sqlite_sequence AS s ON s.name = c.table_name'
+				: 'LEFT JOIN (SELECT 0 AS seq) AS s'
 		);
-		$query         = sprintf(
-			'SELECT
-				table_name AS `Name`,
-				engine AS `Engine`,
-				version AS `Version`,
-				row_format AS `Row_format`,
-				table_rows AS `Rows`,
-				avg_row_length AS `Avg_row_length`,
-				data_length AS `Data_length`,
-				max_data_length AS `Max_data_length`,
-				index_length AS `Index_length`,
-				data_free AS `Data_free`,
-				auto_increment AS `Auto_increment`,
-				create_time AS `Create_time`,
-				update_time AS `Update_time`,
-				check_time AS `Check_time`,
-				table_collation AS `Collation`,
-				checksum AS `Checksum`,
-				create_options AS `Create_options`,
-				table_comment AS `Comment`
-			FROM %s
-			WHERE table_schema = ? %s
-			ORDER BY table_name',
-			$this->quote_sqlite_identifier( $tables_tables ),
+
+		$query  = sprintf(
+			'SELECT * FROM (
+				SELECT
+					table_name AS `Name`,
+					engine AS `Engine`,
+					version AS `Version`,
+					row_format AS `Row_format`,
+					table_rows AS `Rows`,
+					avg_row_length AS `Avg_row_length`,
+					data_length AS `Data_length`,
+					max_data_length AS `Max_data_length`,
+					index_length AS `Index_length`,
+					data_free AS `Data_free`,
+					%s AS `Auto_increment`,
+					create_time AS `Create_time`,
+					update_time AS `Update_time`,
+					check_time AS `Check_time`,
+					table_collation AS `Collation`,
+					checksum AS `Checksum`,
+					create_options AS `Create_options`,
+					table_comment AS `Comment`
+				FROM %s AS t
+				WHERE table_schema = ?
+			)
+			WHERE 1 %s
+			ORDER BY `Name`',
+			$auto_increment_subquery,
+			$this->quote_sqlite_identifier( $tables_table ),
 			$condition ?? ''
 		);
-		$params        = array(
+		$params = array(
 			$this->get_saved_db_name( $database ),
 		);
 
@@ -3873,9 +3960,9 @@ class WP_PDO_MySQL_On_SQLite extends PDO {
 				return 'AUTOINCREMENT';
 			case WP_MySQL_Lexer::BINARY_SYMBOL:
 				/*
-				 * There is no "BINARY expr" equivalent in SQLite. We look for the
-				 * keyword from a higher level to respect it in particular cases
-				 * (REGEXP, LIKE, etc.) and then remove it from the output here.
+				 * "BINARY expr" is translated in "translate_simple_expr_body()".
+				 * Returning null here is a safety net for any unhandled context
+				 * where a bare BINARY token would otherwise leak into the output.
 				 */
 				return null;
 			case WP_MySQL_Lexer::SQL_CALC_FOUND_ROWS_SYMBOL:
@@ -4223,6 +4310,24 @@ class WP_PDO_MySQL_On_SQLite extends PDO {
 			);
 		}
 
+		/*
+		 * Translate "BINARY expr" to "expr COLLATE BINARY".
+		 *
+		 * The MySQL BINARY operator enforces byte-by-byte string comparison.
+		 * In SQLite, COLLATE BINARY is equivalent in comparison contexts.
+		 */
+		if ( null !== $token && WP_MySQL_Lexer::BINARY_SYMBOL === $token->id ) {
+			$expr = $node->get_first_child_node( 'simpleExpr' );
+			return sprintf( '%s COLLATE BINARY', $this->translate( $expr ) );
+		}
+
+		// Translate "CAST(expr AS type)" to its SQLite equivalent.
+		if ( null !== $token && WP_MySQL_Lexer::CAST_SYMBOL === $token->id ) {
+			$expr      = $node->get_first_child_node( 'expr' );
+			$cast_type = $node->get_first_child_node( 'castType' );
+			return $this->translate_cast_expr( $expr, $cast_type );
+		}
+
 		/**
 		 * Translate MySQL CONVERT() expression.
 		 *
@@ -4231,21 +4336,42 @@ class WP_PDO_MySQL_On_SQLite extends PDO {
 		 *   2. CONVERT(expr USING charset): Converts the character set.
 		 */
 		if ( null !== $token && WP_MySQL_Lexer::CONVERT_SYMBOL === $token->id ) {
-			$expr      = $this->translate( $node->get_first_child_node( 'expr' ) );
+			$expr      = $node->get_first_child_node( 'expr' );
 			$cast_type = $node->get_first_child_node( 'castType' );
 
 			if ( null !== $cast_type ) {
 				// CONVERT(expr, type): Translate to cast expression.
 				// TODO: Emulate UNSIGNED cast. SQLite has no unsigned integer type.
-				return sprintf( 'CAST(%s AS %s)', $expr, $this->translate( $cast_type ) );
+				return $this->translate_cast_expr( $expr, $cast_type );
 			} else {
 				// CONVERT(expr USING charset): Keep "expr" as is (no SQLite support).
 				// TODO: Consider rejecting UTF-8-incompatible charasets.
-				return $expr;
+				return $this->translate( $expr );
 			}
 		}
 
 		return $this->translate_sequence( $node->get_children() );
+	}
+
+	/**
+	 * Translate a MySQL CAST expression to SQLite.
+	 *
+	 * Shared by the CAST(expr AS type) and CONVERT(expr, type) forms.
+	 *
+	 * @param  WP_Parser_Node $expr      The "expr" AST node.
+	 * @param  WP_Parser_Node $cast_type The "castType" AST node.
+	 * @return string                    The translated SQLite expression.
+	 */
+	private function translate_cast_expr( WP_Parser_Node $expr, WP_Parser_Node $cast_type ): string {
+		/*
+		 * Translate "CAST(expr AS BINARY)" to "CAST(expr AS TEXT) COLLATE BINARY".
+		 * Emitting "CAST(expr AS BLOB)" would break equality against TEXT values
+		 * due to SQLite's storage-class ordering (BLOB > TEXT).
+		 */
+		if ( $cast_type->has_child_token( WP_MySQL_Lexer::BINARY_SYMBOL ) ) {
+			return sprintf( 'CAST(%s AS TEXT) COLLATE BINARY', $this->translate( $expr ) );
+		}
+		return sprintf( 'CAST(%s AS %s)', $this->translate( $expr ), $this->translate( $cast_type ) );
 	}
 
 	/**
@@ -4606,11 +4732,20 @@ class WP_PDO_MySQL_On_SQLite extends PDO {
 		 *
 		 * For example, for "SELECT 'abc'", the resulting column name is "abc"
 		 * in MySQL, but would be "'abc'" in SQLite if an alias was not used.
+		 *
+		 * Descend the AST until we reach a textStringLiteral. If at any level
+		 * we don't have a single child node, bail out; it's not a bare literal.
 		 */
-		$text_string_literal    = $node->get_first_descendant_node( 'textStringLiteral' );
-		$is_text_string_literal = $text_string_literal && $item === $this->translate( $text_string_literal );
-		if ( $is_text_string_literal ) {
-			$alias = $text_string_literal->get_first_child_token()->get_value();
+		$current = $node;
+		while ( 'textStringLiteral' !== $current->rule_name ) {
+			$children = $current->get_children();
+			if ( 1 !== count( $children ) || ! $children[0] instanceof WP_Parser_Node ) {
+				break;
+			}
+			$current = $children[0];
+		}
+		if ( 'textStringLiteral' === $current->rule_name ) {
+			$alias = $current->get_first_child_token()->get_value();
 
 			// When the literal value contains a NULL byte, MySQL truncates the
 			// resulting identifier at the position of the first one of them.
@@ -4678,7 +4813,7 @@ class WP_PDO_MySQL_On_SQLite extends PDO {
 		$table_name  = $this->unquote_sqlite_identifier( $this->translate( $table ) );
 
 		// When the table reference targets an information schema table,
-		// we need to inject the configured database name dynamically.
+		// we need to inject some additional values dynamically.
 		if (
 			( null === $schema_name && 'information_schema' === $this->db_name )
 			|| ( null !== $schema_name && 'information_schema' === strtolower( $schema_name ) )
@@ -4724,14 +4859,40 @@ class WP_PDO_MySQL_On_SQLite extends PDO {
 			$expanded_list = array();
 			foreach ( $columns as $column ) {
 				$quoted_column = $this->quote_sqlite_identifier( $column );
-				if ( isset( $information_schema_db_column_map[ strtoupper( $column ) ] ) ) {
+				if ( isset( $information_schema_db_column_map[ $column ] ) ) {
+					// Replace the database name with the configured database name.
 					$expanded_list[] = sprintf(
 						"CASE WHEN %s = 'information_schema' THEN %s ELSE %s END AS %s",
 						$quoted_column,
 						$quoted_column,
 						$this->quote_sqlite_value( $this->main_db_name ),
-						strtoupper( $quoted_column )
+						$quoted_column
 					);
+				} elseif ( 'tables' === $table_name && 'AUTO_INCREMENT' === $column ) {
+					// Inject the auto-increment values.
+					$columns_table      = $this->information_schema_builder->get_table_name( false, 'columns' );
+					$has_sequence_table = (bool) $this->execute_sqlite_query(
+						"SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'sqlite_sequence'"
+					)->fetchColumn();
+
+					$auto_increment_subquery = sprintf(
+						"(
+							SELECT COALESCE(s.seq + 1, 1)
+							FROM %s AS c
+							%s
+							WHERE c.extra = 'auto_increment'
+							AND c.table_schema = %s.table_schema
+							AND c.table_name = %s.table_name
+						)",
+						$this->quote_sqlite_identifier( $columns_table ),
+						$has_sequence_table
+							? 'LEFT JOIN main.sqlite_sequence AS s ON s.name = c.table_name'
+							: 'LEFT JOIN (SELECT 0 AS seq) AS s',
+						$this->quote_sqlite_identifier( $table_name ),
+						$this->quote_sqlite_identifier( $table_name )
+					);
+
+					$expanded_list[] = sprintf( '%s AS %s', $auto_increment_subquery, $quoted_column );
 				} else {
 					$expanded_list[] = $quoted_column;
 				}
@@ -4846,6 +5007,83 @@ class WP_PDO_MySQL_On_SQLite extends PDO {
 		}
 
 		// @TODO: Triggers and views.
+	}
+
+	/**
+	 * Apply the AUTO_INCREMENT table option from a CREATE TABLE or ALTER TABLE
+	 * statement by adjusting the row in SQLite's "sqlite_sequence" table.
+	 *
+	 * @param bool           $table_is_temporary Whether the table is temporary.
+	 * @param string         $table_name         The table name.
+	 * @param WP_Parser_Node $node               The "createStatement" or "alterStatement" AST node.
+	 */
+	private function apply_auto_increment_table_option(
+		bool $table_is_temporary,
+		string $table_name,
+		WP_Parser_Node $node
+	): void {
+		// Find the last AUTO_INCREMENT = N option (MySQL uses the last one).
+		$value = null;
+		foreach ( $node->get_descendant_nodes( 'createTableOption' ) as $option ) {
+			if ( ! $option->has_child_token( WP_MySQL_Lexer::AUTO_INCREMENT_SYMBOL ) ) {
+				continue;
+			}
+			$number_node = $option->get_first_child_node( 'ulonglong_number' );
+			if ( null === $number_node ) {
+				continue;
+			}
+			$value = (int) $number_node->get_first_descendant_token()->get_value();
+		}
+		if ( null === $value ) {
+			return;
+		}
+
+		// Find the AUTO_INCREMENT column.
+		$columns_table = $this->information_schema_builder->get_table_name( $table_is_temporary, 'columns' );
+		$auto_column   = $this->execute_sqlite_query(
+			sprintf(
+				"SELECT column_name FROM %s
+				WHERE table_schema = ?
+				AND table_name = ?
+				AND extra = 'auto_increment'",
+				$this->quote_sqlite_identifier( $columns_table )
+			),
+			array( $this->get_saved_db_name(), $table_name )
+		)->fetchColumn();
+		if ( false === $auto_column ) {
+			return;
+		}
+
+		/*
+		 * Prepare an expression for the sequence value.
+		 *   1. Use N - 1. MySQL stores the next value, SQLite the last one.
+		 *   2. Clamp to MAX(col) like MySQL (we can't go below existing values).
+		 *
+		 * The value is inlined as an integer literal because PDO binds PHP ints
+		 * as TEXT, and SQLite's type affinity ranks TEXT above INTEGER in MAX().
+		 */
+		$schema   = $table_is_temporary ? 'temp' : 'main';
+		$seq_expr = sprintf(
+			'MAX(%d, COALESCE((SELECT MAX(%s) FROM %s), 0))',
+			$value - 1,
+			$this->quote_sqlite_identifier( $auto_column ),
+			$this->quote_sqlite_identifier( $table_name )
+		);
+
+		// Update the value in the "sqlite_sequence" table.
+		$updated = $this->execute_sqlite_query(
+			sprintf( 'UPDATE %s.sqlite_sequence SET seq = %s WHERE name = ?', $schema, $seq_expr ),
+			array( $table_name )
+		)->rowCount();
+
+		// If the sequence value does not exist yet, insert a new row.
+		// SQLite reports matched (not affected) rows, so the 0 check is safe.
+		if ( 0 === $updated ) {
+			$this->execute_sqlite_query(
+				sprintf( 'INSERT INTO %s.sqlite_sequence (name, seq) VALUES (?, %s)', $schema, $seq_expr ),
+				array( $table_name )
+			);
+		}
 	}
 
 	/**
@@ -5113,9 +5351,24 @@ class WP_PDO_MySQL_On_SQLite extends PDO {
 				$fragment .= null === $default ? 'NULL' : $this->quote_sqlite_value( $default );
 			} else {
 				// When a column value is included, we need to apply type casting.
-				$position   = array_search( $column['COLUMN_NAME'], $insert_list, true );
-				$identifier = $this->quote_sqlite_identifier( $select_list[ $position ] );
-				$value      = $this->cast_value_for_saving( $column['DATA_TYPE'], $identifier );
+				$position          = array_search( $column['COLUMN_NAME'], $insert_list, true );
+				$identifier        = $this->quote_sqlite_identifier( $select_list[ $position ] );
+				$value             = $this->cast_value_for_saving( $column['DATA_TYPE'], $identifier );
+				$is_auto_increment = str_contains( $column['EXTRA'], 'auto_increment' );
+
+				/*
+				 * In MySQL, inserting 0 into an AUTO_INCREMENT column increments
+				 * the sequence, unless the NO_AUTO_VALUE_ON_ZERO SQL mode is set.
+				 *
+				 * In SQLite, we need to rewrite 0 to NULL to advance the sequence.
+				 * The value is cast to INTEGER before the comparison, because
+				 * SQLite treats values of different types as unequal (0 != '0').
+				 *
+				 * See: https://dev.mysql.com/doc/refman/8.4/en/sql-mode.html#sqlmode_no_auto_value_on_zero
+				 */
+				if ( $is_auto_increment && ! $this->is_sql_mode_active( 'NO_AUTO_VALUE_ON_ZERO' ) ) {
+					$value = sprintf( 'NULLIF(CAST(%s AS INTEGER), 0)', $value );
+				}
 
 				/*
 				 * In MySQL non-STRICT mode, when inserting from a SELECT query:
@@ -5123,9 +5376,17 @@ class WP_PDO_MySQL_On_SQLite extends PDO {
 				 * When a column is declared as NOT NULL, inserting a NULL value
 				 * saves an IMPLICIT DEFAULT value instead. This behavior only
 				 * applies to the INSERT ... SELECT syntax (not VALUES or SET).
+				 *
+				 * AUTO_INCREMENT columns are excluded. A NULL value advances
+				 * the sequence regardless of the column's nullability.
 				 */
 				$is_insert_from_select = 'insertQueryExpression' === $node->rule_name;
-				if ( ! $is_strict_mode && $is_insert_from_select && 'NO' === $column['IS_NULLABLE'] ) {
+				if (
+					! $is_strict_mode
+					&& ! $is_auto_increment
+					&& $is_insert_from_select
+					&& 'NO' === $column['IS_NULLABLE']
+				) {
 					$implicit_default = self::DATA_TYPE_IMPLICIT_DEFAULT_MAP[ $column['DATA_TYPE'] ] ?? null;
 					if ( null !== $implicit_default ) {
 						$value = sprintf( 'COALESCE(%s, %s)', $value, $this->quote_sqlite_value( $implicit_default ) );
@@ -5968,7 +6229,7 @@ class WP_PDO_MySQL_On_SQLite extends PDO {
 			if (
 				'INTEGER' === $type
 				&& 'PRI' === $column['COLUMN_KEY']
-				&& 'auto_increment' !== $column['EXTRA']
+				&& ! str_contains( $column['EXTRA'], 'auto_increment' )
 				&& count( $grouped_constraints['PRIMARY'] ) === 1
 			) {
 				$type = 'INT';
@@ -5985,7 +6246,7 @@ class WP_PDO_MySQL_On_SQLite extends PDO {
 			if ( 'NO' === $column['IS_NULLABLE'] ) {
 				$query .= ' NOT NULL';
 			}
-			if ( 'auto_increment' === $column['EXTRA'] ) {
+			if ( str_contains( $column['EXTRA'], 'auto_increment' ) ) {
 				$has_autoincrement = true;
 				$query            .= ' PRIMARY KEY AUTOINCREMENT';
 			}
@@ -6284,7 +6545,8 @@ class WP_PDO_MySQL_On_SQLite extends PDO {
 		)->fetchAll( PDO::FETCH_ASSOC );
 
 		// 6. Generate CREATE TABLE statement columns.
-		$rows = array();
+		$rows               = array();
+		$has_auto_increment = false;
 		foreach ( $column_info as $column ) {
 			$sql  = '  ';
 			$sql .= $this->quote_mysql_identifier( $column['COLUMN_NAME'] );
@@ -6295,8 +6557,9 @@ class WP_PDO_MySQL_On_SQLite extends PDO {
 				// Nullable "timestamp" columns dump NULL explicitly.
 				$sql .= ' NULL';
 			}
-			if ( 'auto_increment' === $column['EXTRA'] ) {
-				$sql .= ' AUTO_INCREMENT';
+			if ( str_contains( $column['EXTRA'], 'auto_increment' ) ) {
+				$has_auto_increment = true;
+				$sql               .= ' AUTO_INCREMENT';
 			}
 
 			// Handle DEFAULT CURRENT_TIMESTAMP. This works only with timestamp
@@ -6435,6 +6698,28 @@ class WP_PDO_MySQL_On_SQLite extends PDO {
 		$sql .= implode( ",\n", $rows );
 		$sql .= "\n)";
 		$sql .= sprintf( ' ENGINE=%s', $table_info['ENGINE'] );
+
+		// Add "AUTO_INCREMENT=N" if a sequence exists and has been advanced.
+		if ( $has_auto_increment ) {
+			try {
+				$seq = (int) $this->execute_sqlite_query(
+					sprintf(
+						'SELECT seq FROM %s.sqlite_sequence WHERE name = ?',
+						$table_is_temporary ? 'temp' : 'main'
+					),
+					array( $table_name )
+				)->fetchColumn();
+			} catch ( PDOException $e ) {
+				if ( ! str_contains( $e->getMessage(), 'no such table' ) ) {
+					throw $e;
+				}
+				$seq = 0;
+			}
+			if ( $seq > 0 ) {
+				$sql .= sprintf( ' AUTO_INCREMENT=%d', $seq + 1 );
+			}
+		}
+
 		$sql .= sprintf( ' DEFAULT CHARSET=%s', $charset );
 		$sql .= sprintf( ' COLLATE=%s', $collation );
 		if ( '' !== $table_info['TABLE_COMMENT'] ) {

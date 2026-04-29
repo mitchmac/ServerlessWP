@@ -24,7 +24,7 @@ use DeliciousBrains\WP_Offload_Media\Gcp\Ramsey\Uuid\Type\NumberInterface;
 /**
  * A calculator using the brick/math library for arbitrary-precision arithmetic
  *
- * @psalm-immutable
+ * @immutable
  */
 final class BrickMathCalculator implements CalculatorInterface
 {
@@ -35,6 +35,7 @@ final class BrickMathCalculator implements CalculatorInterface
         foreach ($addends as $addend) {
             $sum = $sum->plus($addend->toString());
         }
+        /** @phpstan-ignore possiblyImpure.new */
         return new IntegerObject((string) $sum);
     }
     public function subtract(NumberInterface $minuend, NumberInterface ...$subtrahends) : NumberInterface
@@ -43,6 +44,7 @@ final class BrickMathCalculator implements CalculatorInterface
         foreach ($subtrahends as $subtrahend) {
             $difference = $difference->minus($subtrahend->toString());
         }
+        /** @phpstan-ignore possiblyImpure.new */
         return new IntegerObject((string) $difference);
     }
     public function multiply(NumberInterface $multiplicand, NumberInterface ...$multipliers) : NumberInterface
@@ -51,23 +53,28 @@ final class BrickMathCalculator implements CalculatorInterface
         foreach ($multipliers as $multiplier) {
             $product = $product->multipliedBy($multiplier->toString());
         }
+        /** @phpstan-ignore possiblyImpure.new */
         return new IntegerObject((string) $product);
     }
     public function divide(int $roundingMode, int $scale, NumberInterface $dividend, NumberInterface ...$divisors) : NumberInterface
     {
+        /** @phpstan-ignore possiblyImpure.methodCall */
         $brickRounding = $this->getBrickRoundingMode($roundingMode);
         $quotient = BigDecimal::of($dividend->toString());
         foreach ($divisors as $divisor) {
             $quotient = $quotient->dividedBy($divisor->toString(), $scale, $brickRounding);
         }
         if ($scale === 0) {
+            /** @phpstan-ignore possiblyImpure.new */
             return new IntegerObject((string) $quotient->toBigInteger());
         }
+        /** @phpstan-ignore possiblyImpure.new */
         return new Decimal((string) $quotient);
     }
     public function fromBase(string $value, int $base) : IntegerObject
     {
         try {
+            /** @phpstan-ignore possiblyImpure.new */
             return new IntegerObject((string) BigInteger::fromBase($value, $base));
         } catch (MathException|\InvalidArgumentException $exception) {
             throw new InvalidArgumentException($exception->getMessage(), (int) $exception->getCode(), $exception);
@@ -83,6 +90,7 @@ final class BrickMathCalculator implements CalculatorInterface
     }
     public function toHexadecimal(IntegerObject $value) : Hexadecimal
     {
+        /** @phpstan-ignore possiblyImpure.new */
         return new Hexadecimal($this->toBase($value, 16));
     }
     public function toInteger(Hexadecimal $value) : IntegerObject
@@ -91,9 +99,11 @@ final class BrickMathCalculator implements CalculatorInterface
     }
     /**
      * Maps ramsey/uuid rounding modes to those used by brick/math
+     *
+     * @return BrickMathRounding::*
      */
-    private function getBrickRoundingMode(int $roundingMode) : int
+    private function getBrickRoundingMode(int $roundingMode)
     {
-        return self::ROUNDING_MODE_MAP[$roundingMode] ?? 0;
+        return self::ROUNDING_MODE_MAP[$roundingMode] ?? BrickMathRounding::UNNECESSARY;
     }
 }

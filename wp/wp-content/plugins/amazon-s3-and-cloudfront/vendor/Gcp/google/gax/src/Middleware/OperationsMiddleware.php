@@ -35,9 +35,10 @@ namespace DeliciousBrains\WP_Offload_Media\Gcp\Google\ApiCore\Middleware;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\ApiCore\Call;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\ApiCore\OperationResponse;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Internal\Message;
-use DeliciousBrains\WP_Offload_Media\Gcp\GuzzleHttp\Promise\PromiseInterface;
 /**
  * Middleware which wraps the response in an OperationResponse object.
+ *
+ * @internal
  */
 class OperationsMiddleware implements MiddlewareInterface
 {

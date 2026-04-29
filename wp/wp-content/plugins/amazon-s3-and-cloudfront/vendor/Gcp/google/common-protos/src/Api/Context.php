@@ -5,8 +5,8 @@
 namespace DeliciousBrains\WP_Offload_Media\Gcp\Google\Api;
 
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Internal\GPBType;
-use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Internal\RepeatedField;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Internal\GPBUtil;
+use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\RepeatedField;
 /**
  * `Context` defines which contexts an API requests.
  * Example:
@@ -54,7 +54,7 @@ class Context extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Inte
      * @param array $data {
      *     Optional. Data for populating the Message object.
      *
-     *     @type array<\Google\Api\ContextRule>|\Google\Protobuf\Internal\RepeatedField $rules
+     *     @type \Google\Api\ContextRule[] $rules
      *           A list of RPC context rules that apply to individual API methods.
      *           **NOTE:** All service configuration rules follow "last one wins" order.
      * }
@@ -69,7 +69,7 @@ class Context extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Inte
      * **NOTE:** All service configuration rules follow "last one wins" order.
      *
      * Generated from protobuf field <code>repeated .google.api.ContextRule rules = 1;</code>
-     * @return \Google\Protobuf\Internal\RepeatedField
+     * @return RepeatedField<\Google\Api\ContextRule>
      */
     public function getRules()
     {
@@ -80,7 +80,7 @@ class Context extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Inte
      * **NOTE:** All service configuration rules follow "last one wins" order.
      *
      * Generated from protobuf field <code>repeated .google.api.ContextRule rules = 1;</code>
-     * @param array<\Google\Api\ContextRule>|\Google\Protobuf\Internal\RepeatedField $var
+     * @param \Google\Api\ContextRule[] $var
      * @return $this
      */
     public function setRules($var)

@@ -91,9 +91,9 @@ class AgentHeader
         $metricsHeaders['pb'] = $headerInfo['protobufVersion'] ?? (\phpversion('protobuf') ? \phpversion('protobuf') . '+c' : '+n');
         $metricsList = [];
         foreach ($metricsHeaders as $key => $value) {
-            $metricsList[] = $key . "/" . $value;
+            $metricsList[] = $key . '/' . $value;
         }
-        return [self::AGENT_HEADER_KEY => [\implode(" ", $metricsList)]];
+        return [self::AGENT_HEADER_KEY => [\implode(' ', $metricsList)]];
     }
     /**
      * Reads the gapic version string from a VERSION file. In order to determine the file

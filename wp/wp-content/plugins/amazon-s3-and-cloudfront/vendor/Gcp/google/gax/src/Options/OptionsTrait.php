@@ -32,8 +32,8 @@
  */
 namespace DeliciousBrains\WP_Offload_Media\Gcp\Google\ApiCore\Options;
 
-use DeliciousBrains\WP_Offload_Media\Gcp\Google\ApiCore\ValidationException;
 use BadMethodCallException;
+use DeliciousBrains\WP_Offload_Media\Gcp\Google\ApiCore\ValidationException;
 /**
  * Trait implemented by any class representing an associative array of PHP options.
  * This provides validation and typehinting to loosely typed associative arrays.
@@ -54,6 +54,9 @@ trait OptionsTrait
     {
         return isset($this->{$offset});
     }
+    /**
+     * @return mixed
+     */
     #[\ReturnTypeWillChange]
     public function offsetGet($offset)
     {
@@ -77,7 +80,7 @@ trait OptionsTrait
     {
         $arr = [];
         foreach (\get_object_vars($this) as $key => $value) {
-            $arr[$key] = $value;
+            $arr[$key] = $value instanceof OptionsInterface ? $value->toArray() : $value;
         }
         return $arr;
     }

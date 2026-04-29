@@ -155,6 +155,10 @@ class Remove_Local_Handler extends Item_Handler {
 	protected function handle_item( Item $as3cf_item, Manifest $manifest, array $options ) {
 		global $wp_filesystem;
 
+		if ( ! function_exists( 'WP_Filesystem' ) ) {
+			require_once ABSPATH . 'wp-admin/includes/file.php';
+		}
+
 		if ( ! WP_Filesystem() ) {
 			AS3CF_Error::log( __( 'Could not initialize WP_Filesystem.', 'amazon-s3-and-cloudfront' ) );
 

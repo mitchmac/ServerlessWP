@@ -1,4 +1,5 @@
 import {derived, writable, get} from "svelte/store";
+import {push} from "svelte-spa-router";
 import {wrap} from "svelte-spa-router/wrap";
 
 /**
@@ -60,7 +61,10 @@ function createPages() {
 				routes.set( route, wrap( {
 					component: page.component,
 					userData: userData,
-					conditions: conditions
+					conditions: conditions,
+					props: {
+						onRouteEvent: this.onRouteEvent.bind( this )
+					}
 				} ) );
 
 				if ( !defaultComponent && page.default ) {
@@ -73,7 +77,10 @@ function createPages() {
 				routes.set( "*", wrap( {
 					component: defaultComponent,
 					userData: defaultUserData,
-					conditions: conditions
+					conditions: conditions,
+					props: {
+						onRouteEvent: this.onRouteEvent.bind( this )
+					}
 				} ) );
 			}
 
@@ -105,6 +112,23 @@ function createPages() {
 			}
 
 			return false;
+		},
+		/**
+		 * Handles events published by the router.
+		 *
+		 * This handler gives pages a chance to put their hand up and
+		 * provide a new route to be navigated to in response
+		 * to some event.
+		 * e.g. settings saved resulting in a question being asked.
+		 *
+		 * @param {Object} event
+		 */
+		onRouteEvent( event ) {
+			const route = this.handleRouteEvent( event );
+
+			if ( route ) {
+				push( route );
+			}
 		}
 	};
 }

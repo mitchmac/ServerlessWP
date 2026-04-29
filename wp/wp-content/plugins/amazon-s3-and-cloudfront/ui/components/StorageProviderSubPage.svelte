@@ -1,5 +1,5 @@
 <script>
-	import {createEventDispatcher, getContext, hasContext} from "svelte";
+	import {getContext, hasContext} from "svelte";
 	import {writable} from "svelte/store";
 	import {
 		settings,
@@ -11,7 +11,7 @@
 		current_settings,
 		needs_refresh,
 		revalidatingSettings,
-		state
+		appState
 	} from "../js/stores";
 	import {
 		scrollNotificationsIntoView
@@ -30,20 +30,23 @@
 	import KeyFileEntry from "./KeyFileEntry.svelte";
 	import Notification from "./Notification.svelte";
 
-	export let params = {}; // Required for regex routes.
-	const _params = params; // Stops compiler warning about unused params export;
+	/**
+	 * @typedef {Object} Props
+	 * @property {function} [onRouteEvent]
+	 */
 
-	const dispatch = createEventDispatcher();
+	/** @type {Props} */
+	let { onRouteEvent } = $props();
 
 	// Parent page may want to be locked.
-	let settingsLocked = writable( false );
+	let settingsLocked = $state( writable( false ) );
 
 	if ( hasContext( "settingsLocked" ) ) {
 		settingsLocked = getContext( "settingsLocked" );
 	}
 
 	// Need to be careful about throwing unneeded warnings.
-	let initialSettings = $current_settings;
+	let initialSettings = $state( $current_settings );
 
 	if ( hasContext( "initialSettings" ) ) {
 		initialSettings = getContext( "initialSettings" );
@@ -52,22 +55,22 @@
 	// As this page does not directly alter the settings store until done,
 	// we need to keep track of any changes made elsewhere and prompt
 	// the user to refresh the page.
-	let saving = false;
+	let saving = $state( false );
 	const previousSettings = { ...$current_settings };
 	const previousDefines = { ...$defined_settings };
 
-	$: {
+	$effect.pre( () => {
 		$needs_refresh = $needs_refresh || needsRefresh( saving, previousSettings, $current_settings, previousDefines, $defined_settings );
-	}
+	} );
 
 	/*
 	 * 1. Select Storage Provider
 	 */
 
-	let storageProvider = { ...$storage_provider };
+	let storageProvider = $state( { ...$storage_provider } );
 
-	$: defined = $defined_settings.includes( "provider" );
-	$: disabled = defined || $needs_refresh || $settingsLocked;
+	let defined = $derived( $defined_settings.includes( "provider" ) );
+	let disabled = $derived( defined || $needs_refresh || $settingsLocked );
 
 	/**
 	 * Handles picking different storage provider.
@@ -85,15 +88,15 @@
 		authMethod = getAuthMethod( storageProvider, authMethod );
 	}
 
-	$: changedWithOffloaded = initialSettings.provider !== storageProvider.provider_key_name && $counts.offloaded > 0;
+	let changedWithOffloaded = $derived( initialSettings.provider !== storageProvider.provider_key_name && $counts.offloaded > 0 );
 
 	/*
 	 * 2. Select Authentication method
 	 */
 
-	let accessKeyId = $settings[ "access-key-id" ];
-	let secretAccessKey = $settings[ "secret-access-key" ];
-	let keyFile = $settings[ "key-file" ] ? JSON.stringify( $settings[ "key-file" ] ) : "";
+	let accessKeyId = $state( $settings[ "access-key-id" ] );
+	let secretAccessKey = $state( $settings[ "secret-access-key" ] );
+	let keyFile = $state( $settings[ "key-file" ] ? JSON.stringify( $settings[ "key-file" ] ) : "" );
 
 	/**
 	 * For the given current storage provider, determine the authentication method or fallback to currently selected.
@@ -143,11 +146,13 @@
 		return current;
 	}
 
-	let authMethod = getAuthMethod( storageProvider );
+	// Set initial auth method.
+	// svelte-ignore state_referenced_locally
+	let authMethod = $state( getAuthMethod( storageProvider ) );
 
 	// If auth method is not allowed to be database, then either define or server-role is being forced, likely by a define.
-	$: authDefined = "database" !== getAuthMethod( storageProvider, "database" );
-	$: authDisabled = authDefined || $needs_refresh || $settingsLocked;
+	let authDefined = $derived( "database" !== getAuthMethod( storageProvider, "database" ) );
+	let authDisabled = $derived( authDefined || $needs_refresh || $settingsLocked );
 
 	/*
 	 * 3. Save Authentication Credentials
@@ -163,7 +168,7 @@
 		return $strings.auth_method_title[ method ];
 	}
 
-	$: saveCredentialsTitle = getCredentialsTitle( authMethod );
+	let saveCredentialsTitle = $derived( getCredentialsTitle( authMethod ) );
 
 	/*
 	 * Do Something!
@@ -176,7 +181,7 @@
 	 */
 	async function handleNext() {
 		saving = true;
-		state.pausePeriodicFetch();
+		appState.pausePeriodicFetch();
 
 		$settings.provider = storageProvider.provider_key_name;
 		$settings[ "access-key-id" ] = accessKeyId;
@@ -189,7 +194,7 @@
 		if ( !result.hasOwnProperty( "saved" ) || !result.saved ) {
 			settings.reset();
 			saving = false;
-			await state.resumePeriodicFetch();
+			await appState.resumePeriodicFetch();
 
 			scrollNotificationsIntoView();
 
@@ -197,9 +202,9 @@
 		}
 
 		$revalidatingSettings = true;
-		const statePromise = state.resumePeriodicFetch();
+		const statePromise = appState.resumePeriodicFetch();
 
-		dispatch( "routeEvent", { event: "settings.save", data: result } );
+		onRouteEvent( { event: "settings.save", data: result } );
 
 		// Just make sure periodic state fetch promise is done with,
 		// even though we don't really care about it.
@@ -218,14 +223,16 @@
 	<Panel heading={$strings.select_storage_provider_title} defined={defined} multi>
 		<PanelRow class="body flex-row tab-buttons">
 			{#each Object.values( $storage_providers ) as provider}
-				<TabButton
-					active={provider.provider_key_name === storageProvider.provider_key_name}
-					{disabled}
-					icon={provider.icon}
-					iconDesc={provider.icon_desc}
-					text={provider.provider_service_name}
-					on:click={() => handleChooseProvider( provider )}
-				/>
+				{#if !provider.is_deprecated || provider.provider_key_name === storageProvider.provider_key_name}
+					<TabButton
+						active={provider.provider_key_name === storageProvider.provider_key_name}
+						{disabled}
+						icon={provider.icon}
+						iconDesc={provider.icon_desc}
+						text={provider.provider_service_name}
+						onclick={(event) => {event.preventDefault(); handleChooseProvider( provider );}}
+					/>
+				{/if}
 			{/each}
 
 			<Notification class="notice-qsg">
@@ -290,5 +297,5 @@
 		</Panel>
 	{/if}
 
-	<BackNextButtonsRow on:next={handleNext} nextDisabled={$needs_refresh || $settingsLocked} nextText={$strings.save_and_continue}/>
+	<BackNextButtonsRow onNext={handleNext} nextDisabled={$needs_refresh || $settingsLocked} nextText={$strings.save_and_continue}/>
 </SubPage>

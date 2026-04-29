@@ -15,8 +15,8 @@ namespace DeliciousBrains\WP_Offload_Media\Gcp\Ramsey\Uuid\Exception;
 /**
  * Thrown to indicate that the string received is not a valid UUID
  *
- * The InvalidArgumentException that this extends is the ramsey/uuid version
- * of this exception. It exists in the same namespace as this class.
+ * The InvalidArgumentException that this extends is the ramsey/uuid version of this exception. It exists in the same
+ * namespace as this class.
  */
 class InvalidUuidStringException extends InvalidArgumentException implements UuidExceptionInterface
 {

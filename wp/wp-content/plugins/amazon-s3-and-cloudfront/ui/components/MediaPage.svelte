@@ -14,15 +14,20 @@
 	import UrlPreview from "./UrlPreview.svelte";
 	import Footer from "./Footer.svelte";
 
-	export let name = "media";
-	export let params = {}; // Required for regex routes.
-	const _params = params; // Stops compiler warning for params;
+	/**
+	 * @typedef {Object} Props
+	 * @property {string} [name]
+	 * @property {function} [onRouteEvent]
+	 */
 
-	let sidebar = null;
-	let render = false;
+	/** @type {Props} */
+	let { name = "media", onRouteEvent } = $props();
 
-	if ( hasContext( 'sidebar' ) ) {
-		sidebar = getContext( 'sidebar' );
+	let sidebar = $state( null );
+	let render = $state( false );
+
+	if ( hasContext( "sidebar" ) ) {
+		sidebar = getContext( "sidebar" );
 	}
 
 	// Let all child components know if settings are currently locked.
@@ -32,10 +37,10 @@
 	// So they are grouped, and CSS decides which is shown when width stops both from being shown.
 	// The active route will determine the SubPage that is given the active class.
 	const routes = {
-		'*': MediaSettings,
-	}
+		"*": MediaSettings,
+	};
 
-	$: items = [
+	let items = $derived( [
 		{
 			route: "/",
 			title: () => $strings.storage_settings_title,
@@ -46,16 +51,16 @@
 			title: () => $strings.delivery_settings_title,
 			noticeIcon: $settings_validation[ "delivery" ].type
 		}
-	];
+	] );
 
 	onMount( () => {
 		if ( $is_plugin_setup ) {
 			render = true;
 		}
-	} )
+	} );
 </script>
 
-<Page {name} on:routeEvent>
+<Page {name} {onRouteEvent}>
 	{#if render}
 		<Notifications tab={name}/>
 		<SubNav {name} {items} subpage/>
@@ -65,7 +70,8 @@
 </Page>
 
 {#if sidebar && render}
-	<svelte:component this={sidebar}/>
+	{@const SidebarComponent = sidebar}
+	<SidebarComponent/>
 {/if}
 
-<Footer on:routeEvent/>
+<Footer {onRouteEvent}/>

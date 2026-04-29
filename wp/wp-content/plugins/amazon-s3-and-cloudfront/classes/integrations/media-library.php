@@ -668,7 +668,7 @@ class Media_Library extends Integration {
 	}
 
 	/**
-	 * Get attachment url
+	 * Get attachment url.
 	 *
 	 * @param string $url
 	 * @param int    $post_id
@@ -676,11 +676,8 @@ class Media_Library extends Integration {
 	 * @return bool|mixed|WP_Error
 	 */
 	public function wp_get_attachment_url( $url, $post_id ) {
-		if ( $this->as3cf->plugin_compat->is_customizer_crop_action() ) {
-			return $url;
-		}
-
 		$as3cf_item = Media_Library_Item::get_by_source_id( $post_id );
+
 		if ( empty( $as3cf_item ) || ! $as3cf_item->served_by_provider() ) {
 			return $url;
 		}

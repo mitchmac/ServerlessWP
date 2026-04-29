@@ -5,8 +5,8 @@
 namespace DeliciousBrains\WP_Offload_Media\Gcp\Google\Api;
 
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Internal\GPBType;
-use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Internal\RepeatedField;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Internal\GPBUtil;
+use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\RepeatedField;
 /**
  * Billing related configuration of the service.
  * The following example shows how to configure monitored resources and metrics
@@ -57,7 +57,7 @@ class Billing extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Inte
      * @param array $data {
      *     Optional. Data for populating the Message object.
      *
-     *     @type array<\Google\Api\Billing\BillingDestination>|\Google\Protobuf\Internal\RepeatedField $consumer_destinations
+     *     @type \Google\Api\Billing\BillingDestination[] $consumer_destinations
      *           Billing configurations for sending metrics to the consumer project.
      *           There can be multiple consumer destinations per service, each one must have
      *           a different monitored resource type. A metric can be used in at most
@@ -76,7 +76,7 @@ class Billing extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Inte
      * one consumer destination.
      *
      * Generated from protobuf field <code>repeated .google.api.Billing.BillingDestination consumer_destinations = 8;</code>
-     * @return \Google\Protobuf\Internal\RepeatedField
+     * @return RepeatedField<\Google\Api\Billing\BillingDestination>
      */
     public function getConsumerDestinations()
     {
@@ -89,7 +89,7 @@ class Billing extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Inte
      * one consumer destination.
      *
      * Generated from protobuf field <code>repeated .google.api.Billing.BillingDestination consumer_destinations = 8;</code>
-     * @param array<\Google\Api\Billing\BillingDestination>|\Google\Protobuf\Internal\RepeatedField $var
+     * @param \Google\Api\Billing\BillingDestination[] $var
      * @return $this
      */
     public function setConsumerDestinations($var)

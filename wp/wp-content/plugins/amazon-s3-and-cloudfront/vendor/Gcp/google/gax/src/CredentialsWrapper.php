@@ -35,23 +35,21 @@ namespace DeliciousBrains\WP_Offload_Media\Gcp\Google\ApiCore;
 use DomainException;
 use Exception;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Auth\ApplicationDefaultCredentials;
-use DeliciousBrains\WP_Offload_Media\Gcp\Google\Auth\ProjectIdProviderInterface;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Auth\Cache\MemoryCacheItemPool;
+use DeliciousBrains\WP_Offload_Media\Gcp\Google\Auth\Credentials\GCECredentials;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Auth\Credentials\ServiceAccountCredentials;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Auth\CredentialsLoader;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Auth\FetchAuthTokenCache;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Auth\FetchAuthTokenInterface;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Auth\GetQuotaProjectInterface;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Auth\GetUniverseDomainInterface;
-use DeliciousBrains\WP_Offload_Media\Gcp\Google\Auth\HttpHandler\Guzzle6HttpHandler;
-use DeliciousBrains\WP_Offload_Media\Gcp\Google\Auth\HttpHandler\Guzzle7HttpHandler;
-use DeliciousBrains\WP_Offload_Media\Gcp\Google\Auth\HttpHandler\HttpHandlerFactory;
+use DeliciousBrains\WP_Offload_Media\Gcp\Google\Auth\ProjectIdProviderInterface;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Auth\UpdateMetadataInterface;
 use DeliciousBrains\WP_Offload_Media\Gcp\Psr\Cache\CacheItemPoolInterface;
 /**
  * The CredentialsWrapper object provides a wrapper around a FetchAuthTokenInterface.
  */
-class CredentialsWrapper implements ProjectIdProviderInterface
+class CredentialsWrapper implements HeaderCredentialsInterface, ProjectIdProviderInterface
 {
     use ValidationTrait;
     /** @var FetchAuthTokenInterface $credentialsFetcher */
@@ -71,10 +69,10 @@ class CredentialsWrapper implements ProjectIdProviderInterface
      *        `function (RequestInterface $request, array $options) : ResponseInterface`.
      * @throws ValidationException
      */
-    public function __construct(FetchAuthTokenInterface $credentialsFetcher, callable $authHttpHandler = null, string $universeDomain = GetUniverseDomainInterface::DEFAULT_UNIVERSE_DOMAIN)
+    public function __construct(FetchAuthTokenInterface $credentialsFetcher, ?callable $authHttpHandler = null, string $universeDomain = GetUniverseDomainInterface::DEFAULT_UNIVERSE_DOMAIN)
     {
         $this->credentialsFetcher = $credentialsFetcher;
-        $this->authHttpHandler = $authHttpHandler ?: self::buildHttpHandlerFactory();
+        $this->authHttpHandler = $authHttpHandler;
         if (empty($universeDomain)) {
             throw new ValidationException('The universe domain cannot be empty');
         }
@@ -120,9 +118,8 @@ class CredentialsWrapper implements ProjectIdProviderInterface
     {
         $args += ['keyFile' => null, 'scopes' => null, 'authHttpHandler' => null, 'enableCaching' => \true, 'authCache' => null, 'authCacheOptions' => [], 'quotaProject' => null, 'defaultScopes' => null, 'useJwtAccessWithScope' => \true];
         $keyFile = $args['keyFile'];
-        $authHttpHandler = $args['authHttpHandler'] ?: self::buildHttpHandlerFactory();
         if (\is_null($keyFile)) {
-            $loader = self::buildApplicationDefaultCredentials($args['scopes'], $authHttpHandler, $args['authCacheOptions'], $args['authCache'], $args['quotaProject'], $args['defaultScopes']);
+            $loader = self::buildApplicationDefaultCredentials($args['scopes'], $args['authHttpHandler'], $args['authCacheOptions'], $args['authCache'], $args['quotaProject'], $args['defaultScopes']);
             if ($loader instanceof FetchAuthTokenCache) {
                 $loader = $loader->getFetcher();
             }
@@ -147,19 +144,19 @@ class CredentialsWrapper implements ProjectIdProviderInterface
             $authCache = $args['authCache'] ?: new MemoryCacheItemPool();
             $loader = new FetchAuthTokenCache($loader, $args['authCacheOptions'], $authCache);
         }
-        return new CredentialsWrapper($loader, $authHttpHandler, $universeDomain);
+        return new CredentialsWrapper($loader, $args['authHttpHandler'], $universeDomain);
     }
     /**
      * @return string|null The quota project associated with the credentials.
      */
-    public function getQuotaProject()
+    public function getQuotaProject() : ?string
     {
         if ($this->credentialsFetcher instanceof GetQuotaProjectInterface) {
             return $this->credentialsFetcher->getQuotaProject();
         }
         return null;
     }
-    public function getProjectId(callable $httpHandler = null) : ?string
+    public function getProjectId(?callable $httpHandler = null) : ?string
     {
         // Ensure that FetchAuthTokenCache does not throw an exception
         if ($this->credentialsFetcher instanceof FetchAuthTokenCache && !$this->credentialsFetcher->getFetcher() instanceof ProjectIdProviderInterface) {
@@ -190,7 +187,7 @@ class CredentialsWrapper implements ProjectIdProviderInterface
      * @param string $audience optional audience for self-signed JWTs.
      * @return callable Callable function that returns an authorization header.
      */
-    public function getAuthorizationHeaderCallback($audience = null)
+    public function getAuthorizationHeaderCallback($audience = null) : ?callable
     {
         // NOTE: changes to this function should be treated carefully and tested thoroughly. It will
         // be passed into the gRPC c extension, and changes have the potential to trigger very
@@ -201,7 +198,7 @@ class CredentialsWrapper implements ProjectIdProviderInterface
                 $this->checkUniverseDomain();
                 // Call updateMetadata to take advantage of self-signed JWTs
                 if ($this->credentialsFetcher instanceof UpdateMetadataInterface) {
-                    return $this->credentialsFetcher->updateMetadata([], $audience);
+                    return $this->credentialsFetcher->updateMetadata([], $audience, $this->authHttpHandler);
                 }
                 // In case a custom fetcher is provided (unlikely) which doesn't
                 // implement UpdateMetadataInterface
@@ -219,10 +216,12 @@ class CredentialsWrapper implements ProjectIdProviderInterface
     }
     /**
      * Verify that the expected universe domain matches the universe domain from the credentials.
+     *
+     * @throws ValidationException if the universe domain does not match.
      */
-    public function checkUniverseDomain()
+    public function checkUniverseDomain() : void
     {
-        if (\false === $this->hasCheckedUniverse) {
+        if (\false === $this->hasCheckedUniverse && $this->shouldCheckUniverseDomain()) {
             $credentialsUniverse = $this->credentialsFetcher instanceof GetUniverseDomainInterface ? $this->credentialsFetcher->getUniverseDomain() : GetUniverseDomainInterface::DEFAULT_UNIVERSE_DOMAIN;
             if ($credentialsUniverse !== $this->universeDomain) {
                 throw new ValidationException(\sprintf('The configured universe domain (%s) does not match the credential universe domain (%s)', $this->universeDomain, $credentialsUniverse));
@@ -231,16 +230,17 @@ class CredentialsWrapper implements ProjectIdProviderInterface
         }
     }
     /**
-     * @return Guzzle6HttpHandler|Guzzle7HttpHandler
-     * @throws ValidationException
+     * Skip universe domain check for Metadata server (e.g. GCE) credentials.
+     *
+     * @return bool
      */
-    private static function buildHttpHandlerFactory()
+    private function shouldCheckUniverseDomain() : bool
     {
-        try {
-            return HttpHandlerFactory::build();
-        } catch (Exception $ex) {
-            throw new ValidationException("Failed to build HttpHandler", $ex->getCode(), $ex);
+        $fetcher = $this->credentialsFetcher instanceof FetchAuthTokenCache ? $this->credentialsFetcher->getFetcher() : $this->credentialsFetcher;
+        if ($fetcher instanceof GCECredentials) {
+            return \false;
         }
+        return \true;
     }
     /**
      * @param array $scopes
@@ -252,12 +252,12 @@ class CredentialsWrapper implements ProjectIdProviderInterface
      * @return FetchAuthTokenInterface
      * @throws ValidationException
      */
-    private static function buildApplicationDefaultCredentials(array $scopes = null, callable $authHttpHandler = null, array $authCacheOptions = null, CacheItemPoolInterface $authCache = null, $quotaProject = null, array $defaultScopes = null)
+    private static function buildApplicationDefaultCredentials(?array $scopes = null, ?callable $authHttpHandler = null, ?array $authCacheOptions = null, ?CacheItemPoolInterface $authCache = null, $quotaProject = null, ?array $defaultScopes = null)
     {
         try {
             return ApplicationDefaultCredentials::getCredentials($scopes, $authHttpHandler, $authCacheOptions, $authCache, $quotaProject, $defaultScopes);
         } catch (DomainException $ex) {
-            throw new ValidationException("Could not construct ApplicationDefaultCredentials", $ex->getCode(), $ex);
+            throw new ValidationException('Could not construct ApplicationDefaultCredentials', $ex->getCode(), $ex);
         }
     }
     /**

@@ -27,8 +27,5 @@ namespace DeliciousBrains\WP_Offload_Media\Gcp\Monolog;
  */
 interface ResettableInterface
 {
-    /**
-     * @return void
-     */
-    public function reset();
+    public function reset() : void;
 }

@@ -32,7 +32,6 @@
  */
 namespace DeliciousBrains\WP_Offload_Media\Gcp\Google\ApiCore;
 
-use DeliciousBrains\WP_Offload_Media\Gcp\Google\ApiCore\ValidationException;
 /**
  * Provides functionality for loading a resource name template map from a descriptor config,
  * retrieving a PathTemplate, and parsing values using registered templates.
@@ -77,7 +76,7 @@ trait ResourceHelperTrait
         }
         return self::$templateMap[$key] ?? null;
     }
-    private static function parseFormattedName(string $formattedName, string $template = null) : array
+    private static function parseFormattedName(string $formattedName, ?string $template = null) : array
     {
         if (\is_null(self::$templateMap)) {
             self::registerPathTemplates();

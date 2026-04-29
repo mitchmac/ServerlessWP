@@ -1,16 +1,28 @@
 <script>
-	const classes = $$props.class ? $$props.class : "";
+	/**
+	 * @typedef {Object} Props
+	 * @property {boolean} [header]
+	 * @property {boolean} [footer]
+	 * @property {boolean} [gradient]
+	 * @property {import("svelte").Snippet} [children]
+	 * @property {string} [class]
+	 */
 
-	export let header = false;
-	export let footer = false;
-	export let gradient = false;
+	/** @type {Props} */
+	let {
+		header = false,
+		footer = false,
+		gradient = false,
+		children,
+		class: classes = ""
+	} = $props();
 </script>
 
 <div class="panel-row {classes}" class:header class:footer>
 	{#if gradient}
 		<div class="gradient"></div>
 	{/if}
-	<slot/>
+	{@render children?.()}
 </div>
 
 <style>

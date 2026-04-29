@@ -15,6 +15,7 @@ namespace DeliciousBrains\WP_Offload_Media\Gcp\Ramsey\Uuid\Guid;
 use DeliciousBrains\WP_Offload_Media\Gcp\Ramsey\Uuid\Exception\InvalidArgumentException;
 use DeliciousBrains\WP_Offload_Media\Gcp\Ramsey\Uuid\Fields\SerializableFieldsTrait;
 use DeliciousBrains\WP_Offload_Media\Gcp\Ramsey\Uuid\Rfc4122\FieldsInterface;
+use DeliciousBrains\WP_Offload_Media\Gcp\Ramsey\Uuid\Rfc4122\MaxTrait;
 use DeliciousBrains\WP_Offload_Media\Gcp\Ramsey\Uuid\Rfc4122\NilTrait;
 use DeliciousBrains\WP_Offload_Media\Gcp\Ramsey\Uuid\Rfc4122\VariantTrait;
 use DeliciousBrains\WP_Offload_Media\Gcp\Ramsey\Uuid\Rfc4122\VersionTrait;
@@ -31,22 +32,19 @@ use function substr;
 use function unpack;
 use const STR_PAD_LEFT;
 /**
- * GUIDs are comprised of a set of named fields, according to RFC 4122
+ * GUIDs consist of a set of named fields, according to RFC 9562 (formerly RFC 4122)
  *
  * @see Guid
  *
- * @psalm-immutable
+ * @immutable
  */
 final class Fields implements FieldsInterface
 {
+    use MaxTrait;
     use NilTrait;
     use SerializableFieldsTrait;
     use VariantTrait;
     use VersionTrait;
-    /**
-     * @var string
-     */
-    private $bytes;
     /**
      * @param string $bytes A 16-byte binary string representation of a UUID
      *
@@ -54,14 +52,13 @@ final class Fields implements FieldsInterface
      * @throws InvalidArgumentException if the byte string does not represent a GUID
      * @throws InvalidArgumentException if the byte string does not contain a valid version
      */
-    public function __construct(string $bytes)
+    public function __construct(private string $bytes)
     {
-        if (strlen($bytes) !== 16) {
-            throw new InvalidArgumentException('The byte string must be 16 bytes long; ' . 'received ' . strlen($bytes) . ' bytes');
+        if (strlen($this->bytes) !== 16) {
+            throw new InvalidArgumentException('The byte string must be 16 bytes long; received ' . strlen($this->bytes) . ' bytes');
         }
-        $this->bytes = $bytes;
         if (!$this->isCorrectVariant()) {
-            throw new InvalidArgumentException('The byte string received does not conform to the RFC ' . '4122 or Microsoft Corporation variants');
+            throw new InvalidArgumentException('The byte string received does not conform to the RFC 9562 (formerly RFC 4122) ' . 'or Microsoft Corporation variants');
         }
         if (!$this->isCorrectVersion()) {
             throw new InvalidArgumentException('The byte string received does not contain a valid version');
@@ -74,23 +71,23 @@ final class Fields implements FieldsInterface
     public function getTimeLow() : Hexadecimal
     {
         // Swap the bytes from little endian to network byte order.
-        /** @var array $hex */
+        /** @var string[] $hex */
         $hex = unpack('H*', pack('v*', hexdec(bin2hex(substr($this->bytes, 2, 2))), hexdec(bin2hex(substr($this->bytes, 0, 2)))));
-        return new Hexadecimal((string) ($hex[1] ?? ''));
+        return new Hexadecimal($hex[1] ?? '');
     }
     public function getTimeMid() : Hexadecimal
     {
         // Swap the bytes from little endian to network byte order.
-        /** @var array $hex */
+        /** @var string[] $hex */
         $hex = unpack('H*', pack('v', hexdec(bin2hex(substr($this->bytes, 4, 2)))));
-        return new Hexadecimal((string) ($hex[1] ?? ''));
+        return new Hexadecimal($hex[1] ?? '');
     }
     public function getTimeHiAndVersion() : Hexadecimal
     {
         // Swap the bytes from little endian to network byte order.
-        /** @var array $hex */
+        /** @var string[] $hex */
         $hex = unpack('H*', pack('v', hexdec(bin2hex(substr($this->bytes, 6, 2)))));
-        return new Hexadecimal((string) ($hex[1] ?? ''));
+        return new Hexadecimal($hex[1] ?? '');
     }
     public function getTimestamp() : Hexadecimal
     {
@@ -98,7 +95,13 @@ final class Fields implements FieldsInterface
     }
     public function getClockSeq() : Hexadecimal
     {
-        $clockSeq = hexdec(bin2hex(substr($this->bytes, 8, 2))) & 0x3fff;
+        if ($this->isMax()) {
+            $clockSeq = 0xffff;
+        } elseif ($this->isNil()) {
+            $clockSeq = 0x0;
+        } else {
+            $clockSeq = hexdec(bin2hex(substr($this->bytes, 8, 2))) & 0x3fff;
+        }
         return new Hexadecimal(str_pad(dechex($clockSeq), 4, '0', STR_PAD_LEFT));
     }
     public function getClockSeqHiAndReserved() : Hexadecimal
@@ -115,16 +118,16 @@ final class Fields implements FieldsInterface
     }
     public function getVersion() : ?int
     {
-        if ($this->isNil()) {
+        if ($this->isNil() || $this->isMax()) {
             return null;
         }
-        /** @var array $parts */
+        /** @var int[] $parts */
         $parts = unpack('n*', $this->bytes);
-        return (int) $parts[4] >> 4 & 0xf;
+        return $parts[4] >> 4 & 0xf;
     }
     private function isCorrectVariant() : bool
     {
-        if ($this->isNil()) {
+        if ($this->isNil() || $this->isMax()) {
             return \true;
         }
         $variant = $this->getVariant();

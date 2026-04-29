@@ -13,10 +13,10 @@ declare (strict_types=1);
 namespace DeliciousBrains\WP_Offload_Media\Gcp\Ramsey\Uuid;
 
 /**
- * @deprecated DegradedUuid is no longer necessary to represent UUIDs on 32-bit
- *     systems. Transition typehints to {@see UuidInterface}.
+ * @deprecated DegradedUuid is no longer necessary to represent UUIDs on 32-bit systems.
+ *     Transition any type declarations using this class to {@see UuidInterface}.
  *
- * @psalm-immutable
+ * @immutable
  */
 class DegradedUuid extends Uuid
 {

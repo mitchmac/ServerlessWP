@@ -2,7 +2,7 @@
 
 ![Build Status](https://github.com/googleapis/gax-php/actions/workflows/tests.yml/badge.svg)
 
--   [Documentation](https://googleapis.github.io/gax-php)
+-   [Documentation](https://cloud.google.com/php/docs/reference/gax/latest)
 
 Google API Core for PHP (gax-php) is a set of modules which aids the development
 of APIs for clients based on [gRPC][] and Google API conventions.
@@ -17,7 +17,7 @@ more convenient and idiomatic API surface to callers.
 
 ## PHP Versions
 
-gax-php currently requires PHP 5.6 or higher.
+gax-php currently requires PHP 8.1 or higher.
 
 ## Contributing
 
@@ -67,28 +67,27 @@ be found for Mac or Windows.
 
     ```sh
     > cd /path/to/gax-php
-    > cp ~/composer.phar ./
-    > php composer.phar install
+    > composer install
     ```
 
 3.  Run tests.
 
     ```sh
-    > vendor/bin/phpunit --bootstrap tests/bootstrap.php tests
+    > composer test
     ```
 
 4.  Updating dependencies after changing `composer.json`:
 
     ```sh
-    > php composer.phar update
+    > composer update
     `
     ```
 
 5.  Formatting source:
 
     ```sh
-    > vendor/bin/phpcbf -s --standard=./ruleset.xml
-    > vendor/bin/phpcs -s --standard=./ruleset.xml
+    > composer cs-lint
+    > composer cs-fix
     ```
 
 ## License

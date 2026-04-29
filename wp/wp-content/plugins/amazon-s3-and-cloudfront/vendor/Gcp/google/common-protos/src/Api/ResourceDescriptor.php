@@ -5,8 +5,8 @@
 namespace DeliciousBrains\WP_Offload_Media\Gcp\Google\Api;
 
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Internal\GPBType;
-use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Internal\RepeatedField;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Internal\GPBUtil;
+use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\RepeatedField;
 /**
  * A simple descriptor of a resource type.
  * ResourceDescriptor annotates a resource message (either by means of a
@@ -110,8 +110,12 @@ class ResourceDescriptor extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Pr
     /**
      * The plural name used in the resource name and permission names, such as
      * 'projects' for the resource name of 'projects/{project}' and the permission
-     * name of 'cloudresourcemanager.googleapis.com/projects.get'. It is the same
-     * concept of the `plural` field in k8s CRD spec
+     * name of 'cloudresourcemanager.googleapis.com/projects.get'. One exception
+     * to this is for Nested Collections that have stuttering names, as defined
+     * in [AIP-122](https://google.aip.dev/122#nested-collections), where the
+     * collection ID in the resource name pattern does not necessarily directly
+     * match the `plural` value.
+     * It is the same concept of the `plural` field in k8s CRD spec
      * https://kubernetes.io/docs/tasks/access-kubernetes-api/custom-resources/custom-resource-definitions/
      * Note: The plural form is required even for singleton resources. See
      * https://aip.dev/156
@@ -150,7 +154,7 @@ class ResourceDescriptor extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Pr
      *           /[A-Za-z][a-zA-Z0-9]+/. It should start with an upper case character and
      *           should use PascalCase (UpperCamelCase). The maximum number of
      *           characters allowed for the `resource_type_kind` is 100.
-     *     @type array<string>|\Google\Protobuf\Internal\RepeatedField $pattern
+     *     @type string[] $pattern
      *           Optional. The relative resource name pattern associated with this resource
      *           type. The DNS prefix of the full resource name shouldn't be specified here.
      *           The path pattern must follow the syntax, which aligns with HTTP binding
@@ -185,8 +189,12 @@ class ResourceDescriptor extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Pr
      *     @type string $plural
      *           The plural name used in the resource name and permission names, such as
      *           'projects' for the resource name of 'projects/{project}' and the permission
-     *           name of 'cloudresourcemanager.googleapis.com/projects.get'. It is the same
-     *           concept of the `plural` field in k8s CRD spec
+     *           name of 'cloudresourcemanager.googleapis.com/projects.get'. One exception
+     *           to this is for Nested Collections that have stuttering names, as defined
+     *           in [AIP-122](https://google.aip.dev/122#nested-collections), where the
+     *           collection ID in the resource name pattern does not necessarily directly
+     *           match the `plural` value.
+     *           It is the same concept of the `plural` field in k8s CRD spec
      *           https://kubernetes.io/docs/tasks/access-kubernetes-api/custom-resources/custom-resource-definitions/
      *           Note: The plural form is required even for singleton resources. See
      *           https://aip.dev/156
@@ -194,7 +202,7 @@ class ResourceDescriptor extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Pr
      *           The same concept of the `singular` field in k8s CRD spec
      *           https://kubernetes.io/docs/tasks/access-kubernetes-api/custom-resources/custom-resource-definitions/
      *           Such as "project" for the `resourcemanager.googleapis.com/Project` type.
-     *     @type array<int>|\Google\Protobuf\Internal\RepeatedField $style
+     *     @type int[] $style
      *           Style flag(s) for this resource.
      *           These indicate that a resource is expected to conform to a given
      *           style. See the specific style flags for additional information.
@@ -259,7 +267,7 @@ class ResourceDescriptor extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Pr
      * type of resource.
      *
      * Generated from protobuf field <code>repeated string pattern = 2;</code>
-     * @return \Google\Protobuf\Internal\RepeatedField
+     * @return RepeatedField<string>
      */
     public function getPattern()
     {
@@ -282,7 +290,7 @@ class ResourceDescriptor extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Pr
      * type of resource.
      *
      * Generated from protobuf field <code>repeated string pattern = 2;</code>
-     * @param array<string>|\Google\Protobuf\Internal\RepeatedField $var
+     * @param string[] $var
      * @return $this
      */
     public function setPattern($var)
@@ -366,8 +374,12 @@ class ResourceDescriptor extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Pr
     /**
      * The plural name used in the resource name and permission names, such as
      * 'projects' for the resource name of 'projects/{project}' and the permission
-     * name of 'cloudresourcemanager.googleapis.com/projects.get'. It is the same
-     * concept of the `plural` field in k8s CRD spec
+     * name of 'cloudresourcemanager.googleapis.com/projects.get'. One exception
+     * to this is for Nested Collections that have stuttering names, as defined
+     * in [AIP-122](https://google.aip.dev/122#nested-collections), where the
+     * collection ID in the resource name pattern does not necessarily directly
+     * match the `plural` value.
+     * It is the same concept of the `plural` field in k8s CRD spec
      * https://kubernetes.io/docs/tasks/access-kubernetes-api/custom-resources/custom-resource-definitions/
      * Note: The plural form is required even for singleton resources. See
      * https://aip.dev/156
@@ -382,8 +394,12 @@ class ResourceDescriptor extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Pr
     /**
      * The plural name used in the resource name and permission names, such as
      * 'projects' for the resource name of 'projects/{project}' and the permission
-     * name of 'cloudresourcemanager.googleapis.com/projects.get'. It is the same
-     * concept of the `plural` field in k8s CRD spec
+     * name of 'cloudresourcemanager.googleapis.com/projects.get'. One exception
+     * to this is for Nested Collections that have stuttering names, as defined
+     * in [AIP-122](https://google.aip.dev/122#nested-collections), where the
+     * collection ID in the resource name pattern does not necessarily directly
+     * match the `plural` value.
+     * It is the same concept of the `plural` field in k8s CRD spec
      * https://kubernetes.io/docs/tasks/access-kubernetes-api/custom-resources/custom-resource-definitions/
      * Note: The plural form is required even for singleton resources. See
      * https://aip.dev/156
@@ -431,7 +447,7 @@ class ResourceDescriptor extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Pr
      * style. See the specific style flags for additional information.
      *
      * Generated from protobuf field <code>repeated .google.api.ResourceDescriptor.Style style = 10;</code>
-     * @return \Google\Protobuf\Internal\RepeatedField
+     * @return RepeatedField<int>
      */
     public function getStyle()
     {
@@ -443,7 +459,7 @@ class ResourceDescriptor extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Pr
      * style. See the specific style flags for additional information.
      *
      * Generated from protobuf field <code>repeated .google.api.ResourceDescriptor.Style style = 10;</code>
-     * @param array<int>|\Google\Protobuf\Internal\RepeatedField $var
+     * @param int[] $var
      * @return $this
      */
     public function setStyle($var)

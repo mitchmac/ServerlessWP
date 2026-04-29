@@ -664,8 +664,6 @@
   gap: 0.5rem;
   align-self: stretch;
   min-width: 20px;
-  /* When complete there's an icon prefix that takes up more room. */
-  /* When a tool is running there is longer status text taking up room. */
 }
 #as3cf-settings.wpome div.nav div.items .nav-status-wrapper:focus {
   box-shadow: none;
@@ -721,26 +719,32 @@
     display: none;
   }
 }
-#as3cf-settings.wpome div.nav div.items .nav-status-wrapper.complete {
-  /* Remove complete icon before removing whole status. */
+#as3cf-settings.wpome div.nav div.items .nav-status-wrapper {
+  /* When complete there's an icon prefix that takes up more room. */
 }
 @media (max-width: 720px) {
   #as3cf-settings.wpome div.nav div.items .nav-status-wrapper.complete .progress-bar {
     display: none;
   }
 }
+#as3cf-settings.wpome div.nav div.items .nav-status-wrapper.complete {
+  /* Remove complete icon before removing whole status. */
+}
 @media (max-width: 670px) {
   #as3cf-settings.wpome div.nav div.items .nav-status-wrapper.complete img.icon.type {
     display: none;
   }
 }
-#as3cf-settings.wpome div.nav div.items .nav-status-wrapper.tool-running {
-  /* Because there is an animated icon giving context we can reduce text. */
+#as3cf-settings.wpome div.nav div.items .nav-status-wrapper {
+  /* When a tool is running there is longer status text taking up room. */
 }
 @media (max-width: 800px) {
   #as3cf-settings.wpome div.nav div.items .nav-status-wrapper.tool-running .progress-bar {
     display: none;
   }
+}
+#as3cf-settings.wpome div.nav div.items .nav-status-wrapper.tool-running {
+  /* Because there is an animated icon giving context we can reduce text. */
 }
 @media (max-width: 740px) {
   #as3cf-settings.wpome div.nav div.items .nav-status-wrapper.tool-running .status-text strong {
@@ -828,7 +832,6 @@
   border-radius: 8px;
   display: flex;
   flex-direction: column;
-  /* Probably redundant now, but keeping until verified post 3.0 release. */
 }
 #as3cf-settings.wpome .notification .content {
   box-sizing: border-box;
@@ -1048,6 +1051,9 @@
   border-right: 0;
   border-radius: 0;
 }
+#as3cf-settings.wpome .notification {
+  /* Probably redundant now, but keeping until verified post 3.0 release. */
+}
 #as3cf-settings.wpome .notification.wordpress {
   background: var(--as3cf-color-white);
   border: 1px solid var(--as3cf-wordpress-border-color);
@@ -1142,11 +1148,6 @@
   background: linear-gradient(225deg, rgba(226, 226, 226, 0.5) 0%, rgba(226, 226, 226, 0) 50%);
 }
 
-#as3cf-settings.wpome {
-  /**
-   * Misc
-   */
-}
 #as3cf-settings.wpome .as3cf-sidebar {
   width: 292px;
   min-width: 292px;
@@ -1205,6 +1206,11 @@
     top: auto;
     right: auto;
   }
+}
+#as3cf-settings.wpome {
+  /**
+   * Misc
+   */
 }
 #as3cf-settings.wpome .as3cf-active-provider, #as3cf-settings.wpome .as3cf-active-bucket {
   font-weight: bold;
@@ -1267,12 +1273,6 @@
   background: url(../img/sidebar/item-checked.svg) left center no-repeat;
 }
 
-#as3cf-settings.wpome {
-  /*
-   * Add an external link icon after any link that uses "_blank" target.
-   * There's a couple of classes where we don't want the icon too.
-    */
-}
 #as3cf-settings.wpome a,
 #as3cf-settings.wpome button,
 #as3cf-settings.wpome h1,
@@ -1307,6 +1307,12 @@
 }
 #as3cf-settings.wpome .page-title {
   margin-bottom: 3rem;
+}
+#as3cf-settings.wpome {
+  /*
+   * Add an external link icon after any link that uses "_blank" target.
+   * There's a couple of classes where we don't want the icon too.
+    */
 }
 #as3cf-settings.wpome a[target=_blank]:not(.help):not(.licence):not(.email):after {
   box-sizing: border-box;
@@ -1655,17 +1661,16 @@
 #as3cf-settings.wpome .panel.url-preview {
   max-width: 100%;
 }
-#as3cf-settings.wpome .panel.url-preview .panel-row {
-  /* Good for Firefox & Safari, but Chrome isn't ready for this yet, experimental in v105.
-   * @see https://developer.mozilla.org/en-US/docs/Web/CSS/contain#inline-size
-   */
-  /* Required until Chrome gets contain: inline-size */
-}
 #as3cf-settings.wpome .panel.url-preview .panel-row.desc p {
   font-size: 0.8125rem;
   color: var(--as3cf-color-gray-600);
   line-height: 1.625;
   margin: 1.5rem 0 0;
+}
+#as3cf-settings.wpome .panel.url-preview .panel-row {
+  /* Good for Firefox & Safari, but Chrome isn't ready for this yet, experimental in v105.
+   * @see https://developer.mozilla.org/en-US/docs/Web/CSS/contain#inline-size
+   */
 }
 @supports (contain: inline-size) {
   #as3cf-settings.wpome .panel.url-preview .panel-row.body {
@@ -1708,6 +1713,9 @@
   border-radius: 6px;
   font-weight: 400;
   font-size: 0.75rem;
+}
+#as3cf-settings.wpome .panel.url-preview .panel-row {
+  /* Required until Chrome gets contain: inline-size */
 }
 @supports not (contain: inline-size) {
   #as3cf-settings.wpome .panel.url-preview .panel-row dl {
@@ -1990,7 +1998,6 @@
   cursor: pointer;
   box-sizing: border-box;
   flex: none;
-  /* TODO: Better styling for no buckets in browse list? */
 }
 #as3cf-settings.wpome .panel.multi .panel-container .panel-row.body .bucket-list .row.active {
   background: rgba(236, 112, 94, 0.1);
@@ -2012,6 +2019,9 @@
 }
 #as3cf-settings.wpome .panel.multi .panel-container .panel-row.body .bucket-list .row .status {
   margin-left: auto;
+}
+#as3cf-settings.wpome .panel.multi .panel-container .panel-row.body .bucket-list .row {
+  /* TODO: Better styling for no buckets in browse list? */
 }
 #as3cf-settings.wpome .panel.multi .panel-container .panel-row.body .bucket-list .row.nothing-found {
   cursor: default;
@@ -2056,9 +2066,6 @@
 #as3cf-settings.wpome .panel.flyout.multi .panel-container .panel-row.summary table {
   width: 100%;
   border-collapse: collapse;
-  /* Indent the columns. */
-  /* Table header has different styling and vertical padding. */
-  /* Top and bottom rows have different vertical padding than between rows. */
 }
 #as3cf-settings.wpome .panel.flyout.multi .panel-container .panel-row.summary table th, #as3cf-settings.wpome .panel.flyout.multi .panel-container .panel-row.summary table td {
   padding: 0 0 1rem 2rem;
@@ -2068,11 +2075,17 @@
   /* Make title column cell's width stretch, numerics are compact. */
   width: 100%;
 }
+#as3cf-settings.wpome .panel.flyout.multi .panel-container .panel-row.summary table {
+  /* Indent the columns. */
+}
 #as3cf-settings.wpome .panel.flyout.multi .panel-container .panel-row.summary table th:first-of-type, #as3cf-settings.wpome .panel.flyout.multi .panel-container .panel-row.summary table td:first-of-type {
   padding-left: 1.5rem;
 }
 #as3cf-settings.wpome .panel.flyout.multi .panel-container .panel-row.summary table th:last-of-type, #as3cf-settings.wpome .panel.flyout.multi .panel-container .panel-row.summary table td:last-of-type {
   padding-right: 1.5rem;
+}
+#as3cf-settings.wpome .panel.flyout.multi .panel-container .panel-row.summary table {
+  /* Table header has different styling and vertical padding. */
 }
 #as3cf-settings.wpome .panel.flyout.multi .panel-container .panel-row.summary table thead {
   background-color: var(--as3cf-color-gray-100);
@@ -2086,6 +2099,9 @@
   color: var(--as3cf-color-gray-700);
   font-weight: 500;
   font-size: 10px;
+}
+#as3cf-settings.wpome .panel.flyout.multi .panel-container .panel-row.summary table {
+  /* Top and bottom rows have different vertical padding than between rows. */
 }
 #as3cf-settings.wpome .panel.flyout.multi .panel-container .panel-row.summary table tbody tr:first-of-type td, #as3cf-settings.wpome .panel.flyout.multi .panel-container .panel-row.summary table tfoot tr:first-of-type td {
   padding-top: 1rem;
