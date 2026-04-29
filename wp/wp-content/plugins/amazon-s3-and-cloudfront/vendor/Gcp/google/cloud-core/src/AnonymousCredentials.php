@@ -18,8 +18,8 @@
 namespace DeliciousBrains\WP_Offload_Media\Gcp\Google\Cloud\Core;
 
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Auth\FetchAuthTokenInterface;
-use DeliciousBrains\WP_Offload_Media\Gcp\Google\Auth\UpdateMetadataInterface;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Auth\GetQuotaProjectInterface;
+use DeliciousBrains\WP_Offload_Media\Gcp\Google\Auth\UpdateMetadataInterface;
 /**
  * Provides an anonymous set of credentials, which is useful for APIs which do
  * not require authentication.
@@ -36,7 +36,7 @@ class AnonymousCredentials implements FetchAuthTokenInterface, UpdateMetadataInt
      * @param callable $httpHandler
      * @return array
      */
-    public function fetchAuthToken(callable $httpHandler = null)
+    public function fetchAuthToken(?callable $httpHandler = null)
     {
         return $this->token;
     }
@@ -68,7 +68,7 @@ class AnonymousCredentials implements FetchAuthTokenInterface, UpdateMetadataInt
      * @param callable $httpHandler callback which delivers psr7 request
      * @return array updated metadata hashmap
      */
-    public function updateMetadata($metadata, $authUri = null, callable $httpHandler = null)
+    public function updateMetadata($metadata, $authUri = null, ?callable $httpHandler = null)
     {
         return $metadata;
     }

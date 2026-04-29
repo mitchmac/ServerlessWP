@@ -51,7 +51,7 @@ class BatchRunner
      * @param ProcessItemInterface $processor [optional] The processor object
      *        to use. **Defaults to** null. This is only for testing purpose.
      */
-    public function __construct(ConfigStorageInterface $configStorage = null, ProcessItemInterface $processor = null)
+    public function __construct(?ConfigStorageInterface $configStorage = null, ?ProcessItemInterface $processor = null)
     {
         if ($configStorage === null || $processor === null) {
             if ($this->isSysvIPCLoaded() && $this->isDaemonRunning()) {

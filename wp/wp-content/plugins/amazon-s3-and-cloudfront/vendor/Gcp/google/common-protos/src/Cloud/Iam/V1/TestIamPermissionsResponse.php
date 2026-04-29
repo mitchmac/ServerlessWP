@@ -5,8 +5,8 @@
 namespace DeliciousBrains\WP_Offload_Media\Gcp\Google\Cloud\Iam\V1;
 
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Internal\GPBType;
-use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Internal\RepeatedField;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Internal\GPBUtil;
+use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\RepeatedField;
 /**
  * Response message for `TestIamPermissions` method.
  *
@@ -27,7 +27,7 @@ class TestIamPermissionsResponse extends \DeliciousBrains\WP_Offload_Media\Gcp\G
      * @param array $data {
      *     Optional. Data for populating the Message object.
      *
-     *     @type array<string>|\Google\Protobuf\Internal\RepeatedField $permissions
+     *     @type string[] $permissions
      *           A subset of `TestPermissionsRequest.permissions` that the caller is
      *           allowed.
      * }
@@ -42,7 +42,7 @@ class TestIamPermissionsResponse extends \DeliciousBrains\WP_Offload_Media\Gcp\G
      * allowed.
      *
      * Generated from protobuf field <code>repeated string permissions = 1;</code>
-     * @return \Google\Protobuf\Internal\RepeatedField
+     * @return RepeatedField<string>
      */
     public function getPermissions()
     {
@@ -53,7 +53,7 @@ class TestIamPermissionsResponse extends \DeliciousBrains\WP_Offload_Media\Gcp\G
      * allowed.
      *
      * Generated from protobuf field <code>repeated string permissions = 1;</code>
-     * @param array<string>|\Google\Protobuf\Internal\RepeatedField $var
+     * @param string[] $var
      * @return $this
      */
     public function setPermissions($var)

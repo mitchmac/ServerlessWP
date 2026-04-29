@@ -5,8 +5,8 @@
 namespace DeliciousBrains\WP_Offload_Media\Gcp\Google\Api;
 
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Internal\GPBType;
-use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Internal\RepeatedField;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Internal\GPBUtil;
+use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\RepeatedField;
 /**
  * `Distribution` contains summary statistics for a population of values. It
  * optionally contains a histogram representing the distribution of those values
@@ -115,7 +115,7 @@ class Distribution extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf
      *     @type \Google\Api\Distribution\BucketOptions $bucket_options
      *           Defines the histogram bucket boundaries. If the distribution does not
      *           contain a histogram, then omit this field.
-     *     @type array<int>|array<string>|\Google\Protobuf\Internal\RepeatedField $bucket_counts
+     *     @type int[]|string[] $bucket_counts
      *           The number of values in each bucket of the histogram, as described in
      *           `bucket_options`. If the distribution does not have a histogram, then omit
      *           this field. If there is a histogram, then the sum of the values in
@@ -129,7 +129,7 @@ class Distribution extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf
      *           count for the underflow bucket (number 0). The next N-2 values are the
      *           counts for the finite buckets (number 1 through N-2). The N'th value in
      *           `bucket_counts` is the count for the overflow bucket (number N-1).
-     *     @type array<\Google\Api\Distribution\Exemplar>|\Google\Protobuf\Internal\RepeatedField $exemplars
+     *     @type \Google\Api\Distribution\Exemplar[] $exemplars
      *           Must be in increasing order of `value` field.
      * }
      */
@@ -305,7 +305,7 @@ class Distribution extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf
      * `bucket_counts` is the count for the overflow bucket (number N-1).
      *
      * Generated from protobuf field <code>repeated int64 bucket_counts = 7;</code>
-     * @return \Google\Protobuf\Internal\RepeatedField
+     * @return RepeatedField<int>|RepeatedField<string>
      */
     public function getBucketCounts()
     {
@@ -327,7 +327,7 @@ class Distribution extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf
      * `bucket_counts` is the count for the overflow bucket (number N-1).
      *
      * Generated from protobuf field <code>repeated int64 bucket_counts = 7;</code>
-     * @param array<int>|array<string>|\Google\Protobuf\Internal\RepeatedField $var
+     * @param int[]|string[] $var
      * @return $this
      */
     public function setBucketCounts($var)
@@ -340,7 +340,7 @@ class Distribution extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf
      * Must be in increasing order of `value` field.
      *
      * Generated from protobuf field <code>repeated .google.api.Distribution.Exemplar exemplars = 10;</code>
-     * @return \Google\Protobuf\Internal\RepeatedField
+     * @return RepeatedField<\Google\Api\Distribution\Exemplar>
      */
     public function getExemplars()
     {
@@ -350,7 +350,7 @@ class Distribution extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf
      * Must be in increasing order of `value` field.
      *
      * Generated from protobuf field <code>repeated .google.api.Distribution.Exemplar exemplars = 10;</code>
-     * @param array<\Google\Api\Distribution\Exemplar>|\Google\Protobuf\Internal\RepeatedField $var
+     * @param \Google\Api\Distribution\Exemplar[] $var
      * @return $this
      */
     public function setExemplars($var)

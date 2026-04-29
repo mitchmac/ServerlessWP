@@ -44,12 +44,15 @@ use DeliciousBrains\WP_Offload_Media\Gcp\Google\ApiCore\Transport\Grpc\ServerStr
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\ApiCore\Transport\Grpc\UnaryInterceptorInterface;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\ApiCore\ValidationException;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\ApiCore\ValidationTrait;
+use DeliciousBrains\WP_Offload_Media\Gcp\Google\Auth\Logging\LoggingTrait;
+use DeliciousBrains\WP_Offload_Media\Gcp\Google\Auth\Logging\RpcLogEvent;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Rpc\Code;
 use DeliciousBrains\WP_Offload_Media\Gcp\Grpc\BaseStub;
 use Grpc\Channel;
 use Grpc\ChannelCredentials;
 use DeliciousBrains\WP_Offload_Media\Gcp\Grpc\Interceptor;
 use DeliciousBrains\WP_Offload_Media\Gcp\GuzzleHttp\Promise\Promise;
+use DeliciousBrains\WP_Offload_Media\Gcp\Psr\Log\LoggerInterface;
 /**
  * A gRPC based transport implementation.
  */
@@ -58,6 +61,8 @@ class GrpcTransport extends BaseStub implements TransportInterface
     use ValidationTrait;
     use GrpcSupportTrait;
     use ServiceAddressTrait;
+    use LoggingTrait;
+    private null|LoggerInterface $logger;
     /**
      * @param string $hostname
      * @param array $opts
@@ -73,14 +78,16 @@ class GrpcTransport extends BaseStub implements TransportInterface
      *        release. To prepare for this, please take the time to convert
      *        `UnaryInterceptorInterface` implementations over to a class which
      *        extends {@see Grpc\Interceptor}.
+     * @param null|false|LoggerInterface $logger A PSR-3 Compliant logger.
      * @throws Exception
      */
-    public function __construct(string $hostname, array $opts, Channel $channel = null, array $interceptors = [])
+    public function __construct(string $hostname, array $opts, ?Channel $channel = null, array $interceptors = [], null|false|LoggerInterface $logger = null)
     {
         if ($interceptors) {
             $channel = Interceptor::intercept($channel ?: new Channel($hostname, $opts), $interceptors);
         }
         parent::__construct($hostname, $opts, $channel);
+        $this->logger = $logger;
     }
     /**
      * Builds a GrpcTransport.
@@ -110,7 +117,7 @@ class GrpcTransport extends BaseStub implements TransportInterface
     public static function build(string $apiEndpoint, array $config = [])
     {
         self::validateGrpcSupport();
-        $config += ['stubOpts' => [], 'channel' => null, 'interceptors' => [], 'clientCertSource' => null];
+        $config += ['stubOpts' => [], 'channel' => null, 'interceptors' => [], 'clientCertSource' => null, 'logger' => null];
         list($addr, $port) = self::normalizeServiceAddress($apiEndpoint);
         $host = "{$addr}:{$port}";
         $stubOpts = $config['stubOpts'];
@@ -126,12 +133,15 @@ class GrpcTransport extends BaseStub implements TransportInterface
         }
         $channel = $config['channel'];
         if (!\is_null($channel) && !$channel instanceof Channel) {
-            throw new ValidationException("Channel argument to GrpcTransport must be of type \\Grpc\\Channel, " . "instead got: " . \print_r($channel, \true));
+            throw new ValidationException("Channel argument to GrpcTransport must be of type \\Grpc\\Channel, " . 'instead got: ' . \print_r($channel, \true));
         }
         try {
-            return new GrpcTransport($host, $stubOpts, $channel, $config['interceptors']);
+            if ($config['logger'] === \false) {
+                $config['logger'] = null;
+            }
+            return new GrpcTransport($host, $stubOpts, $channel, $config['interceptors'], $config['logger']);
         } catch (Exception $ex) {
-            throw new ValidationException("Failed to build GrpcTransport: " . $ex->getMessage(), $ex->getCode(), $ex);
+            throw new ValidationException('Failed to build GrpcTransport: ' . $ex->getMessage(), $ex->getCode(), $ex);
         }
     }
     /**
@@ -140,7 +150,18 @@ class GrpcTransport extends BaseStub implements TransportInterface
     public function startBidiStreamingCall(Call $call, array $options)
     {
         $this->verifyUniverseDomain($options);
-        return new BidiStream($this->_bidiRequest('/' . $call->getMethod(), [$call->getDecodeType(), 'decode'], isset($options['headers']) ? $options['headers'] : [], $this->getCallOptions($options)), $call->getDescriptor());
+        $bidiStream = new BidiStream($this->_bidiRequest('/' . $call->getMethod(), [$call->getDecodeType(), 'decode'], isset($options['headers']) ? $options['headers'] : [], $this->getCallOptions($options)), $call->getDescriptor(), $this->logger);
+        if ($this->logger) {
+            $requestEvent = new RpcLogEvent();
+            $requestEvent->headers = $options['headers'] ?? [];
+            $requestEvent->retryAttempt = $options['retryAttempt'] ?? null;
+            $requestEvent->serviceName = $options['serviceName'] ?? null;
+            $requestEvent->rpcName = $call->getMethod();
+            $requestEvent->processId = (int) \getmypid();
+            $requestEvent->requestId = \crc32((string) \spl_object_id($bidiStream) . \getmypid());
+            $this->logRequest($requestEvent);
+        }
+        return $bidiStream;
     }
     /**
      * {@inheritdoc}
@@ -148,7 +169,7 @@ class GrpcTransport extends BaseStub implements TransportInterface
     public function startClientStreamingCall(Call $call, array $options)
     {
         $this->verifyUniverseDomain($options);
-        return new ClientStream($this->_clientStreamRequest('/' . $call->getMethod(), [$call->getDecodeType(), 'decode'], isset($options['headers']) ? $options['headers'] : [], $this->getCallOptions($options)), $call->getDescriptor());
+        return new ClientStream($this->_clientStreamRequest('/' . $call->getMethod(), [$call->getDecodeType(), 'decode'], isset($options['headers']) ? $options['headers'] : [], $this->getCallOptions($options)), $call->getDescriptor(), $this->logger);
     }
     /**
      * {@inheritdoc}
@@ -162,7 +183,19 @@ class GrpcTransport extends BaseStub implements TransportInterface
         }
         // This simultaenously creates and starts a \Grpc\ServerStreamingCall.
         $stream = $this->_serverStreamRequest('/' . $call->getMethod(), $message, [$call->getDecodeType(), 'decode'], isset($options['headers']) ? $options['headers'] : [], $this->getCallOptions($options));
-        return new ServerStream(new ServerStreamingCallWrapper($stream), $call->getDescriptor());
+        $serverStream = new ServerStream(new ServerStreamingCallWrapper($stream), $call->getDescriptor(), $this->logger);
+        if ($this->logger) {
+            $requestEvent = new RpcLogEvent();
+            $requestEvent->headers = $options['headers'];
+            $requestEvent->payload = $call->getMessage()->serializeToJsonString();
+            $requestEvent->retryAttempt = $options['retryAttempt'] ?? null;
+            $requestEvent->serviceName = $options['serviceName'] ?? null;
+            $requestEvent->rpcName = $call->getMethod();
+            $requestEvent->processId = (int) \getmypid();
+            $requestEvent->requestId = \crc32((string) \spl_object_id($serverStream) . \getmypid());
+            $this->logRequest($requestEvent);
+        }
+        return $serverStream;
     }
     /**
      * {@inheritdoc}
@@ -170,10 +203,32 @@ class GrpcTransport extends BaseStub implements TransportInterface
     public function startUnaryCall(Call $call, array $options)
     {
         $this->verifyUniverseDomain($options);
+        $headers = $options['headers'] ?? [];
+        $requestEvent = null;
         $unaryCall = $this->_simpleRequest('/' . $call->getMethod(), $call->getMessage(), [$call->getDecodeType(), 'decode'], isset($options['headers']) ? $options['headers'] : [], $this->getCallOptions($options));
+        if ($this->logger) {
+            $requestEvent = new RpcLogEvent();
+            $requestEvent->headers = $headers;
+            $requestEvent->payload = $call->getMessage()->serializeToJsonString();
+            $requestEvent->retryAttempt = $options['retryAttempt'] ?? null;
+            $requestEvent->serviceName = $options['serviceName'] ?? null;
+            $requestEvent->rpcName = $call->getMethod();
+            $requestEvent->processId = (int) \getmypid();
+            $requestEvent->requestId = \crc32((string) \spl_object_id($call) . \getmypid());
+            $this->logRequest($requestEvent);
+        }
         /** @var Promise $promise */
-        $promise = new Promise(function () use($unaryCall, $options, &$promise) {
+        $promise = new Promise(function () use($unaryCall, $options, &$promise, $requestEvent) {
             list($response, $status) = $unaryCall->wait();
+            if ($this->logger) {
+                $responseEvent = new RpcLogEvent($requestEvent->milliseconds);
+                $responseEvent->headers = $status->metadata;
+                $responseEvent->payload = $response ? $response->serializeToJsonString() : null;
+                $responseEvent->status = $status->code;
+                $responseEvent->processId = $requestEvent->processId;
+                $responseEvent->requestId = $requestEvent->requestId;
+                $this->logResponse($responseEvent);
+            }
             if ($status->code == Code::OK) {
                 if (isset($options['metadataCallback'])) {
                     $metadataCallback = $options['metadataCallback'];

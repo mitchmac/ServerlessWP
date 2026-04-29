@@ -37,11 +37,27 @@ class FieldDescriptor
         return $this->internal_desc->getNumber();
     }
     /**
+     * @deprecated Use isRepeated() or isRequired() instead.
+     *
      * @return int
      */
     public function getLabel()
     {
         return $this->internal_desc->getLabel();
+    }
+    /**
+     * @return boolean
+     */
+    public function isRequired()
+    {
+        return $this->internal_desc->isRequired();
+    }
+    /**
+     * @return boolean
+     */
+    public function isRepeated()
+    {
+        return $this->internal_desc->isRepeated();
     }
     /**
      * @return int

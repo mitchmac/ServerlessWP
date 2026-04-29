@@ -14,10 +14,11 @@ namespace DeliciousBrains\WP_Offload_Media\Gcp\Ramsey\Uuid\Rfc4122;
 
 use DeliciousBrains\WP_Offload_Media\Gcp\Ramsey\Uuid\Uuid;
 /**
- * The nil UUID is special form of UUID that is specified to have all 128 bits
- * set to zero
+ * The nil UUID is a special form of UUID that has all 128 bits set to zero (`0`)
  *
- * @psalm-immutable
+ * @link https://www.rfc-editor.org/rfc/rfc9562#section-5.9 RFC 9562, 5.9. Nil UUID
+ *
+ * @immutable
  */
 final class NilUuid extends Uuid implements UuidInterface
 {

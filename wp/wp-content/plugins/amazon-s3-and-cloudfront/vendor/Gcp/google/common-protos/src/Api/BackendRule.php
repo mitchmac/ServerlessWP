@@ -5,8 +5,8 @@
 namespace DeliciousBrains\WP_Offload_Media\Gcp\Google\Api;
 
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Internal\GPBType;
-use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Internal\RepeatedField;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Internal\GPBUtil;
+use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\RepeatedField;
 /**
  * A backend rule provides configuration for an individual API element.
  *
@@ -277,7 +277,9 @@ class BackendRule extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\
      */
     public function getMinDeadline()
     {
-        @\trigger_error('min_deadline is deprecated.', \E_USER_DEPRECATED);
+        if ($this->min_deadline !== 0.0) {
+            @\trigger_error('min_deadline is deprecated.', \E_USER_DEPRECATED);
+        }
         return $this->min_deadline;
     }
     /**

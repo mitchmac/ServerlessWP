@@ -13,8 +13,7 @@ declare (strict_types=1);
 namespace DeliciousBrains\WP_Offload_Media\Gcp\Ramsey\Uuid\Generator;
 
 /**
- * NameGeneratorFactory retrieves a default name generator, based on the
- * environment
+ * NameGeneratorFactory retrieves a default name generator, based on the environment
  */
 class NameGeneratorFactory
 {

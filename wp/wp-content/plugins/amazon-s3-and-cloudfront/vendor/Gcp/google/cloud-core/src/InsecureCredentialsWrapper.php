@@ -17,20 +17,16 @@
  */
 namespace DeliciousBrains\WP_Offload_Media\Gcp\Google\Cloud\Core;
 
-use DeliciousBrains\WP_Offload_Media\Gcp\Google\ApiCore\CredentialsWrapper;
+use DeliciousBrains\WP_Offload_Media\Gcp\Google\ApiCore\InsecureCredentialsWrapper as ApiCoreInsecureCredentialsWrapper;
 /**
  * For connect to emulator.
+ *
+ * This class is deprecated. Use Google\ApiCore\InsecureCredentialsWrapper instead.
+ * @deprecated
  */
-class InsecureCredentialsWrapper extends CredentialsWrapper
+class InsecureCredentialsWrapper extends ApiCoreInsecureCredentialsWrapper
 {
     public function __construct()
-    {
-    }
-    public function getAuthorizationHeaderCallback($audience = null)
-    {
-        return null;
-    }
-    public function checkUniverseDomain()
     {
     }
 }

@@ -1,9 +1,9 @@
 <script>
-	import {urls} from "../js/stores";
+	import {strings, urls} from "../js/stores";
 </script>
 
 <div class="as3cf-sidebar lite">
-	<a class="as3cf-banner" href={$urls.sidebar_plugin}>
+	<a class="as3cf-banner" href={$urls.sidebar_plugin} title="{$strings.sidebar_header_title}">
 	</a>
 	<div class="as3cf-upgrade-details">
 		<h1>Upgrade</h1>

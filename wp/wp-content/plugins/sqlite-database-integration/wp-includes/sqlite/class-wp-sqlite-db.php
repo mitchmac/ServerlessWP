@@ -16,7 +16,7 @@ class WP_SQLite_DB extends wpdb {
 	/**
 	 * Database Handle
 	 *
-	 * @var WP_SQLite_Translator
+	 * @var WP_SQLite_Driver
 	 */
 	protected $dbh;
 
@@ -94,10 +94,6 @@ class WP_SQLite_DB extends wpdb {
 	 * @param array $modes Optional. A list of SQL modes to set. Default empty array.
 	 */
 	public function set_sql_mode( $modes = array() ) {
-		if ( ! $this->dbh instanceof WP_SQLite_Driver ) {
-			return;
-		}
-
 		if ( empty( $modes ) ) {
 			$result = $this->dbh->query( 'SELECT @@SESSION.sql_mode' );
 			if ( ! isset( $result[0] ) ) {
@@ -173,28 +169,6 @@ class WP_SQLite_DB extends wpdb {
 		}
 		$escaped = addslashes( $data );
 		return $this->add_placeholder_escape( $escaped );
-	}
-
-	/**
-	 * Method to dummy out wpdb::esc_like() function.
-	 *
-	 * WordPress 4.0.0 introduced esc_like() function that adds backslashes to %,
-	 * underscore and backslash, which is not interpreted as escape character
-	 * by SQLite. So we override it and dummy out this function.
-	 *
-	 * @param string $text The raw text to be escaped. The input typed by the user should have no
-	 *                     extra or deleted slashes.
-	 *
-	 * @return string Text in the form of a LIKE phrase. The output is not SQL safe. Call $wpdb::prepare()
-	 *                or real_escape next.
-	 */
-	public function esc_like( $text ) {
-		// The new driver adds "ESCAPE '\\'" to every LIKE expression by default.
-		// We only need to overload this function to a no-op for the old driver.
-		if ( $this->dbh instanceof WP_SQLite_Driver ) {
-			return parent::esc_like( $text );
-		}
-		return $text;
 	}
 
 	/**
@@ -326,34 +300,28 @@ class WP_SQLite_DB extends wpdb {
 			}
 		}
 
-		if ( defined( 'WP_SQLITE_AST_DRIVER' ) && WP_SQLITE_AST_DRIVER ) {
-			if ( null === $this->dbname || '' === $this->dbname ) {
-				$this->bail(
-					'The database name was not set. The SQLite driver requires a database name to be set to emulate MySQL information schema tables.',
-					'db_connect_fail'
-				);
-				return false;
-			}
+		if ( null === $this->dbname || '' === $this->dbname ) {
+			$this->bail(
+				'The database name was not set. The SQLite driver requires a database name to be set to emulate MySQL information schema tables.',
+				'db_connect_fail'
+			);
+			return false;
+		}
 
-			$this->ensure_database_directory( FQDB );
+		$this->ensure_database_directory( FQDB );
 
-			try {
-				$connection      = new WP_SQLite_Connection(
-					array(
-						'pdo'          => $pdo,
-						'path'         => FQDB,
-						'journal_mode' => defined( 'SQLITE_JOURNAL_MODE' ) ? SQLITE_JOURNAL_MODE : null,
-					)
-				);
-				$this->dbh       = new WP_SQLite_Driver( $connection, $this->dbname );
-				$GLOBALS['@pdo'] = $this->dbh->get_connection()->get_pdo();
-			} catch ( Throwable $e ) {
-				$this->last_error = $this->format_error_message( $e );
-			}
-		} else {
-			$this->dbh        = new WP_SQLite_Translator( $pdo );
-			$this->last_error = $this->dbh->get_error_message();
-			$GLOBALS['@pdo']  = $this->dbh->get_pdo();
+		try {
+			$connection      = new WP_SQLite_Connection(
+				array(
+					'pdo'          => $pdo,
+					'path'         => FQDB,
+					'journal_mode' => defined( 'SQLITE_JOURNAL_MODE' ) ? SQLITE_JOURNAL_MODE : null,
+				)
+			);
+			$this->dbh       = new WP_SQLite_Driver( $connection, $this->dbname );
+			$GLOBALS['@pdo'] = $this->dbh->get_connection()->get_pdo();
+		} catch ( Throwable $e ) {
+			$this->last_error = $this->format_error_message( $e );
 		}
 		if ( $this->last_error ) {
 			return false;
@@ -467,11 +435,7 @@ class WP_SQLite_DB extends wpdb {
 		if ( preg_match( '/^\s*(create|alter|truncate|drop)\s/i', $query ) ) {
 			$return_val = true;
 		} elseif ( preg_match( '/^\s*(insert|delete|update|replace)\s/i', $query ) ) {
-			if ( $this->dbh instanceof WP_SQLite_Driver ) {
-				$this->rows_affected = $this->dbh->get_last_return_value();
-			} else {
-				$this->rows_affected = $this->dbh->get_affected_rows();
-			}
+			$this->rows_affected = $this->dbh->get_last_return_value();
 
 			// Take note of the insert_id.
 			if ( preg_match( '/^\s*(insert|replace)\s/i', $query ) ) {
@@ -516,11 +480,7 @@ class WP_SQLite_DB extends wpdb {
 			}
 
 			// Add SQLite query data.
-			if ( $this->dbh instanceof WP_SQLite_Driver ) {
-				$this->queries[ $i ]['sqlite_queries'] = $this->dbh->get_last_sqlite_queries();
-			} else {
-				$this->queries[ $i ]['sqlite_queries'] = $this->dbh->executed_sqlite_queries;
-			}
+			$this->queries[ $i ]['sqlite_queries'] = $this->dbh->get_last_sqlite_queries();
 		}
 		return $return_val;
 	}
@@ -543,10 +503,6 @@ class WP_SQLite_DB extends wpdb {
 			$this->result = $this->dbh->query( $query );
 		} catch ( Throwable $e ) {
 			$this->last_error = $this->format_error_message( $e );
-		}
-
-		if ( $this->dbh instanceof WP_SQLite_Translator ) {
-			$this->last_error = $this->dbh->get_error_message();
 		}
 
 		++$this->num_queries;
@@ -573,27 +529,23 @@ class WP_SQLite_DB extends wpdb {
 		if ( $this->col_info ) {
 			return;
 		}
-		if ( $this->dbh instanceof WP_SQLite_Driver ) {
-			$this->col_info = array();
-			foreach ( $this->dbh->get_last_column_meta() as $column ) {
-				$this->col_info[] = (object) array(
-					'name'       => $column['name'],
-					'orgname'    => $column['mysqli:orgname'],
-					'table'      => $column['table'],
-					'orgtable'   => $column['mysqli:orgtable'],
-					'def'        => '',    // Unused, always ''.
-					'db'         => $column['mysqli:db'],
-					'catalog'    => 'def', // Unused, always 'def'.
-					'max_length' => 0,     // As of PHP 8.1, this is always 0.
-					'length'     => $column['len'],
-					'charsetnr'  => $column['mysqli:charsetnr'],
-					'flags'      => $column['mysqli:flags'],
-					'type'       => $column['mysqli:type'],
-					'decimals'   => $column['precision'],
-				);
-			}
-		} else {
-			$this->col_info = $this->dbh->get_columns();
+		$this->col_info = array();
+		foreach ( $this->dbh->get_last_column_meta() as $column ) {
+			$this->col_info[] = (object) array(
+				'name'       => $column['name'],
+				'orgname'    => $column['mysqli:orgname'],
+				'table'      => $column['table'],
+				'orgtable'   => $column['mysqli:orgtable'],
+				'def'        => '',    // Unused, always ''.
+				'db'         => $column['mysqli:db'],
+				'catalog'    => 'def', // Unused, always 'def'.
+				'max_length' => 0,     // As of PHP 8.1, this is always 0.
+				'length'     => $column['len'],
+				'charsetnr'  => $column['mysqli:charsetnr'],
+				'flags'      => $column['mysqli:flags'],
+				'type'       => $column['mysqli:type'],
+				'decimals'   => $column['precision'],
+			);
 		}
 	}
 

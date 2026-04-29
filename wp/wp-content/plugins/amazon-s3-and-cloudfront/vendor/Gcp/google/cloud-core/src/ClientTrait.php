@@ -17,8 +17,10 @@
  */
 namespace DeliciousBrains\WP_Offload_Media\Gcp\Google\Cloud\Core;
 
-use DeliciousBrains\WP_Offload_Media\Gcp\Google\Auth\CredentialsLoader;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Auth\Credentials\GCECredentials;
+use DeliciousBrains\WP_Offload_Media\Gcp\Google\Auth\CredentialsLoader;
+use DeliciousBrains\WP_Offload_Media\Gcp\Google\Auth\FetchAuthTokenInterface;
+use DeliciousBrains\WP_Offload_Media\Gcp\Google\Auth\ProjectIdProviderInterface;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Cloud\Core\Compute\Metadata;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Cloud\Core\Exception\GoogleException;
 /**
@@ -78,7 +80,10 @@ trait ClientTrait
      */
     private function configureAuthentication(array $config)
     {
-        $config['keyFile'] = $this->getKeyFile($config);
+        $credentialsFetcher = $config['credentialsFetcher'] ?? null;
+        if (!$credentialsFetcher instanceof FetchAuthTokenInterface) {
+            $config['keyFile'] = $this->getKeyFile($config);
+        }
         $this->projectId = $this->detectProjectId($config);
         return $config;
     }
@@ -136,12 +141,15 @@ trait ClientTrait
      */
     private function detectProjectId(array $config)
     {
-        $config += ['httpHandler' => null, 'projectId' => null, 'projectIdRequired' => \false, 'hasEmulator' => \false, 'preferNumericProjectId' => \false, 'suppressKeyFileNotice' => \false];
+        $config += ['credentialsFetcher' => null, 'httpHandler' => null, 'projectId' => null, 'projectIdRequired' => \false, 'hasEmulator' => \false, 'preferNumericProjectId' => \false, 'suppressKeyFileNotice' => \false];
         if ($config['projectId']) {
             return $config['projectId'];
         }
         if ($config['hasEmulator']) {
             return 'emulator-project';
+        }
+        if ($config['credentialsFetcher'] instanceof ProjectIdProviderInterface) {
+            return $config['credentialsFetcher']->getProjectId();
         }
         if (isset($config['keyFile'])) {
             if (isset($config['keyFile']['project_id'])) {

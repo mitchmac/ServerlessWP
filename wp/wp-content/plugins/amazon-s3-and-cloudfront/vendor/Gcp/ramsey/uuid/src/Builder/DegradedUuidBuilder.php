@@ -20,30 +20,20 @@ use DeliciousBrains\WP_Offload_Media\Gcp\Ramsey\Uuid\DegradedUuid;
 use DeliciousBrains\WP_Offload_Media\Gcp\Ramsey\Uuid\Rfc4122\Fields as Rfc4122Fields;
 use DeliciousBrains\WP_Offload_Media\Gcp\Ramsey\Uuid\UuidInterface;
 /**
- * @deprecated DegradedUuid instances are no longer necessary to support 32-bit
- *     systems. Transition to {@see DefaultUuidBuilder}.
+ * @deprecated DegradedUuid instances are no longer necessary to support 32-bit systems. Please transition to {@see DefaultUuidBuilder}.
  *
- * @psalm-immutable
+ * @immutable
  */
 class DegradedUuidBuilder implements UuidBuilderInterface
 {
+    private TimeConverterInterface $timeConverter;
     /**
-     * @var NumberConverterInterface
+     * @param NumberConverterInterface $numberConverter The number converter to use when constructing the DegradedUuid
+     * @param TimeConverterInterface|null $timeConverter The time converter to use for converting timestamps extracted
+     *     from a UUID to Unix timestamps
      */
-    private $numberConverter;
-    /**
-     * @var TimeConverterInterface
-     */
-    private $timeConverter;
-    /**
-     * @param NumberConverterInterface $numberConverter The number converter to
-     *     use when constructing the DegradedUuid
-     * @param TimeConverterInterface|null $timeConverter The time converter to use
-     *     for converting timestamps extracted from a UUID to Unix timestamps
-     */
-    public function __construct(NumberConverterInterface $numberConverter, ?TimeConverterInterface $timeConverter = null)
+    public function __construct(private NumberConverterInterface $numberConverter, ?TimeConverterInterface $timeConverter = null)
     {
-        $this->numberConverter = $numberConverter;
         $this->timeConverter = $timeConverter ?: new DegradedTimeConverter();
     }
     /**
@@ -54,7 +44,7 @@ class DegradedUuidBuilder implements UuidBuilderInterface
      *
      * @return DegradedUuid The DegradedUuidBuild returns an instance of Ramsey\Uuid\DegradedUuid
      *
-     * @psalm-pure
+     * @phpstan-impure
      */
     public function build(CodecInterface $codec, string $bytes) : UuidInterface
     {

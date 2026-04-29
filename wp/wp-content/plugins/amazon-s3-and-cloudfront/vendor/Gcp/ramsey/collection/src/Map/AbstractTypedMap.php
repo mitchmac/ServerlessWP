@@ -15,31 +15,27 @@ namespace DeliciousBrains\WP_Offload_Media\Gcp\Ramsey\Collection\Map;
 use DeliciousBrains\WP_Offload_Media\Gcp\Ramsey\Collection\Exception\InvalidArgumentException;
 use DeliciousBrains\WP_Offload_Media\Gcp\Ramsey\Collection\Tool\TypeTrait;
 use DeliciousBrains\WP_Offload_Media\Gcp\Ramsey\Collection\Tool\ValueToStringTrait;
-use function var_export;
 /**
  * This class provides a basic implementation of `TypedMapInterface`, to
  * minimize the effort required to implement this interface.
  *
  * @template K of array-key
  * @template T
- * @extends AbstractMap<T>
- * @implements TypedMapInterface<T>
+ * @extends AbstractMap<K, T>
+ * @implements TypedMapInterface<K, T>
  */
 abstract class AbstractTypedMap extends AbstractMap implements TypedMapInterface
 {
     use TypeTrait;
     use ValueToStringTrait;
     /**
-     * @param K|null $offset
+     * @param K $offset
      * @param T $value
      *
      * @inheritDoc
      */
-    public function offsetSet($offset, $value) : void
+    public function offsetSet(mixed $offset, mixed $value) : void
     {
-        if ($offset === null) {
-            throw new InvalidArgumentException('Map elements are key/value pairs; a key must be provided for ' . 'value ' . var_export($value, \true));
-        }
         if ($this->checkType($this->getKeyType(), $offset) === \false) {
             throw new InvalidArgumentException('Key must be of type ' . $this->getKeyType() . '; key is ' . $this->toolValueToString($offset));
         }

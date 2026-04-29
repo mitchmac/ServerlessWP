@@ -2,41 +2,66 @@
 	import {notifications, strings, urls} from "../js/stores";
 	import Button from "./Button.svelte";
 
-	const classes = $$props.class ? $$props.class : "";
+	/**
+	 * @typedef {Object} Props
+	 * @property {any} [notification]
+	 * @property {any} [unique_id]
+	 * @property {any} [inline]
+	 * @property {any} [wordpress]
+	 * @property {any} [success]
+	 * @property {any} [warning]
+	 * @property {any} [error]
+	 * @property {any} [heading]
+	 * @property {any} [dismissible]
+	 * @property {any} [icon]
+	 * @property {any} [plainHeading]
+	 * @property {any} [extra]
+	 * @property {any} [links]
+	 * @property {boolean} [expandable]
+	 * @property {boolean} [expanded]
+	 * @property {import("svelte").Snippet} [children]
+	 * @property {import("svelte").Snippet} [details]
+	 * @property {string} [class]
+	 */
 
-	export let notification = {};
+	/** @type {Props} */
+	let {
+		notification = $bindable( {} ),
+		unique_id = notification.id ? notification.id : "",
+		inline = notification.inline ? notification.inline : false,
+		wordpress = notification.wordpress ? notification.wordpress : false,
+		success = notification.type === "success",
+		warning = notification.type === "warning",
+		error = notification.type === "error",
+		heading = notification.hasOwnProperty( "heading" ) && notification.heading.trim().length ? notification.heading.trim() : "",
+		dismissible = notification.dismissible ? notification.dismissible : false,
+		icon = notification.icon ? notification.icon : false,
+		plainHeading = notification.plainHeading ? notification.plainHeading : false,
+		extra = notification.extra ? notification.extra : "",
+		links = notification.links ? notification.links : [],
+		expandable = false,
+		expanded = $bindable( false ),
+		children,
+		details,
+		class: classes = ""
+	} = $props();
 
-	export let unique_id = notification.id ? notification.id : "";
-
-	export let inline = notification.inline ? notification.inline : false;
-	export let wordpress = notification.wordpress ? notification.wordpress : false;
-
-	export let success = notification.type === "success";
-	export let warning = notification.type === "warning";
-	export let error = notification.type === "error";
-	let info = false;
+	let info = $state( false );
 
 	// It's possible to set type purely by component property,
 	// but we need notification.type to be correct too.
-	if ( success ) {
-		notification.type = "success";
-	} else if ( warning ) {
-		notification.type = "warning";
-	} else if ( error ) {
-		notification.type = "error";
-	} else {
-		info = true;
-		notification.type = "info";
-	}
-
-	export let heading = notification.hasOwnProperty( "heading" ) && notification.heading.trim().length ? notification.heading.trim() : "";
-	export let dismissible = notification.dismissible ? notification.dismissible : false;
-	export let icon = notification.icon ? notification.icon : false;
-	export let plainHeading = notification.plainHeading ? notification.plainHeading : false;
-	export let extra = notification.extra ? notification.extra : "";
-	export let links = notification.links ? notification.links : [];
-	export let expandable = false;
-	export let expanded = false;
+	$effect( () => {
+		if ( success ) {
+			notification.type = "success";
+		} else if ( warning ) {
+			notification.type = "warning";
+		} else if ( error ) {
+			notification.type = "error";
+		} else {
+			info = true;
+			notification.type = "info";
+		}
+	} );
 
 	/**
 	 * Returns the icon URL for the notification.
@@ -54,13 +79,13 @@
 		return $urls.assets + "img/icon/notification-" + notificationType + ".svg";
 	}
 
-	$: iconURL = getIconURL( icon, notification.type );
+	let iconURL = $derived( getIconURL( icon, notification.type ) );
 
 	// We need to change various properties and alignments if text is multiline.
-	let iconHeight = 0;
-	let bodyHeight = 0;
+	let iconHeight = $state( 0 );
+	let bodyHeight = $state( 0 );
 
-	$: multiline = (iconHeight && bodyHeight) && bodyHeight > iconHeight;
+	let multiline = $derived( (iconHeight && bodyHeight) && bodyHeight > iconHeight );
 
 	/**
 	 * Builds a links row from an array of HTML links.
@@ -77,7 +102,7 @@
 		return "";
 	}
 
-	$: linksHTML = getLinksHTML( links );
+	let linksHTML = $derived( getLinksHTML( links ) );
 </script>
 
 <div
@@ -109,16 +134,16 @@
 						{/if}
 					{/if}
 					{#if dismissible && expandable}
-						<button class="dismiss" on:click|preventDefault={notifications.dismiss(unique_id)}>{$strings.dismiss_all}</button>
-						<Button expandable {expanded} on:click={() => expanded = !expanded} title={expanded ? $strings.hide_details : $strings.show_details}></Button>
+						<button class="dismiss" onclick={(event) => {event.preventDefault(); notifications.dismiss(unique_id);}}>{$strings.dismiss_all}</button>
+						<Button expandable {expanded} onclick={() => expanded = !expanded} title={expanded ? $strings.hide_details : $strings.show_details}></Button>
 					{:else if expandable}
-						<Button expandable {expanded} on:click={() => expanded = !expanded} title={expanded ? $strings.hide_details : $strings.show_details}></Button>
+						<Button expandable {expanded} onclick={() => expanded = !expanded} title={expanded ? $strings.hide_details : $strings.show_details}></Button>
 					{:else if dismissible}
-						<button class="icon close" title={$strings["dismiss_notice"]} on:click|preventDefault={() => notifications.dismiss(unique_id)}></button>
+						<button class="icon close" title={$strings["dismiss_notice"]} onclick={(event) => {event.preventDefault(); notifications.dismiss(unique_id);}}></button>
 					{/if}
 				</div>
 			{/if}
-			<slot/>
+			{@render children?.()}
 			{#if extra}
 				<p>{@html extra}</p>
 			{/if}
@@ -127,5 +152,5 @@
 			{/if}
 		</div>
 	</div>
-	<slot name="details"/>
+	{@render details?.()}
 </div>

@@ -11,6 +11,7 @@ declare (strict_types=1);
  */
 namespace DeliciousBrains\WP_Offload_Media\Gcp\Monolog\Handler;
 
+use DeliciousBrains\WP_Offload_Media\Gcp\Monolog\LogRecord;
 /**
  * Base Handler class providing the Handler structure, including processors and formatters
  *
@@ -18,42 +19,31 @@ namespace DeliciousBrains\WP_Offload_Media\Gcp\Monolog\Handler;
  *
  * @author Jordi Boggiano <j.boggiano@seld.be>
  * @author Christophe Coevoet <stof@notk.org>
- *
- * @phpstan-import-type LevelName from \Monolog\Logger
- * @phpstan-import-type Level from \Monolog\Logger
- * @phpstan-import-type Record from \Monolog\Logger
- * @phpstan-type FormattedRecord array{message: string, context: mixed[], level: Level, level_name: LevelName, channel: string, datetime: \DateTimeImmutable, extra: mixed[], formatted: mixed}
  */
 abstract class AbstractProcessingHandler extends AbstractHandler implements ProcessableHandlerInterface, FormattableHandlerInterface
 {
     use ProcessableHandlerTrait;
     use FormattableHandlerTrait;
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
-    public function handle(array $record) : bool
+    public function handle(LogRecord $record) : bool
     {
         if (!$this->isHandling($record)) {
             return \false;
         }
-        if ($this->processors) {
-            /** @var Record $record */
+        if (\count($this->processors) > 0) {
             $record = $this->processRecord($record);
         }
-        $record['formatted'] = $this->getFormatter()->format($record);
+        $record->formatted = $this->getFormatter()->format($record);
         $this->write($record);
         return \false === $this->bubble;
     }
     /**
-     * Writes the record down to the log of the implementing handler
-     *
-     * @phpstan-param FormattedRecord $record
+     * Writes the (already formatted) record down to the log of the implementing handler
      */
-    protected abstract function write(array $record) : void;
-    /**
-     * @return void
-     */
-    public function reset()
+    protected abstract function write(LogRecord $record) : void;
+    public function reset() : void
     {
         parent::reset();
         $this->resetProcessors();

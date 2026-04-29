@@ -11,33 +11,31 @@ declare (strict_types=1);
  */
 namespace DeliciousBrains\WP_Offload_Media\Gcp\Monolog\Handler;
 
-use DeliciousBrains\WP_Offload_Media\Gcp\Monolog\Logger;
+use DeliciousBrains\WP_Offload_Media\Gcp\Monolog\Level;
 use DeliciousBrains\WP_Offload_Media\Gcp\Monolog\Formatter\FormatterInterface;
 use DeliciousBrains\WP_Offload_Media\Gcp\Monolog\Formatter\LineFormatter;
 /**
  * Common syslog functionality
- *
- * @phpstan-import-type Level from \Monolog\Logger
  */
 abstract class AbstractSyslogHandler extends AbstractProcessingHandler
 {
-    /** @var int */
-    protected $facility;
-    /**
-     * Translates Monolog log levels to syslog log priorities.
-     * @var array
-     * @phpstan-var array<Level, int>
-     */
-    protected $logLevels = [Logger::DEBUG => \LOG_DEBUG, Logger::INFO => \LOG_INFO, Logger::NOTICE => \LOG_NOTICE, Logger::WARNING => \LOG_WARNING, Logger::ERROR => \LOG_ERR, Logger::CRITICAL => \LOG_CRIT, Logger::ALERT => \LOG_ALERT, Logger::EMERGENCY => \LOG_EMERG];
+    protected int $facility;
     /**
      * List of valid log facility names.
      * @var array<string, int>
      */
-    protected $facilities = ['auth' => \LOG_AUTH, 'authpriv' => \LOG_AUTHPRIV, 'cron' => \LOG_CRON, 'daemon' => \LOG_DAEMON, 'kern' => \LOG_KERN, 'lpr' => \LOG_LPR, 'mail' => \LOG_MAIL, 'news' => \LOG_NEWS, 'syslog' => \LOG_SYSLOG, 'user' => \LOG_USER, 'uucp' => \LOG_UUCP];
+    protected array $facilities = ['auth' => \LOG_AUTH, 'authpriv' => \LOG_AUTHPRIV, 'cron' => \LOG_CRON, 'daemon' => \LOG_DAEMON, 'kern' => \LOG_KERN, 'lpr' => \LOG_LPR, 'mail' => \LOG_MAIL, 'news' => \LOG_NEWS, 'syslog' => \LOG_SYSLOG, 'user' => \LOG_USER, 'uucp' => \LOG_UUCP];
+    /**
+     * Translates Monolog log levels to syslog log priorities.
+     */
+    protected function toSyslogPriority(Level $level) : int
+    {
+        return $level->toRFC5424Level();
+    }
     /**
      * @param string|int $facility Either one of the names of the keys in $this->facilities, or a LOG_* facility constant
      */
-    public function __construct($facility = \LOG_USER, $level = Logger::DEBUG, bool $bubble = \true)
+    public function __construct(string|int $facility = \LOG_USER, int|string|Level $level = Level::Debug, bool $bubble = \true)
     {
         parent::__construct($level, $bubble);
         if (!\defined('PHP_WINDOWS_VERSION_BUILD')) {
@@ -76,7 +74,7 @@ abstract class AbstractSyslogHandler extends AbstractProcessingHandler
         $this->facility = $facility;
     }
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
     protected function getDefaultFormatter() : FormatterInterface
     {

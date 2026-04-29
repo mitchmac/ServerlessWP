@@ -11,41 +11,33 @@ declare (strict_types=1);
  */
 namespace DeliciousBrains\WP_Offload_Media\Gcp\Monolog\Handler;
 
-use DeliciousBrains\WP_Offload_Media\Gcp\Monolog\Logger;
+use DeliciousBrains\WP_Offload_Media\Gcp\Monolog\Level;
 use DeliciousBrains\WP_Offload_Media\Gcp\Monolog\Utils;
+use DeliciousBrains\WP_Offload_Media\Gcp\Monolog\LogRecord;
 /**
  * Stores to any stream resource
  *
  * Can be used to store into php://stderr, remote and local files, etc.
  *
  * @author Jordi Boggiano <j.boggiano@seld.be>
- *
- * @phpstan-import-type FormattedRecord from AbstractProcessingHandler
  */
 class StreamHandler extends AbstractProcessingHandler
 {
-    /** @const int */
     protected const MAX_CHUNK_SIZE = 2147483647;
-    /** @const int 10MB */
+    /** 10MB */
     protected const DEFAULT_CHUNK_SIZE = 10 * 1024 * 1024;
-    /** @var int */
-    protected $streamChunkSize;
+    protected int $streamChunkSize;
     /** @var resource|null */
     protected $stream;
-    /** @var ?string */
-    protected $url = null;
-    /** @var ?string */
-    private $errorMessage = null;
-    /** @var ?int */
-    protected $filePermission;
-    /** @var bool */
-    protected $useLocking;
-    /** @var string */
-    protected $fileOpenMode;
+    protected string|null $url = null;
+    private string|null $errorMessage = null;
+    protected int|null $filePermission;
+    protected bool $useLocking;
+    protected string $fileOpenMode;
     /** @var true|null */
-    private $dirCreated = null;
-    /** @var bool */
-    private $retrying = \false;
+    private bool|null $dirCreated = null;
+    private bool $retrying = \false;
+    private int|null $inodeUrl = null;
     /**
      * @param resource|string $stream         If a missing path can't be created, an UnexpectedValueException will be thrown on first write
      * @param int|null        $filePermission Optional file permissions (default (0644) are only for owner read/write)
@@ -54,7 +46,7 @@ class StreamHandler extends AbstractProcessingHandler
      *
      * @throws \InvalidArgumentException If stream is not a resource or string
      */
-    public function __construct($stream, $level = Logger::DEBUG, bool $bubble = \true, ?int $filePermission = null, bool $useLocking = \false, $fileOpenMode = 'a')
+    public function __construct($stream, int|string|Level $level = Level::Debug, bool $bubble = \true, ?int $filePermission = null, bool $useLocking = \false, string $fileOpenMode = 'a')
     {
         parent::__construct($level, $bubble);
         if (($phpMemoryLimit = Utils::expandIniShorthandBytes(\ini_get('memory_limit'))) !== \false) {
@@ -82,11 +74,23 @@ class StreamHandler extends AbstractProcessingHandler
         $this->useLocking = $useLocking;
     }
     /**
-     * {@inheritDoc}
+     * @inheritDoc
+     */
+    public function reset() : void
+    {
+        parent::reset();
+        // auto-close on reset to make sure we periodically close the file in long running processes
+        // as long as they correctly call reset() between jobs
+        if ($this->url !== null && $this->url !== 'php://memory') {
+            $this->close();
+        }
+    }
+    /**
+     * @inheritDoc
      */
     public function close() : void
     {
-        if ($this->url && \is_resource($this->stream)) {
+        if (null !== $this->url && \is_resource($this->stream)) {
             \fclose($this->stream);
         }
         $this->stream = null;
@@ -103,25 +107,25 @@ class StreamHandler extends AbstractProcessingHandler
     }
     /**
      * Return the stream URL if it was configured with a URL and not an active resource
-     *
-     * @return string|null
      */
     public function getUrl() : ?string
     {
         return $this->url;
     }
-    /**
-     * @return int
-     */
     public function getStreamChunkSize() : int
     {
         return $this->streamChunkSize;
     }
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
-    protected function write(array $record) : void
+    protected function write(LogRecord $record) : void
     {
+        if ($this->hasUrlInodeWasChanged()) {
+            $this->close();
+            $this->write($record);
+            return;
+        }
         if (!\is_resource($this->stream)) {
             $url = $this->url;
             if (null === $url || '' === $url) {
@@ -129,9 +133,7 @@ class StreamHandler extends AbstractProcessingHandler
             }
             $this->createDir($url);
             $this->errorMessage = null;
-            \set_error_handler(function (...$args) {
-                return $this->customErrorHandler(...$args);
-            });
+            \set_error_handler($this->customErrorHandler(...));
             try {
                 $stream = \fopen($url, $this->fileOpenMode);
                 if ($this->filePermission !== null) {
@@ -146,19 +148,15 @@ class StreamHandler extends AbstractProcessingHandler
             }
             \stream_set_chunk_size($stream, $this->streamChunkSize);
             $this->stream = $stream;
+            $this->inodeUrl = $this->getInodeFromUrl();
         }
         $stream = $this->stream;
-        if (!\is_resource($stream)) {
-            throw new \LogicException('No stream was opened yet' . Utils::getRecordMessageForException($record));
-        }
         if ($this->useLocking) {
             // ignoring errors here, there's not much we can do about them
             \flock($stream, \LOCK_EX);
         }
         $this->errorMessage = null;
-        \set_error_handler(function (...$args) {
-            return $this->customErrorHandler(...$args);
-        });
+        \set_error_handler($this->customErrorHandler(...));
         try {
             $this->streamWrite($stream, $record);
         } finally {
@@ -183,14 +181,14 @@ class StreamHandler extends AbstractProcessingHandler
     /**
      * Write to stream
      * @param resource $stream
-     * @param array    $record
-     *
-     * @phpstan-param FormattedRecord $record
      */
-    protected function streamWrite($stream, array $record) : void
+    protected function streamWrite($stream, LogRecord $record) : void
     {
-        \fwrite($stream, (string) $record['formatted']);
+        \fwrite($stream, (string) $record->formatted);
     }
+    /**
+     * @return true
+     */
     private function customErrorHandler(int $code, string $msg) : bool
     {
         $this->errorMessage = \preg_replace('{^(fopen|mkdir|fwrite)\\(.*?\\): }', '', $msg);
@@ -210,7 +208,7 @@ class StreamHandler extends AbstractProcessingHandler
     private function createDir(string $url) : void
     {
         // Do not try to create dir if it has already been tried.
-        if ($this->dirCreated) {
+        if (\true === $this->dirCreated) {
             return;
         }
         $dir = $this->getDirFromStream($url);
@@ -226,5 +224,21 @@ class StreamHandler extends AbstractProcessingHandler
             }
         }
         $this->dirCreated = \true;
+    }
+    private function getInodeFromUrl() : ?int
+    {
+        if ($this->url === null || \str_starts_with($this->url, 'php://')) {
+            return null;
+        }
+        $inode = @\fileinode($this->url);
+        return $inode === \false ? null : $inode;
+    }
+    private function hasUrlInodeWasChanged() : bool
+    {
+        if ($this->inodeUrl === null || $this->retrying || $this->inodeUrl === $this->getInodeFromUrl()) {
+            return \false;
+        }
+        $this->retrying = \true;
+        return \true;
     }
 }

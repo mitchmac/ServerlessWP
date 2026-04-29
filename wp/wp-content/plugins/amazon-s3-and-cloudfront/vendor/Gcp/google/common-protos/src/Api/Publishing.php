@@ -5,8 +5,8 @@
 namespace DeliciousBrains\WP_Offload_Media\Gcp\Google\Api;
 
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Internal\GPBType;
-use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Internal\RepeatedField;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Internal\GPBUtil;
+use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\RepeatedField;
 /**
  * This message configures the settings for publishing [Google Cloud Client
  * libraries](https://cloud.google.com/apis/docs/cloud-client-libraries)
@@ -87,12 +87,19 @@ class Publishing extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\I
      */
     protected $proto_reference_documentation_uri = '';
     /**
+     * Optional link to REST reference documentation.  Example:
+     * https://cloud.google.com/pubsub/lite/docs/reference/rest
+     *
+     * Generated from protobuf field <code>string rest_reference_documentation_uri = 111;</code>
+     */
+    protected $rest_reference_documentation_uri = '';
+    /**
      * Constructor.
      *
      * @param array $data {
      *     Optional. Data for populating the Message object.
      *
-     *     @type array<\Google\Api\MethodSettings>|\Google\Protobuf\Internal\RepeatedField $method_settings
+     *     @type \Google\Api\MethodSettings[] $method_settings
      *           A list of API method settings, e.g. the behavior for methods that use the
      *           long-running operation pattern.
      *     @type string $new_issue_uri
@@ -107,7 +114,7 @@ class Publishing extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\I
      *           etc.  Example: "speech".
      *     @type string $github_label
      *           GitHub label to apply to issues and pull requests opened for this API.
-     *     @type array<string>|\Google\Protobuf\Internal\RepeatedField $codeowner_github_teams
+     *     @type string[] $codeowner_github_teams
      *           GitHub teams to be added to CODEOWNERS in the directory in GitHub
      *           containing source code for the client libraries for this API.
      *     @type string $doc_tag_prefix
@@ -115,13 +122,16 @@ class Publishing extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\I
      *           documentation.
      *     @type int $organization
      *           For whom the client library is being published.
-     *     @type array<\Google\Api\ClientLibrarySettings>|\Google\Protobuf\Internal\RepeatedField $library_settings
+     *     @type \Google\Api\ClientLibrarySettings[] $library_settings
      *           Client library settings.  If the same version string appears multiple
      *           times in this list, then the last one wins.  Settings from earlier
      *           settings with the same version string are discarded.
      *     @type string $proto_reference_documentation_uri
      *           Optional link to proto reference documentation.  Example:
      *           https://cloud.google.com/pubsub/lite/docs/reference/rpc
+     *     @type string $rest_reference_documentation_uri
+     *           Optional link to REST reference documentation.  Example:
+     *           https://cloud.google.com/pubsub/lite/docs/reference/rest
      * }
      */
     public function __construct($data = NULL)
@@ -134,7 +144,7 @@ class Publishing extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\I
      * long-running operation pattern.
      *
      * Generated from protobuf field <code>repeated .google.api.MethodSettings method_settings = 2;</code>
-     * @return \Google\Protobuf\Internal\RepeatedField
+     * @return RepeatedField<\Google\Api\MethodSettings>
      */
     public function getMethodSettings()
     {
@@ -145,7 +155,7 @@ class Publishing extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\I
      * long-running operation pattern.
      *
      * Generated from protobuf field <code>repeated .google.api.MethodSettings method_settings = 2;</code>
-     * @param array<\Google\Api\MethodSettings>|\Google\Protobuf\Internal\RepeatedField $var
+     * @param \Google\Api\MethodSettings[] $var
      * @return $this
      */
     public function setMethodSettings($var)
@@ -259,7 +269,7 @@ class Publishing extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\I
      * containing source code for the client libraries for this API.
      *
      * Generated from protobuf field <code>repeated string codeowner_github_teams = 105;</code>
-     * @return \Google\Protobuf\Internal\RepeatedField
+     * @return RepeatedField<string>
      */
     public function getCodeownerGithubTeams()
     {
@@ -270,7 +280,7 @@ class Publishing extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\I
      * containing source code for the client libraries for this API.
      *
      * Generated from protobuf field <code>repeated string codeowner_github_teams = 105;</code>
-     * @param array<string>|\Google\Protobuf\Internal\RepeatedField $var
+     * @param string[] $var
      * @return $this
      */
     public function setCodeownerGithubTeams($var)
@@ -333,7 +343,7 @@ class Publishing extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\I
      * settings with the same version string are discarded.
      *
      * Generated from protobuf field <code>repeated .google.api.ClientLibrarySettings library_settings = 109;</code>
-     * @return \Google\Protobuf\Internal\RepeatedField
+     * @return RepeatedField<\Google\Api\ClientLibrarySettings>
      */
     public function getLibrarySettings()
     {
@@ -345,7 +355,7 @@ class Publishing extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\I
      * settings with the same version string are discarded.
      *
      * Generated from protobuf field <code>repeated .google.api.ClientLibrarySettings library_settings = 109;</code>
-     * @param array<\Google\Api\ClientLibrarySettings>|\Google\Protobuf\Internal\RepeatedField $var
+     * @param \Google\Api\ClientLibrarySettings[] $var
      * @return $this
      */
     public function setLibrarySettings($var)
@@ -377,6 +387,31 @@ class Publishing extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\I
     {
         GPBUtil::checkString($var, True);
         $this->proto_reference_documentation_uri = $var;
+        return $this;
+    }
+    /**
+     * Optional link to REST reference documentation.  Example:
+     * https://cloud.google.com/pubsub/lite/docs/reference/rest
+     *
+     * Generated from protobuf field <code>string rest_reference_documentation_uri = 111;</code>
+     * @return string
+     */
+    public function getRestReferenceDocumentationUri()
+    {
+        return $this->rest_reference_documentation_uri;
+    }
+    /**
+     * Optional link to REST reference documentation.  Example:
+     * https://cloud.google.com/pubsub/lite/docs/reference/rest
+     *
+     * Generated from protobuf field <code>string rest_reference_documentation_uri = 111;</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setRestReferenceDocumentationUri($var)
+    {
+        GPBUtil::checkString($var, True);
+        $this->rest_reference_documentation_uri = $var;
         return $this;
     }
 }

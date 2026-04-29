@@ -11,6 +11,7 @@ declare (strict_types=1);
  */
 namespace DeliciousBrains\WP_Offload_Media\Gcp\Monolog\Formatter;
 
+use DeliciousBrains\WP_Offload_Media\Gcp\Monolog\LogRecord;
 /**
  * Encodes message information into JSON in a format compatible with Loggly.
  *
@@ -32,12 +33,11 @@ class LogglyFormatter extends JsonFormatter
      * @see https://www.loggly.com/docs/automated-parsing/#json
      * @see \Monolog\Formatter\JsonFormatter::format()
      */
-    public function format(array $record) : string
+    protected function normalizeRecord(LogRecord $record) : array
     {
-        if (isset($record["datetime"]) && $record["datetime"] instanceof \DateTimeInterface) {
-            $record["timestamp"] = $record["datetime"]->format("Y-m-d\\TH:i:s.uO");
-            unset($record["datetime"]);
-        }
-        return parent::format($record);
+        $recordData = parent::normalizeRecord($record);
+        $recordData["timestamp"] = $record->datetime->format("Y-m-d\\TH:i:s.uO");
+        unset($recordData["datetime"]);
+        return $recordData;
     }
 }

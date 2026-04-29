@@ -34,16 +34,19 @@ namespace DeliciousBrains\WP_Offload_Media\Gcp\Google\ApiCore\Middleware;
 
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\ApiCore\Call;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\ApiCore\CredentialsWrapper;
-use DeliciousBrains\WP_Offload_Media\Gcp\GuzzleHttp\Promise\PromiseInterface;
+use DeliciousBrains\WP_Offload_Media\Gcp\Google\ApiCore\HeaderCredentialsInterface;
 /**
 * Middleware which adds a CredentialsWrapper object to the call options.
+*
+* @internal
 */
 class CredentialsWrapperMiddleware implements MiddlewareInterface
 {
     /** @var callable */
     private $nextHandler;
-    private CredentialsWrapper $credentialsWrapper;
-    public function __construct(callable $nextHandler, CredentialsWrapper $credentialsWrapper)
+    /** @var HeaderCredentialsInterface */
+    private HeaderCredentialsInterface $credentialsWrapper;
+    public function __construct(callable $nextHandler, HeaderCredentialsInterface $credentialsWrapper)
     {
         $this->nextHandler = $nextHandler;
         $this->credentialsWrapper = $credentialsWrapper;

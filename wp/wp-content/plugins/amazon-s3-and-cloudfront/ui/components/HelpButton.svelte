@@ -1,13 +1,24 @@
 <script>
 	import {strings, urls, docs} from "../js/stores";
 
-	export let key = "";
-	export let url = key && $docs.hasOwnProperty( key ) && $docs[ key ].hasOwnProperty( "url" ) ? $docs[ key ].url : "";
-	export let desc = "";
+	/**
+	 * @typedef {Object} Props
+	 * @property {string} [key]
+	 * @property {any} [url]
+	 * @property {string} [desc]
+	 */
+
+	/** @type {Props} */
+	let {
+		key = "",
+		url = key && $docs.hasOwnProperty( key ) && $docs[ key ].hasOwnProperty( "url" ) ? $docs[ key ].url : "",
+		desc = ""
+	} = $props();
 
 	// If desc supplied, use it, otherwise try and get via docs store or fall back to default help description.
-	let alt = desc.length ? desc : (key && $docs.hasOwnProperty( key ) && $docs[ key ].hasOwnProperty( "desc" ) ? $docs[ key ].desc : $strings.help_desc);
-	let title = alt;
+	let docs_desc = $derived( key && $docs.hasOwnProperty( key ) && $docs[ key ].hasOwnProperty( "desc" ) ? $docs[ key ].desc : $strings.help_desc );
+	let alt = $derived( desc.length ? desc : docs_desc );
+	let title = $derived( alt );
 </script>
 
 {#if url}

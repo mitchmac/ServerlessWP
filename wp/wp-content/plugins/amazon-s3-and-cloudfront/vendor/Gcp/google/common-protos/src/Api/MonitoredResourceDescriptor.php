@@ -5,8 +5,8 @@
 namespace DeliciousBrains\WP_Offload_Media\Gcp\Google\Api;
 
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Internal\GPBType;
-use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Internal\RepeatedField;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Internal\GPBUtil;
+use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\RepeatedField;
 /**
  * An object that describes the schema of a
  * [MonitoredResource][google.api.MonitoredResource] object using a type name
@@ -36,7 +36,7 @@ class MonitoredResourceDescriptor extends \DeliciousBrains\WP_Offload_Media\Gcp\
     /**
      * Required. The monitored resource type. For example, the type
      * `"cloudsql_database"` represents databases in Google Cloud SQL.
-     *  For a list of types, see [Monitoring resource
+     *  For a list of types, see [Monitored resource
      *  types](https://cloud.google.com/monitoring/api/resources)
      * and [Logging resource
      * types](https://cloud.google.com/logging/docs/api/v2/resource-list).
@@ -90,7 +90,7 @@ class MonitoredResourceDescriptor extends \DeliciousBrains\WP_Offload_Media\Gcp\
      *     @type string $type
      *           Required. The monitored resource type. For example, the type
      *           `"cloudsql_database"` represents databases in Google Cloud SQL.
-     *            For a list of types, see [Monitoring resource
+     *            For a list of types, see [Monitored resource
      *            types](https://cloud.google.com/monitoring/api/resources)
      *           and [Logging resource
      *           types](https://cloud.google.com/logging/docs/api/v2/resource-list).
@@ -102,7 +102,7 @@ class MonitoredResourceDescriptor extends \DeliciousBrains\WP_Offload_Media\Gcp\
      *     @type string $description
      *           Optional. A detailed description of the monitored resource type that might
      *           be used in documentation.
-     *     @type array<\Google\Api\LabelDescriptor>|\Google\Protobuf\Internal\RepeatedField $labels
+     *     @type \Google\Api\LabelDescriptor[] $labels
      *           Required. A set of labels used to describe instances of this monitored
      *           resource type. For example, an individual Google Cloud SQL database is
      *           identified by values for the labels `"database_id"` and `"zone"`.
@@ -151,7 +151,7 @@ class MonitoredResourceDescriptor extends \DeliciousBrains\WP_Offload_Media\Gcp\
     /**
      * Required. The monitored resource type. For example, the type
      * `"cloudsql_database"` represents databases in Google Cloud SQL.
-     *  For a list of types, see [Monitoring resource
+     *  For a list of types, see [Monitored resource
      *  types](https://cloud.google.com/monitoring/api/resources)
      * and [Logging resource
      * types](https://cloud.google.com/logging/docs/api/v2/resource-list).
@@ -166,7 +166,7 @@ class MonitoredResourceDescriptor extends \DeliciousBrains\WP_Offload_Media\Gcp\
     /**
      * Required. The monitored resource type. For example, the type
      * `"cloudsql_database"` represents databases in Google Cloud SQL.
-     *  For a list of types, see [Monitoring resource
+     *  For a list of types, see [Monitored resource
      *  types](https://cloud.google.com/monitoring/api/resources)
      * and [Logging resource
      * types](https://cloud.google.com/logging/docs/api/v2/resource-list).
@@ -241,7 +241,7 @@ class MonitoredResourceDescriptor extends \DeliciousBrains\WP_Offload_Media\Gcp\
      * identified by values for the labels `"database_id"` and `"zone"`.
      *
      * Generated from protobuf field <code>repeated .google.api.LabelDescriptor labels = 4;</code>
-     * @return \Google\Protobuf\Internal\RepeatedField
+     * @return RepeatedField<\Google\Api\LabelDescriptor>
      */
     public function getLabels()
     {
@@ -253,7 +253,7 @@ class MonitoredResourceDescriptor extends \DeliciousBrains\WP_Offload_Media\Gcp\
      * identified by values for the labels `"database_id"` and `"zone"`.
      *
      * Generated from protobuf field <code>repeated .google.api.LabelDescriptor labels = 4;</code>
-     * @param array<\Google\Api\LabelDescriptor>|\Google\Protobuf\Internal\RepeatedField $var
+     * @param \Google\Api\LabelDescriptor[] $var
      * @return $this
      */
     public function setLabels($var)

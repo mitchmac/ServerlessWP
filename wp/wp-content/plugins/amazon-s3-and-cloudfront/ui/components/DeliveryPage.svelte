@@ -1,5 +1,5 @@
 <script>
-	import {createEventDispatcher, setContext} from "svelte";
+	import {setContext} from "svelte";
 	import {
 		strings,
 		settings,
@@ -11,7 +11,7 @@
 		current_settings,
 		needs_refresh,
 		revalidatingSettings,
-		state
+		appState
 	} from "../js/stores";
 	import {
 		scrollNotificationsIntoView
@@ -25,11 +25,14 @@
 	import BackNextButtonsRow from "./BackNextButtonsRow.svelte";
 	import HelpButton from "./HelpButton.svelte";
 
-	const dispatch = createEventDispatcher();
+	/**
+	 * @typedef {Object} Props
+	 * @property {string} [name]
+	 * @property {function} [onRouteEvent]
+	 */
 
-	export let name = "delivery-provider";
-	export let params = {}; // Required for regex routes.
-	const _params = params; // Stops compiler warning about unused params export;
+	/** @type {Props} */
+	let { name = "delivery-provider", onRouteEvent } = $props();
 
 	// Let all child components know if settings are currently locked.
 	setContext( "settingsLocked", settingsLocked );
@@ -37,24 +40,24 @@
 	// As this page does not directly alter the settings store until done,
 	// we need to keep track of any changes made elsewhere and prompt
 	// the user to refresh the page.
-	let saving = false;
+	let saving = $state( false );
 	const previousSettings = { ...$current_settings };
 	const previousDefines = { ...$defined_settings };
 
-	$: {
+	$effect.pre( () => {
 		$needs_refresh = $needs_refresh || needsRefresh( saving, previousSettings, $current_settings, previousDefines, $defined_settings );
-	}
+	} );
 
 	// Start with a copy of the current delivery provider.
-	let deliveryProvider = { ...$delivery_provider };
+	let deliveryProvider = $state( { ...$delivery_provider } );
 
-	$: defined = $defined_settings.includes( "delivery-provider" );
-	$: disabled = defined || $settingsLocked;
+	let defined = $derived( $defined_settings.includes( "delivery-provider" ) );
+	let disabled = $derived( defined || $settingsLocked );
 
-	let serviceName = $settings[ "delivery-provider-service-name" ];
+	let serviceName = $state( $settings[ "delivery-provider-service-name" ] );
 
-	$: serviceNameDefined = $defined_settings.includes( "delivery-provider-service-name" );
-	$: serviceNameDisabled = serviceNameDefined || $settingsLocked;
+	let serviceNameDefined = $derived( $defined_settings.includes( "delivery-provider-service-name" ) );
+	let serviceNameDisabled = $derived( serviceNameDefined || $settingsLocked );
 
 	/**
 	 * Returns an array of delivery providers that can be used with the currently configured storage provider.
@@ -93,7 +96,7 @@
 		return message;
 	}
 
-	$: nextDisabledMessage = getNextDisabledMessage( deliveryProvider, serviceName, $settingsLocked, $needs_refresh );
+	let nextDisabledMessage = $derived( getNextDisabledMessage( deliveryProvider, serviceName, $settingsLocked, $needs_refresh ) );
 
 	/**
 	 * Handles choosing a different delivery provider.
@@ -115,7 +118,7 @@
 	 */
 	async function handleNext() {
 		saving = true;
-		state.pausePeriodicFetch();
+		appState.pausePeriodicFetch();
 
 		$settings[ "delivery-provider" ] = deliveryProvider.provider_key_name;
 		$settings[ "delivery-provider-service-name" ] = serviceName;
@@ -125,7 +128,7 @@
 		if ( result.hasOwnProperty( "saved" ) && !result.saved ) {
 			settings.reset();
 			saving = false;
-			await state.resumePeriodicFetch();
+			await appState.resumePeriodicFetch();
 
 			scrollNotificationsIntoView();
 
@@ -133,9 +136,9 @@
 		}
 
 		$revalidatingSettings = true;
-		const statePromise = state.resumePeriodicFetch();
+		const statePromise = appState.resumePeriodicFetch();
 
-		dispatch( "routeEvent", {
+		onRouteEvent( {
 			event: "settings.save",
 			data: result,
 			default: "/media/delivery"
@@ -148,7 +151,7 @@
 	}
 </script>
 
-<Page {name} subpage on:routeEvent>
+<Page {name} subpage {onRouteEvent}>
 	<Notifications tab={name} tabParent="media"/>
 	<h2 class="page-title">{$strings.delivery_title}</h2>
 
@@ -156,18 +159,20 @@
 		<Panel heading={$strings.select_delivery_provider_title} defined={defined} multi>
 			<PanelRow class="body flex-column delivery-provider-buttons">
 				{#each supportedDeliveryProviders() as provider}
-					<div class="row">
-						<TabButton
-							active={provider.provider_key_name === deliveryProvider.provider_key_name}
-							{disabled}
-							icon={provider.icon}
-							text={provider.default_provider_service_name}
-							on:click={() => handleChooseProvider( provider )}
-						/>
-						<p class="speed">{@html provider.edge_server_support_desc}</p>
-						<p class="private-media">{@html provider.signed_urls_support_desc}</p>
-						<HelpButton url={provider.provider_service_quick_start_url} desc={$strings.view_quick_start_guide}/>
-					</div>
+					{#if !provider.is_deprecated || provider.provider_key_name === deliveryProvider.provider_key_name}
+						<div class="row">
+							<TabButton
+								active={provider.provider_key_name === deliveryProvider.provider_key_name}
+								{disabled}
+								icon={provider.icon}
+								text={provider.default_provider_service_name}
+								onclick={(event) => {event.preventDefault(); handleChooseProvider( provider );}}
+							/>
+							<p class="speed">{@html provider.edge_server_support_desc}</p>
+							<p class="private-media">{@html provider.signed_urls_support_desc}</p>
+							<HelpButton url={provider.provider_service_quick_start_url} desc={$strings.view_quick_start_guide}/>
+						</div>
+					{/if}
 				{/each}
 			</PanelRow>
 		</Panel>
@@ -190,7 +195,7 @@
 		{/if}
 
 		<BackNextButtonsRow
-			on:next={handleNext}
+			onNext={handleNext}
 			nextText={$strings.save_delivery_provider}
 			nextDisabled={nextDisabledMessage}
 			nextTitle={nextDisabledMessage}

@@ -38,7 +38,9 @@ use DeliciousBrains\WP_Offload_Media\Gcp\Google\ApiCore\Middleware\FixedHeaderMi
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\ApiCore\Middleware\OperationsMiddleware;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\ApiCore\Middleware\OptionsFilterMiddleware;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\ApiCore\Middleware\PagedMiddleware;
+use DeliciousBrains\WP_Offload_Media\Gcp\Google\ApiCore\Middleware\RequestAutoPopulationMiddleware;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\ApiCore\Middleware\RetryMiddleware;
+use DeliciousBrains\WP_Offload_Media\Gcp\Google\ApiCore\Middleware\TransportCallMiddleware;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\ApiCore\Options\CallOptions;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\ApiCore\Options\ClientOptions;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\ApiCore\Options\TransportOptions;
@@ -63,12 +65,14 @@ trait GapicClientTrait
     }
     use GrpcSupportTrait;
     private ?TransportInterface $transport = null;
-    private ?CredentialsWrapper $credentialsWrapper = null;
+    private ?HeaderCredentialsInterface $credentialsWrapper = null;
     /** @var RetrySettings[] $retrySettings */
     private array $retrySettings = [];
     private string $serviceName = '';
     private array $agentHeader = [];
     private array $descriptors = [];
+    /** @var array<callable> $prependMiddlewareCallables */
+    private array $prependMiddlewareCallables = [];
     /** @var array<callable> $middlewareCallables */
     private array $middlewareCallables = [];
     private array $transportCallMethods = [Call::UNARY_CALL => 'startUnaryCall', Call::BIDI_STREAMING_CALL => 'startBidiStreamingCall', Call::CLIENT_STREAMING_CALL => 'startClientStreamingCall', Call::SERVER_STREAMING_CALL => 'startServerStreamingCall'];
@@ -107,6 +111,41 @@ trait GapicClientTrait
     public function addMiddleware(callable $middlewareCallable) : void
     {
         $this->middlewareCallables[] = $middlewareCallable;
+    }
+    /**
+     * Prepend a middleware to the call stack by providing a callable which will be
+     * invoked at the end of each call, and will return an instance of
+     * {@see MiddlewareInterface} when invoked.
+     *
+     * The callable must have the following method signature:
+     *
+     *     callable(MiddlewareInterface): MiddlewareInterface
+     *
+     * An implementation may look something like this:
+     * ```
+     * $client->prependMiddleware(function (MiddlewareInterface $handler) {
+     *     return new class ($handler) implements MiddlewareInterface {
+     *         public function __construct(private MiddlewareInterface $handler) {
+     *         }
+     *
+     *         public function __invoke(Call $call, array $options) {
+     *             // modify call and options (pre-request)
+     *             $response = ($this->handler)($call, $options);
+     *             // modify the response (post-request)
+     *             return $response;
+     *         }
+     *     };
+     * });
+     * ```
+     *
+     * @param callable $middlewareCallable A callable which returns an instance
+     *                 of {@see MiddlewareInterface} when invoked with a
+     *                 MiddlewareInterface instance as its first argument.
+     * @return void
+     */
+    public function prependMiddleware(callable $middlewareCallable) : void
+    {
+        $this->prependMiddlewareCallables[] = $middlewareCallable;
     }
     /**
      * Initiates an orderly shutdown in which preexisting calls continue but new
@@ -209,8 +248,13 @@ trait GapicClientTrait
         if (isset($options['serviceAddress'])) {
             $options['apiEndpoint'] = $this->pluck('serviceAddress', $options, \false);
         }
-        $this->validateNotNull($options, ['apiEndpoint', 'serviceName', 'descriptorsConfigPath', 'clientConfig', 'disableRetries', 'credentialsConfig', 'transportConfig']);
-        $this->traitValidate($options, ['credentials', 'transport', 'gapicVersion', 'libName', 'libVersion']);
+        self::validateNotNull($options, ['apiEndpoint', 'serviceName', 'descriptorsConfigPath', 'clientConfig', 'disableRetries', 'credentialsConfig', 'transportConfig']);
+        self::traitValidate($options, ['credentials', 'transport', 'gapicVersion', 'libName', 'libVersion']);
+        // "hasEmulator" is not a supported Client Option, but is used
+        // internally to determine if the client is running in emulator mode.
+        // Therefore, we need to remove it from the $options array before
+        // creating the ClientOptions.
+        $hasEmulator = $this->pluck('hasEmulator', $options, \false) ?? \false;
         if ($this->isBackwardsCompatibilityMode()) {
             if (\is_string($options['clientConfig'])) {
                 // perform validation for V1 surfaces which is done in the
@@ -239,19 +283,28 @@ trait GapicClientTrait
         self::validateFileExists($options['descriptorsConfigPath']);
         $descriptors = (require $options['descriptorsConfigPath']);
         $this->descriptors = $descriptors['interfaces'][$this->serviceName];
-        $this->credentialsWrapper = $this->createCredentialsWrapper($options['credentials'], $options['credentialsConfig'], $options['universeDomain']);
+        if (isset($options['apiKey'], $options['credentials'])) {
+            throw new ValidationException('API Keys and Credentials are mutually exclusive authentication methods and cannot be used together.');
+        }
+        // Set the credentialsWrapper
+        if (isset($options['apiKey'])) {
+            $this->credentialsWrapper = new ApiKeyHeaderCredentials($options['apiKey'], $options['credentialsConfig']['quotaProject'] ?? null);
+        } else {
+            $this->credentialsWrapper = $this->createCredentialsWrapper($options['credentials'], $options['credentialsConfig'], $options['universeDomain']);
+        }
         $transport = $options['transport'] ?: self::defaultTransport();
-        $this->transport = $transport instanceof TransportInterface ? $transport : $this->createTransport($options['apiEndpoint'], $transport, $options['transportConfig'], $options['clientCertSource']);
+        $this->transport = $transport instanceof TransportInterface ? $transport : $this->createTransport($options['apiEndpoint'], $transport, $options['transportConfig'], $options['clientCertSource'], $hasEmulator);
     }
     /**
      * @param string $apiEndpoint
      * @param string $transport
      * @param TransportOptions|array $transportConfig
      * @param callable $clientCertSource
+     * @param bool $hasEmulator
      * @return TransportInterface
      * @throws ValidationException
      */
-    private function createTransport(string $apiEndpoint, $transport, $transportConfig, callable $clientCertSource = null)
+    private function createTransport(string $apiEndpoint, $transport, $transportConfig, ?callable $clientCertSource = null, bool $hasEmulator = \false)
     {
         if (!\is_string($transport)) {
             throw new ValidationException("'transport' must be a string, instead got:" . \print_r($transport, \true));
@@ -284,6 +337,7 @@ trait GapicClientTrait
                     throw new ValidationException("The 'restClientConfigPath' config is required for 'rest' transport.");
                 }
                 $restConfigPath = $configForSpecifiedTransport['restClientConfigPath'];
+                $configForSpecifiedTransport['hasEmulator'] = $hasEmulator;
                 return RestTransport::build($apiEndpoint, $restConfigPath, $configForSpecifiedTransport);
             default:
                 throw new ValidationException("Unexpected 'transport' option: {$transport}. " . "Supported values: ['grpc', 'rest', 'grpc-fallback']");
@@ -396,7 +450,7 @@ trait GapicClientTrait
      *
      * @return PromiseInterface|PagedListResponse|BidiStream|ClientStream|ServerStream
      */
-    private function startApiCall(string $methodName, Message $request = null, array $optionalArgs = [])
+    private function startApiCall(string $methodName, ?Message $request = null, array $optionalArgs = [])
     {
         $methodDescriptors = $this->validateCallConfig($methodName);
         $callType = $methodDescriptors['callType'];
@@ -446,7 +500,7 @@ trait GapicClientTrait
      *
      * @return PromiseInterface|BidiStream|ClientStream|ServerStream
      */
-    private function startCall(string $methodName, string $decodeType, array $optionalArgs = [], Message $request = null, int $callType = Call::UNARY_CALL, string $interfaceName = null)
+    private function startCall(string $methodName, string $decodeType, array $optionalArgs = [], ?Message $request = null, int $callType = Call::UNARY_CALL, ?string $interfaceName = null)
     {
         $optionalArgs = $this->configureCallOptions($optionalArgs);
         $callStack = $this->createCallStack($this->configureCallConstructionOptions($methodName, $optionalArgs));
@@ -470,24 +524,30 @@ trait GapicClientTrait
      *
      *     @type RetrySettings $retrySettings [optional] A retry settings override
      *           For the call.
+     *     @type array<string, string> $autoPopulationSettings Settings for
+     *           auto population of particular request fields if unset.
      * }
      *
      * @return callable
      */
     private function createCallStack(array $callConstructionOptions)
     {
-        $quotaProject = $this->credentialsWrapper->getQuotaProject();
         $fixedHeaders = $this->agentHeader;
-        if ($quotaProject) {
+        if ($quotaProject = $this->credentialsWrapper->getQuotaProject()) {
             $fixedHeaders += ['X-Goog-User-Project' => [$quotaProject]];
         }
-        $callStack = function (Call $call, array $options) {
-            $startCallMethod = $this->transportCallMethods[$call->getCallType()];
-            return $this->transport->{$startCallMethod}($call, $options);
-        };
+        if (isset($this->apiVersion)) {
+            $fixedHeaders += ['X-Goog-Api-Version' => [$this->apiVersion]];
+        }
+        $callStack = new TransportCallMiddleware($this->transport, $this->transportCallMethods);
+        foreach ($this->prependMiddlewareCallables as $fn) {
+            /** @var MiddlewareInterface $callStack */
+            $callStack = $fn($callStack);
+        }
         $callStack = new CredentialsWrapperMiddleware($callStack, $this->credentialsWrapper);
         $callStack = new FixedHeaderMiddleware($callStack, $fixedHeaders, \true);
         $callStack = new RetryMiddleware($callStack, $callConstructionOptions['retrySettings']);
+        $callStack = new RequestAutoPopulationMiddleware($callStack, $callConstructionOptions['autoPopulationSettings']);
         $callStack = new OptionsFilterMiddleware($callStack, ['headers', 'timeoutMillis', 'transportOptions', 'metadataCallback', 'audience', 'metadataReturnType']);
         foreach (\array_reverse($this->middlewareCallables) as $fn) {
             /** @var MiddlewareInterface $callStack */
@@ -509,6 +569,7 @@ trait GapicClientTrait
     private function configureCallConstructionOptions(string $methodName, array $optionalArgs)
     {
         $retrySettings = $this->retrySettings[$methodName];
+        $autoPopulatedFields = $this->descriptors[$methodName]['autoPopulatedFields'] ?? [];
         // Allow for retry settings to be changed at call time
         if (isset($optionalArgs['retrySettings'])) {
             if ($optionalArgs['retrySettings'] instanceof RetrySettings) {
@@ -517,7 +578,7 @@ trait GapicClientTrait
                 $retrySettings = $retrySettings->with($optionalArgs['retrySettings']);
             }
         }
-        return ['retrySettings' => $retrySettings];
+        return ['retrySettings' => $retrySettings, 'autoPopulationSettings' => $autoPopulatedFields];
     }
     /**
      * @return array
@@ -547,7 +608,7 @@ trait GapicClientTrait
      *
      * @return PromiseInterface
      */
-    private function startOperationsCall(string $methodName, array $optionalArgs, Message $request, $client, string $interfaceName = null, string $operationClass = null)
+    private function startOperationsCall(string $methodName, array $optionalArgs, Message $request, $client, ?string $interfaceName = null, ?string $operationClass = null)
     {
         $optionalArgs = $this->configureCallOptions($optionalArgs);
         $callStack = $this->createCallStack($this->configureCallConstructionOptions($methodName, $optionalArgs));
@@ -580,7 +641,7 @@ trait GapicClientTrait
      *
      * @return PagedListResponse
      */
-    private function getPagedListResponse(string $methodName, array $optionalArgs, string $decodeType, Message $request, string $interfaceName = null)
+    private function getPagedListResponse(string $methodName, array $optionalArgs, string $decodeType, Message $request, ?string $interfaceName = null)
     {
         return $this->getPagedListResponseAsync($methodName, $optionalArgs, $decodeType, $request, $interfaceName)->wait();
     }
@@ -593,7 +654,7 @@ trait GapicClientTrait
      *
      * @return PromiseInterface
      */
-    private function getPagedListResponseAsync(string $methodName, array $optionalArgs, string $decodeType, Message $request, string $interfaceName = null)
+    private function getPagedListResponseAsync(string $methodName, array $optionalArgs, string $decodeType, Message $request, ?string $interfaceName = null)
     {
         $optionalArgs = $this->configureCallOptions($optionalArgs);
         $callStack = $this->createCallStack($this->configureCallConstructionOptions($methodName, $optionalArgs));
@@ -609,7 +670,7 @@ trait GapicClientTrait
      *
      * @return string
      */
-    private function buildMethod(string $interfaceName = null, string $methodName = null)
+    private function buildMethod(?string $interfaceName = null, ?string $methodName = null)
     {
         return \sprintf('%s/%s', $interfaceName ?: $this->serviceName, $methodName);
     }
@@ -619,7 +680,7 @@ trait GapicClientTrait
      *
      * @return array
      */
-    private function buildRequestParamsHeader(array $headerParams, Message $request = null)
+    private function buildRequestParamsHeader(array $headerParams, ?Message $request = null)
     {
         $headers = [];
         // No request message means no request-based headers.

@@ -2,10 +2,10 @@
 	import {link} from "svelte-spa-router";
 	import active from "svelte-spa-router/active";
 
-	export let tab;
+	let { tab } = $props();
 
-	let focus = false;
-	let hover = false;
+	let focus = $state( false );
+	let hover = $state( false );
 </script>
 
 <li class="nav-item" use:active={tab.routeMatcher ? tab.routeMatcher : tab.route} class:focus class:hover>
@@ -13,10 +13,10 @@
 		href={tab.route}
 		title={tab.title()}
 		use:link
-		on:focusin={() => focus = true}
-		on:focusout={() => focus = false}
-		on:mouseenter={() => hover = true}
-		on:mouseleave={() => hover = false}
+		onfocusin={() => focus = true}
+		onfocusout={() => focus = false}
+		onmouseenter={() => hover = true}
+		onmouseleave={() => hover = false}
 	>
 		{tab.title()}
 	</a>

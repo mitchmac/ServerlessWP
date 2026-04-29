@@ -11,10 +11,11 @@ declare (strict_types=1);
  */
 namespace DeliciousBrains\WP_Offload_Media\Gcp\Monolog\Handler;
 
-use DeliciousBrains\WP_Offload_Media\Gcp\Monolog\Logger;
+use DeliciousBrains\WP_Offload_Media\Gcp\Monolog\Level;
 use DeliciousBrains\WP_Offload_Media\Gcp\Monolog\Formatter\NormalizerFormatter;
 use DeliciousBrains\WP_Offload_Media\Gcp\Monolog\Formatter\FormatterInterface;
 use DeliciousBrains\WP_Offload_Media\Gcp\Doctrine\CouchDB\CouchDBClient;
+use DeliciousBrains\WP_Offload_Media\Gcp\Monolog\LogRecord;
 /**
  * CouchDB handler for Doctrine CouchDB ODM
  *
@@ -22,19 +23,18 @@ use DeliciousBrains\WP_Offload_Media\Gcp\Doctrine\CouchDB\CouchDBClient;
  */
 class DoctrineCouchDBHandler extends AbstractProcessingHandler
 {
-    /** @var CouchDBClient */
-    private $client;
-    public function __construct(CouchDBClient $client, $level = Logger::DEBUG, bool $bubble = \true)
+    private CouchDBClient $client;
+    public function __construct(CouchDBClient $client, int|string|Level $level = Level::Debug, bool $bubble = \true)
     {
         $this->client = $client;
         parent::__construct($level, $bubble);
     }
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
-    protected function write(array $record) : void
+    protected function write(LogRecord $record) : void
     {
-        $this->client->postDocument($record['formatted']);
+        $this->client->postDocument($record->formatted);
     }
     protected function getDefaultFormatter() : FormatterInterface
     {

@@ -5,8 +5,8 @@
 namespace DeliciousBrains\WP_Offload_Media\Gcp\Google\Api;
 
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Internal\GPBType;
-use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Internal\RepeatedField;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Internal\GPBUtil;
+use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\RepeatedField;
 /**
  * Monitoring configuration of the service.
  * The example below shows how to configure monitored resources and metrics
@@ -91,14 +91,14 @@ class Monitoring extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\I
      * @param array $data {
      *     Optional. Data for populating the Message object.
      *
-     *     @type array<\Google\Api\Monitoring\MonitoringDestination>|\Google\Protobuf\Internal\RepeatedField $producer_destinations
+     *     @type \Google\Api\Monitoring\MonitoringDestination[] $producer_destinations
      *           Monitoring configurations for sending metrics to the producer project.
      *           There can be multiple producer destinations. A monitored resource type may
      *           appear in multiple monitoring destinations if different aggregations are
      *           needed for different sets of metrics associated with that monitored
      *           resource type. A monitored resource and metric pair may only be used once
      *           in the Monitoring configuration.
-     *     @type array<\Google\Api\Monitoring\MonitoringDestination>|\Google\Protobuf\Internal\RepeatedField $consumer_destinations
+     *     @type \Google\Api\Monitoring\MonitoringDestination[] $consumer_destinations
      *           Monitoring configurations for sending metrics to the consumer project.
      *           There can be multiple consumer destinations. A monitored resource type may
      *           appear in multiple monitoring destinations if different aggregations are
@@ -121,7 +121,7 @@ class Monitoring extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\I
      * in the Monitoring configuration.
      *
      * Generated from protobuf field <code>repeated .google.api.Monitoring.MonitoringDestination producer_destinations = 1;</code>
-     * @return \Google\Protobuf\Internal\RepeatedField
+     * @return RepeatedField<\Google\Api\Monitoring\MonitoringDestination>
      */
     public function getProducerDestinations()
     {
@@ -136,7 +136,7 @@ class Monitoring extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\I
      * in the Monitoring configuration.
      *
      * Generated from protobuf field <code>repeated .google.api.Monitoring.MonitoringDestination producer_destinations = 1;</code>
-     * @param array<\Google\Api\Monitoring\MonitoringDestination>|\Google\Protobuf\Internal\RepeatedField $var
+     * @param \Google\Api\Monitoring\MonitoringDestination[] $var
      * @return $this
      */
     public function setProducerDestinations($var)
@@ -154,7 +154,7 @@ class Monitoring extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\I
      * in the Monitoring configuration.
      *
      * Generated from protobuf field <code>repeated .google.api.Monitoring.MonitoringDestination consumer_destinations = 2;</code>
-     * @return \Google\Protobuf\Internal\RepeatedField
+     * @return RepeatedField<\Google\Api\Monitoring\MonitoringDestination>
      */
     public function getConsumerDestinations()
     {
@@ -169,7 +169,7 @@ class Monitoring extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\I
      * in the Monitoring configuration.
      *
      * Generated from protobuf field <code>repeated .google.api.Monitoring.MonitoringDestination consumer_destinations = 2;</code>
-     * @param array<\Google\Api\Monitoring\MonitoringDestination>|\Google\Protobuf\Internal\RepeatedField $var
+     * @param \Google\Api\Monitoring\MonitoringDestination[] $var
      * @return $this
      */
     public function setConsumerDestinations($var)

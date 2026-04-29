@@ -1,16 +1,31 @@
 <script>
-	export let list = false;
-	export let disabled = false;
-	export let name = "options";
-	export let value = "";
-	export let selected = "";
-	export let desc = "";
+	/**
+	 * @typedef {Object} Props
+	 * @property {boolean} [list]
+	 * @property {boolean} [disabled]
+	 * @property {string} [name]
+	 * @property {string} [value]
+	 * @property {string} [selected]
+	 * @property {string} [desc]
+	 * @property {import("svelte").Snippet} [children]
+	 */
+
+	/** @type {Props} */
+	let {
+		list = false,
+		disabled = false,
+		name = "options",
+		value = "",
+		selected = $bindable( "" ),
+		desc = "",
+		children
+	} = $props();
 </script>
 
 <div class="radio-btn" class:list class:disabled>
 	<label>
 		<input type="radio" {name} bind:group={selected} {value} {disabled}>
-		<slot/>
+		{@render children?.()}
 	</label>
 </div>
 {#if selected === value && desc}

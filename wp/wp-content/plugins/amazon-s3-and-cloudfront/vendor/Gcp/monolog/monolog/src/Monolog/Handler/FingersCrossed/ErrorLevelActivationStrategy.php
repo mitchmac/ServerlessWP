@@ -11,33 +11,29 @@ declare (strict_types=1);
  */
 namespace DeliciousBrains\WP_Offload_Media\Gcp\Monolog\Handler\FingersCrossed;
 
+use DeliciousBrains\WP_Offload_Media\Gcp\Monolog\Level;
+use DeliciousBrains\WP_Offload_Media\Gcp\Monolog\LogRecord;
 use DeliciousBrains\WP_Offload_Media\Gcp\Monolog\Logger;
 use DeliciousBrains\WP_Offload_Media\Gcp\Psr\Log\LogLevel;
 /**
  * Error level based activation strategy.
  *
  * @author Johannes M. Schmitt <schmittjoh@gmail.com>
- *
- * @phpstan-import-type Level from \Monolog\Logger
- * @phpstan-import-type LevelName from \Monolog\Logger
  */
 class ErrorLevelActivationStrategy implements ActivationStrategyInterface
 {
+    private Level $actionLevel;
     /**
-     * @var Level
-     */
-    private $actionLevel;
-    /**
-     * @param int|string $actionLevel Level or name or value
+     * @param int|string|Level $actionLevel Level or name or value
      *
-     * @phpstan-param Level|LevelName|LogLevel::* $actionLevel
+     * @phpstan-param value-of<Level::VALUES>|value-of<Level::NAMES>|Level|LogLevel::* $actionLevel
      */
-    public function __construct($actionLevel)
+    public function __construct(int|string|Level $actionLevel)
     {
         $this->actionLevel = Logger::toMonologLevel($actionLevel);
     }
-    public function isHandlerActivated(array $record) : bool
+    public function isHandlerActivated(LogRecord $record) : bool
     {
-        return $record['level'] >= $this->actionLevel;
+        return $record->level->value >= $this->actionLevel->value;
     }
 }

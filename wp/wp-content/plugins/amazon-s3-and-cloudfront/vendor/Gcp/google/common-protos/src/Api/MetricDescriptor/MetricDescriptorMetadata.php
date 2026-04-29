@@ -5,8 +5,8 @@
 namespace DeliciousBrains\WP_Offload_Media\Gcp\Google\Api\MetricDescriptor;
 
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Internal\GPBType;
-use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Internal\RepeatedField;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Internal\GPBUtil;
+use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\RepeatedField;
 /**
  * Additional annotations that can be used to guide the usage of a metric.
  *
@@ -41,6 +41,12 @@ class MetricDescriptorMetadata extends \DeliciousBrains\WP_Offload_Media\Gcp\Goo
      */
     protected $ingest_delay = null;
     /**
+     * The scope of the timeseries data of the metric.
+     *
+     * Generated from protobuf field <code>repeated .google.api.MetricDescriptor.MetricDescriptorMetadata.TimeSeriesResourceHierarchyLevel time_series_resource_hierarchy_level = 4;</code>
+     */
+    private $time_series_resource_hierarchy_level;
+    /**
      * Constructor.
      *
      * @param array $data {
@@ -59,6 +65,8 @@ class MetricDescriptorMetadata extends \DeliciousBrains\WP_Offload_Media\Gcp\Goo
      *           The delay of data points caused by ingestion. Data points older than this
      *           age are guaranteed to be ingested and available to be read, excluding
      *           data loss due to errors.
+     *     @type int[] $time_series_resource_hierarchy_level
+     *           The scope of the timeseries data of the metric.
      * }
      */
     public function __construct($data = NULL)
@@ -77,7 +85,9 @@ class MetricDescriptorMetadata extends \DeliciousBrains\WP_Offload_Media\Gcp\Goo
      */
     public function getLaunchStage()
     {
-        @\trigger_error('launch_stage is deprecated.', \E_USER_DEPRECATED);
+        if ($this->launch_stage !== 0) {
+            @\trigger_error('launch_stage is deprecated.', \E_USER_DEPRECATED);
+        }
         return $this->launch_stage;
     }
     /**
@@ -167,6 +177,29 @@ class MetricDescriptorMetadata extends \DeliciousBrains\WP_Offload_Media\Gcp\Goo
     {
         GPBUtil::checkMessage($var, \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Duration::class);
         $this->ingest_delay = $var;
+        return $this;
+    }
+    /**
+     * The scope of the timeseries data of the metric.
+     *
+     * Generated from protobuf field <code>repeated .google.api.MetricDescriptor.MetricDescriptorMetadata.TimeSeriesResourceHierarchyLevel time_series_resource_hierarchy_level = 4;</code>
+     * @return RepeatedField<int>
+     */
+    public function getTimeSeriesResourceHierarchyLevel()
+    {
+        return $this->time_series_resource_hierarchy_level;
+    }
+    /**
+     * The scope of the timeseries data of the metric.
+     *
+     * Generated from protobuf field <code>repeated .google.api.MetricDescriptor.MetricDescriptorMetadata.TimeSeriesResourceHierarchyLevel time_series_resource_hierarchy_level = 4;</code>
+     * @param int[] $var
+     * @return $this
+     */
+    public function setTimeSeriesResourceHierarchyLevel($var)
+    {
+        $arr = GPBUtil::checkRepeatedField($var, \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Internal\GPBType::ENUM, \DeliciousBrains\WP_Offload_Media\Gcp\Google\Api\MetricDescriptor\MetricDescriptorMetadata\TimeSeriesResourceHierarchyLevel::class);
+        $this->time_series_resource_hierarchy_level = $arr;
         return $this;
     }
 }
