@@ -6,7 +6,7 @@
     },
     {
       "source": "/(.*)",
-      "destination": "/api/index.js"
+      "destination": "/api/vercel.js"
     }
   ],
   "headers": [
@@ -21,7 +21,7 @@
     }
   ],
   "functions": {
-    "api/index.js": {
+    "api/vercel.js": {
       "includeFiles": "wp/**",
       "maxDuration": 60
     }
