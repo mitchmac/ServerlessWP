@@ -1,6 +1,13 @@
 #!/bin/bash
 set -euo pipefail
 
+# Unit tests for the sqliteS3 plugin — fast, no Docker. Run first so failures
+# don't waste time on container builds. Requires root deps installed
+# (npm install at the repo root).
+echo "Running sqliteS3 unit tests..."
+(cd .. && npm install --silent >/dev/null)
+node --test sqliteS3.concurrency.test.js
+
 ./build-test.sh
 
 # Clean up any leftovers from a previous run
