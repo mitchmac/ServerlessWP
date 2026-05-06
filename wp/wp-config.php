@@ -132,8 +132,19 @@ define('DISALLOW_FILE_MODS', true );
 // If using SQLite + S3 or SQLite + Vercel Blob instead of MySQL/MariaDB.
 if (isset($_ENV['SQLITE_S3_BUCKET']) || isset($_ENV['SERVERLESSWP_DATA_SECRET']) || isset($_ENV['BLOB_READ_WRITE_TOKEN'])) {
   define('DB_DIR', '/tmp');
-  define('DB_FILE', 'wp-sqlite-s3.sqlite');
+  // Per-invocation working file path is supplied by the Node sqlite plugin
+  // via a request header so concurrent requests on the same warm instance
+  // don't share one file. Falls back to a fixed name if the header is missing.
+  if (!empty($_SERVER['HTTP_X_SERVERLESSWP_SQLITE_FILE'])) {
+    define('DB_FILE', basename($_SERVER['HTTP_X_SERVERLESSWP_SQLITE_FILE']));
+  } else {
+    define('DB_FILE', 'wp-sqlite-s3.sqlite');
+  }
   define('DB_NAME', 'wp-sqlite');
+
+  // Force the rollback journal mode. The Node sqlite plugin uploads the
+  // single .sqlite file to remote storage at the end of each request.
+  define('SQLITE_JOURNAL_MODE', 'DELETE');
 
   // Auto-cron can cause db race conditions on these urls, don't bother with it.
   if (strpos($_SERVER['REQUEST_URI'], 'wp-admin') !== false || strpos($_SERVER['REQUEST_URI'], 'wp-login') !== false) {

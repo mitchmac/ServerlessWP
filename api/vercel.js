@@ -33,4 +33,5 @@ if (hasSqliteS3) {
     });
 }
 
-exports.handler = core.handler;
+module.exports = core.handler;
+module.exports.handler = core.handler;
