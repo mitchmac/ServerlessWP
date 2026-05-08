@@ -1,98 +1,37 @@
-const serverlesswp = require('serverlesswp');
+// Vercel-specific entry point. Adds Vercel Blob as a storage option and
+// layers VERCEL_* env var fallbacks onto the SQLite + S3 config, then delegates
+// to the core handler in api/index.js.
 
-const { validate } = require('../util/install.js');
-const { setup } = require('../util/directory.js');
+const core = require('./index.js');
 const sqliteS3 = require('../util/sqliteS3.js');
-const sandbox = require('../util/sandbox.js');
-const readOnly = require('../util/readOnly.js');
+const sqliteVercelBlob = require('../util/sqliteVercelBlob.js');
 
-const pathToWP = '/tmp/wp';
-let initSqliteS3 = false;
+const hasSqliteS3 = !!(process.env['SQLITE_S3_BUCKET'] || process.env['SERVERLESSWP_DATA_SECRET']);
+const useVercelBlob = !!process.env['BLOB_READ_WRITE_TOKEN'] && !hasSqliteS3;
 
-// Move the /wp directory to /tmp/wp so that it is writeable.
-setup();
-
-// This is where all requests to WordPress are routed through.
-// See vercel.json or netlify.toml for the redirection rules.
-async function handler(event, context, callback) {
-    if ((process.env['SQLITE_S3_BUCKET'] || process.env['SERVERLESSWP_DATA_SECRET']) && !initSqliteS3) {
-        let wpContentPath = pathToWP + '/wp-content';
-        let sqlitePluginPath = wpContentPath + '/plugins/sqlite-database-integration';
-        await sqliteS3.prepPlugin(wpContentPath, sqlitePluginPath);
-
-        let branchSlug = '';
-        let bucketFallback = '';
-        
-        // Vercel
-        if (process.env['VERCEL']) {
-            const branch = sqliteS3.branchNameToS3file(process.env['VERCEL_GIT_COMMIT_REF']);
-            branchSlug = branch ? '-' + branch : '';
-            bucketFallback = process.env['VERCEL_PROJECT_ID'];
-        }
-
-        // Configure the sqliteS3 plugin.
-        let sqliteS3Config = {
-            bucket: process.env['SQLITE_S3_BUCKET'] || bucketFallback,
-            file:`wp-sqlite-s3${branchSlug}.sqlite`,
-            S3Client: {
-                credentials: {
-                    "accessKeyId": process.env['SQLITE_S3_API_KEY'] || process.env['VERCEL_PROJECT_ID'],
-                    "secretAccessKey": process.env['SQLITE_S3_API_SECRET'] || process.env['SERVERLESSWP_DATA_SECRET']
-                },
-                region: process.env['SQLITE_S3_REGION'],
-            }
-        };
-
-        if (process.env['SQLITE_S3_ENDPOINT']) {
-            sqliteS3Config.S3Client.endpoint = process.env['SQLITE_S3_ENDPOINT'];
-        }
-
-        if (process.env['SQLITE_S3_FORCE_PATH_STYLE'] || process.env['SERVERLESSWP_DATA_SECRET']) {
-            sqliteS3Config.S3Client.forcePathStyle = true;
-        }
-
-        if (process.env['SERVERLESSWP_DATA_SECRET']) {
-            sqliteS3Config.S3Client.endpoint = 'https://data.serverlesswp.com';
-            sqliteS3Config.onAuthError = () => sandbox.register(
-                sqliteS3Config.bucket,
-                process.env['SERVERLESSWP_DATA_SECRET']
-            );
-        }
-
-        sqliteS3.config(sqliteS3Config);
-        initSqliteS3 = true;
+// Encode the current Vercel git branch so each branch gets its own database.
+function branchSlug() {
+    if (process.env['VERCEL_GIT_COMMIT_REF']) {
+        const branch = encodeURIComponent(process.env['VERCEL_GIT_COMMIT_REF']);
+        return branch ? '-' + branch : '';
     }
-
-    // Send the request (event object) to the serverlesswp library.
-    // It includes the PHP server that allows WordPress to handle the request.
-    let response = await serverlesswp({docRoot: pathToWP, event: event});
-    
-    // Check to see if the database environment variables are in place.
-    let checkInstall = validate(response);
-    
-    if (checkInstall) {
-        return checkInstall;
-    }
-    else {
-        // Return the response for serving.
-        return response;
-    }
+    return '';
 }
 
-if (process.env['SERVERLESSWP_READ_ONLY_MODE'] && !['false', '0', 'no'].includes(process.env['SERVERLESSWP_READ_ONLY_MODE'].toLowerCase())) {
-    // Register before sqliteS3 so blocked requests force a response before the S3 fetch.
-    serverlesswp.registerPlugin(readOnly);
+if (hasSqliteS3) {
+    // Re-configure the S3 plugin with Vercel-aware overrides: the sandbox flow
+    // uses VERCEL_PROJECT_ID as the bucket name and the API key fallback, and
+    // branch-aware filenames keep preview deploys isolated.
+    core.useSqlitePlugin(sqliteS3, core.buildSqliteS3Config({
+        bucket: process.env['SQLITE_S3_BUCKET'] || process.env['VERCEL_PROJECT_ID'],
+        file: `wp-sqlite-s3${branchSlug()}.sqlite`,
+        accessKeyId: process.env['SQLITE_S3_API_KEY'] || process.env['VERCEL_PROJECT_ID'],
+    }));
+} else if (useVercelBlob) {
+    core.useSqlitePlugin(sqliteVercelBlob, {
+        pathname: `wp-sqlite${branchSlug()}.sqlite`,
+    });
 }
 
-if (process.env['SQLITE_S3_BUCKET'] || process.env['SERVERLESSWP_DATA_SECRET']) {
-    // Register the sqlite serverlesswp plugin.
-    serverlesswp.registerPlugin(sqliteS3);
-}
-
-if (process.env['SERVERLESSWP_DATA_SECRET']) {
-    // Register the sandbox widget plugin.
-    serverlesswp.registerPlugin(sandbox);
-}
-
-module.exports = handler;
-module.exports.handler = handler;
+module.exports = core.handler;
+module.exports.handler = core.handler;
