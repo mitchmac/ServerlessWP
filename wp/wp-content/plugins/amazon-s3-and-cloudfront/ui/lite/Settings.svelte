@@ -23,17 +23,18 @@
 	import Pages from "../components/Pages.svelte";
 	import Sidebar from "./Sidebar.svelte";
 
-	export let init = {};
+	let { init = {} } = $props();
 
 	// During initialization set config store to passed in values to avoid undefined values in components during mount.
 	// This saves having to do a lot of checking of values before use.
+	// svelte-ignore state_referenced_locally
 	config.set( init );
 	pages.set( defaultPages );
 
 	// Add Lite specific pages.
 	addPages();
 
-	setContext( 'sidebar', Sidebar );
+	setContext( "sidebar", Sidebar );
 
 	/**
 	 * Handles state update event's changes to config.
@@ -97,9 +98,11 @@
 	}
 
 	// Catch changes to needing access credentials as soon as possible.
-	$: if ( $needs_access_keys ) {
-		handleStateUpdate( $config );
-	}
+	$effect.pre( () => {
+		if ( $needs_access_keys ) {
+			handleStateUpdate( $config );
+		}
+	} );
 
 	onMount( () => {
 		// Make sure state dependent data is up-to-date.
@@ -112,7 +115,9 @@
 	} );
 
 	// Make sure all inline notifications are in place.
-	$: settings_notifications.update( ( notices ) => settingsNotifications.process( notices, $settings, $current_settings, $strings ) );
+	$effect.pre( () => {
+		settings_notifications.update( ( notices ) => settingsNotifications.process( notices, $settings, $current_settings, $strings ) );
+	} );
 </script>
 
 <Settings header={Header}>

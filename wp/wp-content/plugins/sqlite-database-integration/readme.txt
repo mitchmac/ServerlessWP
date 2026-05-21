@@ -4,7 +4,7 @@ Contributors:      wordpressdotorg, aristath, janjakes, zieladam, berislav.grgic
 Requires at least: 6.4
 Tested up to:      6.9
 Requires PHP:      7.2
-Stable tag:        2.2.23
+Stable tag:        3.0.0-rc.3
 License:           GPLv2 or later
 License URI:       https://www.gnu.org/licenses/gpl-2.0.html
 Tags:              performance, database
@@ -14,8 +14,6 @@ SQLite integration plugin by the WordPress Team.
 == Description ==
 
 The SQLite plugin is a community, feature plugin. The intent is to allow testing an SQLite integration with WordPress and gather feedback, with the goal of eventually landing it in WordPress core.
-
-This feature plugin includes code from the PHPMyAdmin project (specifically parts of the PHPMyAdmin/sql-parser library), licensed under the GPL v2 or later. More info on the PHPMyAdmin/sql-parser library can be found on [GitHub](https://github.com/phpmyadmin/sql-parser).
 
 == Frequently Asked Questions ==
 
@@ -45,6 +43,22 @@ the wpdb API, while queries are internally adapted to be compatible
 with SQLite syntax and behavior.
 
 == Changelog ==
+
+= 3.0.0-rc.3 =
+
+* Lexer: Fix possible OOB read in quoted strings ([#374](https://github.com/WordPress/sqlite-database-integration/pull/374))
+* Add support for `NO_AUTO_VALUE_ON_ZERO` SQL mode ([#366](https://github.com/WordPress/sqlite-database-integration/pull/366))
+
+= 3.0.0-rc.2 =
+
+* Support MySQL `BINARY` operator ([#369](https://github.com/WordPress/sqlite-database-integration/pull/369))
+* Add support for `AUTO_INCREMENT` value management ([#367](https://github.com/WordPress/sqlite-database-integration/pull/367))
+* Add support for `DELETE` with `LIMIT` and `ORDER BY` ([#365](https://github.com/WordPress/sqlite-database-integration/pull/365))
+
+= 3.0.0-rc.1 =
+
+* Improve concurrent database access ([#361](https://github.com/WordPress/sqlite-database-integration/pull/361))
+* Remove legacy SQLite driver ([#358](https://github.com/WordPress/sqlite-database-integration/pull/358))
 
 = 2.2.23 =
 

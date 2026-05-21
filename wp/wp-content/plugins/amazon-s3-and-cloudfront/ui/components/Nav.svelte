@@ -2,6 +2,13 @@
 	import {pages} from "../js/routes";
 	import NavItem from "./NavItem.svelte";
 	import OffloadStatus from "./OffloadStatus.svelte";
+	/**
+	 * @typedef {Object} Props
+	 * @property {import("svelte").Snippet} [children]
+	 */
+
+	/** @type {Props} */
+	let { children } = $props();
 </script>
 
 <div class="nav">
@@ -13,8 +20,10 @@
 				{/if}
 			{/each}
 		</ul>
-		<slot>
+		{#if children}
+			{@render children()}
+		{:else}
 			<OffloadStatus/>
-		</slot>
+		{/if}
 	</div>
 </div>

@@ -22,7 +22,8 @@ class WP_Scripts extends WP_Dependencies {
 	 * Full URL with trailing slash.
 	 *
 	 * @since 2.6.0
-	 * @var string
+	 * @see wp_default_scripts()
+	 * @var string|null
 	 */
 	public $base_url;
 
@@ -30,7 +31,8 @@ class WP_Scripts extends WP_Dependencies {
 	 * URL of the content directory.
 	 *
 	 * @since 2.8.0
-	 * @var string
+	 * @see wp_default_scripts()
+	 * @var string|null
 	 */
 	public $content_url;
 
@@ -38,7 +40,8 @@ class WP_Scripts extends WP_Dependencies {
 	 * Default version string for scripts.
 	 *
 	 * @since 2.6.0
-	 * @var string
+	 * @see wp_default_scripts()
+	 * @var string|null
 	 */
 	public $default_version;
 
@@ -46,7 +49,7 @@ class WP_Scripts extends WP_Dependencies {
 	 * Holds handles of scripts which are enqueued in footer.
 	 *
 	 * @since 2.8.0
-	 * @var array
+	 * @var string[]
 	 */
 	public $in_footer = array();
 
@@ -118,7 +121,8 @@ class WP_Scripts extends WP_Dependencies {
 	 * List of default directories.
 	 *
 	 * @since 2.8.0
-	 * @var array
+	 * @see wp_default_scripts()
+	 * @var string[]|null
 	 */
 	public $default_dirs;
 
@@ -374,7 +378,8 @@ class WP_Scripts extends WP_Dependencies {
 			$filtered_src = apply_filters( 'script_loader_src', $src, $handle );
 
 			if (
-				$this->in_default_dir( $filtered_src )
+				is_string( $filtered_src )
+				&& $this->in_default_dir( $filtered_src )
 				&& ( $before_script || $after_script || $translations_stop_concat || $this->is_delayed_strategy( $strategy ) )
 			) {
 				$this->do_concat = false;
@@ -412,8 +417,31 @@ class WP_Scripts extends WP_Dependencies {
 			$src = $this->base_url . $src;
 		}
 
-		if ( ! empty( $ver ) ) {
-			$src = add_query_arg( 'ver', $ver, $src );
+		$ver_to_add = '';
+		if ( empty( $obj->ver ) && null !== $obj->ver && is_string( $this->default_version ) ) {
+			$ver_to_add = $this->default_version;
+		} elseif ( is_scalar( $obj->ver ) ) {
+			$ver_to_add = (string) $obj->ver;
+		}
+
+		$added_args = (string) ( $this->args[ $handle ] ?? '' );
+
+		if ( '' !== $ver_to_add || '' !== $added_args ) {
+			$fragment = strstr( $src, '#' );
+			if ( false !== $fragment ) {
+				$src = substr( $src, 0, -strlen( $fragment ) );
+			}
+
+			if ( '' !== $ver_to_add ) {
+				$src .= ( str_contains( $src, '?' ) ? '&' : '?' ) . 'ver=' . rawurlencode( $ver_to_add );
+			}
+			if ( '' !== $added_args ) {
+				$src .= ( str_contains( $src, '?' ) ? '&' : '?' ) . $added_args;
+			}
+
+			if ( false !== $fragment ) {
+				$src .= $fragment;
+			}
 		}
 
 		/** This filter is documented in wp-includes/class-wp-scripts.php */
@@ -435,7 +463,7 @@ class WP_Scripts extends WP_Dependencies {
 		}
 
 		// Determine fetchpriority.
-		$original_fetchpriority = isset( $obj->extra['fetchpriority'] ) ? $obj->extra['fetchpriority'] : null;
+		$original_fetchpriority = $obj->extra['fetchpriority'] ?? null;
 		if ( null === $original_fetchpriority || ! $this->is_valid_fetchpriority( $original_fetchpriority ) ) {
 			$original_fetchpriority = 'auto';
 		}
@@ -589,9 +617,9 @@ class WP_Scripts extends WP_Dependencies {
 	 *
 	 * @since 2.1.0
 	 *
-	 * @param string $handle      Name of the script to attach data to.
-	 * @param string $object_name Name of the variable that will contain the data.
-	 * @param array  $l10n        Array of data to localize.
+	 * @param string               $handle      Name of the script to attach data to.
+	 * @param string               $object_name Name of the variable that will contain the data.
+	 * @param array<string, mixed> $l10n        Array of data to localize.
 	 * @return bool True on success, false on failure.
 	 */
 	public function localize( $handle, $object_name, $l10n ) {
@@ -857,7 +885,7 @@ JS;
 					sprintf(
 						/* translators: 1: $strategy, 2: $handle */
 						__( 'Invalid strategy `%1$s` defined for `%2$s` during script registration.' ),
-						$value,
+						is_string( $value ) ? $value : gettype( $value ),
 						$handle
 					),
 					'6.3.0'
@@ -869,7 +897,7 @@ JS;
 					sprintf(
 						/* translators: 1: $strategy, 2: $handle */
 						__( 'Cannot supply a strategy `%1$s` for script `%2$s` because it is an alias (it lacks a `src` value).' ),
-						$value,
+						is_string( $value ) ? $value : gettype( $value ),
 						$handle
 					),
 					'6.3.0'
@@ -905,6 +933,48 @@ JS;
 				);
 				return false;
 			}
+		} elseif ( 'module_dependencies' === $key ) {
+			if ( ! is_array( $value ) ) {
+				_doing_it_wrong(
+					__METHOD__,
+					sprintf(
+						/* translators: 1: 'module_dependencies', 2: Script handle. */
+						__( 'The value for "%1$s" must be an array for the "%2$s" script.' ),
+						'module_dependencies',
+						$handle
+					),
+					'7.0.0'
+				);
+				return false;
+			}
+
+			$sanitized_value = array();
+			$has_invalid_ids = false;
+			foreach ( $value as $module ) {
+				if (
+					is_string( $module ) ||
+					( is_array( $module ) && isset( $module['id'] ) && is_string( $module['id'] ) )
+				) {
+					$sanitized_value[] = $module;
+				} else {
+					$has_invalid_ids = true;
+				}
+			}
+
+			if ( $has_invalid_ids ) {
+				_doing_it_wrong(
+					__METHOD__,
+					sprintf(
+						/* translators: 1: Script handle, 2: 'module_dependencies' */
+						__( 'The script handle "%1$s" has one or more of its script module dependencies ("%2$s") which are invalid.' ),
+						$handle,
+						'module_dependencies'
+					),
+					'7.0.0'
+				);
+			}
+
+			$value = $sanitized_value;
 		}
 		return parent::add_data( $handle, $key, $value );
 	}
@@ -1129,7 +1199,7 @@ JS;
 				}
 			}
 		}
-		$stored_results[ $handle ] = $priorities[ $highest_priority_index ]; // @phpstan-ignore parameterByRef.type (We know the index is valid and that this will be a string.)
+		$stored_results[ $handle ] = $priorities[ $highest_priority_index ];
 		return $priorities[ $highest_priority_index ];
 	}
 

@@ -5,8 +5,8 @@
 namespace DeliciousBrains\WP_Offload_Media\Gcp\Google\Rpc\Context\AttributeContext;
 
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Internal\GPBType;
-use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Internal\RepeatedField;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Internal\GPBUtil;
+use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\RepeatedField;
 /**
  * This message defines request authentication attributes. Terminology is
  * based on the JSON Web Token (JWT) standard, but the terms also
@@ -61,7 +61,7 @@ class Auth extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Interna
      *     'sub': '113289723416554971153',
      *     'aud': ['123456789012', 'pubsub.googleapis.com'],
      *     'azp': '123456789012.apps.googleusercontent.com',
-     *     'email': 'jsmith&#64;example.com',
+     *     'email': 'jsmith\@example.com',
      *     'iat': 1353601026,
      *     'exp': 1353604926}
      * SAML assertions are similarly specified, but with an identity provider
@@ -93,7 +93,7 @@ class Auth extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Interna
      *           delimited, with `/` percent-encoded within the subject fragment. For
      *           Google accounts, the principal format is:
      *           "https://accounts.google.com/{id}"
-     *     @type array<string>|\Google\Protobuf\Internal\RepeatedField $audiences
+     *     @type string[] $audiences
      *           The intended audience(s) for this authentication information. Reflects
      *           the audience (`aud`) claim within a JWT. The audience
      *           value(s) depends on the `issuer`, but typically include one or more of
@@ -120,12 +120,12 @@ class Auth extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Interna
      *               'sub': '113289723416554971153',
      *               'aud': ['123456789012', 'pubsub.googleapis.com'],
      *               'azp': '123456789012.apps.googleusercontent.com',
-     *               'email': 'jsmith&#64;example.com',
+     *               'email': 'jsmith\@example.com',
      *               'iat': 1353601026,
      *               'exp': 1353604926}
      *           SAML assertions are similarly specified, but with an identity provider
      *           dependent structure.
-     *     @type array<string>|\Google\Protobuf\Internal\RepeatedField $access_levels
+     *     @type string[] $access_levels
      *           A list of access level resource names that allow resources to be
      *           accessed by authenticated requester. It is part of Secure GCP processing
      *           for the incoming request. An access level string has the format:
@@ -185,7 +185,7 @@ class Auth extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Interna
      * information provided.
      *
      * Generated from protobuf field <code>repeated string audiences = 2;</code>
-     * @return \Google\Protobuf\Internal\RepeatedField
+     * @return RepeatedField<string>
      */
     public function getAudiences()
     {
@@ -206,7 +206,7 @@ class Auth extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Interna
      * information provided.
      *
      * Generated from protobuf field <code>repeated string audiences = 2;</code>
-     * @param array<string>|\Google\Protobuf\Internal\RepeatedField $var
+     * @param string[] $var
      * @return $this
      */
     public function setAudiences($var)
@@ -253,7 +253,7 @@ class Auth extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Interna
      *     'sub': '113289723416554971153',
      *     'aud': ['123456789012', 'pubsub.googleapis.com'],
      *     'azp': '123456789012.apps.googleusercontent.com',
-     *     'email': 'jsmith&#64;example.com',
+     *     'email': 'jsmith\@example.com',
      *     'iat': 1353601026,
      *     'exp': 1353604926}
      * SAML assertions are similarly specified, but with an identity provider
@@ -283,7 +283,7 @@ class Auth extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Interna
      *     'sub': '113289723416554971153',
      *     'aud': ['123456789012', 'pubsub.googleapis.com'],
      *     'azp': '123456789012.apps.googleusercontent.com',
-     *     'email': 'jsmith&#64;example.com',
+     *     'email': 'jsmith\@example.com',
      *     'iat': 1353601026,
      *     'exp': 1353604926}
      * SAML assertions are similarly specified, but with an identity provider
@@ -308,7 +308,7 @@ class Auth extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Interna
      * "//accesscontextmanager.googleapis.com/accessPolicies/MY_POLICY_ID/accessLevels/MY_LEVEL"
      *
      * Generated from protobuf field <code>repeated string access_levels = 5;</code>
-     * @return \Google\Protobuf\Internal\RepeatedField
+     * @return RepeatedField<string>
      */
     public function getAccessLevels()
     {
@@ -323,7 +323,7 @@ class Auth extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Interna
      * "//accesscontextmanager.googleapis.com/accessPolicies/MY_POLICY_ID/accessLevels/MY_LEVEL"
      *
      * Generated from protobuf field <code>repeated string access_levels = 5;</code>
-     * @param array<string>|\Google\Protobuf\Internal\RepeatedField $var
+     * @param string[] $var
      * @return $this
      */
     public function setAccessLevels($var)

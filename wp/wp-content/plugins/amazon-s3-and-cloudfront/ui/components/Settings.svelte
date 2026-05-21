@@ -1,11 +1,17 @@
 <script>
 	import {onMount} from "svelte";
-	import {config, notifications, settings, state} from "../js/stores";
+	import {config, notifications, settings, appState} from "../js/stores";
 	import Header from "./Header.svelte";
 
-	// These components can be overridden.
-	export let header = Header;
-	export let footer = null;
+	/**
+	 * @typedef {Object} Props
+	 * @property {any} [header] - These components can be overridden.
+	 * @property {any} [footer]
+	 * @property {import("svelte").Snippet} [children]
+	 */
+
+	/** @type {Props} */
+	let { header = Header, footer = null, children } = $props();
 
 	// We need a disassociated copy of the initial settings to work with.
 	settings.set( { ...$config.settings } );
@@ -19,19 +25,23 @@
 
 	onMount( () => {
 		// Periodically check the state.
-		state.startPeriodicFetch();
+		appState.startPeriodicFetch();
 
 		// Be a good citizen and clean up the timer when exiting our settings.
-		return () => state.stopPeriodicFetch();
+		return () => appState.stopPeriodicFetch();
 	} );
 </script>
 
 {#if header}
-	<svelte:component this={header}/>
+	{@const HeaderComponent = header}
+	<HeaderComponent/>
 {/if}
-<slot>
+{#if children}
+	{@render children()}
+{:else}
 	<!-- CONTENT GOES HERE -->
-</slot>
+{/if}
 {#if footer}
-	<svelte:component this={footer}/>
+	{@const FooterComponent = footer}
+	<FooterComponent/>
 {/if}

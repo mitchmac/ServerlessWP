@@ -2,13 +2,13 @@
 	import {link, location} from "svelte-spa-router";
 	import {urls} from "../js/stores";
 
-	export let page;
+	let { page } = $props();
 
-	let focus = false;
-	let hover = false;
+	let focus = $state( false );
+	let hover = $state( false );
 
-	$: showIcon = typeof page.noticeIcon === "string" && (["warning", "error"].includes( page.noticeIcon ));
-	$: iconUrl = showIcon ? $urls.assets + "img/icon/tab-notifier-" + page.noticeIcon + ".svg" : "";
+	let showIcon = $derived( typeof page.noticeIcon === "string" && (["warning", "error"].includes( page.noticeIcon )) );
+	let iconUrl = $derived( showIcon ? $urls.assets + "img/icon/tab-notifier-" + page.noticeIcon + ".svg" : "" );
 
 </script>
 
@@ -17,10 +17,10 @@
 		href={page.route}
 		title={page.title()}
 		use:link
-		on:focusin={() => focus = true}
-		on:focusout={() => focus = false}
-		on:mouseenter={() => hover = true}
-		on:mouseleave={() => hover = false}
+		onfocusin={() => focus = true}
+		onfocusout={() => focus = false}
+		onmouseenter={() => hover = true}
+		onmouseleave={() => hover = false}
 	>
 		{page.title()}
 		{#if showIcon}

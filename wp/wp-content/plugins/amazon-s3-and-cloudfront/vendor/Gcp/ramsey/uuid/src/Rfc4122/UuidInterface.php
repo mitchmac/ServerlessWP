@@ -14,20 +14,12 @@ namespace DeliciousBrains\WP_Offload_Media\Gcp\Ramsey\Uuid\Rfc4122;
 
 use DeliciousBrains\WP_Offload_Media\Gcp\Ramsey\Uuid\UuidInterface as BaseUuidInterface;
 /**
- * Also known as a Leach-Salz variant UUID, an RFC 4122 variant UUID is a
- * universally unique identifier defined by RFC 4122
+ * A universally unique identifier (UUID), as defined in RFC 9562 (formerly RFC 4122)
  *
- * @link https://tools.ietf.org/html/rfc4122 RFC 4122
+ * @link https://www.rfc-editor.org/rfc/rfc9562 RFC 9562
  *
- * @psalm-immutable
+ * @immutable
  */
 interface UuidInterface extends BaseUuidInterface
 {
-    /**
-     * Returns the string standard representation of the UUID as a URN
-     *
-     * @link http://en.wikipedia.org/wiki/Uniform_Resource_Name Uniform Resource Name
-     * @link https://tools.ietf.org/html/rfc4122#section-3 RFC 4122, § 3: Namespace Registration Template
-     */
-    public function getUrn() : string;
 }

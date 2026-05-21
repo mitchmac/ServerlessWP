@@ -5,8 +5,8 @@
 namespace DeliciousBrains\WP_Offload_Media\Gcp\Google\Api;
 
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Internal\GPBType;
-use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Internal\RepeatedField;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Internal\GPBUtil;
+use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\RepeatedField;
 /**
  * ### System parameter configuration
  * A system parameter is a special kind of parameter defined by the API
@@ -51,7 +51,7 @@ class SystemParameters extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Prot
      * @param array $data {
      *     Optional. Data for populating the Message object.
      *
-     *     @type array<\Google\Api\SystemParameterRule>|\Google\Protobuf\Internal\RepeatedField $rules
+     *     @type \Google\Api\SystemParameterRule[] $rules
      *           Define system parameters.
      *           The parameters defined here will override the default parameters
      *           implemented by the system. If this field is missing from the service
@@ -106,7 +106,7 @@ class SystemParameters extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Prot
      * **NOTE:** All service configuration rules follow "last one wins" order.
      *
      * Generated from protobuf field <code>repeated .google.api.SystemParameterRule rules = 1;</code>
-     * @return \Google\Protobuf\Internal\RepeatedField
+     * @return RepeatedField<\Google\Api\SystemParameterRule>
      */
     public function getRules()
     {
@@ -137,7 +137,7 @@ class SystemParameters extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Prot
      * **NOTE:** All service configuration rules follow "last one wins" order.
      *
      * Generated from protobuf field <code>repeated .google.api.SystemParameterRule rules = 1;</code>
-     * @param array<\Google\Api\SystemParameterRule>|\Google\Protobuf\Internal\RepeatedField $var
+     * @param \Google\Api\SystemParameterRule[] $var
      * @return $this
      */
     public function setRules($var)

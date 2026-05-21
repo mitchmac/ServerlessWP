@@ -2,7 +2,7 @@
 	import {settings_notifications} from "../js/stores";
 	import Notification from "./Notification.svelte";
 
-	export let settingKey;
+	let { settingKey } = $props();
 
 	/**
 	 * Compares two notification objects to sort them into a preferred order.

@@ -95,6 +95,17 @@ abstract class Storage_Provider extends Provider implements Validator_Interface 
 	private $validator_priority = 5;
 
 	/**
+	 * Returns the full name for the provider type, e.g. "Storage Provider" or "Delivery Provider".
+	 *
+	 * Should be overridden in Storage/Provider subclasses.
+	 *
+	 * @return string
+	 */
+	public static function get_provider_type_name(): string {
+		return __( 'Storage Provider', 'amazon-s3-and-cloudfront' );
+	}
+
+	/**
 	 * Is the provider able to use access keys?
 	 *
 	 * @return bool
@@ -454,7 +465,7 @@ abstract class Storage_Provider extends Provider implements Validator_Interface 
 	 */
 	public function get_default_acl() {
 		return apply_filters(
-			'as3cf_' . static::$provider_key_name . '_' . static::$service_key_name . '_default_acl',
+			'as3cf_' . static::get_provider_key_name() . '_' . static::get_service_key_name() . '_default_acl',
 			$this->get_public_acl()
 		);
 	}
@@ -537,8 +548,8 @@ abstract class Storage_Provider extends Provider implements Validator_Interface 
 	public static function get_regions() {
 		// Backwards compatibility, e.g. 'aws_get_regions'.
 		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals -- backwards compatibility
-		$regions = apply_filters( static::$provider_key_name . '_get_regions', static::$regions );
-		$regions = apply_filters( 'as3cf_' . static::$provider_key_name . '_get_regions', $regions );
+		$regions = apply_filters( static::get_provider_key_name() . '_get_regions', static::$regions );
+		$regions = apply_filters( 'as3cf_' . static::get_provider_key_name() . '_get_regions', $regions );
 
 		natsort( $regions );
 
@@ -631,12 +642,12 @@ abstract class Storage_Provider extends Provider implements Validator_Interface 
 			// Add credentials and given args to default client args and then let user override.
 			$args = array_merge( $this->default_client_args(), $args );
 			$args = apply_filters(
-				'as3cf_' . static::$provider_key_name . '_init_client_args',
+				'as3cf_' . static::get_provider_key_name() . '_init_client_args',
 				$this->init_client_args( $args )
 			);
 			// Backwards compatibility, e.g. 'aws_get_client_args'.
 			// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals -- backwards compatibility
-			$args = apply_filters( static::$provider_key_name . '_get_client_args', $args );
+			$args = apply_filters( static::get_provider_key_name() . '_get_client_args', $args );
 
 			$this->client = $this->init_client( $args );
 		}
@@ -659,7 +670,7 @@ abstract class Storage_Provider extends Provider implements Validator_Interface 
 		$this->_init_client( $args );
 
 		$args = apply_filters(
-			'as3cf_' . static::$provider_key_name . '_' . static::$service_key_name . '_client_args',
+			'as3cf_' . static::get_provider_key_name() . '_' . static::get_service_key_name() . '_client_args',
 			$this->init_service_client_args( $args )
 		);
 
@@ -737,7 +748,7 @@ abstract class Storage_Provider extends Provider implements Validator_Interface 
 		 * @return string
 		 */
 		return apply_filters(
-			'as3cf_' . static::$provider_key_name . '_' . static::$service_key_name . '_url_prefix',
+			'as3cf_' . static::get_provider_key_name() . '_' . static::get_service_key_name() . '_url_prefix',
 			$this->url_prefix( $region, $expires ),
 			$region,
 			$expires
@@ -772,7 +783,7 @@ abstract class Storage_Provider extends Provider implements Validator_Interface 
 		$domain = empty( $prefix ) ? $domain : $prefix . '.' . $domain;
 
 		return apply_filters(
-			'as3cf_' . static::$provider_key_name . '_' . static::$service_key_name . '_url_domain',
+			'as3cf_' . static::get_provider_key_name() . '_' . static::get_service_key_name() . '_url_domain',
 			$this->url_domain( $domain, $bucket, $region, $expires, $args ),
 			$bucket,
 			$region,
@@ -1461,7 +1472,8 @@ abstract class Storage_Provider extends Provider implements Validator_Interface 
 		}
 
 		// Do we have a bucket name?
-		if ( empty( $this->as3cf->get_core_setting( 'bucket' ) ) ) {
+		$core_bucket = $this->as3cf->get_core_setting( 'bucket' );
+		if ( empty( $core_bucket ) ) {
 			return new AS3CF_Result(
 				Validator_Interface::AS3CF_STATUS_MESSAGE_ERROR,
 				__( 'Media cannot be offloaded due to a missing bucket name.', 'amazon-s3-and-cloudfront' )
@@ -1469,7 +1481,13 @@ abstract class Storage_Provider extends Provider implements Validator_Interface 
 		}
 
 		if ( $force ) {
-			$this->as3cf->get_bucket_region( $this->as3cf->get_core_setting( 'bucket' ), false );
+			// As we're forcing checks of storage settings, ensure use ACLs state is refreshed.
+			$this->as3cf->remove_setting( 'use-bucket-acls' );
+
+			$defined_region = $this->as3cf->maybe_get_defined_bucket_region( $core_bucket );
+			if ( null === $defined_region ) {
+				$this->as3cf->get_bucket_region( $core_bucket, false );
+			}
 		}
 
 		// Did the last bucket validation trigger any notices?

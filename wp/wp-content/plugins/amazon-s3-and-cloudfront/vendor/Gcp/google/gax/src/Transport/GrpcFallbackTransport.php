@@ -79,9 +79,9 @@ class GrpcFallbackTransport implements TransportInterface
      */
     public static function build(string $apiEndpoint, array $config = [])
     {
-        $config += ['httpHandler' => null, 'clientCertSource' => null];
+        $config += ['httpHandler' => null, 'clientCertSource' => null, 'logger' => null];
         list($baseUri, $port) = self::normalizeServiceAddress($apiEndpoint);
-        $httpHandler = $config['httpHandler'] ?: self::buildHttpHandlerAsync();
+        $httpHandler = $config['httpHandler'] ?: self::buildHttpHandlerAsync(logger: $config['logger']);
         $transport = new GrpcFallbackTransport("{$baseUri}:{$port}", $httpHandler);
         if ($config['clientCertSource']) {
             $transport->configureMtlsChannel($config['clientCertSource']);
@@ -94,6 +94,7 @@ class GrpcFallbackTransport implements TransportInterface
     public function startUnaryCall(Call $call, array $options)
     {
         $httpHandler = $this->httpHandler;
+        $options['requestId'] = \crc32((string) \spl_object_id($call) . \getmypid());
         return $httpHandler($this->buildRequest($call, $options), $this->getCallOptions($options))->then(function (ResponseInterface $response) use($options) {
             if (isset($options['metadataCallback'])) {
                 $metadataCallback = $options['metadataCallback'];
@@ -145,6 +146,12 @@ class GrpcFallbackTransport implements TransportInterface
         $callOptions = $options['transportOptions']['grpcFallbackOptions'] ?? [];
         if (isset($options['timeoutMillis'])) {
             $callOptions['timeout'] = $options['timeoutMillis'] / 1000;
+        }
+        if (isset($options['retryAttempt'])) {
+            $callOptions['retryAttempt'] = $options['retryAttempt'];
+        }
+        if (isset($options['requestId'])) {
+            $callOptions['requestId'] = $options['requestId'];
         }
         if ($this->clientCertSource) {
             list($cert, $key) = self::loadClientCertSource($this->clientCertSource);

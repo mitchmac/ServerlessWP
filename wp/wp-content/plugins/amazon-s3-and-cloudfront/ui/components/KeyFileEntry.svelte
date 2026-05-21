@@ -1,9 +1,15 @@
 <script>
 	import {strings} from "../js/stores";
 
-	export let provider;
-	export let value = "";
-	export let disabled = false;
+	/**
+	 * @typedef {Object} Props
+	 * @property {any} provider
+	 * @property {string} [value]
+	 * @property {boolean} [disabled]
+	 */
+
+	/** @type {Props} */
+	let { provider, value = $bindable( "" ), disabled = false } = $props();
 
 	let name = "key-file";
 	let label = $strings.key_file;

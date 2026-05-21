@@ -96,6 +96,39 @@ class WP_SQLite_PDO_User_Defined_Functions {
 	);
 
 	/**
+	 * First element of the RAND(N) LCG state (the value the output is derived from).
+	 *
+	 * @var int|null
+	 */
+	private $rand_seed1 = null;
+
+	/**
+	 * Second element of the RAND(N) LCG state (the paired value used in the recurrence).
+	 *
+	 * @var int|null
+	 */
+	private $rand_seed2 = null;
+
+	/**
+	 * Last seed value passed to RAND(N) in the current statement.
+	 *
+	 * Used to detect whether the rand sequence is advancing with the same seed
+	 * (e.g. "SELECT RAND(3) FROM t"), or reseeding (starting a new sequence).
+	 *
+	 * @var int|null
+	 */
+	private $rand_last_seed = null;
+
+	/**
+	 * Clear any per-statement state held by the UDFs.
+	 */
+	public function flush(): void {
+		$this->rand_seed1     = null;
+		$this->rand_seed2     = null;
+		$this->rand_last_seed = null;
+	}
+
+	/**
 	 * A helper function to throw an error from SQLite expressions.
 	 *
 	 * @param string $message The error message.
@@ -167,19 +200,74 @@ class WP_SQLite_PDO_User_Defined_Functions {
 	}
 
 	/**
-	 * Method to emulate MySQL RAND() function.
+	 * Method to emulate MySQL's seeded RAND(N) function.
 	 *
-	 * SQLite does have a random generator, but it is called RANDOM() and returns random
-	 * number between -9223372036854775808 and +9223372036854775807. So we substitute it
-	 * with PHP random generator.
+	 * Implements MySQL's deterministic LCG (Linear Congruential Generator),
+	 * producing bit-exact output for a given seed.
 	 *
-	 * This function uses mt_rand() which is four times faster than rand() and returns
-	 * the random number between 0 and 1.
+	 * Known divergences from MySQL:
 	 *
-	 * @return int
+	 *  1. In MySQL, RAND(N) behaves differently depending on whether the seed
+	 *     is constant expression or varies per invocation:
+	 *      - Constant seed (e.g. "SELECT RAND(3) FROM t"):
+	 *        LCG is initialized once per statement and advanced for each row.
+	 *      - Non-constant seed (e.g. "SELECT RAND(col) FROM t"):
+	 *        LCG is initialized for every row with its seed value.
+	 *
+	 *     A SQLite UDF cannot tell whether the seed expression is constant, so
+	 *     we just compare the seed against its last value. This diverges from
+	 *     MySQL in rare cases, and we can consider improving it in the future.
+	 *
+	 *  2. The LCG state is shared across call sites in the same query, so
+	 *     "SELECT RAND(1), RAND(1)" yields different results here than in MySQL.
+	 *     This is a rare edge case that we can consider improving in the future.
+	 *
+	 * Unseeded RAND() never reaches this function. The AST driver translates it
+	 * directly to a more efficient SQLite-native expression.
+	 *
+	 * @param int|float|string|null $seed Seed value.
+	 *
+	 * @return float A value in [0, 1).
 	 */
-	public function rand() {
-		return mt_rand( 0, 1 );
+	public function rand( $seed ) {
+		// Requires 64-bit PHP. Seed * 0x10000001 can exceed PHP_INT_MAX on 32-bit.
+		$max_value = 0x3FFFFFFF;
+
+		if ( null === $seed ) {
+			// MySQL treats NULL seed as 0.
+			$seed = 0;
+		} elseif ( ! is_int( $seed ) ) {
+			/*
+			 * MySQL rounds float values and numeric strings take the same path.
+			 * Reduce the value to a 32-bit range using "fmod" to avoid firing
+			 * the "out-of-range float to int" cast deprecation on PHP 8.1+.
+			 */
+			$seed = (int) fmod( round( (float) $seed, 0, PHP_ROUND_HALF_EVEN ), 0x100000000 );
+		}
+
+		// Initialize MySQL's internal 30-bit seeds.
+		if ( $seed !== $this->rand_last_seed ) {
+			/*
+			 * MySQL casts to uint32, and the intermediate results wrap at 32-bit
+			 * unsigned boundaries. We emulate this with & 0xFFFFFFFF masks.
+			 */
+			$seed_u32             = $seed & 0xFFFFFFFF;
+			$this->rand_seed1     = ( ( $seed_u32 * 0x10001 + 55555555 ) & 0xFFFFFFFF ) % $max_value;
+			$this->rand_seed2     = ( ( $seed_u32 * 0x10000001 ) & 0xFFFFFFFF ) % $max_value;
+			$this->rand_last_seed = $seed;
+		}
+
+		/*
+		 * MySQL's LCG recurrence:
+		 *   seed1 = (seed1 * 3 + seed2) % max_value
+		 *   seed2 = (seed1 + seed2 + 33) % max_value
+		 *
+		 * Note that seed1 is updated first and the new value is used for seed2.
+		 */
+		$this->rand_seed1 = ( $this->rand_seed1 * 3 + $this->rand_seed2 ) % $max_value;
+		$this->rand_seed2 = ( $this->rand_seed1 + $this->rand_seed2 + 33 ) % $max_value;
+
+		return (float) $this->rand_seed1 / (float) $max_value;
 	}
 
 	/**

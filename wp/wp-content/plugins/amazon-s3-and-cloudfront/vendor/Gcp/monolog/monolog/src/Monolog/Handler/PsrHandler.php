@@ -11,9 +11,10 @@ declare (strict_types=1);
  */
 namespace DeliciousBrains\WP_Offload_Media\Gcp\Monolog\Handler;
 
-use DeliciousBrains\WP_Offload_Media\Gcp\Monolog\Logger;
+use DeliciousBrains\WP_Offload_Media\Gcp\Monolog\Level;
 use DeliciousBrains\WP_Offload_Media\Gcp\Psr\Log\LoggerInterface;
 use DeliciousBrains\WP_Offload_Media\Gcp\Monolog\Formatter\FormatterInterface;
+use DeliciousBrains\WP_Offload_Media\Gcp\Monolog\LogRecord;
 /**
  * Proxies log messages to an existing PSR-3 compliant logger.
  *
@@ -27,42 +28,34 @@ class PsrHandler extends AbstractHandler implements FormattableHandlerInterface
 {
     /**
      * PSR-3 compliant logger
-     *
-     * @var LoggerInterface
      */
-    protected $logger;
-    /**
-     * @var FormatterInterface|null
-     */
-    protected $formatter;
+    protected LoggerInterface $logger;
+    protected FormatterInterface|null $formatter = null;
+    private bool $includeExtra;
     /**
      * @param LoggerInterface $logger The underlying PSR-3 compliant logger to which messages will be proxied
      */
-    public function __construct(LoggerInterface $logger, $level = Logger::DEBUG, bool $bubble = \true)
+    public function __construct(LoggerInterface $logger, int|string|Level $level = Level::Debug, bool $bubble = \true, bool $includeExtra = \false)
     {
         parent::__construct($level, $bubble);
         $this->logger = $logger;
+        $this->includeExtra = $includeExtra;
     }
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
-    public function handle(array $record) : bool
+    public function handle(LogRecord $record) : bool
     {
         if (!$this->isHandling($record)) {
             return \false;
         }
-        if ($this->formatter) {
-            $formatted = $this->formatter->format($record);
-            $this->logger->log(\strtolower($record['level_name']), (string) $formatted, $record['context']);
-        } else {
-            $this->logger->log(\strtolower($record['level_name']), $record['message'], $record['context']);
-        }
+        $message = $this->formatter !== null ? (string) $this->formatter->format($record) : $record->message;
+        $context = $this->includeExtra ? [...$record->extra, ...$record->context] : $record->context;
+        $this->logger->log($record->level->toPsrLogLevel(), $message, $context);
         return \false === $this->bubble;
     }
     /**
      * Sets the formatter.
-     *
-     * @param FormatterInterface $formatter
      */
     public function setFormatter(FormatterInterface $formatter) : HandlerInterface
     {
@@ -71,12 +64,10 @@ class PsrHandler extends AbstractHandler implements FormattableHandlerInterface
     }
     /**
      * Gets the formatter.
-     *
-     * @return FormatterInterface
      */
     public function getFormatter() : FormatterInterface
     {
-        if (!$this->formatter) {
+        if ($this->formatter === null) {
             throw new \LogicException('No formatter has been set and this handler does not have a default formatter');
         }
         return $this->formatter;
