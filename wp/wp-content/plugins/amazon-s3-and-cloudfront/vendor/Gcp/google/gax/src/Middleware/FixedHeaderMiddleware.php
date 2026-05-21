@@ -33,9 +33,10 @@
 namespace DeliciousBrains\WP_Offload_Media\Gcp\Google\ApiCore\Middleware;
 
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\ApiCore\Call;
-use DeliciousBrains\WP_Offload_Media\Gcp\GuzzleHttp\Promise\PromiseInterface;
 /**
  * Middleware to add fixed headers to an API call.
+ *
+ * @internal
  */
 class FixedHeaderMiddleware implements MiddlewareInterface
 {

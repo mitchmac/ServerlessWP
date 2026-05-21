@@ -4,10 +4,21 @@
 	import ProgressBar from "../components/ProgressBar.svelte";
 	import OffloadStatusFlyout from "./OffloadStatusFlyout.svelte";
 
-	// Controls whether flyout is visible or not.
-	export let expanded = false;
-	export let flyoutButton = {};
-	export let hasFocus = false;
+	/**
+	 * @typedef {Object} Props
+	 * @property {boolean} [expanded] - Controls whether flyout is visible or not.
+	 * @property {any} [flyoutButton]
+	 * @property {boolean} [hasFocus]
+	 * @property {import("svelte").Snippet} [flyout]
+	 */
+
+	/** @type {Props} */
+	let {
+		expanded = $bindable( false ),
+		flyoutButton = $bindable( {} ),
+		hasFocus = $bindable( false ),
+		flyout
+	} = $props();
 
 	/**
 	 * Returns the numeric percentage progress for total offloaded media.
@@ -31,8 +42,8 @@
 		return percent;
 	}
 
-	$: percentComplete = getPercentComplete( $counts.total, $counts.offloaded );
-	$: complete = percentComplete >= 100;
+	let percentComplete = $derived( getPercentComplete( $counts.total, $counts.offloaded ) );
+	let complete = $derived( percentComplete >= 100 );
 
 	/**
 	 * Returns a formatted title string reflecting the current status.
@@ -48,7 +59,7 @@
 		return percent + "% (" + numToString( offloaded ) + "/" + numToString( total ) + ") " + description;
 	}
 
-	$: title = getTitle( percentComplete, $counts.total, $counts.offloaded, $strings.offloaded );
+	let title = $derived( getTitle( percentComplete, $counts.total, $counts.offloaded, $strings.offloaded ) );
 
 	/**
 	 * Handles a click to toggle the flyout.
@@ -77,16 +88,16 @@
 </script>
 
 <!-- TODO: Fix a11y. -->
-<!-- svelte-ignore a11y-no-static-element-interactions -->
+<!-- svelte-ignore a11y_no_static_element_interactions -->
 <div class="nav-status-wrapper" class:complete>
 	<!-- TODO: Fix a11y. -->
-	<!-- svelte-ignore a11y-click-events-have-key-events -->
+	<!-- svelte-ignore a11y_click_events_have_key_events -->
 	<div
 		class="nav-status"
 		{title}
-		on:click|preventDefault={handleClick}
-		on:mouseenter={handleMouseEnter}
-		on:mouseleave={handleMouseLeave}
+		onclick={handleClick}
+		onmouseenter={handleMouseEnter}
+		onmouseleave={handleMouseLeave}
 	>
 		{#if complete}
 			<img
@@ -108,9 +119,11 @@
 			{title}
 		/>
 	</div>
-	<slot name="flyout">
+	{#if flyout}
+		{@render flyout()}
+	{:else}
 		<OffloadStatusFlyout bind:expanded bind:hasFocus bind:buttonRef={flyoutButton}/>
-	</slot>
+	{/if}
 </div>
 
 <style>

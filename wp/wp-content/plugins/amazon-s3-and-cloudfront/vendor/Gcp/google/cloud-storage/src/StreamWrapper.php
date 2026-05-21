@@ -19,7 +19,6 @@ namespace DeliciousBrains\WP_Offload_Media\Gcp\Google\Cloud\Storage;
 
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Cloud\Core\Exception\NotFoundException;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Cloud\Core\Exception\ServiceException;
-use DeliciousBrains\WP_Offload_Media\Gcp\Google\Cloud\Storage\Bucket;
 use DeliciousBrains\WP_Offload_Media\Gcp\GuzzleHttp\Psr7\CachingStream;
 /**
  * A streamWrapper implementation for handling `gs://bucket/path/to/file.jpg`.
@@ -106,12 +105,38 @@ class StreamWrapper
         $this->stream_close();
     }
     /**
-     * Starting PHP 7.4, this is called when include/require is used on a stream.
-     * Absence of this method presents a warning.
-     * https://www.php.net/manual/en/migration74.incompatible.php
+     * This is called when include/require is used on a stream.
      */
     public function stream_set_option()
     {
+        return \false;
+    }
+    /**
+     * This is called when touch is used on a stream. See:
+     * https://www.php.net/manual/en/streamwrapper.stream-metadata.php
+     */
+    public function stream_metadata($path, $option, $value)
+    {
+        if ($option == \STREAM_META_TOUCH) {
+            $this->openPath($path);
+            return $this->touch();
+        }
+        return \false;
+    }
+    /**
+     * Creates an empty file if it does not exist.
+     * @return bool Returns true if file exists or has been created, false otherwise.
+     */
+    private function touch()
+    {
+        $object = $this->bucket->object($this->file);
+        try {
+            if (!$object->exists()) {
+                $this->bucket->upload('', ['name' => $this->file]);
+            }
+            return \true;
+        } catch (NotFoundException $e) {
+        }
         return \false;
     }
     /**
@@ -170,7 +195,7 @@ class StreamWrapper
      */
     public function stream_open($path, $mode, $flags, &$openedPath)
     {
-        $client = $this->openPath($path);
+        $this->openPath($path);
         // strip off 'b' or 't' from the mode
         $mode = \rtrim($mode, 'bt');
         $options = [];
@@ -365,7 +390,7 @@ class StreamWrapper
                     // since the service call returns nested results and we only
                     // want to yield results directly within the requested directory,
                     // check if we've already yielded this value.
-                    if ($parts[0] === "" || \in_array($parts[0], $yielded)) {
+                    if ($parts[0] === '' || \in_array($parts[0], $yielded)) {
                         continue;
                     }
                     $yielded[] = $parts[0];
@@ -598,7 +623,7 @@ class StreamWrapper
             return \false;
         }
         // equivalent to 100666 and 100444 in octal
-        $stats = array('mode' => $this->bucket->isWritable() ? self::FILE_WRITABLE_MODE : self::FILE_READABLE_MODE);
+        $stats = ['mode' => $this->bucket->isWritable() ? self::FILE_WRITABLE_MODE : self::FILE_READABLE_MODE];
         $this->statsFromFileInfo($info, $stats);
         return $this->makeStatArray($stats);
     }

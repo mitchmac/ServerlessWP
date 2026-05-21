@@ -33,7 +33,7 @@ trait ValidateTrait
      * @return void
      * @throws \InvalidArgumentException
      */
-    private function validateBatch(array $input, $type, callable $additionalCheck = null)
+    private function validateBatch(array $input, $type, ?callable $additionalCheck = null)
     {
         foreach ($input as $element) {
             if (!$element instanceof $type) {

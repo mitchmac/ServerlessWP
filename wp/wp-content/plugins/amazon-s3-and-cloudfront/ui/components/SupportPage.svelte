@@ -4,8 +4,25 @@
 	import Page from "./Page.svelte";
 	import Notifications from "./Notifications.svelte";
 
-	export let name = "support";
-	export let title = $strings.support_tab_title;
+	/**
+	 * @typedef {Object} Props
+	 * @property {string} [name]
+	 * @property {any} [title]
+	 * @property {import("svelte").Snippet} [header]
+	 * @property {import("svelte").Snippet} [content]
+	 * @property {import("svelte").Snippet} [footer]
+	 * @property {function} [onRouteEvent]
+	 */
+
+	/** @type {Props} */
+	let {
+		name = "support",
+		title = $strings.support_tab_title,
+		header,
+		content,
+		footer,
+		onRouteEvent
+	} = $props();
 
 	onMount( async () => {
 		const json = await api.get( "diagnostics", {} );
@@ -16,25 +33,27 @@
 	} );
 </script>
 
-<Page {name} on:routeEvent>
+<Page {name} {onRouteEvent}>
 	<Notifications tab={name}/>
 	{#if title}
 		<h2 class="page-title">{title}</h2>
 	{/if}
 	<div class="support-page wrapper">
 
-		<slot name="header"/>
+		{@render header?.()}
 
 		<div class="columns">
 			<div class="support-form">
-				<slot name="content">
+				{#if content}
+					{@render content()}
+				{:else}
 					<div class="lite-support">
 						<p>{@html $strings.no_support}</p>
 						<p>{@html $strings.community_support}</p>
 						<p>{@html $strings.upgrade_for_support}</p>
 						<p>{@html $strings.report_a_bug}</p>
 					</div>
-				</slot>
+				{/if}
 
 				<div class="diagnostic-info">
 					<hr>
@@ -44,7 +63,7 @@
 				</div>
 			</div>
 
-			<slot name="footer"/>
+			{@render footer?.()}
 		</div>
 	</div>
 </Page>

@@ -18,10 +18,10 @@
 namespace DeliciousBrains\WP_Offload_Media\Gcp\Google\Cloud\Core;
 
 use DeliciousBrains\WP_Offload_Media\Gcp\DrSlump\Protobuf;
-use DeliciousBrains\WP_Offload_Media\Gcp\google\protobuf\Value;
 use DeliciousBrains\WP_Offload_Media\Gcp\google\protobuf\ListValue;
 use DeliciousBrains\WP_Offload_Media\Gcp\google\protobuf\NullValue;
 use DeliciousBrains\WP_Offload_Media\Gcp\google\protobuf\Struct;
+use DeliciousBrains\WP_Offload_Media\Gcp\google\protobuf\Value;
 /**
  * Extend the Protobuf-PHP array codec to allow messages to match the format
  * used for REST.
@@ -71,7 +71,7 @@ class PhpArray extends Protobuf\Codec\PhpArray
             $v = $message->_get($tag);
             if ($field->isRepeated()) {
                 // Make sure the value is an array of values
-                $v = \is_array($v) ? $v : array($v);
+                $v = \is_array($v) ? $v : [$v];
                 $arr = [];
                 foreach ($v as $k => $vv) {
                     // Skip nullified repeated values
@@ -116,7 +116,7 @@ class PhpArray extends Protobuf\Codec\PhpArray
             }
             if ($field->isRepeated()) {
                 // Make sure the value is an array of values
-                $v = \is_array($v) && \is_int(\key($v)) ? $v : array($v);
+                $v = \is_array($v) && \is_int(\key($v)) ? $v : [$v];
                 foreach ($v as $k => $vv) {
                     $v[$k] = $this->filterValue($vv, $field);
                 }

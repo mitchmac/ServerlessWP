@@ -34,15 +34,11 @@ function sqlite_make_db_sqlite() {
 		wp_die( $message, 'Database Error!' );
 	}
 
-	if ( defined( 'WP_SQLITE_AST_DRIVER' ) && WP_SQLITE_AST_DRIVER ) {
-		$translator = new WP_SQLite_Driver(
-			new WP_SQLite_Connection( array( 'pdo' => $pdo ) ),
-			$wpdb->dbname
-		);
-	} else {
-		$translator = new WP_SQLite_Translator( $pdo );
-	}
-	$query = null;
+	$translator = new WP_SQLite_Driver(
+		new WP_SQLite_Connection( array( 'pdo' => $pdo ) ),
+		$wpdb->dbname
+	);
+	$query      = null;
 
 	try {
 		$translator->begin_transaction();
@@ -52,21 +48,16 @@ function sqlite_make_db_sqlite() {
 				continue;
 			}
 
-			$result = $translator->query( $query );
-			if ( false === $result ) {
-				throw new PDOException( $translator->get_error_message() );
-			}
+			$translator->query( $query );
 		}
 		$translator->commit();
 	} catch ( PDOException $err ) {
-		$err_data = $err->errorInfo; // phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase
-		$err_code = $err_data[1];
 		$translator->rollback();
 		$message  = sprintf(
 			'Error occurred while creating tables or indexes...<br />Query was: %s<br />',
 			var_export( $query, true )
 		);
-		$message .= sprintf( 'Error message is: %s', $err_data[2] );
+		$message .= sprintf( 'Error message is: %s', $err->getMessage() );
 		wp_die( $message, 'Database Error!' );
 	}
 

@@ -12,6 +12,7 @@ declare (strict_types=1);
 namespace DeliciousBrains\WP_Offload_Media\Gcp\Monolog\Formatter;
 
 use DateTimeInterface;
+use DeliciousBrains\WP_Offload_Media\Gcp\Monolog\LogRecord;
 /**
  * Format a log message into an Elasticsearch record
  *
@@ -22,11 +23,11 @@ class ElasticsearchFormatter extends NormalizerFormatter
     /**
      * @var string Elasticsearch index name
      */
-    protected $index;
+    protected string $index;
     /**
      * @var string Elasticsearch record type
      */
-    protected $type;
+    protected string $type;
     /**
      * @param string $index Elasticsearch index name
      * @param string $type  Elasticsearch record type
@@ -34,22 +35,20 @@ class ElasticsearchFormatter extends NormalizerFormatter
     public function __construct(string $index, string $type)
     {
         // Elasticsearch requires an ISO 8601 format date with optional millisecond precision.
-        parent::__construct(DateTimeInterface::ISO8601);
+        parent::__construct(DateTimeInterface::ATOM);
         $this->index = $index;
         $this->type = $type;
     }
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
-    public function format(array $record)
+    public function format(LogRecord $record)
     {
         $record = parent::format($record);
         return $this->getDocument($record);
     }
     /**
      * Getter index
-     *
-     * @return string
      */
     public function getIndex() : string
     {
@@ -57,8 +56,6 @@ class ElasticsearchFormatter extends NormalizerFormatter
     }
     /**
      * Getter type
-     *
-     * @return string
      */
     public function getType() : string
     {

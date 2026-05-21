@@ -803,7 +803,7 @@ function wp_replace_in_html_tags( $haystack, $replace_pairs ) {
  * @access private
  *
  * @param array $matches preg_replace_callback matches array
- * @return string
+ * @return string Text with newlines replaced with placeholders.
  */
 function _autop_newline_preservation_helper( $matches ) {
 	return str_replace( "\n", '<WPPreserveNewline />', $matches[0] );
@@ -1566,6 +1566,7 @@ function utf8_uri_encode( $utf8_string, $length = 0, $encode_ascii_characters = 
  * | U+00F6   | ö     | oe          | Latin small letter o with diaeresis     |
  * | U+00DC   | Ü     | Ue          | Latin capital letter U with diaeresis   |
  * | U+00FC   | ü     | ue          | Latin small letter u with diaeresis     |
+ * | U+1E9E   | ẞ     | SS          | Latin capital letter sharp s            |
  * | U+00DF   | ß     | ss          | Latin small letter sharp s              |
  *
  * Danish (`da_DK`) locale:
@@ -1599,6 +1600,7 @@ function utf8_uri_encode( $utf8_string, $length = 0, $encode_ascii_characters = 
  * @since 5.7.0 Added locale support for `de_AT`.
  * @since 6.0.0 Added the `$locale` parameter.
  * @since 6.1.0 Added Unicode NFC encoding normalization support.
+ * @since 7.0.0 Added capital Eszett (U+1E9E) support for German locales.
  *
  * @param string $text   Text that might have accent characters.
  * @param string $locale Optional. The locale to use for accent removal. Some character
@@ -1972,6 +1974,7 @@ function remove_accents( $text, $locale = '' ) {
 			$chars['ö'] = 'oe';
 			$chars['Ü'] = 'Ue';
 			$chars['ü'] = 'ue';
+			$chars['ẞ'] = 'SS';
 			$chars['ß'] = 'ss';
 		} elseif ( 'da_DK' === $locale ) {
 			$chars['Æ'] = 'Ae';
@@ -2642,8 +2645,8 @@ function force_balance_tags( $text ) {
 		$tag_name          = $regex[2];
 		$tag               = strtolower( $tag_name );
 		$is_single_tag     = in_array( $tag, $single_tags, true );
-		$pre_attribute_ws  = isset( $regex[4] ) ? $regex[4] : '';
-		$attributes        = trim( isset( $regex[5] ) ? $regex[5] : $regex[3] );
+		$pre_attribute_ws  = $regex[4] ?? '';
+		$attributes        = trim( $regex[5] ?? $regex[3] );
 		$has_self_closer   = str_ends_with( $attributes, '/' );
 
 		$newtext .= $tagqueue;
@@ -2835,18 +2838,6 @@ function trailingslashit( $value ) {
  */
 function untrailingslashit( $value ) {
 	return rtrim( $value, '/\\' );
-}
-
-/**
- * Adds slashes to a string or recursively adds slashes to strings within an array.
- *
- * @since 0.71
- *
- * @param string|array $gpc String or array of data to slash.
- * @return string|array Slashed `$gpc`.
- */
-function addslashes_gpc( $gpc ) {
-	return wp_slash( $gpc );
 }
 
 /**
@@ -4684,7 +4675,7 @@ function esc_js( $text ) {
  * @since 2.8.0
  *
  * @param string $text
- * @return string
+ * @return string Escaped text.
  */
 function esc_html( $text ) {
 	$safe_text = wp_check_invalid_utf8( $text );
@@ -4709,7 +4700,7 @@ function esc_html( $text ) {
  * @since 2.8.0
  *
  * @param string $text
- * @return string
+ * @return string Escaped text.
  */
 function esc_attr( $text ) {
 	$safe_text = wp_check_invalid_utf8( $text );
@@ -4734,7 +4725,7 @@ function esc_attr( $text ) {
  * @since 3.1.0
  *
  * @param string $text
- * @return string
+ * @return string Escaped text.
  */
 function esc_textarea( $text ) {
 	$safe_text = htmlspecialchars( $text, ENT_QUOTES, get_option( 'blog_charset' ) );
@@ -4813,7 +4804,7 @@ EOF;
  * @since 6.5.5 Allow hyphens in tag names (i.e. custom elements).
  *
  * @param string $tag_name
- * @return string
+ * @return string Sanitized tag name.
  */
 function tag_escape( $tag_name ) {
 	$safe_tag = strtolower( preg_replace( '/[^a-zA-Z0-9-_:]/', '', $tag_name ) );
@@ -5283,10 +5274,10 @@ function wp_sprintf( $pattern, ...$args ) {
 			// Find numbered arguments or take the next one in order.
 			if ( preg_match( '/^%(\d+)\$/', $fragment, $matches ) ) {
 				$index    = $matches[1] - 1; // 0-based array vs 1-based sprintf() arguments.
-				$arg      = isset( $args[ $index ] ) ? $args[ $index ] : '';
+				$arg      = $args[ $index ] ?? '';
 				$fragment = str_replace( "%{$matches[1]}$", '%', $fragment );
 			} else {
-				$arg = isset( $args[ $arg_index ] ) ? $args[ $arg_index ] : '';
+				$arg = $args[ $arg_index ] ?? '';
 				++$arg_index;
 			}
 
@@ -5687,7 +5678,7 @@ function _sanitize_text_fields( $str, $keep_newlines = false ) {
  *
  * @param string $path   A path.
  * @param string $suffix If the filename ends in suffix this will also be cut off.
- * @return string
+ * @return string The base name of the given path.
  */
 function wp_basename( $path, $suffix = '' ) {
 	return urldecode( basename( str_replace( array( '%2F', '%5C' ), '/', urlencode( $path ) ), $suffix ) );
