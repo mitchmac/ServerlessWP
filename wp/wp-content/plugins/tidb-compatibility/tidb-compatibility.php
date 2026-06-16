@@ -31,9 +31,18 @@ class WTC_FIX_WP_SLOW_QUERY {
                         $wp_query->fw_clauses = $clauses;
                         return $clauses;
                 }, 999, 2 );
+
+                /**
+                 * WP_User_Query (admin users list, etc.)
+                 */
+                add_filter( 'found_users_query', [ __CLASS__, 'wtc_add_found_users_query' ], 999, 2 );
+                add_filter( 'users_pre_query', function ( $results, \WP_User_Query $query ) {
+                        $query->query_fields = self::wtc_remove_found_rows_query( $query->query_fields );
+                        return $results;
+                }, 999, 2 );
         }
         public static function wtc_remove_found_rows_query( $sql ) {
-                return str_replace( ' SQL_CALC_FOUND_ROWS ', '', $sql );
+                return preg_replace( '/\bSQL_CALC_FOUND_ROWS\s+/i', '', $sql );
         }
         public static function wtc_add_found_rows_query( $sql, WP_Query $query ) {
                 global $wpdb;
@@ -49,6 +58,16 @@ class WTC_FIX_WP_SLOW_QUERY {
                         SELECT $distinct $count
                         FROM {$wpdb->posts} $join
                         WHERE 1=1 $where
+                ";
+        }
+        public static function wtc_add_found_users_query( $sql, WP_User_Query $query ) {
+                global $wpdb;
+                $has_distinct = stripos( $query->query_fields, 'DISTINCT' ) !== false;
+                $count        = $has_distinct ? "COUNT( DISTINCT {$wpdb->users}.ID )" : 'COUNT(*)';
+                return "
+                        SELECT $count
+                        {$query->query_from}
+                        {$query->query_where}
                 ";
         }
 }
