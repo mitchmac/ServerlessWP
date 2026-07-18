@@ -5,8 +5,8 @@
 namespace DeliciousBrains\WP_Offload_Media\Gcp\Google\Api;
 
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Internal\GPBType;
-use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Internal\RepeatedField;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Internal\GPBUtil;
+use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\RepeatedField;
 /**
  * `QuotaLimit` defines a specific limit that applies over a specified duration
  * for a limit type. There can be at most one limit for a duration and limit
@@ -87,8 +87,8 @@ class QuotaLimit extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\I
     protected $metric = '';
     /**
      * Specify the unit of the quota limit. It uses the same syntax as
-     * [Metric.unit][]. The supported unit kinds are determined by the quota
-     * backend system.
+     * [MetricDescriptor.unit][google.api.MetricDescriptor.unit]. The supported
+     * unit kinds are determined by the quota backend system.
      * Here are some examples:
      * * "1/min/{project}" for quota per minute per project.
      * Note: the order of unit components is insignificant.
@@ -163,8 +163,8 @@ class QuotaLimit extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\I
      *           defined within the service config.
      *     @type string $unit
      *           Specify the unit of the quota limit. It uses the same syntax as
-     *           [Metric.unit][]. The supported unit kinds are determined by the quota
-     *           backend system.
+     *           [MetricDescriptor.unit][google.api.MetricDescriptor.unit]. The supported
+     *           unit kinds are determined by the quota backend system.
      *           Here are some examples:
      *           * "1/min/{project}" for quota per minute per project.
      *           Note: the order of unit components is insignificant.
@@ -402,8 +402,8 @@ class QuotaLimit extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\I
     }
     /**
      * Specify the unit of the quota limit. It uses the same syntax as
-     * [Metric.unit][]. The supported unit kinds are determined by the quota
-     * backend system.
+     * [MetricDescriptor.unit][google.api.MetricDescriptor.unit]. The supported
+     * unit kinds are determined by the quota backend system.
      * Here are some examples:
      * * "1/min/{project}" for quota per minute per project.
      * Note: the order of unit components is insignificant.
@@ -418,8 +418,8 @@ class QuotaLimit extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\I
     }
     /**
      * Specify the unit of the quota limit. It uses the same syntax as
-     * [Metric.unit][]. The supported unit kinds are determined by the quota
-     * backend system.
+     * [MetricDescriptor.unit][google.api.MetricDescriptor.unit]. The supported
+     * unit kinds are determined by the quota backend system.
      * Here are some examples:
      * * "1/min/{project}" for quota per minute per project.
      * Note: the order of unit components is insignificant.

@@ -5,8 +5,8 @@
 namespace DeliciousBrains\WP_Offload_Media\Gcp\Google\Cloud\Iam\V1;
 
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Internal\GPBType;
-use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Internal\RepeatedField;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Internal\GPBUtil;
+use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\RepeatedField;
 /**
  * Request message for `TestIamPermissions` method.
  *
@@ -39,7 +39,7 @@ class TestIamPermissionsRequest extends \DeliciousBrains\WP_Offload_Media\Gcp\Go
      *     @type string $resource
      *           REQUIRED: The resource for which the policy detail is being requested.
      *           See the operation documentation for the appropriate value for this field.
-     *     @type array<string>|\Google\Protobuf\Internal\RepeatedField $permissions
+     *     @type string[] $permissions
      *           The set of permissions to check for the `resource`. Permissions with
      *           wildcards (such as '*' or 'storage.*') are not allowed. For more
      *           information see
@@ -83,7 +83,7 @@ class TestIamPermissionsRequest extends \DeliciousBrains\WP_Offload_Media\Gcp\Go
      * [IAM Overview](https://cloud.google.com/iam/docs/overview#permissions).
      *
      * Generated from protobuf field <code>repeated string permissions = 2 [(.google.api.field_behavior) = REQUIRED];</code>
-     * @return \Google\Protobuf\Internal\RepeatedField
+     * @return RepeatedField<string>
      */
     public function getPermissions()
     {
@@ -96,7 +96,7 @@ class TestIamPermissionsRequest extends \DeliciousBrains\WP_Offload_Media\Gcp\Go
      * [IAM Overview](https://cloud.google.com/iam/docs/overview#permissions).
      *
      * Generated from protobuf field <code>repeated string permissions = 2 [(.google.api.field_behavior) = REQUIRED];</code>
-     * @param array<string>|\Google\Protobuf\Internal\RepeatedField $var
+     * @param string[] $var
      * @return $this
      */
     public function setPermissions($var)

@@ -8,13 +8,12 @@ use DeliciousBrains\WP_Offload_Media\Gcp\Rize\UriTemplate\Parser;
  * | 1   |    {/list}    /red,green,blue                  | {$value}*(?:,{$value}+)*
  * | 2   |    {/list*}   /red/green/blue                  | {$value}+(?:{$sep}{$value}+)*
  * | 3   |    {/keys}    /semi,%3B,dot,.,comma,%2C        | /(\w+,?)+
- * | 4   |    {/keys*}   /semi=%3B/dot=./comma=%2C        | /(?:\w+=\w+/?)*
+ * | 4   |    {/keys*}   /semi=%3B/dot=./comma=%2C        | /(?:\w+=\w+/?)*.
  */
 class UnNamed extends Abstraction
 {
-    public function toRegex(Parser $parser, Node\Variable $var)
+    public function toRegex(Parser $parser, Node\Variable $var) : string
     {
-        $regex = null;
         $value = $this->getRegex();
         $options = $var->options;
         if ($options['modifier']) {
@@ -27,9 +26,9 @@ class UnNamed extends Abstraction
                     $regex = $value . '{0,' . $options['value'] . '}';
                     break;
                 case '%':
-                    throw new \Exception("% (array) modifier only works with Named type operators e.g. ;,?,&");
+                    throw new \InvalidArgumentException('% (array) modifier only works with Named type operators e.g. ;,?,&');
                 default:
-                    throw new \Exception("Unknown modifier `{$options['modifier']}`");
+                    throw new \InvalidArgumentException("Unknown modifier `{$options['modifier']}`");
             }
         } else {
             // 1, 3

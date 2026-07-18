@@ -424,6 +424,10 @@ function create_initial_rest_routes() {
 	$abilities_run_controller->register_routes();
 	$abilities_list_controller = new WP_REST_Abilities_V1_List_Controller();
 	$abilities_list_controller->register_routes();
+
+	// Icons.
+	$icons_controller = new WP_REST_Icons_Controller();
+	$icons_controller->register_routes();
 }
 
 /**
@@ -435,6 +439,15 @@ function create_initial_rest_routes() {
  */
 function rest_api_loaded() {
 	if ( empty( $GLOBALS['wp']->query_vars['rest_route'] ) ) {
+		return;
+	}
+
+	// Short-circuit before define()/die() if a REST dispatch is already in flight.
+	// serve_request() enforces this too; guarding here avoids the trailing die().
+	if ( isset( $GLOBALS['wp_rest_server'] )
+		&& $GLOBALS['wp_rest_server'] instanceof WP_REST_Server
+		&& $GLOBALS['wp_rest_server']->is_dispatching()
+	) {
 		return;
 	}
 
@@ -952,7 +965,7 @@ function rest_filter_response_fields( $response, $server, $request ) {
 				// Skip any sub-properties if their parent prop is already marked for inclusion.
 				break 2;
 			}
-			$ref[ $next ] = isset( $ref[ $next ] ) ? $ref[ $next ] : array();
+			$ref[ $next ] = $ref[ $next ] ?? array();
 			$ref          = &$ref[ $next ];
 		}
 		$last         = array_shift( $parts );
@@ -3088,7 +3101,7 @@ function rest_filter_response_by_context( $response_data, $schema, $context ) {
 		$check = array();
 
 		if ( $is_array_type ) {
-			$check = isset( $schema['items'] ) ? $schema['items'] : array();
+			$check = $schema['items'] ?? array();
 		} elseif ( $is_object_type ) {
 			if ( isset( $schema['properties'][ $key ] ) ) {
 				$check = $schema['properties'][ $key ];
@@ -3416,8 +3429,15 @@ function rest_get_endpoint_args_for_schema( $schema, $method = WP_REST_Server::C
 function rest_convert_error_to_response( $error ) {
 	$status = array_reduce(
 		$error->get_all_error_data(),
-		static function ( $status, $error_data ) {
-			return is_array( $error_data ) && isset( $error_data['status'] ) ? $error_data['status'] : $status;
+		/**
+		 * @param int   $status     Status.
+		 * @param mixed $error_data Error data.
+		 */
+		static function ( int $status, $error_data ): int {
+			if ( is_array( $error_data ) && isset( $error_data['status'] ) && is_numeric( $error_data['status'] ) ) {
+				$status = (int) $error_data['status'];
+			}
+			return $status;
 		},
 		500
 	);

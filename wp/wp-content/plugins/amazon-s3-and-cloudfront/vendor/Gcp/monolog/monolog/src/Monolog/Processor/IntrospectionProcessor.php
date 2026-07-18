@@ -11,8 +11,10 @@ declare (strict_types=1);
  */
 namespace DeliciousBrains\WP_Offload_Media\Gcp\Monolog\Processor;
 
+use DeliciousBrains\WP_Offload_Media\Gcp\Monolog\Level;
 use DeliciousBrains\WP_Offload_Media\Gcp\Monolog\Logger;
 use DeliciousBrains\WP_Offload_Media\Gcp\Psr\Log\LogLevel;
+use DeliciousBrains\WP_Offload_Media\Gcp\Monolog\LogRecord;
 /**
  * Injects line/file:class/function where the log message came from
  *
@@ -23,39 +25,34 @@ use DeliciousBrains\WP_Offload_Media\Gcp\Psr\Log\LogLevel;
  * triggered the FingersCrossedHandler.
  *
  * @author Jordi Boggiano <j.boggiano@seld.be>
- *
- * @phpstan-import-type Level from \Monolog\Logger
- * @phpstan-import-type LevelName from \Monolog\Logger
  */
 class IntrospectionProcessor implements ProcessorInterface
 {
-    /** @var int */
-    private $level;
+    protected Level $level;
     /** @var string[] */
-    private $skipClassesPartials;
-    /** @var int */
-    private $skipStackFramesCount;
-    /** @var string[] */
-    private $skipFunctions = ['call_user_func', 'call_user_func_array'];
+    protected array $skipClassesPartials;
+    protected int $skipStackFramesCount;
+    protected const SKIP_FUNCTIONS = ['call_user_func', 'call_user_func_array'];
+    protected const SKIP_CLASSES = ['DeliciousBrains\\WP_Offload_Media\\Gcp\\Monolog\\'];
     /**
-     * @param string|int $level               The minimum logging level at which this Processor will be triggered
-     * @param string[]   $skipClassesPartials
+     * @param string|int|Level $level               The minimum logging level at which this Processor will be triggered
+     * @param string[]         $skipClassesPartials
      *
-     * @phpstan-param Level|LevelName|LogLevel::* $level
+     * @phpstan-param value-of<Level::VALUES>|value-of<Level::NAMES>|Level|LogLevel::* $level
      */
-    public function __construct($level = Logger::DEBUG, array $skipClassesPartials = [], int $skipStackFramesCount = 0)
+    public function __construct(int|string|Level $level = Level::Debug, array $skipClassesPartials = [], int $skipStackFramesCount = 0)
     {
         $this->level = Logger::toMonologLevel($level);
-        $this->skipClassesPartials = \array_merge(['DeliciousBrains\\WP_Offload_Media\\Gcp\\Monolog\\'], $skipClassesPartials);
+        $this->skipClassesPartials = \array_merge(static::SKIP_CLASSES, $skipClassesPartials);
         $this->skipStackFramesCount = $skipStackFramesCount;
     }
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
-    public function __invoke(array $record) : array
+    public function __invoke(LogRecord $record) : LogRecord
     {
         // return if the level is not high enough
-        if ($record['level'] < $this->level) {
+        if ($record->level->isLowerThan($this->level)) {
             return $record;
         }
         $trace = \debug_backtrace(\DEBUG_BACKTRACE_IGNORE_ARGS);
@@ -72,7 +69,7 @@ class IntrospectionProcessor implements ProcessorInterface
                         continue 2;
                     }
                 }
-            } elseif (\in_array($trace[$i]['function'], $this->skipFunctions)) {
+            } elseif (\in_array($trace[$i]['function'], self::SKIP_FUNCTIONS, \true)) {
                 $i++;
                 continue;
             }
@@ -80,17 +77,17 @@ class IntrospectionProcessor implements ProcessorInterface
         }
         $i += $this->skipStackFramesCount;
         // we should have the call source now
-        $record['extra'] = \array_merge($record['extra'], ['file' => isset($trace[$i - 1]['file']) ? $trace[$i - 1]['file'] : null, 'line' => isset($trace[$i - 1]['line']) ? $trace[$i - 1]['line'] : null, 'class' => isset($trace[$i]['class']) ? $trace[$i]['class'] : null, 'callType' => isset($trace[$i]['type']) ? $trace[$i]['type'] : null, 'function' => isset($trace[$i]['function']) ? $trace[$i]['function'] : null]);
+        $record->extra = \array_merge($record->extra, ['file' => $trace[$i - 1]['file'] ?? null, 'line' => $trace[$i - 1]['line'] ?? null, 'class' => $trace[$i]['class'] ?? null, 'callType' => $trace[$i]['type'] ?? null, 'function' => $trace[$i]['function'] ?? null]);
         return $record;
     }
     /**
-     * @param array[] $trace
+     * @param array<mixed> $trace
      */
     private function isTraceClassOrSkippedFunction(array $trace, int $index) : bool
     {
         if (!isset($trace[$index])) {
             return \false;
         }
-        return isset($trace[$index]['class']) || \in_array($trace[$index]['function'], $this->skipFunctions);
+        return isset($trace[$index]['class']) || \in_array($trace[$index]['function'], self::SKIP_FUNCTIONS, \true);
     }
 }

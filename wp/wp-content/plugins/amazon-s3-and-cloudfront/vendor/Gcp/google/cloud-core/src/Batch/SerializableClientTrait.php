@@ -83,6 +83,9 @@ trait SerializableClientTrait
      */
     private function getDefaultClosureSerializer()
     {
+        if (\function_exists('DeliciousBrains\\WP_Offload_Media\\Gcp\\Opis\\Closure\\serialize')) {
+            return new OpisClosureSerializerV4();
+        }
         if (\class_exists(SerializableClosure::class)) {
             return new OpisClosureSerializer();
         }

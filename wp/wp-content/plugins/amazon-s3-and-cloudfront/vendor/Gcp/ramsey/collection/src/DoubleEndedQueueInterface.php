@@ -178,8 +178,7 @@ interface DoubleEndedQueueInterface extends QueueInterface
      *     Implementations should use a more-specific exception that extends
      *     `\RuntimeException`.
      */
-    // phpcs:ignore SlevomatCodingStandard.TypeHints.ParameterTypeHint.MissingNativeTypeHint
-    public function addFirst($element) : bool;
+    public function addFirst(mixed $element) : bool;
     /**
      * Inserts the specified element at the end of this queue if it is possible
      * to do so immediately without violating capacity restrictions.
@@ -198,8 +197,7 @@ interface DoubleEndedQueueInterface extends QueueInterface
      *     Implementations should use a more-specific exception that extends
      *     `\RuntimeException`.
      */
-    // phpcs:ignore SlevomatCodingStandard.TypeHints.ParameterTypeHint.MissingNativeTypeHint
-    public function addLast($element) : bool;
+    public function addLast(mixed $element) : bool;
     /**
      * Inserts the specified element at the front of this queue if it is
      * possible to do so immediately without violating capacity restrictions.
@@ -212,8 +210,7 @@ interface DoubleEndedQueueInterface extends QueueInterface
      *
      * @return bool `true` if the element was added to this queue, else `false`.
      */
-    // phpcs:ignore SlevomatCodingStandard.TypeHints.ParameterTypeHint.MissingNativeTypeHint
-    public function offerFirst($element) : bool;
+    public function offerFirst(mixed $element) : bool;
     /**
      * Inserts the specified element at the end of this queue if it is possible
      * to do so immediately without violating capacity restrictions.
@@ -226,8 +223,7 @@ interface DoubleEndedQueueInterface extends QueueInterface
      *
      * @return bool `true` if the element was added to this queue, else `false`.
      */
-    // phpcs:ignore SlevomatCodingStandard.TypeHints.ParameterTypeHint.MissingNativeTypeHint
-    public function offerLast($element) : bool;
+    public function offerLast(mixed $element) : bool;
     /**
      * Retrieves and removes the head of this queue.
      *
@@ -238,7 +234,7 @@ interface DoubleEndedQueueInterface extends QueueInterface
      *
      * @throws NoSuchElementException if this queue is empty.
      */
-    public function removeFirst();
+    public function removeFirst() : mixed;
     /**
      * Retrieves and removes the tail of this queue.
      *
@@ -249,21 +245,21 @@ interface DoubleEndedQueueInterface extends QueueInterface
      *
      * @throws NoSuchElementException if this queue is empty.
      */
-    public function removeLast();
+    public function removeLast() : mixed;
     /**
      * Retrieves and removes the head of this queue, or returns `null` if this
      * queue is empty.
      *
-     * @return T|null the head of this queue, or `null` if this queue is empty.
+     * @return T | null the head of this queue, or `null` if this queue is empty.
      */
-    public function pollFirst();
+    public function pollFirst() : mixed;
     /**
      * Retrieves and removes the tail of this queue, or returns `null` if this
      * queue is empty.
      *
-     * @return T|null the tail of this queue, or `null` if this queue is empty.
+     * @return T | null the tail of this queue, or `null` if this queue is empty.
      */
-    public function pollLast();
+    public function pollLast() : mixed;
     /**
      * Retrieves, but does not remove, the head of this queue.
      *
@@ -274,7 +270,7 @@ interface DoubleEndedQueueInterface extends QueueInterface
      *
      * @throws NoSuchElementException if this queue is empty.
      */
-    public function firstElement();
+    public function firstElement() : mixed;
     /**
      * Retrieves, but does not remove, the tail of this queue.
      *
@@ -285,19 +281,19 @@ interface DoubleEndedQueueInterface extends QueueInterface
      *
      * @throws NoSuchElementException if this queue is empty.
      */
-    public function lastElement();
+    public function lastElement() : mixed;
     /**
      * Retrieves, but does not remove, the head of this queue, or returns `null`
      * if this queue is empty.
      *
-     * @return T|null the head of this queue, or `null` if this queue is empty.
+     * @return T | null the head of this queue, or `null` if this queue is empty.
      */
-    public function peekFirst();
+    public function peekFirst() : mixed;
     /**
      * Retrieves, but does not remove, the tail of this queue, or returns `null`
      * if this queue is empty.
      *
-     * @return T|null the tail of this queue, or `null` if this queue is empty.
+     * @return T | null the tail of this queue, or `null` if this queue is empty.
      */
-    public function peekLast();
+    public function peekLast() : mixed;
 }

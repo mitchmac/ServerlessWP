@@ -17,68 +17,9 @@
  */
 namespace DeliciousBrains\WP_Offload_Media\Gcp\Google\Cloud\Core\Report;
 
-use DeliciousBrains\WP_Offload_Media\Gcp\Google\Cloud\Core\Compute\Metadata;
 /**
- * A MetadataProvider for Cloud Run.
+ * @deprecated Use \Google\Cloud\Core\Report\CloudRunServiceMetadataProvider instead
  */
-class CloudRunMetadataProvider implements MetadataProviderInterface
+class CloudRunMetadataProvider extends CloudRunServiceMetadataProvider
 {
-    /**
-     * @var Metadata
-     */
-    private $metadata;
-    /**
-     * @var string
-     */
-    private $serviceId;
-    /**
-     * @var string
-     */
-    private $revisionId;
-    public function __construct(array $env)
-    {
-        $this->serviceId = isset($env['K_SERVICE']) ? $env['K_SERVICE'] : 'unknown-service';
-        $this->revisionId = isset($env['K_REVISION']) ? $env['K_REVISION'] : 'unknown-revision';
-        $this->metadata = new Metadata();
-    }
-    /**
-     * not implemented
-     * @TODO
-     */
-    public function monitoredResource()
-    {
-        return [];
-    }
-    /**
-     * not implemented
-     * @TODO
-     */
-    public function projectId()
-    {
-        return $this->metadata->getProjectId();
-    }
-    /**
-     * Return the service id.
-     * @return string
-     */
-    public function serviceId()
-    {
-        return $this->serviceId;
-    }
-    /**
-     * Return the version id.
-     * @return string
-     */
-    public function versionId()
-    {
-        return $this->revisionId;
-    }
-    /**
-     * not implemented
-     * @TODO
-     */
-    public function labels()
-    {
-        return [];
-    }
 }

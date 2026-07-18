@@ -1,18 +1,24 @@
 <script>
 	import Panel from "../components/Panel.svelte";
 
-	export let benefits;
+	let {
+		benefits,
+		heading,
+		description,
+		call_to_action,
+		call_to_action_note
+	} = $props();
 </script>
 
 <Panel name="upsell" class="upsell-panel">
 	<div class="branding"></div>
 	<div class="content">
 		<div class="heading">
-			<slot name="heading"></slot>
+			{@render heading?.()}
 		</div>
 
 		<div class="description">
-			<slot name="description"></slot>
+			{@render description?.()}
 		</div>
 
 		<div class="benefits">
@@ -25,9 +31,9 @@
 		</div>
 
 		<div class="call-to-action">
-			<slot name="call-to-action"></slot>
+			{@render call_to_action?.()}
 			<div class="note">
-				<slot name="call-to-action-note"></slot>
+				{@render call_to_action_note?.()}
 			</div>
 		</div>
 	</div>

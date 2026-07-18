@@ -17,8 +17,10 @@
  */
 namespace DeliciousBrains\WP_Offload_Media\Gcp\Google\Auth\Credentials;
 
+use DeliciousBrains\WP_Offload_Media\Gcp\Firebase\JWT\JWT;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Auth\CredentialsLoader;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Auth\GetQuotaProjectInterface;
+use DeliciousBrains\WP_Offload_Media\Gcp\Google\Auth\Iam;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Auth\OAuth2;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Auth\ProjectIdProviderInterface;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Auth\ServiceAccountSignerTrait;
@@ -61,6 +63,13 @@ class ServiceAccountCredentials extends CredentialsLoader implements GetQuotaPro
 {
     use ServiceAccountSignerTrait;
     /**
+     * Used in observability metric headers
+     *
+     * @var string
+     */
+    private const CRED_TYPE = 'sa';
+    private const IAM_SCOPE = 'https://www.googleapis.com/auth/iam';
+    /**
      * The OAuth2 instance used to conduct authorization.
      *
      * @var OAuth2
@@ -92,6 +101,11 @@ class ServiceAccountCredentials extends CredentialsLoader implements GetQuotaPro
      * @var string
      */
     private string $universeDomain;
+    /**
+     * Whether this is an ID token request or an access token request. Used when
+     * building the metric header.
+     */
+    private bool $isIdTokenRequest = \false;
     /**
      * Create a new ServiceAccountCredentials.
      *
@@ -129,8 +143,9 @@ class ServiceAccountCredentials extends CredentialsLoader implements GetQuotaPro
         $additionalClaims = [];
         if ($targetAudience) {
             $additionalClaims = ['target_audience' => $targetAudience];
+            $this->isIdTokenRequest = \true;
         }
-        $this->auth = new OAuth2(['audience' => self::TOKEN_CREDENTIAL_URI, 'issuer' => $jsonKey['client_email'], 'scope' => $scope, 'signingAlgorithm' => 'RS256', 'signingKey' => $jsonKey['private_key'], 'sub' => $sub, 'tokenCredentialUri' => self::TOKEN_CREDENTIAL_URI, 'additionalClaims' => $additionalClaims]);
+        $this->auth = new OAuth2(['audience' => self::TOKEN_CREDENTIAL_URI, 'issuer' => $jsonKey['client_email'], 'scope' => $scope, 'signingAlgorithm' => 'RS256', 'signingKey' => $jsonKey['private_key'], 'signingKeyId' => $jsonKey['private_key_id'] ?? null, 'sub' => $sub, 'tokenCredentialUri' => self::TOKEN_CREDENTIAL_URI, 'additionalClaims' => $additionalClaims]);
         $this->projectId = $jsonKey['project_id'] ?? null;
         $this->universeDomain = $jsonKey['universe_domain'] ?? self::DEFAULT_UNIVERSE_DOMAIN;
     }
@@ -148,7 +163,9 @@ class ServiceAccountCredentials extends CredentialsLoader implements GetQuotaPro
         $this->useJwtAccessWithScope = \true;
     }
     /**
-     * @param callable $httpHandler
+     * @param callable|null $httpHandler
+     * @param array<mixed> $headers [optional] Headers to be inserted
+     *     into the token endpoint request present.
      *
      * @return array<mixed> {
      *     A set of auth related metadata, containing the following
@@ -158,7 +175,7 @@ class ServiceAccountCredentials extends CredentialsLoader implements GetQuotaPro
      *     @type string $token_type
      * }
      */
-    public function fetchAuthToken(callable $httpHandler = null)
+    public function fetchAuthToken(?callable $httpHandler = null, array $headers = [])
     {
         if ($this->useSelfSignedJwt()) {
             $jwtCreds = $this->createJwtAccessCredentials();
@@ -169,16 +186,32 @@ class ServiceAccountCredentials extends CredentialsLoader implements GetQuotaPro
             }
             return $accessToken;
         }
-        return $this->auth->fetchAuthToken($httpHandler);
+        if ($this->isIdTokenRequest && $this->getUniverseDomain() !== self::DEFAULT_UNIVERSE_DOMAIN) {
+            $now = \time();
+            $jwt = Jwt::encode(['iss' => $this->auth->getIssuer(), 'sub' => $this->auth->getIssuer(), 'scope' => self::IAM_SCOPE, 'exp' => $now + $this->auth->getExpiry(), 'iat' => $now - OAuth2::DEFAULT_SKEW_SECONDS], $this->auth->getSigningKey(), $this->auth->getSigningAlgorithm(), $this->auth->getSigningKeyId());
+            // We create a new instance of Iam each time because the `$httpHandler` might change.
+            $idToken = (new Iam($httpHandler, $this->getUniverseDomain()))->generateIdToken($this->auth->getIssuer(), $this->auth->getAdditionalClaims()['target_audience'], $jwt, $this->applyTokenEndpointMetrics($headers, 'it'));
+            return ['id_token' => $idToken];
+        }
+        return $this->auth->fetchAuthToken($httpHandler, $this->applyTokenEndpointMetrics($headers, $this->isIdTokenRequest ? 'it' : 'at'));
     }
     /**
+     * Return the Cache Key for the credentials.
+     * For the cache key format is one of the following:
+     * ClientEmail.Scope[.Sub]
+     * ClientEmail.Audience[.Sub]
+     *
      * @return string
      */
     public function getCacheKey()
     {
-        $key = $this->auth->getIssuer() . ':' . $this->auth->getCacheKey();
+        $scopeOrAudience = $this->auth->getScope();
+        if (!$scopeOrAudience) {
+            $scopeOrAudience = $this->auth->getAudience();
+        }
+        $key = $this->auth->getIssuer() . '.' . $scopeOrAudience;
         if ($sub = $this->auth->getSub()) {
-            $key .= ':' . $sub;
+            $key .= '.' . $sub;
         }
         return $key;
     }
@@ -196,10 +229,10 @@ class ServiceAccountCredentials extends CredentialsLoader implements GetQuotaPro
      *
      * Returns null if the project ID does not exist in the keyfile.
      *
-     * @param callable $httpHandler Not used by this credentials type.
+     * @param callable|null $httpHandler Not used by this credentials type.
      * @return string|null
      */
-    public function getProjectId(callable $httpHandler = null)
+    public function getProjectId(?callable $httpHandler = null)
     {
         return $this->projectId;
     }
@@ -208,10 +241,10 @@ class ServiceAccountCredentials extends CredentialsLoader implements GetQuotaPro
      *
      * @param array<mixed> $metadata metadata hashmap
      * @param string $authUri optional auth uri
-     * @param callable $httpHandler callback which delivers psr7 request
+     * @param callable|null $httpHandler callback which delivers psr7 request
      * @return array<mixed> updated metadata hashmap
      */
-    public function updateMetadata($metadata, $authUri = null, callable $httpHandler = null)
+    public function updateMetadata($metadata, $authUri = null, ?callable $httpHandler = null)
     {
         // scope exists. use oauth implementation
         if (!$this->useSelfSignedJwt()) {
@@ -256,12 +289,23 @@ class ServiceAccountCredentials extends CredentialsLoader implements GetQuotaPro
      *
      * In this case, it returns the keyfile's client_email key.
      *
-     * @param callable $httpHandler Not used by this credentials type.
+     * @param callable|null $httpHandler Not used by this credentials type.
      * @return string
      */
-    public function getClientName(callable $httpHandler = null)
+    public function getClientName(?callable $httpHandler = null)
     {
         return $this->auth->getIssuer();
+    }
+    /**
+     * Get the private key from the keyfile.
+     *
+     * In this case, it returns the keyfile's private_key key, needed for JWT signing.
+     *
+     * @return string
+     */
+    public function getPrivateKey()
+    {
+        return $this->auth->getSigningKey();
     }
     /**
      * Get the quota project used for this API request
@@ -281,6 +325,10 @@ class ServiceAccountCredentials extends CredentialsLoader implements GetQuotaPro
     {
         return $this->universeDomain;
     }
+    protected function getCredType() : string
+    {
+        return self::CRED_TYPE;
+    }
     /**
      * @return bool
      */
@@ -295,8 +343,8 @@ class ServiceAccountCredentials extends CredentialsLoader implements GetQuotaPro
             }
             return \false;
         }
-        // If claims are set, this call is for "id_tokens"
-        if ($this->auth->getAdditionalClaims()) {
+        // Do not use self-signed JWT for ID tokens
+        if ($this->isIdTokenRequest) {
             return \false;
         }
         // When true, ServiceAccountCredentials will always use JwtAccess for access tokens

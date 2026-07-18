@@ -11,6 +11,7 @@ declare (strict_types=1);
  */
 namespace DeliciousBrains\WP_Offload_Media\Gcp\Monolog\Handler;
 
+use DeliciousBrains\WP_Offload_Media\Gcp\Monolog\LogRecord;
 /**
  * No-op
  *
@@ -23,16 +24,16 @@ namespace DeliciousBrains\WP_Offload_Media\Gcp\Monolog\Handler;
 class NoopHandler extends Handler
 {
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
-    public function isHandling(array $record) : bool
+    public function isHandling(LogRecord $record) : bool
     {
         return \true;
     }
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
-    public function handle(array $record) : bool
+    public function handle(LogRecord $record) : bool
     {
         return \false;
     }

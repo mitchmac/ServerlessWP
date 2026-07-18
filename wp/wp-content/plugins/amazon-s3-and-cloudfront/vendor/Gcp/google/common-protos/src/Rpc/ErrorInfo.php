@@ -5,8 +5,8 @@
 namespace DeliciousBrains\WP_Offload_Media\Gcp\Google\Rpc;
 
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Internal\GPBType;
-use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Internal\RepeatedField;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Internal\GPBUtil;
+use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\RepeatedField;
 /**
  * Describes the cause of the error with structured details.
  * Example of an error when contacting the "pubsub.googleapis.com" API when it
@@ -55,11 +55,12 @@ class ErrorInfo extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\In
     protected $domain = '';
     /**
      * Additional structured details about this error.
-     * Keys should match /[a-zA-Z0-9-_]/ and be limited to 64 characters in
+     * Keys must match a regular expression of `[a-z][a-zA-Z0-9-_]+` but should
+     * ideally be lowerCamelCase. Also, they must be limited to 64 characters in
      * length. When identifying the current value of an exceeded limit, the units
      * should be contained in the key, not the value.  For example, rather than
-     * {"instanceLimit": "100/request"}, should be returned as,
-     * {"instanceLimitPerRequest": "100"}, if the client exceeds the number of
+     * `{"instanceLimit": "100/request"}`, should be returned as,
+     * `{"instanceLimitPerRequest": "100"}`, if the client exceeds the number of
      * instances that can be created in a single (batch) request.
      *
      * Generated from protobuf field <code>map<string, string> metadata = 3;</code>
@@ -86,11 +87,12 @@ class ErrorInfo extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\In
      *           infrastructure, the error domain is "googleapis.com".
      *     @type array|\Google\Protobuf\Internal\MapField $metadata
      *           Additional structured details about this error.
-     *           Keys should match /[a-zA-Z0-9-_]/ and be limited to 64 characters in
+     *           Keys must match a regular expression of `[a-z][a-zA-Z0-9-_]+` but should
+     *           ideally be lowerCamelCase. Also, they must be limited to 64 characters in
      *           length. When identifying the current value of an exceeded limit, the units
      *           should be contained in the key, not the value.  For example, rather than
-     *           {"instanceLimit": "100/request"}, should be returned as,
-     *           {"instanceLimitPerRequest": "100"}, if the client exceeds the number of
+     *           `{"instanceLimit": "100/request"}`, should be returned as,
+     *           `{"instanceLimitPerRequest": "100"}`, if the client exceeds the number of
      *           instances that can be created in a single (batch) request.
      * }
      */
@@ -165,11 +167,12 @@ class ErrorInfo extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\In
     }
     /**
      * Additional structured details about this error.
-     * Keys should match /[a-zA-Z0-9-_]/ and be limited to 64 characters in
+     * Keys must match a regular expression of `[a-z][a-zA-Z0-9-_]+` but should
+     * ideally be lowerCamelCase. Also, they must be limited to 64 characters in
      * length. When identifying the current value of an exceeded limit, the units
      * should be contained in the key, not the value.  For example, rather than
-     * {"instanceLimit": "100/request"}, should be returned as,
-     * {"instanceLimitPerRequest": "100"}, if the client exceeds the number of
+     * `{"instanceLimit": "100/request"}`, should be returned as,
+     * `{"instanceLimitPerRequest": "100"}`, if the client exceeds the number of
      * instances that can be created in a single (batch) request.
      *
      * Generated from protobuf field <code>map<string, string> metadata = 3;</code>
@@ -181,11 +184,12 @@ class ErrorInfo extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\In
     }
     /**
      * Additional structured details about this error.
-     * Keys should match /[a-zA-Z0-9-_]/ and be limited to 64 characters in
+     * Keys must match a regular expression of `[a-z][a-zA-Z0-9-_]+` but should
+     * ideally be lowerCamelCase. Also, they must be limited to 64 characters in
      * length. When identifying the current value of an exceeded limit, the units
      * should be contained in the key, not the value.  For example, rather than
-     * {"instanceLimit": "100/request"}, should be returned as,
-     * {"instanceLimitPerRequest": "100"}, if the client exceeds the number of
+     * `{"instanceLimit": "100/request"}`, should be returned as,
+     * `{"instanceLimitPerRequest": "100"}`, if the client exceeds the number of
      * instances that can be created in a single (batch) request.
      *
      * Generated from protobuf field <code>map<string, string> metadata = 3;</code>

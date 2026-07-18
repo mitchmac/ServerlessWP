@@ -12,9 +12,10 @@
 declare (strict_types=1);
 namespace DeliciousBrains\WP_Offload_Media\Gcp\Ramsey\Collection\Exception;
 
+use InvalidArgumentException as PhpInvalidArgumentException;
 /**
  * Thrown to indicate an argument is not of the expected type.
  */
-class InvalidArgumentException extends \InvalidArgumentException
+class InvalidArgumentException extends PhpInvalidArgumentException implements CollectionException
 {
 }

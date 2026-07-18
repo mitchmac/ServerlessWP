@@ -17,15 +17,12 @@
  */
 namespace DeliciousBrains\WP_Offload_Media\Gcp\Google\Cloud\Core;
 
-use DeliciousBrains\WP_Offload_Media\Gcp\Google\ApiCore\Serializer;
-use DeliciousBrains\WP_Offload_Media\Gcp\Google\Cloud\Core\ArrayTrait;
-use DeliciousBrains\WP_Offload_Media\Gcp\Google\Cloud\Core\Exception\NotFoundException;
-use DeliciousBrains\WP_Offload_Media\Gcp\Google\Cloud\Core\Exception\ServiceException;
-use DeliciousBrains\WP_Offload_Media\Gcp\Google\Cloud\Core\TimeTrait;
-use DeliciousBrains\WP_Offload_Media\Gcp\Google\Cloud\Core\WhitelistTrait;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Internal\Message;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\ApiCore\ApiException;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\ApiCore\OperationResponse;
+use DeliciousBrains\WP_Offload_Media\Gcp\Google\ApiCore\Serializer;
+use DeliciousBrains\WP_Offload_Media\Gcp\Google\Cloud\Core\Exception\NotFoundException;
+use DeliciousBrains\WP_Offload_Media\Gcp\Google\Cloud\Core\Exception\ServiceException;
 /**
  * @internal
  * Responsible for forwarding the requests to their
@@ -42,13 +39,13 @@ class RequestHandler
      * @var Serializer
      */
     private Serializer $serializer;
-    private array $clients;
+    private array $clients = [];
     /**
      * @param Serializer $serializer
-     * @param array $clientClasses
+     * @param array<string|object> $clients
      * @param array $clientConfig
      */
-    public function __construct(Serializer $serializer, array $clientClasses, array $clientConfig = [])
+    public function __construct(Serializer $serializer, array $clients, array $clientConfig = [])
     {
         //@codeCoverageIgnoreStart
         $this->serializer = $serializer;
@@ -62,9 +59,12 @@ class RequestHandler
         }
         //@codeCoverageIgnoreEnd
         // Initialize the client classes and store them in memory
-        $this->clients = [];
-        foreach ($clientClasses as $className) {
-            $this->clients[$className] = new $className($clientConfig);
+        foreach ($clients as $client) {
+            if (\is_object($client)) {
+                $this->clients[\get_class($client)] = $client;
+            } else {
+                $this->clients[$client] = new $client($clientConfig);
+            }
         }
     }
     /**

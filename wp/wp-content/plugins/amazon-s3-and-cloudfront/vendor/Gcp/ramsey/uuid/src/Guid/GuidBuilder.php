@@ -24,28 +24,17 @@ use Throwable;
  *
  * @see Guid
  *
- * @psalm-immutable
+ * @immutable
  */
 class GuidBuilder implements UuidBuilderInterface
 {
     /**
-     * @var NumberConverterInterface
+     * @param NumberConverterInterface $numberConverter The number converter to use when constructing the Guid
+     * @param TimeConverterInterface $timeConverter The time converter to use for converting timestamps extracted from a
+     *     UUID to Unix timestamps
      */
-    private $numberConverter;
-    /**
-     * @var TimeConverterInterface
-     */
-    private $timeConverter;
-    /**
-     * @param NumberConverterInterface $numberConverter The number converter to
-     *     use when constructing the Guid
-     * @param TimeConverterInterface $timeConverter The time converter to use
-     *     for converting timestamps extracted from a UUID to Unix timestamps
-     */
-    public function __construct(NumberConverterInterface $numberConverter, TimeConverterInterface $timeConverter)
+    public function __construct(private NumberConverterInterface $numberConverter, private TimeConverterInterface $timeConverter)
     {
-        $this->numberConverter = $numberConverter;
-        $this->timeConverter = $timeConverter;
     }
     /**
      * Builds and returns a Guid
@@ -55,21 +44,26 @@ class GuidBuilder implements UuidBuilderInterface
      *
      * @return Guid The GuidBuilder returns an instance of Ramsey\Uuid\Guid\Guid
      *
-     * @psalm-pure
+     * @pure
      */
     public function build(CodecInterface $codec, string $bytes) : UuidInterface
     {
         try {
+            /** @phpstan-ignore possiblyImpure.new */
             return new Guid($this->buildFields($bytes), $this->numberConverter, $codec, $this->timeConverter);
         } catch (Throwable $e) {
+            /** @phpstan-ignore possiblyImpure.methodCall, possiblyImpure.methodCall */
             throw new UnableToBuildUuidException($e->getMessage(), (int) $e->getCode(), $e);
         }
     }
     /**
-     * Proxy method to allow injecting a mock, for testing
+     * Proxy method to allow injecting a mock for testing
+     *
+     * @pure
      */
     protected function buildFields(string $bytes) : Fields
     {
+        /** @phpstan-ignore possiblyImpure.new */
         return new Fields($bytes);
     }
 }

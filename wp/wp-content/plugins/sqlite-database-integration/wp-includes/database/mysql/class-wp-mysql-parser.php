@@ -9,6 +9,17 @@ class WP_MySQL_Parser extends WP_Parser {
 	private $current_ast;
 
 	/**
+	 * Reset this parser with a new token stream.
+	 *
+	 * @param array<WP_Parser_Token> $tokens The parser tokens.
+	 */
+	public function reset_tokens( array $tokens ): void {
+		$this->tokens      = $tokens;
+		$this->position    = 0;
+		$this->current_ast = null;
+	}
+
+	/**
 	 * Parse the next query from the input SQL string.
 	 *
 	 * This method reads tokens until a query is parsed, or the parsing fails.

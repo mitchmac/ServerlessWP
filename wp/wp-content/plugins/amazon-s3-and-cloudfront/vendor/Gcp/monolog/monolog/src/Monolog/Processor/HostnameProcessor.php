@@ -11,23 +11,23 @@ declare (strict_types=1);
  */
 namespace DeliciousBrains\WP_Offload_Media\Gcp\Monolog\Processor;
 
+use DeliciousBrains\WP_Offload_Media\Gcp\Monolog\LogRecord;
 /**
  * Injects value of gethostname in all records
  */
 class HostnameProcessor implements ProcessorInterface
 {
-    /** @var string */
-    private static $host;
+    private static string $host;
     public function __construct()
     {
         self::$host = (string) \gethostname();
     }
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
-    public function __invoke(array $record) : array
+    public function __invoke(LogRecord $record) : LogRecord
     {
-        $record['extra']['hostname'] = self::$host;
+        $record->extra['hostname'] = self::$host;
         return $record;
     }
 }

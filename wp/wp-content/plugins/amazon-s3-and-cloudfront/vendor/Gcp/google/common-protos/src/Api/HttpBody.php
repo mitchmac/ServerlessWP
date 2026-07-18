@@ -5,8 +5,8 @@
 namespace DeliciousBrains\WP_Offload_Media\Gcp\Google\Api;
 
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Internal\GPBType;
-use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Internal\RepeatedField;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Internal\GPBUtil;
+use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\RepeatedField;
 /**
  * Message that represents an arbitrary HTTP body. It should only be used for
  * payload formats that can't be represented as JSON, such as raw binary or
@@ -72,7 +72,7 @@ class HttpBody extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Int
      *           The HTTP Content-Type header value specifying the content type of the body.
      *     @type string $data
      *           The HTTP request/response body as raw binary.
-     *     @type array<\Google\Protobuf\Any>|\Google\Protobuf\Internal\RepeatedField $extensions
+     *     @type \Google\Protobuf\Any[] $extensions
      *           Application specific response metadata. Must be set in the first response
      *           for streaming APIs.
      * }
@@ -133,7 +133,7 @@ class HttpBody extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Int
      * for streaming APIs.
      *
      * Generated from protobuf field <code>repeated .google.protobuf.Any extensions = 3;</code>
-     * @return \Google\Protobuf\Internal\RepeatedField
+     * @return RepeatedField<\Google\Protobuf\Any>
      */
     public function getExtensions()
     {
@@ -144,7 +144,7 @@ class HttpBody extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Int
      * for streaming APIs.
      *
      * Generated from protobuf field <code>repeated .google.protobuf.Any extensions = 3;</code>
-     * @param array<\Google\Protobuf\Any>|\Google\Protobuf\Internal\RepeatedField $var
+     * @param \Google\Protobuf\Any[] $var
      * @return $this
      */
     public function setExtensions($var)

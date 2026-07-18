@@ -26,12 +26,12 @@ class AnyBase extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Inte
         if (\substr($this->type_url, 0, $url_prifix_len) != GPBUtil::TYPE_URL_PREFIX) {
             throw new \Exception("Type url needs to be type.googleapis.com/fully-qulified");
         }
-        $fully_qualifed_name = \substr($this->type_url, $url_prifix_len);
+        $fully_qualified_name = \substr($this->type_url, $url_prifix_len);
         // Create message according to fully qualified name.
         $pool = \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Internal\DescriptorPool::getGeneratedPool();
-        $desc = $pool->getDescriptorByProtoName($fully_qualifed_name);
+        $desc = $pool->getDescriptorByProtoName($fully_qualified_name);
         if (\is_null($desc)) {
-            throw new \Exception("Class " . $fully_qualifed_name . " hasn't been added to descriptor pool");
+            throw new \Exception("Class " . $fully_qualified_name . " hasn't been added to descriptor pool");
         }
         $klass = $desc->getClass();
         $msg = new $klass();
@@ -55,8 +55,8 @@ class AnyBase extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Inte
         // Set type url.
         $pool = \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Internal\DescriptorPool::getGeneratedPool();
         $desc = $pool->getDescriptorByClassName(\get_class($msg));
-        $fully_qualifed_name = $desc->getFullName();
-        $this->type_url = GPBUtil::TYPE_URL_PREFIX . $fully_qualifed_name;
+        $fully_qualified_name = $desc->getFullName();
+        $this->type_url = GPBUtil::TYPE_URL_PREFIX . $fully_qualified_name;
     }
     /**
      * This method returns whether the type_url in any_message is corresponded
@@ -67,8 +67,8 @@ class AnyBase extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Inte
     {
         $pool = \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Internal\DescriptorPool::getGeneratedPool();
         $desc = $pool->getDescriptorByClassName($klass);
-        $fully_qualifed_name = $desc->getFullName();
-        $type_url = GPBUtil::TYPE_URL_PREFIX . $fully_qualifed_name;
+        $fully_qualified_name = $desc->getFullName();
+        $type_url = GPBUtil::TYPE_URL_PREFIX . $fully_qualified_name;
         return $this->type_url === $type_url;
     }
 }
