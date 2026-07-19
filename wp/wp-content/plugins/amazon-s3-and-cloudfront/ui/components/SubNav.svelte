@@ -2,12 +2,23 @@
 	import {urls} from "../js/stores";
 	import SubNavItem from "./SubNavItem.svelte";
 
-	export let name = "media";
-	export let items = [];
-	export let subpage = false;
-	export let progress = false;
+	/**
+	 * @typedef {Object} Props
+	 * @property {string} [name]
+	 * @property {any} [items]
+	 * @property {boolean} [subpage]
+	 * @property {boolean} [progress]
+	 */
 
-	$: displayItems = items.filter( ( page ) => page.title && (!page.hasOwnProperty( "enabled" ) || page.enabled() === true) );
+	/** @type {Props} */
+	let {
+		name = "media",
+		items = [],
+		subpage = false,
+		progress = false
+	} = $props();
+
+	let displayItems = $derived( items.filter( ( page ) => page.title && (!page.hasOwnProperty( "enabled" ) || page.enabled() === true) ) );
 </script>
 
 {#if displayItems}

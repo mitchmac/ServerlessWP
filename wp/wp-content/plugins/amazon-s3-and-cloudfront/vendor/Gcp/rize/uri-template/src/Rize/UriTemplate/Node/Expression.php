@@ -2,70 +2,48 @@
 
 namespace DeliciousBrains\WP_Offload_Media\Gcp\Rize\UriTemplate\Node;
 
-use DeliciousBrains\WP_Offload_Media\Gcp\Rize\UriTemplate\Parser;
 use DeliciousBrains\WP_Offload_Media\Gcp\Rize\UriTemplate\Operator;
-/**
- * Description
- */
+use DeliciousBrains\WP_Offload_Media\Gcp\Rize\UriTemplate\Parser;
 class Expression extends Abstraction
 {
     /**
-     * @var Operator\Abstraction
+     * @param string $forwardLookupSeparator
      */
-    private $operator;
-    /**
-     * @var array
-     */
-    private $variables = array();
-    /**
-     * Whether to do a forward lookup for a given separator
-     * @var string
-     */
-    private $forwardLookupSeparator;
-    public function __construct($token, Operator\Abstraction $operator, array $variables = null, $forwardLookupSeparator = null)
+    public function __construct(
+        string $token,
+        private readonly Operator\Abstraction $operator,
+        private readonly ?array $variables = null,
+        /**
+         * Whether to do a forward lookup for a given separator.
+         */
+        private $forwardLookupSeparator = null
+    )
     {
         parent::__construct($token);
-        $this->operator = $operator;
-        $this->variables = $variables;
-        $this->forwardLookupSeparator = $forwardLookupSeparator;
     }
-    /**
-     * @return Operator\Abstraction
-     */
-    public function getOperator()
+    public function getOperator() : Operator\Abstraction
     {
         return $this->operator;
     }
-    /**
-     * @return array
-     */
-    public function getVariables()
+    public function getVariables() : ?array
     {
         return $this->variables;
     }
-    /**
-     * @return string
-     */
-    public function getForwardLookupSeparator()
+    public function getForwardLookupSeparator() : string
     {
         return $this->forwardLookupSeparator;
     }
-    /**
-     * @param string $forwardLookupSeparator
-     */
-    public function setForwardLookupSeparator($forwardLookupSeparator)
+    public function setForwardLookupSeparator(string $forwardLookupSeparator) : void
     {
         $this->forwardLookupSeparator = $forwardLookupSeparator;
     }
-    /**
-     * @param Parser $parser
-     * @param array $params
-     * @return null|string
-     */
-    public function expand(Parser $parser, array $params = array())
+    public function expand(Parser $parser, array $params = []) : ?string
     {
-        $data = array();
+        $data = [];
         $op = $this->operator;
+        if ($this->variables === null) {
+            return $op->first;
+        }
         // check for variable modifiers
         foreach ($this->variables as $var) {
             $val = $op->expand($parser, $var, $params);
@@ -77,27 +55,22 @@ class Expression extends Abstraction
         return $data ? $op->first . \implode($op->sep, $data) : null;
     }
     /**
-     * Matches given URI against current node
+     * Matches given URI against current node.
      *
-     * @param Parser $parser
-     * @param string $uri
-     * @param array  $params
-     * @param bool $strict
      * @return null|array `uri and params` or `null` if not match and $strict is true
      */
-    public function match(Parser $parser, $uri, $params = array(), $strict = \false)
+    public function match(Parser $parser, string $uri, array $params = [], bool $strict = \false) : ?array
     {
         $op = $this->operator;
         // check expression operator first
         if ($op->id && isset($uri[0]) && $uri[0] !== $op->id) {
-            return array($uri, $params);
+            return [$uri, $params];
         }
         // remove operator from input
         if ($op->id) {
             $uri = \substr($uri, 1);
         }
         foreach ($this->sortVariables($this->variables) as $var) {
-            /** @var \Rize\UriTemplate\Node\Variable $regex */
             $regex = '#' . $op->toRegex($parser, $var) . '#';
             $val = null;
             // do a forward lookup and get just the relevant part
@@ -110,30 +83,23 @@ class Expression extends Abstraction
             }
             if (\preg_match($regex, $preparedUri, $match)) {
                 // remove matched part from input
-                $preparedUri = \preg_replace($regex, '', $preparedUri, $limit = 1);
+                $preparedUri = \preg_replace($regex, '', $preparedUri, 1);
                 $val = $op->extract($parser, $var, $match[0]);
-            } else {
-                if ($strict) {
-                    return null;
-                }
+            } elseif ($strict) {
+                return null;
             }
             $uri = $preparedUri . $remainingUri;
             $params[$var->getToken()] = $val;
         }
-        return array($uri, $params);
+        return [$uri, $params];
     }
     /**
      * Sort variables before extracting data from uri.
      * We have to sort vars by non-explode to explode.
-     *
-     * @param array $vars
-     * @return array
      */
-    protected function sortVariables(array $vars)
+    protected function sortVariables(array $vars) : array
     {
-        \usort($vars, function ($a, $b) {
-            return $a->options['modifier'] >= $b->options['modifier'] ? 1 : -1;
-        });
+        \usort($vars, static fn($a, $b) => $a->options['modifier'] <=> $b->options['modifier']);
         return $vars;
     }
 }

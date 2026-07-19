@@ -1,7 +1,14 @@
 <script>
-	const classes = $$props.class ? $$props.class : "";
+	/**
+	 * @typedef {Object} Props
+	 * @property {import("svelte").Snippet} [children]
+	 * @property {string} [class]
+	 */
+
+	/** @type {Props} */
+	let { children, class: classes = "" } = $props();
 </script>
 
 <div class="panel-container {classes}">
-	<slot/>
+	{@render children?.()}
 </div>

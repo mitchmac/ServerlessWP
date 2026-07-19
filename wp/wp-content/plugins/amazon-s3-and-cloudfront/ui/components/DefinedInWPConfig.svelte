@@ -1,7 +1,13 @@
 <script>
 	import {strings} from "../js/stores";
 
-	export let defined = false;
+	/**
+	 * @typedef {Object} Props
+	 * @property {boolean} [defined]
+	 */
+
+	/** @type {Props} */
+	let { defined = false } = $props();
 </script>
 
 {#if defined}

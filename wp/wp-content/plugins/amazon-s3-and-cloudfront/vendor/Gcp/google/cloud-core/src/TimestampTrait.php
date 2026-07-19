@@ -17,7 +17,6 @@
  */
 namespace DeliciousBrains\WP_Offload_Media\Gcp\Google\Cloud\Core;
 
-use DeliciousBrains\WP_Offload_Media\Gcp\Google\Cloud\Core\Timestamp;
 /**
  * Helper methods to work on Google\Cloud\Core\Timestamp.
  * @internal

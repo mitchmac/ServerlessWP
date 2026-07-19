@@ -19,7 +19,6 @@ namespace DeliciousBrains\WP_Offload_Media\Gcp\Google\Cloud\Core\Upload;
 
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Cloud\Core\Exception\GoogleException;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Cloud\Core\Exception\ServiceException;
-use DeliciousBrains\WP_Offload_Media\Gcp\Google\Cloud\Core\Exception\UploadException;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Cloud\Core\JsonTrait;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Cloud\Core\RequestWrapper;
 use DeliciousBrains\WP_Offload_Media\Gcp\GuzzleHttp\Promise\PromiseInterface;
@@ -198,19 +197,20 @@ class ResumableUploader extends AbstractUploader
      */
     protected function getStatusResponse()
     {
-        $request = new Request('PUT', $this->resumeUri, ['Content-Range' => 'bytes */*']);
+        $request = new Request('PUT', $this->resumeUri, ['Content-Range' => 'bytes */' . $this->data->getSize()]);
         return $this->requestWrapper->send($request, $this->requestOptions);
     }
     /**
      * Gets the starting range for the upload.
      *
      * @param string $rangeHeader
-     * @return int|null
+     * @return int
      */
     protected function getRangeStart($rangeHeader)
     {
         if (!$rangeHeader) {
-            return null;
+            // assume no bytes are uploaded if no range header is present
+            return 0;
         }
         return (int) \explode('-', $rangeHeader)[1] + 1;
     }

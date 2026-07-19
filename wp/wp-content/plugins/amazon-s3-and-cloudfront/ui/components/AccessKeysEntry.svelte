@@ -1,10 +1,21 @@
 <script>
 	import {strings} from "../js/stores";
 
-	export let provider;
-	export let accessKeyId = "";
-	export let secretAccessKey = "";
-	export let disabled = false;
+	/**
+	 * @typedef {Object} Props
+	 * @property {any} provider
+	 * @property {string} [accessKeyId]
+	 * @property {string} [secretAccessKey]
+	 * @property {boolean} [disabled]
+	 */
+
+	/** @type {Props} */
+	let {
+		provider,
+		accessKeyId = $bindable( "" ),
+		secretAccessKey = $bindable( "" ),
+		disabled = false
+	} = $props();
 
 	let accessKeyIdName = "access-key-id";
 	let accessKeyIdLabel = $strings.access_key_id;

@@ -47,7 +47,7 @@ class Retry
      * @param callable $retryFunction [optional] returns bool for whether or not
      *        to retry.
      */
-    public function __construct($retries, callable $delayFunction, callable $retryFunction = null)
+    public function __construct($retries, callable $delayFunction, ?callable $retryFunction = null)
     {
         $this->retries = $retries !== null ? (int) $retries : 3;
         $this->delayFunction = $delayFunction;

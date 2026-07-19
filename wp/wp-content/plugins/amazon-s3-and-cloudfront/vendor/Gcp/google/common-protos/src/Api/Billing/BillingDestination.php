@@ -5,8 +5,8 @@
 namespace DeliciousBrains\WP_Offload_Media\Gcp\Google\Api\Billing;
 
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Internal\GPBType;
-use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Internal\RepeatedField;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Internal\GPBUtil;
+use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\RepeatedField;
 /**
  * Configuration of a specific billing destination (Currently only support
  * bill against consumer project).
@@ -41,7 +41,7 @@ class BillingDestination extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Pr
      *           The monitored resource type. The type must be defined in
      *           [Service.monitored_resources][google.api.Service.monitored_resources]
      *           section.
-     *     @type array<string>|\Google\Protobuf\Internal\RepeatedField $metrics
+     *     @type string[] $metrics
      *           Names of the metrics to report to this billing destination.
      *           Each name must be defined in
      *           [Service.metrics][google.api.Service.metrics] section.
@@ -85,7 +85,7 @@ class BillingDestination extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Pr
      * [Service.metrics][google.api.Service.metrics] section.
      *
      * Generated from protobuf field <code>repeated string metrics = 2;</code>
-     * @return \Google\Protobuf\Internal\RepeatedField
+     * @return RepeatedField<string>
      */
     public function getMetrics()
     {
@@ -97,7 +97,7 @@ class BillingDestination extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Pr
      * [Service.metrics][google.api.Service.metrics] section.
      *
      * Generated from protobuf field <code>repeated string metrics = 2;</code>
-     * @param array<string>|\Google\Protobuf\Internal\RepeatedField $var
+     * @param string[] $var
      * @return $this
      */
     public function setMetrics($var)

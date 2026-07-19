@@ -17,34 +17,27 @@ use DeliciousBrains\WP_Offload_Media\Gcp\Ramsey\Uuid\Exception\BuilderNotFoundEx
 use DeliciousBrains\WP_Offload_Media\Gcp\Ramsey\Uuid\Exception\UnableToBuildUuidException;
 use DeliciousBrains\WP_Offload_Media\Gcp\Ramsey\Uuid\UuidInterface;
 /**
- * FallbackBuilder builds a UUID by stepping through a list of UUID builders
- * until a UUID can be constructed without exceptions
+ * FallbackBuilder builds a UUID by stepping through a list of UUID builders until a UUID can be constructed without exceptions
  *
- * @psalm-immutable
+ * @immutable
  */
 class FallbackBuilder implements UuidBuilderInterface
 {
     /**
-     * @var BuilderCollection
+     * @param iterable<UuidBuilderInterface> $builders An array of UUID builders
      */
-    private $builders;
-    /**
-     * @param BuilderCollection $builders An array of UUID builders
-     */
-    public function __construct(BuilderCollection $builders)
+    public function __construct(private iterable $builders)
     {
-        $this->builders = $builders;
     }
     /**
-     * Builds and returns a UuidInterface instance using the first builder that
-     * succeeds
+     * Builds and returns a UuidInterface instance using the first builder that succeeds
      *
      * @param CodecInterface $codec The codec to use for building this instance
      * @param string $bytes The byte string from which to construct a UUID
      *
      * @return UuidInterface an instance of a UUID object
      *
-     * @psalm-pure
+     * @pure
      */
     public function build(CodecInterface $codec, string $bytes) : UuidInterface
     {

@@ -32,11 +32,11 @@
  */
 namespace DeliciousBrains\WP_Offload_Media\Gcp\Google\ApiCore\Options;
 
-use DeliciousBrains\WP_Offload_Media\Gcp\Google\ApiCore\Options\TransportOptions\GrpcTransportOptions;
-use DeliciousBrains\WP_Offload_Media\Gcp\Google\ApiCore\Options\TransportOptions\GrpcFallbackTransportOptions;
-use DeliciousBrains\WP_Offload_Media\Gcp\Google\ApiCore\Options\TransportOptions\RestTransportOptions;
 use ArrayAccess;
-class TransportOptions implements ArrayAccess
+use DeliciousBrains\WP_Offload_Media\Gcp\Google\ApiCore\Options\TransportOptions\GrpcFallbackTransportOptions;
+use DeliciousBrains\WP_Offload_Media\Gcp\Google\ApiCore\Options\TransportOptions\GrpcTransportOptions;
+use DeliciousBrains\WP_Offload_Media\Gcp\Google\ApiCore\Options\TransportOptions\RestTransportOptions;
+class TransportOptions implements ArrayAccess, OptionsInterface
 {
     use OptionsTrait;
     private GrpcTransportOptions $grpc;
@@ -66,16 +66,34 @@ class TransportOptions implements ArrayAccess
         $this->setGrpcFallback(new GrpcFallbackTransportOptions($arr['grpc-fallback'] ?? []));
         $this->setRest(new RestTransportOptions($arr['rest'] ?? []));
     }
-    public function setGrpc(GrpcTransportOptions $grpc) : void
+    /**
+     * @param GrpcTransportOptions $grpc
+     *
+     * @return $this
+     */
+    public function setGrpc(GrpcTransportOptions $grpc) : self
     {
         $this->grpc = $grpc;
+        return $this;
     }
-    public function setGrpcFallback(GrpcFallbackTransportOptions $grpcFallback) : void
+    /**
+     * @param GrpcFallbackTransportOptions $grpcFallback
+     *
+     * @return $this
+     */
+    public function setGrpcFallback(GrpcFallbackTransportOptions $grpcFallback) : self
     {
         $this->grpcFallback = $grpcFallback;
+        return $this;
     }
-    public function setRest(RestTransportOptions $rest) : void
+    /**
+     * @param RestTransportOptions $rest
+     *
+     * @return $this
+     */
+    public function setRest(RestTransportOptions $rest) : self
     {
         $this->rest = $rest;
+        return $this;
     }
 }

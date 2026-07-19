@@ -34,9 +34,10 @@ namespace DeliciousBrains\WP_Offload_Media\Gcp\Google\ApiCore\Middleware;
 
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\ApiCore\ArrayTrait;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\ApiCore\Call;
-use DeliciousBrains\WP_Offload_Media\Gcp\GuzzleHttp\Promise\PromiseInterface;
 /**
 * Middleware which filters the $options array.
+*
+* @internal
 */
 class OptionsFilterMiddleware implements MiddlewareInterface
 {

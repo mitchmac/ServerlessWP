@@ -22,6 +22,7 @@ use DeliciousBrains\WP_Offload_Media\Gcp\Opis\Closure\SerializableClosure;
  * A closure serializer utilizing
  * [Opis Closure Library](https://github.com/opis/closure).
  *
+ * @deprecated use OpisClosureSerializerV4
  * @experimental The experimental flag means that while we believe this method
  *      or class is ready for use, it may change before release in backwards-
  *      incompatible ways. Please use with caution, and test thoroughly when
