@@ -32,11 +32,16 @@
  */
 namespace DeliciousBrains\WP_Offload_Media\Gcp\Google\ApiCore;
 
+use DeliciousBrains\WP_Offload_Media\Gcp\Google\ApiCore\Options\ClientOptions;
+use DeliciousBrains\WP_Offload_Media\Gcp\Google\Auth\ApplicationDefaultCredentials;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Auth\CredentialsLoader;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Auth\FetchAuthTokenInterface;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Auth\GetUniverseDomainInterface;
+use DeliciousBrains\WP_Offload_Media\Gcp\Google\Auth\HttpHandler\HttpHandlerFactory;
 use DeliciousBrains\WP_Offload_Media\Gcp\Grpc\Gcp\ApiConfig;
 use DeliciousBrains\WP_Offload_Media\Gcp\Grpc\Gcp\Config;
+use DeliciousBrains\WP_Offload_Media\Gcp\Psr\Log\LoggerInterface;
+use DeliciousBrains\WP_Offload_Media\Gcp\Psr\Log\LogLevel;
 /**
  * Common functions used to work with various clients.
  *
@@ -74,13 +79,30 @@ trait ClientOptionsTrait
     {
         return [];
     }
-    private function buildClientOptions(array $options)
+    /**
+     * Resolve client options based on the client's default
+     * ({@see ClientOptionsTrait::getClientDefault}) and the default for all
+     * Google APIs.
+     *
+     * 1. Set default client option values
+     * 2. Set default logger (and log user-supplied configuration options)
+     * 3. Set default transport configuration
+     * 4. Call "modifyClientOptions" (for backwards compatibility)
+     * 5. Use "defaultScopes" when custom endpoint is supplied
+     * 6. Load mTLS from the environment if configured
+     * 7. Resolve endpoint based on universe domain template when possible
+     * 8. Load sysvshm grpc config when possible
+     */
+    private function buildClientOptions(array|ClientOptions $options)
     {
+        if ($options instanceof ClientOptions) {
+            $options = $options->toArray();
+        }
         // Build $defaultOptions starting from top level
         // variables, then going into deeper nesting, so that
         // we will not encounter missing keys
         $defaultOptions = self::getClientDefaults();
-        $defaultOptions += ['disableRetries' => \false, 'credentials' => null, 'credentialsConfig' => [], 'transport' => null, 'transportConfig' => [], 'gapicVersion' => self::getGapicVersion($options), 'libName' => null, 'libVersion' => null, 'apiEndpoint' => null, 'clientCertSource' => null, 'universeDomain' => null];
+        $defaultOptions += ['disableRetries' => \false, 'credentials' => null, 'credentialsConfig' => [], 'transport' => null, 'transportConfig' => [], 'gapicVersion' => self::getGapicVersion($options), 'libName' => null, 'libVersion' => null, 'apiEndpoint' => null, 'clientCertSource' => null, 'universeDomain' => null, 'logger' => null];
         $supportedTransports = $this->supportedTransports();
         foreach ($supportedTransports as $transportName) {
             if (!\array_key_exists($transportName, $defaultOptions['transportConfig'])) {
@@ -92,19 +114,38 @@ trait ClientOptionsTrait
         }
         // Keep track of the API Endpoint
         $apiEndpoint = $options['apiEndpoint'] ?? null;
+        // Keep track of the original user supplied options for logging the configuration
+        $clientSuppliedOptions = $options;
         // Merge defaults into $options starting from top level
         // variables, then going into deeper nesting, so that
         // we will not encounter missing keys
         $options += $defaultOptions;
+        // If logger is explicitly set to false, logging is disabled
+        if (\is_null($options['logger'])) {
+            $options['logger'] = ApplicationDefaultCredentials::getDefaultLogger();
+        }
+        if ($options['logger'] !== null && $options['logger'] !== \false && !$options['logger'] instanceof LoggerInterface) {
+            throw new ValidationException('The "logger" option in the options array should be PSR-3 LoggerInterface compatible');
+        }
+        // Log the user supplied configuration.
+        $this->logConfiguration($options['logger'], $clientSuppliedOptions);
+        if (isset($options['logger'])) {
+            $options['credentialsConfig']['authHttpHandler'] = HttpHandlerFactory::build(logger: $options['logger']);
+        }
         $options['credentialsConfig'] += $defaultOptions['credentialsConfig'];
         $options['transportConfig'] += $defaultOptions['transportConfig'];
         // @phpstan-ignore-line
         if (isset($options['transportConfig']['grpc'])) {
             $options['transportConfig']['grpc'] += $defaultOptions['transportConfig']['grpc'];
             $options['transportConfig']['grpc']['stubOpts'] += $defaultOptions['transportConfig']['grpc']['stubOpts'];
+            $options['transportConfig']['grpc']['logger'] = $options['logger'] ?? null;
         }
         if (isset($options['transportConfig']['rest'])) {
             $options['transportConfig']['rest'] += $defaultOptions['transportConfig']['rest'];
+            $options['transportConfig']['rest']['logger'] = $options['logger'] ?? null;
+        }
+        if (isset($options['transportConfig']['grpc-fallback'])) {
+            $options['transportConfig']['grpc-fallback']['logger'] = $options['logger'] ?? null;
         }
         // These calls do not apply to "New Surface" clients.
         if ($this->isBackwardsCompatibilityMode()) {
@@ -202,17 +243,20 @@ trait ClientOptionsTrait
     private function createCredentialsWrapper($credentials, array $credentialsConfig, string $universeDomain)
     {
         if (\is_null($credentials)) {
+            // If the user has explicitly set the apiKey option, use Api Key credentials
             return CredentialsWrapper::build($credentialsConfig, $universeDomain);
-        } elseif (\is_string($credentials) || \is_array($credentials)) {
+        }
+        if (\is_string($credentials) || \is_array($credentials)) {
             return CredentialsWrapper::build(['keyFile' => $credentials] + $credentialsConfig, $universeDomain);
-        } elseif ($credentials instanceof FetchAuthTokenInterface) {
+        }
+        if ($credentials instanceof FetchAuthTokenInterface) {
             $authHttpHandler = $credentialsConfig['authHttpHandler'] ?? null;
             return new CredentialsWrapper($credentials, $authHttpHandler, $universeDomain);
-        } elseif ($credentials instanceof CredentialsWrapper) {
-            return $credentials;
-        } else {
-            throw new ValidationException('Unexpected value in $auth option, got: ' . \print_r($credentials, \true));
         }
+        if ($credentials instanceof CredentialsWrapper) {
+            return $credentials;
+        }
+        throw new ValidationException(\sprintf('Unexpected value in $auth option, got: %s', \print_r($credentials, \true)));
     }
     /**
      * This defaults to all three transports, which One-Platform supports.
@@ -243,5 +287,21 @@ trait ClientOptionsTrait
     private function isBackwardsCompatibilityMode() : bool
     {
         return \false;
+    }
+    /**
+     * @param null|false|LoggerInterface $logger
+     * @param string $options
+     */
+    private function logConfiguration(null|false|LoggerInterface $logger, array $options) : void
+    {
+        if (!$logger) {
+            return;
+        }
+        $configurationLog = ['timestamp' => \date(\DATE_RFC3339), 'severity' => \strtoupper(LogLevel::DEBUG), 'processId' => \getmypid(), 'jsonPayload' => [
+            'serviceName' => self::SERVICE_NAME,
+            // @phpstan-ignore-line
+            'clientConfiguration' => $options,
+        ]];
+        $logger->debug(\json_encode($configurationLog));
     }
 }

@@ -20,38 +20,22 @@ use DeliciousBrains\WP_Offload_Media\Gcp\Ramsey\Uuid\Provider\NodeProviderInterf
 use DeliciousBrains\WP_Offload_Media\Gcp\Ramsey\Uuid\Provider\TimeProviderInterface;
 use DeliciousBrains\WP_Offload_Media\Gcp\Ramsey\Uuid\Type\Hexadecimal;
 use Throwable;
-use function ctype_xdigit;
 use function dechex;
 use function hex2bin;
 use function is_int;
 use function pack;
+use function preg_match;
 use function sprintf;
 use function str_pad;
 use function strlen;
 use const STR_PAD_LEFT;
 /**
- * DefaultTimeGenerator generates strings of binary data based on a node ID,
- * clock sequence, and the current time
+ * DefaultTimeGenerator generates strings of binary data based on a node ID, clock sequence, and the current time
  */
 class DefaultTimeGenerator implements TimeGeneratorInterface
 {
-    /**
-     * @var NodeProviderInterface
-     */
-    private $nodeProvider;
-    /**
-     * @var TimeConverterInterface
-     */
-    private $timeConverter;
-    /**
-     * @var TimeProviderInterface
-     */
-    private $timeProvider;
-    public function __construct(NodeProviderInterface $nodeProvider, TimeConverterInterface $timeConverter, TimeProviderInterface $timeProvider)
+    public function __construct(private NodeProviderInterface $nodeProvider, private TimeConverterInterface $timeConverter, private TimeProviderInterface $timeProvider)
     {
-        $this->nodeProvider = $nodeProvider;
-        $this->timeConverter = $timeConverter;
-        $this->timeProvider = $timeProvider;
     }
     /**
      * @throws InvalidArgumentException if the parameters contain invalid values
@@ -67,7 +51,7 @@ class DefaultTimeGenerator implements TimeGeneratorInterface
         $node = $this->getValidNode($node);
         if ($clockSeq === null) {
             try {
-                // This does not use "stable storage"; see RFC 4122, Section 4.2.1.1.
+                // This does not use "stable storage"; see RFC 9562, section 6.3.
                 $clockSeq = \random_int(0, 0x3fff);
             } catch (Throwable $exception) {
                 throw new RandomSourceException($exception->getMessage(), (int) $exception->getCode(), $exception);
@@ -83,25 +67,24 @@ class DefaultTimeGenerator implements TimeGeneratorInterface
         return $timeBytes[4] . $timeBytes[5] . $timeBytes[6] . $timeBytes[7] . $timeBytes[2] . $timeBytes[3] . $timeBytes[0] . $timeBytes[1] . pack('n*', $clockSeq) . $node;
     }
     /**
-     * Uses the node provider given when constructing this instance to get
-     * the node ID (usually a MAC address)
+     * Uses the node provider given when constructing this instance to get the node ID (usually a MAC address)
      *
-     * @param string|int|null $node A node value that may be used to override the node provider
+     * @param int | string | null $node A node value that may be used to override the node provider
      *
      * @return string 6-byte binary string representation of the node
      *
      * @throws InvalidArgumentException
      */
-    private function getValidNode($node) : string
+    private function getValidNode(int|string|null $node) : string
     {
         if ($node === null) {
             $node = $this->nodeProvider->getNode();
         }
-        // Convert the node to hex, if it is still an integer.
+        // Convert the node to hex if it is still an integer.
         if (is_int($node)) {
             $node = dechex($node);
         }
-        if (!ctype_xdigit((string) $node) || strlen((string) $node) > 12) {
+        if (!preg_match('/^[A-Fa-f0-9]+$/', (string) $node) || strlen((string) $node) > 12) {
             throw new InvalidArgumentException('Invalid node value');
         }
         return (string) hex2bin(str_pad((string) $node, 12, '0', STR_PAD_LEFT));

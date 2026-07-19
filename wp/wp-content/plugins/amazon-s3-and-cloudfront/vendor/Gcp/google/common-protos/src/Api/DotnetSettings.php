@@ -5,8 +5,8 @@
 namespace DeliciousBrains\WP_Offload_Media\Gcp\Google\Api;
 
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Internal\GPBType;
-use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Internal\RepeatedField;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Internal\GPBUtil;
+use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\RepeatedField;
 /**
  * Settings for Dotnet client libraries.
  *
@@ -85,16 +85,16 @@ class DotnetSettings extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protob
      *           named from different services would cause naming collisions.
      *           Example entry:
      *           "datalabeling.googleapis.com/Dataset": "DataLabelingDataset"
-     *     @type array<string>|\Google\Protobuf\Internal\RepeatedField $ignored_resources
+     *     @type string[] $ignored_resources
      *           List of full resource types to ignore during generation.
      *           This is typically used for API-specific Location resources,
      *           which should be handled by the generator as if they were actually
      *           the common Location resources.
      *           Example entry: "documentai.googleapis.com/Location"
-     *     @type array<string>|\Google\Protobuf\Internal\RepeatedField $forced_namespace_aliases
+     *     @type string[] $forced_namespace_aliases
      *           Namespaces which must be aliased in snippets due to
      *           a known (but non-generator-predictable) naming collision
-     *     @type array<string>|\Google\Protobuf\Internal\RepeatedField $handwritten_signatures
+     *     @type string[] $handwritten_signatures
      *           Method signatures (in the form "service.method(signature)")
      *           which are provided separately, so shouldn't be generated.
      *           Snippets *calling* these methods are still generated, however.
@@ -206,7 +206,7 @@ class DotnetSettings extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protob
      * Example entry: "documentai.googleapis.com/Location"
      *
      * Generated from protobuf field <code>repeated string ignored_resources = 4;</code>
-     * @return \Google\Protobuf\Internal\RepeatedField
+     * @return RepeatedField<string>
      */
     public function getIgnoredResources()
     {
@@ -220,7 +220,7 @@ class DotnetSettings extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protob
      * Example entry: "documentai.googleapis.com/Location"
      *
      * Generated from protobuf field <code>repeated string ignored_resources = 4;</code>
-     * @param array<string>|\Google\Protobuf\Internal\RepeatedField $var
+     * @param string[] $var
      * @return $this
      */
     public function setIgnoredResources($var)
@@ -234,7 +234,7 @@ class DotnetSettings extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protob
      * a known (but non-generator-predictable) naming collision
      *
      * Generated from protobuf field <code>repeated string forced_namespace_aliases = 5;</code>
-     * @return \Google\Protobuf\Internal\RepeatedField
+     * @return RepeatedField<string>
      */
     public function getForcedNamespaceAliases()
     {
@@ -245,7 +245,7 @@ class DotnetSettings extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protob
      * a known (but non-generator-predictable) naming collision
      *
      * Generated from protobuf field <code>repeated string forced_namespace_aliases = 5;</code>
-     * @param array<string>|\Google\Protobuf\Internal\RepeatedField $var
+     * @param string[] $var
      * @return $this
      */
     public function setForcedNamespaceAliases($var)
@@ -260,7 +260,7 @@ class DotnetSettings extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protob
      * Snippets *calling* these methods are still generated, however.
      *
      * Generated from protobuf field <code>repeated string handwritten_signatures = 6;</code>
-     * @return \Google\Protobuf\Internal\RepeatedField
+     * @return RepeatedField<string>
      */
     public function getHandwrittenSignatures()
     {
@@ -272,7 +272,7 @@ class DotnetSettings extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protob
      * Snippets *calling* these methods are still generated, however.
      *
      * Generated from protobuf field <code>repeated string handwritten_signatures = 6;</code>
-     * @param array<string>|\Google\Protobuf\Internal\RepeatedField $var
+     * @param string[] $var
      * @return $this
      */
     public function setHandwrittenSignatures($var)

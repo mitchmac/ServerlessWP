@@ -5,8 +5,8 @@
 namespace DeliciousBrains\WP_Offload_Media\Gcp\Google\Api;
 
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Internal\GPBType;
-use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Internal\RepeatedField;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Internal\GPBUtil;
+use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\RepeatedField;
 /**
  * A description of a log type. Example in YAML format:
  *     - name: library.googleapis.com/activity_history
@@ -62,7 +62,7 @@ class LogDescriptor extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobu
      *           include the following characters: upper- and lower-case alphanumeric
      *           characters [A-Za-z0-9], and punctuation characters including
      *           slash, underscore, hyphen, period [/_-.].
-     *     @type array<\Google\Api\LabelDescriptor>|\Google\Protobuf\Internal\RepeatedField $labels
+     *     @type \Google\Api\LabelDescriptor[] $labels
      *           The set of labels that are available to describe a specific log entry.
      *           Runtime requests that contain labels not specified here are
      *           considered invalid.
@@ -114,7 +114,7 @@ class LogDescriptor extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobu
      * considered invalid.
      *
      * Generated from protobuf field <code>repeated .google.api.LabelDescriptor labels = 2;</code>
-     * @return \Google\Protobuf\Internal\RepeatedField
+     * @return RepeatedField<\Google\Api\LabelDescriptor>
      */
     public function getLabels()
     {
@@ -126,7 +126,7 @@ class LogDescriptor extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobu
      * considered invalid.
      *
      * Generated from protobuf field <code>repeated .google.api.LabelDescriptor labels = 2;</code>
-     * @param array<\Google\Api\LabelDescriptor>|\Google\Protobuf\Internal\RepeatedField $var
+     * @param \Google\Api\LabelDescriptor[] $var
      * @return $this
      */
     public function setLabels($var)

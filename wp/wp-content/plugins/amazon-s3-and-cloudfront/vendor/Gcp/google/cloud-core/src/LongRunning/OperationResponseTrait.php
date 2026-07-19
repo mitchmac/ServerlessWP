@@ -20,7 +20,6 @@ namespace DeliciousBrains\WP_Offload_Media\Gcp\Google\Cloud\Core\LongRunning;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\ApiCore\OperationResponse;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\ApiCore\Serializer;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\GAX\OperationResponse as GaxOperationResponse;
-use DeliciousBrains\WP_Offload_Media\Gcp\Google\GAX\Serializer as GaxSerialzer;
 /**
  * Serializes and deserializes ApiCore LRO Response objects.
  *

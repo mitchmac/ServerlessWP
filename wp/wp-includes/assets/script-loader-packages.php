@@ -1,1 +1,893 @@
-<?php return array('a11y.js' => array('dependencies' => array('wp-dom-ready', 'wp-i18n'), 'version' => '454e8a3cffdca128c277'), 'admin-ui.js' => array('dependencies' => array('react-jsx-runtime', 'wp-components', 'wp-element'), 'version' => '162fe802085f0b777fd4'), 'annotations.js' => array('dependencies' => array('wp-data', 'wp-hooks', 'wp-i18n', 'wp-rich-text'), 'version' => 'b0f85052d9a7695cd3bc'), 'api-fetch.js' => array('dependencies' => array('wp-i18n', 'wp-url'), 'version' => 'dde45ae4bb2923c6d069'), 'autop.js' => array('dependencies' => array(), 'version' => '4253b2f13990616d5356'), 'base-styles.js' => array('dependencies' => array(), 'version' => 'dc7e184aa007ae08c82c'), 'blob.js' => array('dependencies' => array(), 'version' => 'e1b9669561b45fc50da4'), 'block-directory.js' => array('dependencies' => array('react-jsx-runtime', 'wp-a11y', 'wp-api-fetch', 'wp-block-editor', 'wp-blocks', 'wp-components', 'wp-compose', 'wp-core-data', 'wp-data', 'wp-editor', 'wp-element', 'wp-hooks', 'wp-html-entities', 'wp-i18n', 'wp-notices', 'wp-plugins', 'wp-primitives', 'wp-url'), 'version' => '033f605efae39cbb46e1'), 'block-editor.js' => array('dependencies' => array('react', 'react-dom', 'react-jsx-runtime', 'wp-a11y', 'wp-api-fetch', 'wp-blob', 'wp-block-serialization-default-parser', 'wp-blocks', 'wp-commands', 'wp-components', 'wp-compose', 'wp-data', 'wp-date', 'wp-deprecated', 'wp-dom', 'wp-element', 'wp-hooks', 'wp-html-entities', 'wp-i18n', 'wp-is-shallow-equal', 'wp-keyboard-shortcuts', 'wp-keycodes', 'wp-notices', 'wp-preferences', 'wp-primitives', 'wp-priority-queue', 'wp-private-apis', 'wp-rich-text', 'wp-style-engine', 'wp-token-list', 'wp-url', 'wp-warning'), 'version' => 'eae9c1c1fdbcd744c9d5'), 'block-library.js' => array('dependencies' => array('react-jsx-runtime', 'wp-a11y', 'wp-api-fetch', 'wp-autop', 'wp-blob', 'wp-block-editor', 'wp-blocks', 'wp-components', 'wp-compose', 'wp-core-data', 'wp-data', 'wp-date', 'wp-deprecated', 'wp-dom', 'wp-element', 'wp-escape-html', 'wp-hooks', 'wp-html-entities', 'wp-i18n', 'wp-keyboard-shortcuts', 'wp-keycodes', 'wp-latex-to-mathml', 'wp-notices', 'wp-patterns', 'wp-primitives', 'wp-private-apis', 'wp-rich-text', 'wp-server-side-render', 'wp-url', 'wp-wordcount'), 'version' => '203bb80432e60c3ac8bd'), 'block-serialization-default-parser.js' => array('dependencies' => array(), 'version' => '6f4152c4a3466c0e1107'), 'blocks.js' => array('dependencies' => array('react-jsx-runtime', 'wp-autop', 'wp-blob', 'wp-block-serialization-default-parser', 'wp-data', 'wp-deprecated', 'wp-dom', 'wp-element', 'wp-hooks', 'wp-html-entities', 'wp-i18n', 'wp-is-shallow-equal', 'wp-private-apis', 'wp-rich-text', 'wp-shortcode', 'wp-warning'), 'version' => '038adc2b455e24b7ce0e'), 'commands.js' => array('dependencies' => array('react', 'react-dom', 'react-jsx-runtime', 'wp-components', 'wp-data', 'wp-element', 'wp-i18n', 'wp-keyboard-shortcuts', 'wp-primitives', 'wp-private-apis'), 'version' => 'dc36b1bd84586300bf60'), 'components.js' => array('dependencies' => array('react', 'react-dom', 'react-jsx-runtime', 'wp-a11y', 'wp-compose', 'wp-date', 'wp-deprecated', 'wp-dom', 'wp-element', 'wp-escape-html', 'wp-hooks', 'wp-html-entities', 'wp-i18n', 'wp-is-shallow-equal', 'wp-keycodes', 'wp-primitives', 'wp-private-apis', 'wp-rich-text', 'wp-warning'), 'version' => '316cf67f025fcb3e30cc'), 'compose.js' => array('dependencies' => array('react', 'react-jsx-runtime', 'wp-deprecated', 'wp-dom', 'wp-element', 'wp-is-shallow-equal', 'wp-keycodes', 'wp-priority-queue'), 'version' => '7c895b31cd7a903b5229'), 'core-commands.js' => array('dependencies' => array('react-jsx-runtime', 'wp-commands', 'wp-compose', 'wp-core-data', 'wp-data', 'wp-element', 'wp-html-entities', 'wp-i18n', 'wp-primitives', 'wp-private-apis', 'wp-router', 'wp-url'), 'version' => '2aa6475e85b024c6a8d7'), 'core-data.js' => array('dependencies' => array('react-jsx-runtime', 'wp-api-fetch', 'wp-block-editor', 'wp-blocks', 'wp-compose', 'wp-data', 'wp-deprecated', 'wp-element', 'wp-html-entities', 'wp-i18n', 'wp-is-shallow-equal', 'wp-private-apis', 'wp-rich-text', 'wp-url', 'wp-warning'), 'version' => '164cd7b3a5ff5fbcb9c6'), 'customize-widgets.js' => array('dependencies' => array('react-jsx-runtime', 'wp-block-editor', 'wp-block-library', 'wp-blocks', 'wp-components', 'wp-compose', 'wp-core-data', 'wp-data', 'wp-dom', 'wp-element', 'wp-hooks', 'wp-i18n', 'wp-is-shallow-equal', 'wp-keyboard-shortcuts', 'wp-keycodes', 'wp-media-utils', 'wp-preferences', 'wp-primitives', 'wp-private-apis', 'wp-widgets'), 'version' => '18b0f5c24fbd8697b2aa'), 'data.js' => array('dependencies' => array('react-jsx-runtime', 'wp-compose', 'wp-deprecated', 'wp-element', 'wp-is-shallow-equal', 'wp-priority-queue', 'wp-private-apis', 'wp-redux-routine'), 'version' => 'c64d89d47908ae6c6928'), 'data-controls.js' => array('dependencies' => array('wp-api-fetch', 'wp-data', 'wp-deprecated'), 'version' => '795b5696a2f33be22815'), 'date.js' => array('dependencies' => array('moment', 'wp-deprecated'), 'version' => '90011238ea6662a51b76'), 'deprecated.js' => array('dependencies' => array('wp-hooks'), 'version' => '6c0519d363872604d48f'), 'dom.js' => array('dependencies' => array('wp-deprecated'), 'version' => 'ce91312aee495c65e891'), 'dom-ready.js' => array('dependencies' => array(), 'version' => 'e8a78afc9e733da0e68c'), 'edit-post.js' => array('dependencies' => array('react-jsx-runtime', 'wp-api-fetch', 'wp-block-editor', 'wp-block-library', 'wp-blocks', 'wp-commands', 'wp-components', 'wp-compose', 'wp-core-data', 'wp-data', 'wp-deprecated', 'wp-editor', 'wp-element', 'wp-hooks', 'wp-html-entities', 'wp-i18n', 'wp-keyboard-shortcuts', 'wp-keycodes', 'wp-notices', 'wp-plugins', 'wp-preferences', 'wp-primitives', 'wp-private-apis', 'wp-url', 'wp-widgets'), 'version' => 'e1bb9f1ce3b75f246296'), 'edit-site.js' => array('dependencies' => array('react', 'react-dom', 'react-jsx-runtime', 'wp-a11y', 'wp-api-fetch', 'wp-blob', 'wp-block-editor', 'wp-block-library', 'wp-blocks', 'wp-commands', 'wp-components', 'wp-compose', 'wp-core-data', 'wp-data', 'wp-date', 'wp-deprecated', 'wp-dom', 'wp-editor', 'wp-element', 'wp-hooks', 'wp-html-entities', 'wp-i18n', 'wp-keyboard-shortcuts', 'wp-keycodes', 'wp-media-utils', 'wp-notices', 'wp-patterns', 'wp-plugins', 'wp-preferences', 'wp-primitives', 'wp-private-apis', 'wp-router', 'wp-url', 'wp-warning', 'wp-widgets'), 'version' => '7c958b50fcdf2747fee0'), 'edit-widgets.js' => array('dependencies' => array('react-jsx-runtime', 'wp-api-fetch', 'wp-block-editor', 'wp-block-library', 'wp-blocks', 'wp-components', 'wp-compose', 'wp-core-data', 'wp-data', 'wp-deprecated', 'wp-dom', 'wp-element', 'wp-hooks', 'wp-i18n', 'wp-keyboard-shortcuts', 'wp-keycodes', 'wp-media-utils', 'wp-notices', 'wp-patterns', 'wp-plugins', 'wp-preferences', 'wp-primitives', 'wp-private-apis', 'wp-url', 'wp-viewport', 'wp-widgets'), 'version' => 'a80ffe47fb274d89b066'), 'editor.js' => array('dependencies' => array('react', 'react-dom', 'react-jsx-runtime', 'wp-a11y', 'wp-api-fetch', 'wp-blob', 'wp-block-editor', 'wp-blocks', 'wp-commands', 'wp-components', 'wp-compose', 'wp-core-data', 'wp-data', 'wp-date', 'wp-deprecated', 'wp-dom', 'wp-element', 'wp-hooks', 'wp-html-entities', 'wp-i18n', 'wp-keyboard-shortcuts', 'wp-keycodes', 'wp-media-utils', 'wp-notices', 'wp-patterns', 'wp-plugins', 'wp-preferences', 'wp-primitives', 'wp-private-apis', 'wp-rich-text', 'wp-server-side-render', 'wp-url', 'wp-viewport', 'wp-warning', 'wp-wordcount'), 'version' => '28ddbb0a43bff021a355'), 'element.js' => array('dependencies' => array('react', 'react-dom', 'wp-escape-html'), 'version' => 'a63ee6ce984c02a99fa7'), 'escape-html.js' => array('dependencies' => array(), 'version' => '6cade854f375b3091114'), 'format-library.js' => array('dependencies' => array('react-jsx-runtime', 'wp-a11y', 'wp-block-editor', 'wp-components', 'wp-compose', 'wp-data', 'wp-element', 'wp-html-entities', 'wp-i18n', 'wp-latex-to-mathml', 'wp-primitives', 'wp-private-apis', 'wp-rich-text', 'wp-url'), 'version' => '70ccda985031e9303e9e'), 'hooks.js' => array('dependencies' => array(), 'version' => '220ff17f5667d013d468'), 'html-entities.js' => array('dependencies' => array(), 'version' => '4ae2a0abe957ffc91832'), 'i18n.js' => array('dependencies' => array('wp-hooks'), 'version' => '6b3ae5bd3b8d9598492d'), 'is-shallow-equal.js' => array('dependencies' => array(), 'version' => '4554764360b974e32f5d'), 'keyboard-shortcuts.js' => array('dependencies' => array('react-jsx-runtime', 'wp-data', 'wp-element', 'wp-keycodes'), 'version' => '98dc6100b14191414e86'), 'keycodes.js' => array('dependencies' => array('wp-i18n'), 'version' => '0ae26254e495f9f44348'), 'latex-to-mathml.js' => array('dependencies' => array(), 'version' => '1ce7a1f9643a38b5ebfc'), 'list-reusable-blocks.js' => array('dependencies' => array('react-jsx-runtime', 'wp-api-fetch', 'wp-blob', 'wp-components', 'wp-compose', 'wp-element', 'wp-i18n'), 'version' => '6a9a46c2725626e98187'), 'media-utils.js' => array('dependencies' => array('wp-api-fetch', 'wp-blob', 'wp-element', 'wp-i18n', 'wp-private-apis'), 'version' => '759ef046a52055f4122a'), 'notices.js' => array('dependencies' => array('wp-data'), 'version' => 'bce2bc515ebefc1c8fdb'), 'nux.js' => array('dependencies' => array('react-jsx-runtime', 'wp-components', 'wp-compose', 'wp-data', 'wp-deprecated', 'wp-element', 'wp-i18n', 'wp-primitives'), 'version' => 'faac53b38d2c588188d9'), 'patterns.js' => array('dependencies' => array('react-jsx-runtime', 'wp-a11y', 'wp-block-editor', 'wp-blocks', 'wp-components', 'wp-compose', 'wp-core-data', 'wp-data', 'wp-element', 'wp-html-entities', 'wp-i18n', 'wp-notices', 'wp-primitives', 'wp-private-apis', 'wp-url'), 'version' => '9a430feb5c489942dfd9'), 'plugins.js' => array('dependencies' => array('react-jsx-runtime', 'wp-compose', 'wp-deprecated', 'wp-element', 'wp-hooks', 'wp-is-shallow-equal', 'wp-primitives'), 'version' => '406ba7671d4fe3433a29'), 'preferences.js' => array('dependencies' => array('react-jsx-runtime', 'wp-a11y', 'wp-components', 'wp-compose', 'wp-data', 'wp-deprecated', 'wp-element', 'wp-i18n', 'wp-primitives', 'wp-private-apis'), 'version' => '82e07780e2bc6c33ac54'), 'preferences-persistence.js' => array('dependencies' => array('wp-api-fetch'), 'version' => 'c2f2335b9574eb86f052'), 'primitives.js' => array('dependencies' => array('react-jsx-runtime', 'wp-element'), 'version' => '2a765d78f060aed119ff'), 'priority-queue.js' => array('dependencies' => array(), 'version' => 'b617c70465159c57937b'), 'private-apis.js' => array('dependencies' => array(), 'version' => 'd7d926d9becc3eef5e24'), 'redux-routine.js' => array('dependencies' => array(), 'version' => '58e4c7cd114da148c2c4'), 'reusable-blocks.js' => array('dependencies' => array('react-jsx-runtime', 'wp-block-editor', 'wp-blocks', 'wp-components', 'wp-core-data', 'wp-data', 'wp-element', 'wp-i18n', 'wp-notices', 'wp-primitives', 'wp-url'), 'version' => '432ad5022736e46b1966'), 'rich-text.js' => array('dependencies' => array('wp-a11y', 'wp-compose', 'wp-data', 'wp-deprecated', 'wp-element', 'wp-escape-html', 'wp-i18n', 'wp-keycodes'), 'version' => '26b032e73cfbf9a8165e'), 'router.js' => array('dependencies' => array('react-jsx-runtime', 'wp-compose', 'wp-element', 'wp-private-apis', 'wp-url'), 'version' => 'a276444c22bcd59e25c6'), 'server-side-render.js' => array('dependencies' => array('react-jsx-runtime', 'wp-api-fetch', 'wp-blocks', 'wp-components', 'wp-compose', 'wp-data', 'wp-element', 'wp-i18n', 'wp-url'), 'version' => '1332aa67a86c1fb5cdae'), 'shortcode.js' => array('dependencies' => array(), 'version' => 'c4ba248a967c40b8582c'), 'style-engine.js' => array('dependencies' => array(), 'version' => 'e9af2fb3cca3fc5b8836'), 'token-list.js' => array('dependencies' => array(), 'version' => '2dbca0e379f5b7d539a9'), 'url.js' => array('dependencies' => array(), 'version' => '6bc6a4c3049d91342459'), 'viewport.js' => array('dependencies' => array('react-jsx-runtime', 'wp-compose', 'wp-data'), 'version' => 'a67acba4cc142a907c6d'), 'views.js' => array('dependencies' => array('wp-data', 'wp-element', 'wp-preferences'), 'version' => '45d25ba894aa9540a41f'), 'warning.js' => array('dependencies' => array(), 'version' => '9eb7f5c6957924ec4b81'), 'widgets.js' => array('dependencies' => array('react-jsx-runtime', 'wp-api-fetch', 'wp-block-editor', 'wp-blocks', 'wp-components', 'wp-compose', 'wp-core-data', 'wp-data', 'wp-element', 'wp-i18n', 'wp-notices', 'wp-primitives'), 'version' => '1eec0865ea9500e23fc2'), 'wordcount.js' => array('dependencies' => array(), 'version' => '74fa464d39ba906db10c'));
+<?php return array(
+	'a11y.js' => array(
+		'dependencies' => array(
+			'wp-dom-ready',
+			'wp-i18n'
+		),
+		'version' => 'af934e5259bc51b8718e'
+	),
+	'annotations.js' => array(
+		'dependencies' => array(
+			'wp-data',
+			'wp-hooks',
+			'wp-i18n',
+			'wp-rich-text'
+		),
+		'version' => '4b07d06c67c3b5ea590c'
+	),
+	'api-fetch.js' => array(
+		'dependencies' => array(
+			'wp-i18n',
+			'wp-url'
+		),
+		'version' => 'd7efe4dc1468d36c39b8'
+	),
+	'autop.js' => array(
+		'dependencies' => array(
+			
+		),
+		'version' => '9d0d0901b46f0a9027c9'
+	),
+	'base-styles.js' => array(
+		'dependencies' => array(
+			
+		),
+		'version' => '8ebe97b095beb7e9279b'
+	),
+	'blob.js' => array(
+		'dependencies' => array(
+			
+		),
+		'version' => '198af75fe06d924090d8'
+	),
+	'block-directory.js' => array(
+		'dependencies' => array(
+			'react-jsx-runtime',
+			'wp-a11y',
+			'wp-api-fetch',
+			'wp-block-editor',
+			'wp-blocks',
+			'wp-components',
+			'wp-compose',
+			'wp-core-data',
+			'wp-data',
+			'wp-editor',
+			'wp-element',
+			'wp-hooks',
+			'wp-html-entities',
+			'wp-i18n',
+			'wp-notices',
+			'wp-plugins',
+			'wp-primitives',
+			'wp-url'
+		),
+		'version' => '23207f52d0d266f6e1c4'
+	),
+	'block-editor.js' => array(
+		'dependencies' => array(
+			'react',
+			'react-dom',
+			'react-jsx-runtime',
+			'wp-a11y',
+			'wp-api-fetch',
+			'wp-blob',
+			'wp-block-serialization-default-parser',
+			'wp-blocks',
+			'wp-commands',
+			'wp-components',
+			'wp-compose',
+			'wp-data',
+			'wp-date',
+			'wp-deprecated',
+			'wp-dom',
+			'wp-element',
+			'wp-hooks',
+			'wp-html-entities',
+			'wp-i18n',
+			'wp-is-shallow-equal',
+			'wp-keyboard-shortcuts',
+			'wp-keycodes',
+			'wp-notices',
+			'wp-preferences',
+			'wp-primitives',
+			'wp-priority-queue',
+			'wp-private-apis',
+			'wp-rich-text',
+			'wp-style-engine',
+			'wp-theme',
+			'wp-token-list',
+			'wp-upload-media',
+			'wp-url',
+			'wp-warning'
+		),
+		'version' => 'f3d941bcb2e86c269881'
+	),
+	'block-library.js' => array(
+		'dependencies' => array(
+			'react',
+			'react-jsx-runtime',
+			'wp-a11y',
+			'wp-api-fetch',
+			'wp-autop',
+			'wp-blob',
+			'wp-block-editor',
+			'wp-blocks',
+			'wp-components',
+			'wp-compose',
+			'wp-core-data',
+			'wp-data',
+			'wp-date',
+			'wp-deprecated',
+			'wp-dom',
+			'wp-element',
+			'wp-escape-html',
+			'wp-hooks',
+			'wp-html-entities',
+			'wp-i18n',
+			'wp-keyboard-shortcuts',
+			'wp-keycodes',
+			'wp-notices',
+			'wp-patterns',
+			'wp-primitives',
+			'wp-private-apis',
+			'wp-rich-text',
+			'wp-server-side-render',
+			'wp-upload-media',
+			'wp-url',
+			'wp-wordcount'
+		),
+		'module_dependencies' => array(
+			array(
+				'id' => '@wordpress/latex-to-mathml',
+				'import' => 'dynamic'
+			)
+		),
+		'version' => '998f328cb929aeb1d5a8'
+	),
+	'block-serialization-default-parser.js' => array(
+		'dependencies' => array(
+			
+		),
+		'version' => 'bff55bd3f1ce9df0c99c'
+	),
+	'block-serialization-spec-parser.js' => array(
+		'dependencies' => array(
+			
+		),
+		'version' => '9ebc5e95e1de1cabd1e6'
+	),
+	'blocks.js' => array(
+		'dependencies' => array(
+			'react-jsx-runtime',
+			'wp-autop',
+			'wp-blob',
+			'wp-block-serialization-default-parser',
+			'wp-data',
+			'wp-deprecated',
+			'wp-dom',
+			'wp-element',
+			'wp-hooks',
+			'wp-html-entities',
+			'wp-i18n',
+			'wp-is-shallow-equal',
+			'wp-private-apis',
+			'wp-rich-text',
+			'wp-shortcode',
+			'wp-warning'
+		),
+		'version' => 'ef38e42500165bfda301'
+	),
+	'commands.js' => array(
+		'dependencies' => array(
+			'react',
+			'react-dom',
+			'react-jsx-runtime',
+			'wp-components',
+			'wp-data',
+			'wp-element',
+			'wp-i18n',
+			'wp-keyboard-shortcuts',
+			'wp-primitives',
+			'wp-private-apis'
+		),
+		'version' => 'e3d8bba53f4ffea4fcd2'
+	),
+	'components.js' => array(
+		'dependencies' => array(
+			'react',
+			'react-dom',
+			'react-jsx-runtime',
+			'wp-a11y',
+			'wp-compose',
+			'wp-date',
+			'wp-deprecated',
+			'wp-dom',
+			'wp-element',
+			'wp-escape-html',
+			'wp-hooks',
+			'wp-html-entities',
+			'wp-i18n',
+			'wp-is-shallow-equal',
+			'wp-keycodes',
+			'wp-primitives',
+			'wp-private-apis',
+			'wp-rich-text',
+			'wp-warning'
+		),
+		'version' => '5dedfe13f08880193a28'
+	),
+	'compose.js' => array(
+		'dependencies' => array(
+			'react',
+			'react-jsx-runtime',
+			'wp-deprecated',
+			'wp-dom',
+			'wp-element',
+			'wp-is-shallow-equal',
+			'wp-keycodes',
+			'wp-priority-queue',
+			'wp-undo-manager'
+		),
+		'version' => 'fbe37f6b46750554f947'
+	),
+	'core-commands.js' => array(
+		'dependencies' => array(
+			'react-jsx-runtime',
+			'wp-commands',
+			'wp-compose',
+			'wp-core-data',
+			'wp-data',
+			'wp-element',
+			'wp-html-entities',
+			'wp-i18n',
+			'wp-primitives',
+			'wp-private-apis',
+			'wp-router',
+			'wp-url'
+		),
+		'version' => 'b209152e7e51279d7c28'
+	),
+	'core-data.js' => array(
+		'dependencies' => array(
+			'react-jsx-runtime',
+			'wp-api-fetch',
+			'wp-block-editor',
+			'wp-blocks',
+			'wp-compose',
+			'wp-data',
+			'wp-deprecated',
+			'wp-element',
+			'wp-hooks',
+			'wp-html-entities',
+			'wp-i18n',
+			'wp-private-apis',
+			'wp-rich-text',
+			'wp-undo-manager',
+			'wp-url',
+			'wp-warning'
+		),
+		'version' => '89931f90e4df5eb5f8a3'
+	),
+	'customize-widgets.js' => array(
+		'dependencies' => array(
+			'react-jsx-runtime',
+			'wp-block-editor',
+			'wp-block-library',
+			'wp-blocks',
+			'wp-components',
+			'wp-compose',
+			'wp-core-data',
+			'wp-data',
+			'wp-dom',
+			'wp-element',
+			'wp-hooks',
+			'wp-i18n',
+			'wp-is-shallow-equal',
+			'wp-keyboard-shortcuts',
+			'wp-keycodes',
+			'wp-media-utils',
+			'wp-preferences',
+			'wp-primitives',
+			'wp-private-apis',
+			'wp-widgets'
+		),
+		'version' => '524dc7a4326b77064831'
+	),
+	'data.js' => array(
+		'dependencies' => array(
+			'react-jsx-runtime',
+			'wp-compose',
+			'wp-deprecated',
+			'wp-element',
+			'wp-is-shallow-equal',
+			'wp-priority-queue',
+			'wp-private-apis',
+			'wp-redux-routine'
+		),
+		'version' => '1756b6a2676c1b3369ab'
+	),
+	'data-controls.js' => array(
+		'dependencies' => array(
+			'wp-api-fetch',
+			'wp-data',
+			'wp-deprecated'
+		),
+		'version' => '730061ade69d7f341014'
+	),
+	'date.js' => array(
+		'dependencies' => array(
+			'moment',
+			'wp-deprecated'
+		),
+		'version' => 'c9f8e7dd3232716f34e9'
+	),
+	'deprecated.js' => array(
+		'dependencies' => array(
+			'wp-hooks'
+		),
+		'version' => '990e85f234fee8f7d446'
+	),
+	'dom.js' => array(
+		'dependencies' => array(
+			'wp-deprecated'
+		),
+		'version' => '66a6cf58e0c4cd128af0'
+	),
+	'dom-ready.js' => array(
+		'dependencies' => array(
+			
+		),
+		'version' => 'a06281ae5cf5500e9317'
+	),
+	'edit-post.js' => array(
+		'dependencies' => array(
+			'media-models',
+			'media-views',
+			'postbox',
+			'react',
+			'react-dom',
+			'react-jsx-runtime',
+			'wp-a11y',
+			'wp-api-fetch',
+			'wp-block-editor',
+			'wp-block-library',
+			'wp-blocks',
+			'wp-commands',
+			'wp-components',
+			'wp-compose',
+			'wp-core-data',
+			'wp-data',
+			'wp-deprecated',
+			'wp-editor',
+			'wp-element',
+			'wp-hooks',
+			'wp-html-entities',
+			'wp-i18n',
+			'wp-keyboard-shortcuts',
+			'wp-keycodes',
+			'wp-notices',
+			'wp-plugins',
+			'wp-preferences',
+			'wp-primitives',
+			'wp-private-apis',
+			'wp-style-engine',
+			'wp-theme',
+			'wp-url',
+			'wp-widgets'
+		),
+		'module_dependencies' => array(
+			array(
+				'id' => '@wordpress/route',
+				'import' => 'static'
+			)
+		),
+		'version' => '28ef50b859708963e197'
+	),
+	'edit-site.js' => array(
+		'dependencies' => array(
+			'react',
+			'react-dom',
+			'react-jsx-runtime',
+			'wp-a11y',
+			'wp-api-fetch',
+			'wp-blob',
+			'wp-block-editor',
+			'wp-block-library',
+			'wp-blocks',
+			'wp-commands',
+			'wp-components',
+			'wp-compose',
+			'wp-core-data',
+			'wp-data',
+			'wp-date',
+			'wp-deprecated',
+			'wp-dom',
+			'wp-dom-ready',
+			'wp-editor',
+			'wp-element',
+			'wp-html-entities',
+			'wp-i18n',
+			'wp-keyboard-shortcuts',
+			'wp-keycodes',
+			'wp-notices',
+			'wp-patterns',
+			'wp-plugins',
+			'wp-preferences',
+			'wp-primitives',
+			'wp-private-apis',
+			'wp-router',
+			'wp-style-engine',
+			'wp-theme',
+			'wp-url',
+			'wp-warning',
+			'wp-widgets'
+		),
+		'module_dependencies' => array(
+			array(
+				'id' => '@wordpress/route',
+				'import' => 'static'
+			)
+		),
+		'version' => 'dfd078032a67983c4d32'
+	),
+	'edit-widgets.js' => array(
+		'dependencies' => array(
+			'react',
+			'react-dom',
+			'react-jsx-runtime',
+			'wp-a11y',
+			'wp-api-fetch',
+			'wp-block-editor',
+			'wp-block-library',
+			'wp-blocks',
+			'wp-components',
+			'wp-compose',
+			'wp-core-data',
+			'wp-data',
+			'wp-deprecated',
+			'wp-dom',
+			'wp-element',
+			'wp-hooks',
+			'wp-i18n',
+			'wp-keyboard-shortcuts',
+			'wp-keycodes',
+			'wp-media-utils',
+			'wp-notices',
+			'wp-patterns',
+			'wp-plugins',
+			'wp-preferences',
+			'wp-primitives',
+			'wp-private-apis',
+			'wp-theme',
+			'wp-url',
+			'wp-viewport',
+			'wp-widgets'
+		),
+		'module_dependencies' => array(
+			array(
+				'id' => '@wordpress/route',
+				'import' => 'static'
+			)
+		),
+		'version' => '899c5ac5dcb94e19d378'
+	),
+	'editor.js' => array(
+		'dependencies' => array(
+			'react',
+			'react-dom',
+			'react-jsx-runtime',
+			'wp-a11y',
+			'wp-api-fetch',
+			'wp-blob',
+			'wp-block-editor',
+			'wp-block-serialization-default-parser',
+			'wp-blocks',
+			'wp-commands',
+			'wp-components',
+			'wp-compose',
+			'wp-core-data',
+			'wp-data',
+			'wp-date',
+			'wp-deprecated',
+			'wp-dom',
+			'wp-element',
+			'wp-hooks',
+			'wp-html-entities',
+			'wp-i18n',
+			'wp-keyboard-shortcuts',
+			'wp-keycodes',
+			'wp-media-utils',
+			'wp-notices',
+			'wp-patterns',
+			'wp-plugins',
+			'wp-preferences',
+			'wp-primitives',
+			'wp-private-apis',
+			'wp-rich-text',
+			'wp-server-side-render',
+			'wp-style-engine',
+			'wp-theme',
+			'wp-upload-media',
+			'wp-url',
+			'wp-viewport',
+			'wp-warning',
+			'wp-wordcount'
+		),
+		'module_dependencies' => array(
+			array(
+				'id' => '@wordpress/route',
+				'import' => 'static'
+			)
+		),
+		'version' => '425fffc30511d9d52e5f'
+	),
+	'element.js' => array(
+		'dependencies' => array(
+			'react',
+			'react-dom',
+			'wp-escape-html'
+		),
+		'version' => '15ba804677f72a8db97b'
+	),
+	'escape-html.js' => array(
+		'dependencies' => array(
+			
+		),
+		'version' => '3f093e5cca67aa0f8b56'
+	),
+	'format-library.js' => array(
+		'dependencies' => array(
+			'react-jsx-runtime',
+			'wp-a11y',
+			'wp-block-editor',
+			'wp-components',
+			'wp-compose',
+			'wp-data',
+			'wp-element',
+			'wp-html-entities',
+			'wp-i18n',
+			'wp-primitives',
+			'wp-private-apis',
+			'wp-rich-text',
+			'wp-url'
+		),
+		'module_dependencies' => array(
+			array(
+				'id' => '@wordpress/latex-to-mathml',
+				'import' => 'dynamic'
+			)
+		),
+		'version' => 'f89be9586f2d9ce4545a'
+	),
+	'hooks.js' => array(
+		'dependencies' => array(
+			
+		),
+		'version' => '7496969728ca0f95732d'
+	),
+	'html-entities.js' => array(
+		'dependencies' => array(
+			
+		),
+		'version' => '8c6fa5b869dfeadc4af2'
+	),
+	'i18n.js' => array(
+		'dependencies' => array(
+			'wp-hooks'
+		),
+		'version' => '781d11515ad3d91786ec'
+	),
+	'is-shallow-equal.js' => array(
+		'dependencies' => array(
+			
+		),
+		'version' => '5d84b9f3cb50d2ce7d04'
+	),
+	'keyboard-shortcuts.js' => array(
+		'dependencies' => array(
+			'react-jsx-runtime',
+			'wp-data',
+			'wp-element',
+			'wp-keycodes'
+		),
+		'version' => '2ed78d3b4c23f38804e0'
+	),
+	'keycodes.js' => array(
+		'dependencies' => array(
+			'wp-i18n'
+		),
+		'version' => 'aa1a141e3468afe7f852'
+	),
+	'list-reusable-blocks.js' => array(
+		'dependencies' => array(
+			'react-jsx-runtime',
+			'wp-api-fetch',
+			'wp-blob',
+			'wp-components',
+			'wp-compose',
+			'wp-element',
+			'wp-i18n'
+		),
+		'version' => '2e35ebd5dbaccb5a90c5'
+	),
+	'media-utils.js' => array(
+		'dependencies' => array(
+			'react',
+			'react-dom',
+			'react-jsx-runtime',
+			'wp-a11y',
+			'wp-api-fetch',
+			'wp-blob',
+			'wp-components',
+			'wp-compose',
+			'wp-core-data',
+			'wp-data',
+			'wp-date',
+			'wp-deprecated',
+			'wp-element',
+			'wp-i18n',
+			'wp-keycodes',
+			'wp-notices',
+			'wp-primitives',
+			'wp-private-apis',
+			'wp-theme',
+			'wp-url',
+			'wp-warning'
+		),
+		'version' => '85f1375ab5f23cd5d13c'
+	),
+	'notices.js' => array(
+		'dependencies' => array(
+			'react-jsx-runtime',
+			'wp-components',
+			'wp-data'
+		),
+		'version' => '218d0173a31ae7269246'
+	),
+	'nux.js' => array(
+		'dependencies' => array(
+			'react-jsx-runtime',
+			'wp-components',
+			'wp-compose',
+			'wp-data',
+			'wp-deprecated',
+			'wp-element',
+			'wp-i18n',
+			'wp-primitives'
+		),
+		'version' => '14d2335a0007b36b9112'
+	),
+	'patterns.js' => array(
+		'dependencies' => array(
+			'react-jsx-runtime',
+			'wp-a11y',
+			'wp-block-editor',
+			'wp-blocks',
+			'wp-components',
+			'wp-compose',
+			'wp-core-data',
+			'wp-data',
+			'wp-element',
+			'wp-html-entities',
+			'wp-i18n',
+			'wp-notices',
+			'wp-primitives',
+			'wp-private-apis',
+			'wp-url'
+		),
+		'version' => '714c49ed2942c98d088f'
+	),
+	'plugins.js' => array(
+		'dependencies' => array(
+			'react-jsx-runtime',
+			'wp-compose',
+			'wp-deprecated',
+			'wp-element',
+			'wp-hooks',
+			'wp-is-shallow-equal',
+			'wp-primitives'
+		),
+		'version' => '72e3cf01c2b3535a9432'
+	),
+	'preferences.js' => array(
+		'dependencies' => array(
+			'react-jsx-runtime',
+			'wp-a11y',
+			'wp-components',
+			'wp-compose',
+			'wp-data',
+			'wp-deprecated',
+			'wp-element',
+			'wp-i18n',
+			'wp-preferences-persistence',
+			'wp-primitives',
+			'wp-private-apis'
+		),
+		'version' => '035813168e404aa30193'
+	),
+	'preferences-persistence.js' => array(
+		'dependencies' => array(
+			'wp-api-fetch'
+		),
+		'version' => 'e8033be98338d1861bca'
+	),
+	'primitives.js' => array(
+		'dependencies' => array(
+			'react-jsx-runtime',
+			'wp-element'
+		),
+		'version' => 'a5c905ec27bcd76ef287'
+	),
+	'priority-queue.js' => array(
+		'dependencies' => array(
+			
+		),
+		'version' => '1f0e89e247bc0bd3f9b9'
+	),
+	'private-apis.js' => array(
+		'dependencies' => array(
+			
+		),
+		'version' => '835912f0086b9e59aed4'
+	),
+	'react-i18n.js' => array(
+		'dependencies' => array(
+			'react-jsx-runtime',
+			'wp-element',
+			'wp-i18n'
+		),
+		'version' => '9b74577dbd7e50f6b77b'
+	),
+	'redux-routine.js' => array(
+		'dependencies' => array(
+			
+		),
+		'version' => '64f9f5001aabc046c605'
+	),
+	'reusable-blocks.js' => array(
+		'dependencies' => array(
+			'react-jsx-runtime',
+			'wp-block-editor',
+			'wp-blocks',
+			'wp-components',
+			'wp-core-data',
+			'wp-data',
+			'wp-element',
+			'wp-i18n',
+			'wp-notices',
+			'wp-primitives',
+			'wp-url'
+		),
+		'version' => '21d86e46535b79d9afda'
+	),
+	'rich-text.js' => array(
+		'dependencies' => array(
+			'wp-a11y',
+			'wp-compose',
+			'wp-data',
+			'wp-deprecated',
+			'wp-dom',
+			'wp-element',
+			'wp-escape-html',
+			'wp-i18n',
+			'wp-keycodes',
+			'wp-private-apis'
+		),
+		'version' => '16449e6108f48327f368'
+	),
+	'router.js' => array(
+		'dependencies' => array(
+			'react-jsx-runtime',
+			'wp-compose',
+			'wp-element',
+			'wp-private-apis',
+			'wp-url'
+		),
+		'version' => '0249e6724784b1c2583b'
+	),
+	'server-side-render.js' => array(
+		'dependencies' => array(
+			'react-jsx-runtime',
+			'wp-api-fetch',
+			'wp-blocks',
+			'wp-components',
+			'wp-compose',
+			'wp-data',
+			'wp-element',
+			'wp-i18n',
+			'wp-url'
+		),
+		'version' => '10a51bf05ced35b78092'
+	),
+	'shortcode.js' => array(
+		'dependencies' => array(
+			
+		),
+		'version' => '11742fe18cc215d3d5ab'
+	),
+	'style-engine.js' => array(
+		'dependencies' => array(
+			
+		),
+		'version' => 'faa37ce61b7ec8394b2a'
+	),
+	'theme.js' => array(
+		'dependencies' => array(
+			'react-jsx-runtime',
+			'wp-element',
+			'wp-private-apis'
+		),
+		'version' => 'e22ce547a4420507b323'
+	),
+	'token-list.js' => array(
+		'dependencies' => array(
+			
+		),
+		'version' => '16f0aebdd39d87c2a84b'
+	),
+	'undo-manager.js' => array(
+		'dependencies' => array(
+			'wp-is-shallow-equal'
+		),
+		'version' => '27bb0ae036a2c9d4a1b5'
+	),
+	'upload-media.js' => array(
+		'dependencies' => array(
+			'react-jsx-runtime',
+			'wp-blob',
+			'wp-compose',
+			'wp-data',
+			'wp-element',
+			'wp-i18n',
+			'wp-private-apis',
+			'wp-url'
+		),
+		'module_dependencies' => array(
+			
+		),
+		'version' => 'd359c2cccf866d7082d2'
+	),
+	'url.js' => array(
+		'dependencies' => array(
+			
+		),
+		'version' => 'bb0f766c3d2efe497871'
+	),
+	'viewport.js' => array(
+		'dependencies' => array(
+			'react-jsx-runtime',
+			'wp-compose',
+			'wp-data'
+		),
+		'version' => '8614025b8075d220d78f'
+	),
+	'warning.js' => array(
+		'dependencies' => array(
+			
+		),
+		'version' => '36fdbdc984d93aee8a97'
+	),
+	'widgets.js' => array(
+		'dependencies' => array(
+			'react-jsx-runtime',
+			'wp-api-fetch',
+			'wp-block-editor',
+			'wp-blocks',
+			'wp-components',
+			'wp-compose',
+			'wp-core-data',
+			'wp-data',
+			'wp-element',
+			'wp-i18n',
+			'wp-notices',
+			'wp-primitives'
+		),
+		'version' => '02b8dd683bc610f979fa'
+	),
+	'wordcount.js' => array(
+		'dependencies' => array(
+			
+		),
+		'version' => '3b928d5db8724a8614dd'
+	)
+);

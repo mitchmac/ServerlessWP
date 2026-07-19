@@ -5,10 +5,11 @@
 namespace DeliciousBrains\WP_Offload_Media\Gcp\Google\LongRunning;
 
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Internal\GPBType;
-use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Internal\RepeatedField;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Internal\GPBUtil;
+use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\RepeatedField;
 /**
- * The request message for [Operations.WaitOperation][google.longrunning.Operations.WaitOperation].
+ * The request message for
+ * [Operations.WaitOperation][google.longrunning.Operations.WaitOperation].
  *
  * Generated from protobuf message <code>google.longrunning.WaitOperationRequest</code>
  */

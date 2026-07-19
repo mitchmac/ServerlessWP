@@ -17,9 +17,10 @@ use DeliciousBrains\WP_Offload_Media\Gcp\Ramsey\Uuid\Converter\NumberConverterIn
 use DeliciousBrains\WP_Offload_Media\Gcp\Ramsey\Uuid\Converter\TimeConverterInterface;
 use DeliciousBrains\WP_Offload_Media\Gcp\Ramsey\Uuid\Uuid as BaseUuid;
 /**
- * Nonstandard\Uuid is a UUID that doesn't conform to RFC 4122
+ * Nonstandard\Uuid is a UUID that doesn't conform to RFC 9562 (formerly RFC 4122)
  *
- * @psalm-immutable
+ * @immutable
+ * @pure
  */
 final class Uuid extends BaseUuid
 {

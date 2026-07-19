@@ -11,35 +11,13 @@ declare (strict_types=1);
  */
 namespace DeliciousBrains\WP_Offload_Media\Gcp\Monolog;
 
-use DateTimeZone;
-/**
- * Overrides default json encoding of date time objects
- *
- * @author Menno Holtkamp
- * @author Jordi Boggiano <j.boggiano@seld.be>
- */
-class DateTimeImmutable extends \DateTimeImmutable implements \JsonSerializable
-{
+\class_alias(JsonSerializableDateTimeImmutable::class, 'DeliciousBrains\\WP_Offload_Media\\Gcp\\Monolog\\DateTimeImmutable');
+// @phpstan-ignore-next-line
+if (\false) {
     /**
-     * @var bool
+     * @deprecated Use \Monolog\JsonSerializableDateTimeImmutable instead.
      */
-    private $useMicroseconds;
-    public function __construct(bool $useMicroseconds, ?DateTimeZone $timezone = null)
+    class DateTimeImmutable extends JsonSerializableDateTimeImmutable
     {
-        $this->useMicroseconds = $useMicroseconds;
-        // if you like to use a custom time to pass to Logger::addRecord directly,
-        // call modify() or setTimestamp() on this instance to change the date after creating it
-        parent::__construct('now', $timezone);
-    }
-    public function jsonSerialize() : string
-    {
-        if ($this->useMicroseconds) {
-            return $this->format('Y-m-d\\TH:i:s.uP');
-        }
-        return $this->format('Y-m-d\\TH:i:sP');
-    }
-    public function __toString() : string
-    {
-        return $this->jsonSerialize();
     }
 }

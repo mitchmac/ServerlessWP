@@ -11,6 +11,7 @@ declare (strict_types=1);
  */
 namespace DeliciousBrains\WP_Offload_Media\Gcp\Monolog\Processor;
 
+use DeliciousBrains\WP_Offload_Media\Gcp\Monolog\LogRecord;
 /**
  * Injects memory_get_usage in all records
  *
@@ -20,15 +21,15 @@ namespace DeliciousBrains\WP_Offload_Media\Gcp\Monolog\Processor;
 class MemoryUsageProcessor extends MemoryProcessor
 {
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
-    public function __invoke(array $record) : array
+    public function __invoke(LogRecord $record) : LogRecord
     {
         $usage = \memory_get_usage($this->realUsage);
         if ($this->useFormatting) {
             $usage = $this->formatBytes($usage);
         }
-        $record['extra']['memory_usage'] = $usage;
+        $record->extra['memory_usage'] = $usage;
         return $record;
     }
 }
