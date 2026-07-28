@@ -12,8 +12,9 @@ declare (strict_types=1);
 namespace DeliciousBrains\WP_Offload_Media\Gcp\Monolog\Handler;
 
 use DeliciousBrains\WP_Offload_Media\Gcp\Aws\Sqs\SqsClient;
-use DeliciousBrains\WP_Offload_Media\Gcp\Monolog\Logger;
+use DeliciousBrains\WP_Offload_Media\Gcp\Monolog\Level;
 use DeliciousBrains\WP_Offload_Media\Gcp\Monolog\Utils;
+use DeliciousBrains\WP_Offload_Media\Gcp\Monolog\LogRecord;
 /**
  * Writes to any sqs queue.
  *
@@ -25,25 +26,23 @@ class SqsHandler extends AbstractProcessingHandler
     protected const MAX_MESSAGE_SIZE = 262144;
     /** 100 KB in bytes - head message size for new error log */
     protected const HEAD_MESSAGE_SIZE = 102400;
-    /** @var SqsClient */
-    private $client;
-    /** @var string */
-    private $queueUrl;
-    public function __construct(SqsClient $sqsClient, string $queueUrl, $level = Logger::DEBUG, bool $bubble = \true)
+    private SqsClient $client;
+    private string $queueUrl;
+    public function __construct(SqsClient $sqsClient, string $queueUrl, int|string|Level $level = Level::Debug, bool $bubble = \true)
     {
         parent::__construct($level, $bubble);
         $this->client = $sqsClient;
         $this->queueUrl = $queueUrl;
     }
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
-    protected function write(array $record) : void
+    protected function write(LogRecord $record) : void
     {
-        if (!isset($record['formatted']) || 'string' !== \gettype($record['formatted'])) {
+        if (!isset($record->formatted) || 'string' !== \gettype($record->formatted)) {
             throw new \InvalidArgumentException('SqsHandler accepts only formatted records as a string' . Utils::getRecordMessageForException($record));
         }
-        $messageBody = $record['formatted'];
+        $messageBody = $record->formatted;
         if (\strlen($messageBody) >= static::MAX_MESSAGE_SIZE) {
             $messageBody = Utils::substr($messageBody, 0, static::HEAD_MESSAGE_SIZE);
         }

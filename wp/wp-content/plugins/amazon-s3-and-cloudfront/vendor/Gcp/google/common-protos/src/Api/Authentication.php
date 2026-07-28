@@ -5,8 +5,8 @@
 namespace DeliciousBrains\WP_Offload_Media\Gcp\Google\Api;
 
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Internal\GPBType;
-use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Internal\RepeatedField;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Internal\GPBUtil;
+use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\RepeatedField;
 /**
  * `Authentication` defines the authentication configuration for API methods
  * provided by an API service.
@@ -48,10 +48,10 @@ class Authentication extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protob
      * @param array $data {
      *     Optional. Data for populating the Message object.
      *
-     *     @type array<\Google\Api\AuthenticationRule>|\Google\Protobuf\Internal\RepeatedField $rules
+     *     @type \Google\Api\AuthenticationRule[] $rules
      *           A list of authentication rules that apply to individual API methods.
      *           **NOTE:** All service configuration rules follow "last one wins" order.
-     *     @type array<\Google\Api\AuthProvider>|\Google\Protobuf\Internal\RepeatedField $providers
+     *     @type \Google\Api\AuthProvider[] $providers
      *           Defines a set of authentication providers that a service supports.
      * }
      */
@@ -65,7 +65,7 @@ class Authentication extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protob
      * **NOTE:** All service configuration rules follow "last one wins" order.
      *
      * Generated from protobuf field <code>repeated .google.api.AuthenticationRule rules = 3;</code>
-     * @return \Google\Protobuf\Internal\RepeatedField
+     * @return RepeatedField<\Google\Api\AuthenticationRule>
      */
     public function getRules()
     {
@@ -76,7 +76,7 @@ class Authentication extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protob
      * **NOTE:** All service configuration rules follow "last one wins" order.
      *
      * Generated from protobuf field <code>repeated .google.api.AuthenticationRule rules = 3;</code>
-     * @param array<\Google\Api\AuthenticationRule>|\Google\Protobuf\Internal\RepeatedField $var
+     * @param \Google\Api\AuthenticationRule[] $var
      * @return $this
      */
     public function setRules($var)
@@ -89,7 +89,7 @@ class Authentication extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protob
      * Defines a set of authentication providers that a service supports.
      *
      * Generated from protobuf field <code>repeated .google.api.AuthProvider providers = 4;</code>
-     * @return \Google\Protobuf\Internal\RepeatedField
+     * @return RepeatedField<\Google\Api\AuthProvider>
      */
     public function getProviders()
     {
@@ -99,7 +99,7 @@ class Authentication extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protob
      * Defines a set of authentication providers that a service supports.
      *
      * Generated from protobuf field <code>repeated .google.api.AuthProvider providers = 4;</code>
-     * @param array<\Google\Api\AuthProvider>|\Google\Protobuf\Internal\RepeatedField $var
+     * @param \Google\Api\AuthProvider[] $var
      * @return $this
      */
     public function setProviders($var)

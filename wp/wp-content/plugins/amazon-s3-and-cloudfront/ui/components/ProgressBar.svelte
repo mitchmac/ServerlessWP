@@ -1,14 +1,32 @@
 <script>
 	import {cubicOut} from "svelte/easing";
-	import {tweened} from "svelte/motion";
+	import {Tween} from "svelte/motion";
 
-	export let percentComplete = 0;
-	export let starting = false;
-	export let running = false;
-	export let paused = false;
-	export let title = "";
+	/**
+	 * @typedef {Object} Props
+	 * @property {number} [percentComplete]
+	 * @property {boolean} [starting]
+	 * @property {boolean} [running]
+	 * @property {boolean} [paused]
+	 * @property {string} [title]
+	 * @property {function} [onclick]
+	 * @property {function} [onmouseenter]
+	 * @property {function} [onmouseleave]
+	 */
 
-	let progressTweened = tweened( 0, {
+	/** @type {Props} */
+	let {
+		percentComplete = 0,
+		starting = false,
+		running = false,
+		paused = false,
+		title = "",
+		onclick,
+		onmouseenter,
+		onmouseleave
+	} = $props();
+
+	const progressTween = new Tween( 0, {
 		duration: 400,
 		easing: cubicOut
 	} );
@@ -32,21 +50,23 @@
 		return percent;
 	}
 
-	$: progressTweened.set( getProgress( percentComplete ) );
-	$: complete = percentComplete >= 100;
+	$effect( () => {
+		progressTween.set( getProgress( percentComplete ) );
+	} );
+	let complete = $derived( percentComplete >= 100 );
 </script>
 
 <!-- TODO: Fix a11y. -->
-<!-- svelte-ignore a11y-no-static-element-interactions -->
-<!-- svelte-ignore a11y-click-events-have-key-events -->
+<!-- svelte-ignore a11y_no_static_element_interactions -->
+<!-- svelte-ignore a11y_click_events_have_key_events -->
 <div
 	class="progress-bar"
 	class:stripe={running && ! paused}
 	class:animate={starting}
 	{title}
-	on:click|preventDefault
-	on:mouseenter
-	on:mouseleave
+	{onclick}
+	{onmouseenter}
+	{onmouseleave}
 >
-	<span class="indicator animate" class:complete class:running style="width: {$progressTweened}%"></span>
+	<span class="indicator animate" class:complete class:running style="width: {progressTween.current}%"></span>
 </div>

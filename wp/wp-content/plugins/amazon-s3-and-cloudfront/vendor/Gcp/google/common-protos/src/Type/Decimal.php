@@ -5,8 +5,8 @@
 namespace DeliciousBrains\WP_Offload_Media\Gcp\Google\Type;
 
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Internal\GPBType;
-use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Internal\RepeatedField;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Internal\GPBUtil;
+use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\RepeatedField;
 /**
  * A representation of a decimal value, such as 2.5. Clients may convert values
  * into language-native decimal formats, such as Java's [BigDecimal][] or

@@ -1,36 +1,49 @@
 <script>
-	import {createEventDispatcher} from "svelte";
-
 	import {urls} from "../js/stores";
 
-	const classes = $$props.class ? $$props.class : "";
-	const dispatch = createEventDispatcher();
+	/**
+	 * @typedef {Object} Props
+	 * @property {any} [ref]
+	 * @property {boolean} [extraSmall] - Button sizes, medium is the default.
+	 * @property {boolean} [small]
+	 * @property {boolean} [large]
+	 * @property {any} [medium]
+	 * @property {boolean} [primary] - Button styles, outline is the default.
+	 * @property {boolean} [expandable]
+	 * @property {boolean} [refresh]
+	 * @property {any} [outline]
+	 * @property {boolean} [disabled] - Is the button disabled? Defaults to false.
+	 * @property {boolean} [expanded] - Is the button in an expanded state? Defaults to false.
+	 * @property {boolean} [refreshing] - Is the button in a refreshing state? Defaults to false.
+	 * @property {string} [title] - A button can have a title, most useful to give a reason when disabled.
+	 * @property {import("svelte").Snippet} [children]
+	 * @property {string} [class]
+	 * @property {function} [onclick]
+	 * @property {function} [onfocusout]
+	 * @property {function} [onCancel] - Callback for custom cancel event.
+	 */
 
-	export let ref = {};
-
-	// Button sizes, medium is the default.
-	export let extraSmall = false;
-	export let small = false;
-	export let large = false;
-	export let medium = !extraSmall && !small && !large;
-
-	// Button styles, outline is the default.
-	export let primary = false;
-	export let expandable = false;
-	export let refresh = false;
-	export let outline = !primary && !expandable && !refresh;
-
-	// Is the button disabled? Defaults to false.
-	export let disabled = false;
-
-	// Is the button in an expanded state? Defaults to false.
-	export let expanded = false;
-
-	// Is the button in a refreshing state? Defaults to false.
-	export let refreshing = false;
-
-	// A button can have a title, most useful to give a reason when disabled.
-	export let title = "";
+	/** @type {Props} */
+	let {
+		ref = $bindable( {} ),
+		extraSmall = false,
+		small = false,
+		large = false,
+		medium = !extraSmall && !small && !large,
+		primary = false,
+		expandable = false,
+		refresh = false,
+		outline = !primary && !expandable && !refresh,
+		disabled = false,
+		expanded = false,
+		refreshing = false,
+		title = "",
+		children,
+		class: classes = "",
+		onclick,
+		onfocusout,
+		onCancel = {}
+	} = $props();
 
 	/**
 	 * Catch escape key and emit a custom cancel event.
@@ -38,19 +51,19 @@
 	 * @param {KeyboardEvent} event
 	 */
 	function handleKeyup( event ) {
-		if ( event.key === "Escape" ) {
+		if ( event.key === "Escape" && typeof onCancel === "function" ) {
 			event.preventDefault();
-			dispatch( "cancel" );
+			onCancel();
 		}
 	}
 
 	function refreshIcon( refreshing ) {
-		return $urls.assets + 'img/icon/' + (refreshing ? 'refresh-disabled.svg' : 'refresh.svg');
+		return $urls.assets + "img/icon/" + (refreshing ? "refresh-disabled.svg" : "refresh.svg");
 	}
 </script>
 
 <button
-	on:click|preventDefault
+	{onclick}
 	class:btn-xs={extraSmall}
 	class:btn-sm={small}
 	class:btn-md={medium}
@@ -66,11 +79,11 @@
 	{title}
 	disabled={disabled || refreshing}
 	bind:this={ref}
-	on:focusout
-	on:keyup={handleKeyup}
+	{onfocusout}
+	onkeyup={handleKeyup}
 >
 	{#if refresh}
 		<img class="icon refresh" class:refreshing src="{refreshIcon(refreshing)}" alt={title}/>
 	{/if}
-	<slot/>
+	{@render children?.()}
 </button>

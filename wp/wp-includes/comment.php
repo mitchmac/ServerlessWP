@@ -240,9 +240,12 @@ function get_comment( $comment = null, $output = OBJECT ) {
 	 *
 	 * @since 2.3.0
 	 *
-	 * @param WP_Comment $_comment Comment data.
+	 * @param WP_Comment|null $_comment Comment data.
 	 */
 	$_comment = apply_filters( 'get_comment', $_comment );
+	if ( ! ( $_comment instanceof WP_Comment ) ) {
+		return null;
+	}
 
 	if ( OBJECT === $output ) {
 		return $_comment;
@@ -595,7 +598,7 @@ function wp_set_comment_cookies( $comment, $user, $cookies_consent = true ) {
 	 * Filters the lifetime of the comment cookie in seconds.
 	 *
 	 * @since 2.8.0
-	 * @since 6.6.0 The default $seconds value changed from 30000000 to YEAR_IN_SECONDS.
+	 * @since 6.6.0 The default `$seconds` value changed from 30000000 to YEAR_IN_SECONDS.
 	 *
 	 * @param int $seconds Comment cookie lifetime. Default YEAR_IN_SECONDS.
 	 */
@@ -804,7 +807,7 @@ function wp_allow_comment( $commentdata, $wp_error = false ) {
 	);
 
 	if ( $is_flood ) {
-		/** This filter is documented in wp-includes/comment-template.php */
+		/** This filter is documented in wp-includes/comment.php */
 		$comment_flood_message = apply_filters( 'comment_flood_message', __( 'You are posting comments too quickly. Slow down.' ) );
 
 		return new WP_Error( 'comment_flood', $comment_flood_message, 429 );
@@ -2212,7 +2215,7 @@ function wp_filter_comment( $commentdata ) {
 	 *
 	 * @param string $comment_agent The comment author's browser user agent.
 	 */
-	$commentdata['comment_agent'] = apply_filters( 'pre_comment_user_agent', ( isset( $commentdata['comment_agent'] ) ? $commentdata['comment_agent'] : '' ) );
+	$commentdata['comment_agent'] = apply_filters( 'pre_comment_user_agent', ( $commentdata['comment_agent'] ?? '' ) );
 	/** This filter is documented in wp-includes/comment.php */
 	$commentdata['comment_author'] = apply_filters( 'pre_comment_author_name', $commentdata['comment_author'] );
 	/**
@@ -2330,7 +2333,7 @@ function wp_new_comment( $commentdata, $wp_error = false ) {
 	}
 
 	if ( ! isset( $commentdata['comment_agent'] ) ) {
-		$commentdata['comment_agent'] = isset( $_SERVER['HTTP_USER_AGENT'] ) ? $_SERVER['HTTP_USER_AGENT'] : '';
+		$commentdata['comment_agent'] = $_SERVER['HTTP_USER_AGENT'] ?? '';
 	}
 
 	/**
@@ -2629,7 +2632,7 @@ function wp_update_comment( $commentarr, $wp_error = false ) {
 
 	$filter_comment = false;
 	if ( ! has_filter( 'pre_comment_content', 'wp_filter_kses' ) ) {
-		$filter_comment = ! user_can( isset( $comment['user_id'] ) ? $comment['user_id'] : 0, 'unfiltered_html' );
+		$filter_comment = ! user_can( $comment['user_id'] ?? 0, 'unfiltered_html' );
 	}
 
 	if ( $filter_comment ) {
@@ -2769,7 +2772,7 @@ function wp_update_comment( $commentarr, $wp_error = false ) {
  * @since 2.5.0
  *
  * @param bool $defer
- * @return bool
+ * @return bool Whether comment counting is deferred.
  */
 function wp_defer_comment_counting( $defer = null ) {
 	static $_defer = false;
@@ -3371,7 +3374,7 @@ function weblog_ping( $server = '', $path = '' ) {
  * @see wp_http_validate_url()
  *
  * @param string $source_uri
- * @return string
+ * @return string Validated source URI.
  */
 function pingback_ping_source_uri( $source_uri ) {
 	return (string) wp_http_validate_url( $source_uri );

@@ -1,33 +1,76 @@
 <script>
-	import {createEventDispatcher} from "svelte";
 	import {strings} from "../js/stores";
 	import Button from "./Button.svelte";
 
-	const dispatch = createEventDispatcher();
+	/**
+	 * @typedef {Object} Props
+	 * @property {any} [backText]
+	 * @property {boolean} [backDisabled]
+	 * @property {string} [backTitle]
+	 * @property {boolean} [backVisible]
+	 * @property {any} [skipText]
+	 * @property {boolean} [skipDisabled]
+	 * @property {string} [skipTitle]
+	 * @property {boolean} [skipVisible]
+	 * @property {any} [nextText]
+	 * @property {boolean} [nextDisabled]
+	 * @property {string} [nextTitle]
+	 * @property {function} [onBack]
+	 * @property {function} [onSkip]
+	 * @property {function} [onNext]
+	 */
 
-	// Back button is optional but shown by default.
-	export let backText = $strings.back;
-	export let backDisabled = false;
-	export let backTitle = "";
-	export let backVisible = false;
+	/** @type {Props} */
+	let {
+		backText = $strings.back,
+		backDisabled = false,
+		backTitle = "",
+		backVisible = false,
+		skipText = $strings.skip,
+		skipDisabled = false,
+		skipTitle = "",
+		skipVisible = false,
+		nextText = $strings.next,
+		nextDisabled = false,
+		nextTitle = "",
+		onBack = {},
+		onSkip = {},
+		onNext = {}
+	} = $props();
 
-	// Skip button is optional, only shown if explicitly made visible.
-	export let skipText = $strings.skip;
-	export let skipDisabled = false;
-	export let skipTitle = "";
-	export let skipVisible = false;
+	/**
+	 * Handle back request, uses onBack callback if set.
+	 */
+	function handleBack() {
+		if ( typeof onBack === "function" ) {
+			onBack();
+		}
+	}
 
-	// Next button required.
-	export let nextText = $strings.next;
-	export let nextDisabled = false;
-	export let nextTitle = "";
+	/**
+	 * Handle skip request, uses onSkip callback if set.
+	 */
+	function handleSkip() {
+		if ( typeof onSkip === "function" ) {
+			onSkip();
+		}
+	}
+
+	/**
+	 * Handle next request, uses onNext callback if set.
+	 */
+	function handleNext() {
+		if ( typeof onNext === "function" ) {
+			onNext();
+		}
+	}
 </script>
 
 <div class="btn-row">
 	{#if backVisible}
 		<Button
 			large
-			on:click="{() => dispatch('back')}"
+			onclick={handleBack}
 			disabled={backDisabled}
 			title={backTitle}
 		>
@@ -38,7 +81,7 @@
 		<Button
 			large
 			outline
-			on:click="{() => dispatch('skip')}"
+			onclick={handleSkip}
 			disabled={skipDisabled}
 			title={skipTitle}
 		>
@@ -48,7 +91,7 @@
 	<Button
 		large
 		primary
-		on:click="{() => dispatch('next')}"
+		onclick={handleNext}
 		disabled={nextDisabled}
 		title={nextTitle}
 	>

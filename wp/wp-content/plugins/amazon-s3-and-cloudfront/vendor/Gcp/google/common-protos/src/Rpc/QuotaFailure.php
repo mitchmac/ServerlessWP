@@ -5,8 +5,8 @@
 namespace DeliciousBrains\WP_Offload_Media\Gcp\Google\Rpc;
 
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Internal\GPBType;
-use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Internal\RepeatedField;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Internal\GPBUtil;
+use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\RepeatedField;
 /**
  * Describes how a quota check failed.
  * For example if a daily limit was exceeded for the calling project,
@@ -34,7 +34,7 @@ class QuotaFailure extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf
      * @param array $data {
      *     Optional. Data for populating the Message object.
      *
-     *     @type array<\Google\Rpc\QuotaFailure\Violation>|\Google\Protobuf\Internal\RepeatedField $violations
+     *     @type \Google\Rpc\QuotaFailure\Violation[] $violations
      *           Describes all quota violations.
      * }
      */
@@ -47,7 +47,7 @@ class QuotaFailure extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf
      * Describes all quota violations.
      *
      * Generated from protobuf field <code>repeated .google.rpc.QuotaFailure.Violation violations = 1;</code>
-     * @return \Google\Protobuf\Internal\RepeatedField
+     * @return RepeatedField<\Google\Rpc\QuotaFailure\Violation>
      */
     public function getViolations()
     {
@@ -57,7 +57,7 @@ class QuotaFailure extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf
      * Describes all quota violations.
      *
      * Generated from protobuf field <code>repeated .google.rpc.QuotaFailure.Violation violations = 1;</code>
-     * @param array<\Google\Rpc\QuotaFailure\Violation>|\Google\Protobuf\Internal\RepeatedField $var
+     * @param \Google\Rpc\QuotaFailure\Violation[] $var
      * @return $this
      */
     public function setViolations($var)

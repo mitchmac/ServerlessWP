@@ -5,8 +5,8 @@
 namespace DeliciousBrains\WP_Offload_Media\Gcp\Google\Api\Logging;
 
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Internal\GPBType;
-use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Internal\RepeatedField;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Internal\GPBUtil;
+use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\RepeatedField;
 /**
  * Configuration of a specific logging destination (the producer project
  * or the consumer project).
@@ -42,7 +42,7 @@ class LoggingDestination extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Pr
      *           The monitored resource type. The type must be defined in the
      *           [Service.monitored_resources][google.api.Service.monitored_resources]
      *           section.
-     *     @type array<string>|\Google\Protobuf\Internal\RepeatedField $logs
+     *     @type string[] $logs
      *           Names of the logs to be sent to this destination. Each name must
      *           be defined in the [Service.logs][google.api.Service.logs] section. If the
      *           log name is not a domain scoped name, it will be automatically prefixed
@@ -88,7 +88,7 @@ class LoggingDestination extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Pr
      * with the service name followed by "/".
      *
      * Generated from protobuf field <code>repeated string logs = 1;</code>
-     * @return \Google\Protobuf\Internal\RepeatedField
+     * @return RepeatedField<string>
      */
     public function getLogs()
     {
@@ -101,7 +101,7 @@ class LoggingDestination extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Pr
      * with the service name followed by "/".
      *
      * Generated from protobuf field <code>repeated string logs = 1;</code>
-     * @param array<string>|\Google\Protobuf\Internal\RepeatedField $var
+     * @param string[] $var
      * @return $this
      */
     public function setLogs($var)

@@ -5,8 +5,8 @@
 namespace DeliciousBrains\WP_Offload_Media\Gcp\Google\Api;
 
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Internal\GPBType;
-use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Internal\RepeatedField;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Internal\GPBUtil;
+use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\RepeatedField;
 /**
  * `Documentation` provides the information for describing a service.
  * Example:
@@ -19,7 +19,7 @@ use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Internal\GPBUtil;
  *     content: &#40;== include google/foo/overview.md ==&#41;
  *   - name: Tutorial
  *     content: &#40;== include google/foo/tutorial.md ==&#41;
- *     subpages;
+ *     subpages:
  *     - name: Java
  *       content: &#40;== include google/foo/tutorial_java.md ==&#41;
  *   rules:
@@ -129,9 +129,9 @@ class Documentation extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobu
      *           text. It becomes the overview of the service displayed in Google Cloud
      *           Console.
      *           NOTE: This field is equivalent to the standard field `description`.
-     *     @type array<\Google\Api\Page>|\Google\Protobuf\Internal\RepeatedField $pages
+     *     @type \Google\Api\Page[] $pages
      *           The top level pages for the documentation set.
-     *     @type array<\Google\Api\DocumentationRule>|\Google\Protobuf\Internal\RepeatedField $rules
+     *     @type \Google\Api\DocumentationRule[] $rules
      *           A list of documentation rules that apply to individual API elements.
      *           **NOTE:** All service configuration rules follow "last one wins" order.
      *     @type string $documentation_root_url
@@ -195,7 +195,7 @@ class Documentation extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobu
      * The top level pages for the documentation set.
      *
      * Generated from protobuf field <code>repeated .google.api.Page pages = 5;</code>
-     * @return \Google\Protobuf\Internal\RepeatedField
+     * @return RepeatedField<\Google\Api\Page>
      */
     public function getPages()
     {
@@ -205,7 +205,7 @@ class Documentation extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobu
      * The top level pages for the documentation set.
      *
      * Generated from protobuf field <code>repeated .google.api.Page pages = 5;</code>
-     * @param array<\Google\Api\Page>|\Google\Protobuf\Internal\RepeatedField $var
+     * @param \Google\Api\Page[] $var
      * @return $this
      */
     public function setPages($var)
@@ -219,7 +219,7 @@ class Documentation extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobu
      * **NOTE:** All service configuration rules follow "last one wins" order.
      *
      * Generated from protobuf field <code>repeated .google.api.DocumentationRule rules = 3;</code>
-     * @return \Google\Protobuf\Internal\RepeatedField
+     * @return RepeatedField<\Google\Api\DocumentationRule>
      */
     public function getRules()
     {
@@ -230,7 +230,7 @@ class Documentation extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobu
      * **NOTE:** All service configuration rules follow "last one wins" order.
      *
      * Generated from protobuf field <code>repeated .google.api.DocumentationRule rules = 3;</code>
-     * @param array<\Google\Api\DocumentationRule>|\Google\Protobuf\Internal\RepeatedField $var
+     * @param \Google\Api\DocumentationRule[] $var
      * @return $this
      */
     public function setRules($var)

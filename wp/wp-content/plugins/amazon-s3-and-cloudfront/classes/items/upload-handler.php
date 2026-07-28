@@ -176,7 +176,10 @@ class Upload_Handler extends Item_Handler {
 				$bucket = $this->as3cf->check_bucket( $args['Bucket'] );
 
 				if ( $bucket ) {
-					$region = $this->as3cf->get_bucket_region( $bucket );
+					$region = $this->as3cf->maybe_get_defined_bucket_region( $bucket );
+					if ( null === $region ) {
+						$region = $this->as3cf->get_bucket_region( $bucket );
+					}
 
 					if ( is_wp_error( $region ) ) {
 						unset( $region );

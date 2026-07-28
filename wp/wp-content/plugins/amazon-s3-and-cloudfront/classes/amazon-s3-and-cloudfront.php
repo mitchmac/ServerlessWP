@@ -610,6 +610,7 @@ class Amazon_S3_And_CloudFront extends AS3CF_Plugin_Base {
 		 */
 		foreach ( $this->get_provider_classes( 'storage' ) as $provider_key => $provider_class ) {
 			$providers[ $provider_key ] = array(
+				'is_deprecated'                                      => $provider_class::is_deprecated(),
 				'provider_key_name'                                  => $provider_class::get_provider_key_name(),
 				'provider_name'                                      => $provider_class::get_provider_name(),
 				'service_name'                                       => $provider_class::get_service_name(),
@@ -682,6 +683,7 @@ class Amazon_S3_And_CloudFront extends AS3CF_Plugin_Base {
 			}
 
 			$providers[ $provider_key ] = array(
+				'is_deprecated'                                      => $provider_class::is_deprecated(),
 				'provider_key_name'                                  => $provider_class::get_provider_key_name(),
 				'provider_name'                                      => $provider_class::get_provider_name(),
 				'service_name'                                       => $provider_class::get_service_name(),
@@ -1999,6 +2001,43 @@ class Amazon_S3_And_CloudFront extends AS3CF_Plugin_Base {
 	}
 
 	/**
+	 * Returns sanitized region from wp-config defines when applicable for the configured bucket.
+	 *
+	 * Only applies when `region` is set via `AS3CF_SETTINGS`, or `AS3CF_REGION`
+	 * (not UI-only database settings). Callers should fall back to get_bucket_region() when this
+	 * returns null.
+	 *
+	 * @param string $bucket Bucket name being resolved.
+	 *
+	 * @return string|null Region string, or null when the storage API should be used.
+	 */
+	public function maybe_get_defined_bucket_region( $bucket ) {
+		if ( ! is_string( $bucket ) || empty( $bucket ) ) {
+			return null;
+		}
+
+		// Defined region is only trusted for the plugin's configured bucket (not arbitrary buckets).
+		$configured_bucket = $this->get_core_setting( 'bucket' );
+		if ( ! is_string( $configured_bucket ) || empty( $configured_bucket ) || $bucket !== $configured_bucket ) {
+			return null;
+		}
+
+		// Region must come from defines (AS3CF_SETTINGS / AS3CF_REGION), not UI-only DB.
+		$defined_region = $this->get_defined_setting( 'region' );
+		if ( ! is_string( $defined_region ) || empty( $defined_region ) ) {
+			return null;
+		}
+
+		// Provider-specific normalization; fall back to API if sanitize fails or yields nothing usable.
+		$region = $this->get_storage_provider()->sanitize_region( $defined_region );
+		if ( ! is_string( $region ) || empty( $region ) ) {
+			return null;
+		}
+
+		return $region;
+	}
+
+	/**
 	 * Get the region of a bucket
 	 *
 	 * @param string  $bucket
@@ -2269,6 +2308,22 @@ class Amazon_S3_And_CloudFront extends AS3CF_Plugin_Base {
 		$this->enqueue_style( 'as3cf-settings', 'assets/css/settings' );
 		$this->enqueue_script( 'as3cf-settings', 'assets/js/settings', array(), false );
 
+		// Our script is a module, but wp_enqueue_script_module() isn't available
+		// until WP 6.5, and localization isn't until WP 6.7.
+		add_filter(
+			'script_loader_tag',
+			function ( $tag, $handle, $src ) {
+				if ( 'as3cf-settings' === $handle ) {
+					// phpcs:ignore WordPress.WP.EnqueuedResources.NonEnqueuedScript
+					$tag = '<script type="module" src="' . esc_url( $src ) . '"></script>';
+				}
+
+				return $tag;
+			},
+			10,
+			3
+		);
+
 		wp_localize_script( 'as3cf-settings',
 			'as3cf_settings',
 			$config
@@ -2319,6 +2374,10 @@ class Amazon_S3_And_CloudFront extends AS3CF_Plugin_Base {
 
 		$config = array(
 			'strings'                          => array(
+				'sidebar_header_title'                  => __(
+					"View WP Offload Media's features…",
+					'amazon-s3-and-cloudfront'
+				),
 				'needs_access_keys'                     => Storage_Provider::get_needs_access_keys_desc(),
 				'create_bucket_error'                   => __( 'Error creating bucket', 'amazon-s3-and-cloudfront' ),
 				'create_bucket_name_missing'            => __( 'Bucket name not entered.', 'amazon-s3-and-cloudfront' ),

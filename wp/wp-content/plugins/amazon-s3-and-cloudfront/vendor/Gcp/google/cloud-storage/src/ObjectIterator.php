@@ -22,6 +22,8 @@ use DeliciousBrains\WP_Offload_Media\Gcp\Google\Cloud\Core\Iterator\ItemIterator
  * ObjectIterator
  *
  * Iterates over a set of {@see StorageObject} items.
+ *
+ * @implements \Iterator<int, StorageObject>
  */
 class ObjectIterator implements \Iterator
 {

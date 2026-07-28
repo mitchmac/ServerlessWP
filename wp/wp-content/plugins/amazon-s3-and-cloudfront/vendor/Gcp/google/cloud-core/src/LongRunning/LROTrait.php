@@ -19,7 +19,6 @@ namespace DeliciousBrains\WP_Offload_Media\Gcp\Google\Cloud\Core\LongRunning;
 
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Cloud\Core\Iterator\ItemIterator;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Cloud\Core\Iterator\PageIterator;
-use DeliciousBrains\WP_Offload_Media\Gcp\Google\Cloud\Core\LongRunning\LongRunningConnectionInterface;
 /**
  * Provide Long Running Operation support to Google Cloud PHP Clients.
  *

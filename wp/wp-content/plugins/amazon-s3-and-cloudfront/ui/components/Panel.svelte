@@ -1,5 +1,5 @@
 <script>
-	import {createEventDispatcher, getContext, hasContext} from "svelte";
+	import {getContext, hasContext} from "svelte";
 	import {writable} from "svelte/store";
 	import {fade} from "svelte/transition";
 	import {link} from "svelte-spa-router";
@@ -11,39 +11,73 @@
 	import HelpButton from "./HelpButton.svelte";
 	import Button from "./Button.svelte";
 
-	const classes = $$props.class ? $$props.class : "";
-	const dispatch = createEventDispatcher();
+	/**
+	 * @typedef {Object} Props
+	 * @property {any} [ref]
+	 * @property {string} [name]
+	 * @property {string} [heading]
+	 * @property {boolean} [defined]
+	 * @property {boolean} [multi]
+	 * @property {boolean} [flyout]
+	 * @property {string} [toggleName]
+	 * @property {boolean} [toggle]
+	 * @property {boolean} [refresh]
+	 * @property {any} [refreshText]
+	 * @property {any} [refreshDesc]
+	 * @property {boolean} [refreshing]
+	 * @property {string} [helpKey]
+	 * @property {string} [helpURL]
+	 * @property {any} [helpDesc]
+	 * @property {any} [storageProvider]
+	 * @property {import("svelte").Snippet} [children]
+	 * @property {string} [class]
+	 * @property {function} [onclick]
+	 * @property {function} [onfocusout]
+	 * @property {function} [onmouseenter]
+	 * @property {function} [onmouseleave]
+	 * @property {function} [onmousedown]
+	 * @property {function} [onCancel]
+	 * @property {function} [onRefresh]
+	 */
 
-	export let ref = {};
-	export let name = "";
-	export let heading = "";
-	export let defined = false;
-	export let multi = false;
-	export let flyout = false;
-	export let toggleName = "";
-	export let toggle = false;
-	export let refresh = false;
-	export let refreshText = $strings.refresh_title;
-	export let refreshDesc = refreshText;
-	export let refreshing = false;
-	export let helpKey = "";
-	export let helpURL = "";
-	export let helpDesc = $strings.help_desc;
-
-	// We can display storage provider info on the right-hand side of the panel's header.
-	// In the future, if anything else needs to be displayed in the same position we
-	// should create a named slot or assignable component. CSS changes would be required.
-	export let storageProvider = null;
+	/** @type {Props} */
+	let {
+		ref = $bindable( {} ),
+		name = "",
+		heading = "",
+		defined = false,
+		multi = false,
+		flyout = false,
+		toggleName = "",
+		toggle = $bindable( false ),
+		refresh = false,
+		refreshText = $strings.refresh_title,
+		refreshDesc = refreshText,
+		refreshing = false,
+		helpKey = "",
+		helpURL = "",
+		helpDesc = $strings.help_desc,
+		storageProvider = null,
+		children,
+		class: classes = "",
+		onclick,
+		onfocusout,
+		onmouseenter,
+		onmouseleave,
+		onmousedown,
+		onCancel = {},
+		onRefresh = {}
+	} = $props();
 
 	// Parent page may want to be locked.
-	let settingsLocked = writable( false );
+	let settingsLocked = $state( writable( false ) );
 
 	if ( hasContext( "settingsLocked" ) ) {
 		settingsLocked = getContext( "settingsLocked" );
 	}
 
-	$: locked = $settingsLocked;
-	$: toggleDisabled = $defined_settings.includes( toggleName ) || locked;
+	let locked = $derived( $settingsLocked );
+	let toggleDisabled = $derived( $defined_settings.includes( toggleName ) || locked );
 
 	/**
 	 * If appropriate, clicking the header toggles to toggle switch.
@@ -60,15 +94,24 @@
 	 * @param {KeyboardEvent} event
 	 */
 	function handleKeyup( event ) {
-		if ( event.key === "Escape" ) {
+		if ( event.key === "Escape" && typeof onCancel === "function" ) {
 			event.preventDefault();
-			dispatch( "cancel" );
+			onCancel();
+		}
+	}
+
+	/**
+	 * Handle refresh request, uses onRefresh callback if set.
+	 */
+	function handleRefresh() {
+		if ( typeof onRefresh === "function" ) {
+			onRefresh();
 		}
 	}
 </script>
 
 <!-- TODO: Fix a11y. -->
-<!-- svelte-ignore a11y-no-static-element-interactions -->
+<!-- svelte-ignore a11y_no_static_element_interactions -->
 <div
 	class="panel {name}"
 	class:multi
@@ -76,12 +119,12 @@
 	class:locked
 	transition:fade={{duration: flyout ? 200 : 0}}
 	bind:this={ref}
-	on:focusout
-	on:mouseenter
-	on:mouseleave
-	on:mousedown
-	on:click
-	on:keyup={handleKeyup}
+	{onfocusout}
+	{onmouseenter}
+	{onmouseleave}
+	{onmousedown}
+	{onclick}
+	onkeyup={handleKeyup}
 >
 	{#if !multi && heading}
 		<div class="heading">
@@ -102,15 +145,15 @@
 						{heading}
 					</ToggleSwitch>
 					<!-- TODO: Fix a11y. -->
-					<!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
-					<!-- svelte-ignore a11y-click-events-have-key-events -->
-					<h3 on:click={headingClickHandler} class="toggler" class:toggleDisabled>{heading}</h3>
+					<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+					<!-- svelte-ignore a11y_click_events_have_key_events -->
+					<h3 onclick={headingClickHandler} class="toggler" class:toggleDisabled>{heading}</h3>
 				{:else}
 					<h3>{heading}</h3>
 				{/if}
 				<DefinedInWPConfig {defined}/>
 				{#if refresh}
-					<Button refresh {refreshing} title={refreshDesc} on:click={() => dispatch("refresh")}>{@html refreshText}</Button>
+					<Button refresh {refreshing} title={refreshDesc} onclick={handleRefresh}>{@html refreshText}</Button>
 				{/if}
 				{#if storageProvider}
 					<div class="provider">
@@ -128,7 +171,7 @@
 			</PanelRow>
 		{/if}
 
-		<slot/>
+		{@render children?.()}
 	</PanelContainer>
 </div>
 

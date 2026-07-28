@@ -2,9 +2,15 @@
 	import {notifications} from "../js/stores";
 	import Notification from "./Notification.svelte";
 
-	export let component = Notification;
-	export let tab = "";
-	export let tabParent = "";
+	/**
+	 * @typedef {Object} Props
+	 * @property {any} [component]
+	 * @property {string} [tab]
+	 * @property {string} [tabParent]
+	 */
+
+	/** @type {Props} */
+	let { component = Notification, tab = "", tabParent = "" } = $props();
 
 	/**
 	 * Render the notification or not?
@@ -23,11 +29,12 @@
 	<div id="notifications" class="notifications wrapper">
 		{#each $notifications as notification (notification.render_key)}
 			{#if renderNotification( notification )}
-				<svelte:component this={component} notification={notification}>
+				{@const NotificationComponent = component}
+				<NotificationComponent notification={notification}>
 					{#if notification.message}
 						<p>{@html notification.message}</p>
 					{/if}
-				</svelte:component>
+				</NotificationComponent>
 			{/if}
 		{/each}
 	</div>

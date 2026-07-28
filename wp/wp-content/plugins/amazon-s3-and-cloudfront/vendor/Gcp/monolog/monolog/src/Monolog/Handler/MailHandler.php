@@ -13,30 +13,28 @@ namespace DeliciousBrains\WP_Offload_Media\Gcp\Monolog\Handler;
 
 use DeliciousBrains\WP_Offload_Media\Gcp\Monolog\Formatter\FormatterInterface;
 use DeliciousBrains\WP_Offload_Media\Gcp\Monolog\Formatter\HtmlFormatter;
+use DeliciousBrains\WP_Offload_Media\Gcp\Monolog\LogRecord;
 /**
  * Base class for all mail handlers
  *
  * @author Gyula Sallai
- *
- * @phpstan-import-type Record from \Monolog\Logger
  */
 abstract class MailHandler extends AbstractProcessingHandler
 {
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
     public function handleBatch(array $records) : void
     {
         $messages = [];
         foreach ($records as $record) {
-            if ($record['level'] < $this->level) {
+            if ($record->level->isLowerThan($this->level)) {
                 continue;
             }
-            /** @var Record $message */
             $message = $this->processRecord($record);
             $messages[] = $message;
         }
-        if (!empty($messages)) {
+        if (\count($messages) > 0) {
             $this->send((string) $this->getFormatter()->formatBatch($messages), $messages);
         }
     }
@@ -46,25 +44,24 @@ abstract class MailHandler extends AbstractProcessingHandler
      * @param string $content formatted email body to be sent
      * @param array  $records the array of log records that formed this content
      *
-     * @phpstan-param Record[] $records
+     * @phpstan-param non-empty-array<LogRecord> $records
      */
     protected abstract function send(string $content, array $records) : void;
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
-    protected function write(array $record) : void
+    protected function write(LogRecord $record) : void
     {
-        $this->send((string) $record['formatted'], [$record]);
+        $this->send((string) $record->formatted, [$record]);
     }
     /**
-     * @phpstan-param non-empty-array<Record> $records
-     * @phpstan-return Record
+     * @phpstan-param non-empty-array<LogRecord> $records
      */
-    protected function getHighestRecord(array $records) : array
+    protected function getHighestRecord(array $records) : LogRecord
     {
         $highestRecord = null;
         foreach ($records as $record) {
-            if ($highestRecord === null || $highestRecord['level'] < $record['level']) {
+            if ($highestRecord === null || $record->level->isHigherThan($highestRecord->level)) {
                 $highestRecord = $record;
             }
         }
@@ -76,8 +73,6 @@ abstract class MailHandler extends AbstractProcessingHandler
     }
     /**
      * Gets the default formatter.
-     *
-     * @return FormatterInterface
      */
     protected function getDefaultFormatter() : FormatterInterface
     {

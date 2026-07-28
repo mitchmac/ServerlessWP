@@ -5,8 +5,8 @@
 namespace DeliciousBrains\WP_Offload_Media\Gcp\Google\Api;
 
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Internal\GPBType;
-use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Internal\RepeatedField;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Internal\GPBUtil;
+use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\RepeatedField;
 /**
  * `Visibility` restricts service consumer's access to service elements,
  * such as whether an application can call a visibility-restricted method.
@@ -44,7 +44,7 @@ class Visibility extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\I
      * @param array $data {
      *     Optional. Data for populating the Message object.
      *
-     *     @type array<\Google\Api\VisibilityRule>|\Google\Protobuf\Internal\RepeatedField $rules
+     *     @type \Google\Api\VisibilityRule[] $rules
      *           A list of visibility rules that apply to individual API elements.
      *           **NOTE:** All service configuration rules follow "last one wins" order.
      * }
@@ -59,7 +59,7 @@ class Visibility extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\I
      * **NOTE:** All service configuration rules follow "last one wins" order.
      *
      * Generated from protobuf field <code>repeated .google.api.VisibilityRule rules = 1;</code>
-     * @return \Google\Protobuf\Internal\RepeatedField
+     * @return RepeatedField<\Google\Api\VisibilityRule>
      */
     public function getRules()
     {
@@ -70,7 +70,7 @@ class Visibility extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\I
      * **NOTE:** All service configuration rules follow "last one wins" order.
      *
      * Generated from protobuf field <code>repeated .google.api.VisibilityRule rules = 1;</code>
-     * @param array<\Google\Api\VisibilityRule>|\Google\Protobuf\Internal\RepeatedField $var
+     * @param \Google\Api\VisibilityRule[] $var
      * @return $this
      */
     public function setRules($var)

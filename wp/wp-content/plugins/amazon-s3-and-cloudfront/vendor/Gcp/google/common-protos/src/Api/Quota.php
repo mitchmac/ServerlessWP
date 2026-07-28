@@ -5,8 +5,8 @@
 namespace DeliciousBrains\WP_Offload_Media\Gcp\Google\Api;
 
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Internal\GPBType;
-use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Internal\RepeatedField;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Internal\GPBUtil;
+use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\RepeatedField;
 /**
  * Quota configuration helps to achieve fairness and budgeting in service
  * usage.
@@ -72,9 +72,9 @@ class Quota extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Intern
      * @param array $data {
      *     Optional. Data for populating the Message object.
      *
-     *     @type array<\Google\Api\QuotaLimit>|\Google\Protobuf\Internal\RepeatedField $limits
+     *     @type \Google\Api\QuotaLimit[] $limits
      *           List of QuotaLimit definitions for the service.
-     *     @type array<\Google\Api\MetricRule>|\Google\Protobuf\Internal\RepeatedField $metric_rules
+     *     @type \Google\Api\MetricRule[] $metric_rules
      *           List of MetricRule definitions, each one mapping a selected method to one
      *           or more metrics.
      * }
@@ -88,7 +88,7 @@ class Quota extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Intern
      * List of QuotaLimit definitions for the service.
      *
      * Generated from protobuf field <code>repeated .google.api.QuotaLimit limits = 3;</code>
-     * @return \Google\Protobuf\Internal\RepeatedField
+     * @return RepeatedField<\Google\Api\QuotaLimit>
      */
     public function getLimits()
     {
@@ -98,7 +98,7 @@ class Quota extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Intern
      * List of QuotaLimit definitions for the service.
      *
      * Generated from protobuf field <code>repeated .google.api.QuotaLimit limits = 3;</code>
-     * @param array<\Google\Api\QuotaLimit>|\Google\Protobuf\Internal\RepeatedField $var
+     * @param \Google\Api\QuotaLimit[] $var
      * @return $this
      */
     public function setLimits($var)
@@ -112,7 +112,7 @@ class Quota extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Intern
      * or more metrics.
      *
      * Generated from protobuf field <code>repeated .google.api.MetricRule metric_rules = 4;</code>
-     * @return \Google\Protobuf\Internal\RepeatedField
+     * @return RepeatedField<\Google\Api\MetricRule>
      */
     public function getMetricRules()
     {
@@ -123,7 +123,7 @@ class Quota extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Intern
      * or more metrics.
      *
      * Generated from protobuf field <code>repeated .google.api.MetricRule metric_rules = 4;</code>
-     * @param array<\Google\Api\MetricRule>|\Google\Protobuf\Internal\RepeatedField $var
+     * @param \Google\Api\MetricRule[] $var
      * @return $this
      */
     public function setMetricRules($var)

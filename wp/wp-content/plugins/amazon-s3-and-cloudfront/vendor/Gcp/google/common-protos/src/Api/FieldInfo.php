@@ -5,8 +5,8 @@
 namespace DeliciousBrains\WP_Offload_Media\Gcp\Google\Api;
 
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Internal\GPBType;
-use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Internal\RepeatedField;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Internal\GPBUtil;
+use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\RepeatedField;
 /**
  * Rich semantic information of an API field beyond basic typing.
  *
@@ -23,6 +23,14 @@ class FieldInfo extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\In
      */
     protected $format = 0;
     /**
+     * The type(s) that the annotated, generic field may represent.
+     * Currently, this must only be used on fields of type `google.protobuf.Any`.
+     * Supporting other generic types may be considered in the future.
+     *
+     * Generated from protobuf field <code>repeated .google.api.TypeReference referenced_types = 2;</code>
+     */
+    private $referenced_types;
+    /**
      * Constructor.
      *
      * @param array $data {
@@ -32,6 +40,10 @@ class FieldInfo extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\In
      *           The standard format of a field value. This does not explicitly configure
      *           any API consumer, just documents the API's format for the field it is
      *           applied to.
+     *     @type \Google\Api\TypeReference[] $referenced_types
+     *           The type(s) that the annotated, generic field may represent.
+     *           Currently, this must only be used on fields of type `google.protobuf.Any`.
+     *           Supporting other generic types may be considered in the future.
      * }
      */
     public function __construct($data = NULL)
@@ -64,6 +76,33 @@ class FieldInfo extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\In
     {
         GPBUtil::checkEnum($var, \DeliciousBrains\WP_Offload_Media\Gcp\Google\Api\FieldInfo\Format::class);
         $this->format = $var;
+        return $this;
+    }
+    /**
+     * The type(s) that the annotated, generic field may represent.
+     * Currently, this must only be used on fields of type `google.protobuf.Any`.
+     * Supporting other generic types may be considered in the future.
+     *
+     * Generated from protobuf field <code>repeated .google.api.TypeReference referenced_types = 2;</code>
+     * @return RepeatedField<\Google\Api\TypeReference>
+     */
+    public function getReferencedTypes()
+    {
+        return $this->referenced_types;
+    }
+    /**
+     * The type(s) that the annotated, generic field may represent.
+     * Currently, this must only be used on fields of type `google.protobuf.Any`.
+     * Supporting other generic types may be considered in the future.
+     *
+     * Generated from protobuf field <code>repeated .google.api.TypeReference referenced_types = 2;</code>
+     * @param \Google\Api\TypeReference[] $var
+     * @return $this
+     */
+    public function setReferencedTypes($var)
+    {
+        $arr = GPBUtil::checkRepeatedField($var, \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Internal\GPBType::MESSAGE, \DeliciousBrains\WP_Offload_Media\Gcp\Google\Api\TypeReference::class);
+        $this->referenced_types = $arr;
         return $this;
     }
 }

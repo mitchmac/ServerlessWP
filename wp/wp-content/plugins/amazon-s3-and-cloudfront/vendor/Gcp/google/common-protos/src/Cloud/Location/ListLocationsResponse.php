@@ -5,8 +5,8 @@
 namespace DeliciousBrains\WP_Offload_Media\Gcp\Google\Cloud\Location;
 
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Internal\GPBType;
-use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Internal\RepeatedField;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Internal\GPBUtil;
+use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\RepeatedField;
 /**
  * The response message for [Locations.ListLocations][google.cloud.location.Locations.ListLocations].
  *
@@ -32,7 +32,7 @@ class ListLocationsResponse extends \DeliciousBrains\WP_Offload_Media\Gcp\Google
      * @param array $data {
      *     Optional. Data for populating the Message object.
      *
-     *     @type array<\Google\Cloud\Location\Location>|\Google\Protobuf\Internal\RepeatedField $locations
+     *     @type \Google\Cloud\Location\Location[] $locations
      *           A list of locations that matches the specified filter in the request.
      *     @type string $next_page_token
      *           The standard List next-page token.
@@ -47,7 +47,7 @@ class ListLocationsResponse extends \DeliciousBrains\WP_Offload_Media\Gcp\Google
      * A list of locations that matches the specified filter in the request.
      *
      * Generated from protobuf field <code>repeated .google.cloud.location.Location locations = 1;</code>
-     * @return \Google\Protobuf\Internal\RepeatedField
+     * @return RepeatedField<\Google\Cloud\Location\Location>
      */
     public function getLocations()
     {
@@ -57,7 +57,7 @@ class ListLocationsResponse extends \DeliciousBrains\WP_Offload_Media\Gcp\Google
      * A list of locations that matches the specified filter in the request.
      *
      * Generated from protobuf field <code>repeated .google.cloud.location.Location locations = 1;</code>
-     * @param array<\Google\Cloud\Location\Location>|\Google\Protobuf\Internal\RepeatedField $var
+     * @param \Google\Cloud\Location\Location[] $var
      * @return $this
      */
     public function setLocations($var)

@@ -5,8 +5,8 @@
 namespace DeliciousBrains\WP_Offload_Media\Gcp\Google\Rpc\BadRequest;
 
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Internal\GPBType;
-use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Internal\RepeatedField;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Internal\GPBUtil;
+use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\RepeatedField;
 /**
  * A message type used to describe a single bad request field.
  *
@@ -55,6 +55,24 @@ class FieldViolation extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protob
      */
     protected $description = '';
     /**
+     * The reason of the field-level error. This is a constant value that
+     * identifies the proximate cause of the field-level error. It should
+     * uniquely identify the type of the FieldViolation within the scope of the
+     * google.rpc.ErrorInfo.domain. This should be at most 63
+     * characters and match a regular expression of `[A-Z][A-Z0-9_]+[A-Z0-9]`,
+     * which represents UPPER_SNAKE_CASE.
+     *
+     * Generated from protobuf field <code>string reason = 3;</code>
+     */
+    protected $reason = '';
+    /**
+     * Provides a localized error message for field-level errors that is safe to
+     * return to the API consumer.
+     *
+     * Generated from protobuf field <code>.google.rpc.LocalizedMessage localized_message = 4;</code>
+     */
+    protected $localized_message = null;
+    /**
      * Constructor.
      *
      * @param array $data {
@@ -92,6 +110,16 @@ class FieldViolation extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protob
      *             value in the third `emailAddresses` message.
      *     @type string $description
      *           A description of why the request element is bad.
+     *     @type string $reason
+     *           The reason of the field-level error. This is a constant value that
+     *           identifies the proximate cause of the field-level error. It should
+     *           uniquely identify the type of the FieldViolation within the scope of the
+     *           google.rpc.ErrorInfo.domain. This should be at most 63
+     *           characters and match a regular expression of `[A-Z][A-Z0-9_]+[A-Z0-9]`,
+     *           which represents UPPER_SNAKE_CASE.
+     *     @type \Google\Rpc\LocalizedMessage $localized_message
+     *           Provides a localized error message for field-level errors that is safe to
+     *           return to the API consumer.
      * }
      */
     public function __construct($data = NULL)
@@ -199,6 +227,72 @@ class FieldViolation extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protob
     {
         GPBUtil::checkString($var, True);
         $this->description = $var;
+        return $this;
+    }
+    /**
+     * The reason of the field-level error. This is a constant value that
+     * identifies the proximate cause of the field-level error. It should
+     * uniquely identify the type of the FieldViolation within the scope of the
+     * google.rpc.ErrorInfo.domain. This should be at most 63
+     * characters and match a regular expression of `[A-Z][A-Z0-9_]+[A-Z0-9]`,
+     * which represents UPPER_SNAKE_CASE.
+     *
+     * Generated from protobuf field <code>string reason = 3;</code>
+     * @return string
+     */
+    public function getReason()
+    {
+        return $this->reason;
+    }
+    /**
+     * The reason of the field-level error. This is a constant value that
+     * identifies the proximate cause of the field-level error. It should
+     * uniquely identify the type of the FieldViolation within the scope of the
+     * google.rpc.ErrorInfo.domain. This should be at most 63
+     * characters and match a regular expression of `[A-Z][A-Z0-9_]+[A-Z0-9]`,
+     * which represents UPPER_SNAKE_CASE.
+     *
+     * Generated from protobuf field <code>string reason = 3;</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setReason($var)
+    {
+        GPBUtil::checkString($var, True);
+        $this->reason = $var;
+        return $this;
+    }
+    /**
+     * Provides a localized error message for field-level errors that is safe to
+     * return to the API consumer.
+     *
+     * Generated from protobuf field <code>.google.rpc.LocalizedMessage localized_message = 4;</code>
+     * @return \Google\Rpc\LocalizedMessage|null
+     */
+    public function getLocalizedMessage()
+    {
+        return $this->localized_message;
+    }
+    public function hasLocalizedMessage()
+    {
+        return isset($this->localized_message);
+    }
+    public function clearLocalizedMessage()
+    {
+        unset($this->localized_message);
+    }
+    /**
+     * Provides a localized error message for field-level errors that is safe to
+     * return to the API consumer.
+     *
+     * Generated from protobuf field <code>.google.rpc.LocalizedMessage localized_message = 4;</code>
+     * @param \Google\Rpc\LocalizedMessage $var
+     * @return $this
+     */
+    public function setLocalizedMessage($var)
+    {
+        GPBUtil::checkMessage($var, \DeliciousBrains\WP_Offload_Media\Gcp\Google\Rpc\LocalizedMessage::class);
+        $this->localized_message = $var;
         return $this;
     }
 }

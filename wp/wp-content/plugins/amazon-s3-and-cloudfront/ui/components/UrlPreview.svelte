@@ -4,12 +4,12 @@
 	import Panel from "./Panel.svelte";
 	import PanelRow from "./PanelRow.svelte";
 
-	let parts = $urls.url_parts;
+	let parts = $state( $urls.url_parts );
 
 	/**
 	 * When settings have changed, show their preview URL, otherwise show saved settings version.
 	 *
-	 * Note: This function **assigns** to the `example` and `parts` variables to defeat the reactive demons!
+	 * Note: This function **assigns** to the `parts` variable to defeat the reactive demons!
 	 *
 	 * @param {Object} urls
 	 * @param {boolean} settingsChanged
@@ -37,7 +37,8 @@
 		return false;
 	}
 
-	$: isTemporaryUrl = temporaryUrl( $urls, $settings_changed, $settings );
+	// Update parts when settings temporarily changed.
+	$effect( () => temporaryUrl( $urls, $settings_changed, $settings ) );
 </script>
 
 {#if parts.length > 0}

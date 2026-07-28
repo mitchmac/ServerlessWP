@@ -9,8 +9,6 @@ namespace DeliciousBrains\WP_Offload_Media\Gcp\Brick\Math\Exception;
 class RoundingNecessaryException extends MathException
 {
     /**
-     * @return RoundingNecessaryException
-     *
      * @psalm-pure
      */
     public static function roundingNecessary() : RoundingNecessaryException

@@ -5,8 +5,8 @@
 namespace DeliciousBrains\WP_Offload_Media\Gcp\Google\Api;
 
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Internal\GPBType;
-use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Internal\RepeatedField;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Internal\GPBUtil;
+use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\RepeatedField;
 /**
  * Represents a documentation page. A page can contain subpages to represent
  * nested documentation set structure.
@@ -35,9 +35,9 @@ class Page extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Interna
      */
     protected $name = '';
     /**
-     * The Markdown content of the page. You can use <code>&#40;== include {path}
-     * ==&#41;</code> to include content from a Markdown file. The content can be
-     * used to produce the documentation page such as HTML format page.
+     * The Markdown content of the page. You can use ```(== include {path}
+     * ==)``` to include content from a Markdown file. The content can be used
+     * to produce the documentation page such as HTML format page.
      *
      * Generated from protobuf field <code>string content = 2;</code>
      */
@@ -71,10 +71,10 @@ class Page extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Interna
      *           You can reference `Java` page using Markdown reference link syntax:
      *           `[Java][Tutorial.Java]`.
      *     @type string $content
-     *           The Markdown content of the page. You can use <code>&#40;== include {path}
-     *           ==&#41;</code> to include content from a Markdown file. The content can be
-     *           used to produce the documentation page such as HTML format page.
-     *     @type array<\Google\Api\Page>|\Google\Protobuf\Internal\RepeatedField $subpages
+     *           The Markdown content of the page. You can use ```(== include {path}
+     *           ==)``` to include content from a Markdown file. The content can be used
+     *           to produce the documentation page such as HTML format page.
+     *     @type \Google\Api\Page[] $subpages
      *           Subpages of this page. The order of subpages specified here will be
      *           honored in the generated docset.
      * }
@@ -134,9 +134,9 @@ class Page extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Interna
         return $this;
     }
     /**
-     * The Markdown content of the page. You can use <code>&#40;== include {path}
-     * ==&#41;</code> to include content from a Markdown file. The content can be
-     * used to produce the documentation page such as HTML format page.
+     * The Markdown content of the page. You can use ```(== include {path}
+     * ==)``` to include content from a Markdown file. The content can be used
+     * to produce the documentation page such as HTML format page.
      *
      * Generated from protobuf field <code>string content = 2;</code>
      * @return string
@@ -146,9 +146,9 @@ class Page extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Interna
         return $this->content;
     }
     /**
-     * The Markdown content of the page. You can use <code>&#40;== include {path}
-     * ==&#41;</code> to include content from a Markdown file. The content can be
-     * used to produce the documentation page such as HTML format page.
+     * The Markdown content of the page. You can use ```(== include {path}
+     * ==)``` to include content from a Markdown file. The content can be used
+     * to produce the documentation page such as HTML format page.
      *
      * Generated from protobuf field <code>string content = 2;</code>
      * @param string $var
@@ -165,7 +165,7 @@ class Page extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Interna
      * honored in the generated docset.
      *
      * Generated from protobuf field <code>repeated .google.api.Page subpages = 3;</code>
-     * @return \Google\Protobuf\Internal\RepeatedField
+     * @return RepeatedField<\Google\Api\Page>
      */
     public function getSubpages()
     {
@@ -176,7 +176,7 @@ class Page extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Interna
      * honored in the generated docset.
      *
      * Generated from protobuf field <code>repeated .google.api.Page subpages = 3;</code>
-     * @param array<\Google\Api\Page>|\Google\Protobuf\Internal\RepeatedField $var
+     * @param \Google\Api\Page[] $var
      * @return $this
      */
     public function setSubpages($var)

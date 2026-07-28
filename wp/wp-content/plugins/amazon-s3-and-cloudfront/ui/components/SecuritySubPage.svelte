@@ -1,5 +1,5 @@
 <script>
-	import {createEventDispatcher, getContext, hasContext} from "svelte";
+	import {getContext, hasContext} from "svelte";
 	import {writable} from "svelte/store";
 	import {slide} from "svelte/transition";
 	import {
@@ -11,7 +11,7 @@
 		delivery_provider,
 		needs_refresh,
 		revalidatingSettings,
-		state,
+		appState,
 		defined_settings
 	} from "../js/stores";
 	import {
@@ -24,10 +24,16 @@
 	import BackNextButtonsRow from "./BackNextButtonsRow.svelte";
 	import Checkbox from "./Checkbox.svelte";
 
-	const dispatch = createEventDispatcher();
+	/**
+	 * @typedef {Object} Props
+	 * @property {function} [onRouteEvent]
+	 */
+
+	/** @type {Props} */
+	let { onRouteEvent } = $props();
 
 	// Parent page may want to be locked.
-	let settingsLocked = writable( false );
+	let settingsLocked = $state( writable( false ) );
 
 	if ( hasContext( "settingsLocked" ) ) {
 		settingsLocked = getContext( "settingsLocked" );
@@ -36,29 +42,30 @@
 	// As this page does not directly alter the settings store until done,
 	// we need to keep track of any changes made elsewhere and prompt
 	// the user to refresh the page.
-	let saving = false;
+	let saving = $state( false );
 	const previousSettings = { ...$current_settings };
 	const previousDefines = { ...$defined_settings };
 
-	$: {
+	$effect.pre( () => {
 		$needs_refresh = $needs_refresh || needsRefresh( saving, previousSettings, $current_settings, previousDefines, $defined_settings );
-	}
+	} );
 
-	let blockPublicAccess = $settings[ "block-public-access" ];
-	let bapaSetupConfirmed = false;
+	let blockPublicAccess = $state( $settings[ "block-public-access" ] );
+	let bapaSetupConfirmed = $state( false );
 
-	let objectOwnershipEnforced = $settings[ "object-ownership-enforced" ];
-	let ooeSetupConfirmed = false;
+	let objectOwnershipEnforced = $state( $settings[ "object-ownership-enforced" ] );
+	let ooeSetupConfirmed = $state( false );
 
 	// During initial setup we show a slightly different page
 	// if ACLs disabled but unsupported by Delivery Provider.
-	let initialSetup = false;
+	let initialSetup = $state( false );
 
 	if ( hasContext( "initialSetup" ) ) {
 		initialSetup = getContext( "initialSetup" );
 	}
 
 	// If provider has changed, then still treat as initial setup.
+	// svelte-ignore state_referenced_locally
 	if (
 		!initialSetup &&
 		hasContext( "initialSettings" ) &&
@@ -110,14 +117,14 @@
 		return $strings.keep_bucket_security;
 	}
 
-	$: nextText = getNextText(
+	let nextText = $derived( getNextText(
 		$current_settings[ "block-public-access" ],
 		blockPublicAccess,
 		$current_settings[ "object-ownership-enforced" ],
 		objectOwnershipEnforced,
 		$needs_refresh,
 		$settingsLocked
-	);
+	) );
 
 	/**
 	 * Determines whether the Next button should be disabled or not.
@@ -139,7 +146,7 @@
 		return needsRefresh || settingsLocked || (!currentValue && newValue && supported && !setupConfirmed);
 	}
 
-	$: nextDisabled =
+	let nextDisabled = $derived(
 		getNextDisabled(
 			$current_settings[ "block-public-access" ],
 			blockPublicAccess,
@@ -155,7 +162,8 @@
 			ooeSetupConfirmed,
 			$needs_refresh,
 			$settingsLocked
-		);
+		)
+	);
 
 	/**
 	 * Handles a Next button click.
@@ -167,12 +175,12 @@
 			blockPublicAccess === $current_settings[ "block-public-access" ] &&
 			objectOwnershipEnforced === $current_settings[ "object-ownership-enforced" ]
 		) {
-			dispatch( "routeEvent", { event: "next", default: "/" } );
+			onRouteEvent( { event: "next", default: "/" } );
 			return;
 		}
 
 		saving = true;
-		state.pausePeriodicFetch();
+		appState.pausePeriodicFetch();
 
 		const result = await updateBucketProperties();
 
@@ -181,17 +189,17 @@
 
 		if ( false === result ) {
 			saving = false;
-			await state.resumePeriodicFetch();
+			await appState.resumePeriodicFetch();
 
 			scrollNotificationsIntoView();
 			return;
 		}
 
 		$revalidatingSettings = true;
-		const statePromise = state.resumePeriodicFetch();
+		const statePromise = appState.resumePeriodicFetch();
 
 		// Block All Public Access changed.
-		dispatch( "routeEvent", {
+		onRouteEvent( {
 			event: "bucket-security",
 			data: {
 				blockPublicAccess: $settings[ "block-public-access" ],
@@ -278,5 +286,5 @@
 		{/if}
 	</Panel>
 
-	<BackNextButtonsRow on:next={handleNext} {nextText} {nextDisabled}/>
+	<BackNextButtonsRow onNext={handleNext} {nextText} {nextDisabled}/>
 </SubPage>

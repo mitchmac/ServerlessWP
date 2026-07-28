@@ -79,7 +79,7 @@ trait RestTrait
     public function send($resource, $method, array $options = [], $whitelisted = \false)
     {
         $options += ['prettyPrint' => \false];
-        $requestOptions = $this->pluckArray(['restOptions', 'retries', 'retryHeaders', 'requestTimeout', 'restRetryFunction', 'restRetryListener'], $options);
+        $requestOptions = $this->pluckArray(['restOptions', 'retries', 'retryHeaders', 'requestTimeout', 'restRetryFunction', 'restRetryListener', 'restDelayFunction', 'restCalcDelayFunction'], $options);
         try {
             return \json_decode($this->requestWrapper->send($this->requestBuilder->build($resource, $method, $options), $requestOptions)->getBody(), \true);
         } catch (NotFoundException $e) {
@@ -97,7 +97,7 @@ trait RestTrait
      * @param string $apiEndpointTemplate
      * @return string
      */
-    private function getApiEndpoint($default, array $config, string $apiEndpointTemplate = null)
+    private function getApiEndpoint($default, array $config, ?string $apiEndpointTemplate = null)
     {
         // If the $default parameter is provided, or the user has set an "apiEndoint" config option,
         // fall back to the previous behavior.

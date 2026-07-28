@@ -81,6 +81,17 @@ abstract class Delivery_Provider extends Provider implements Validator_Interface
 	private $validator_priority = 10;
 
 	/**
+	 * Returns the full name for the provider type, e.g. "Storage Provider" or "Delivery Provider".
+	 *
+	 * Should be overridden in Storage/Provider subclasses.
+	 *
+	 * @return string
+	 */
+	public static function get_provider_type_name(): string {
+		return __( 'Delivery Provider', 'amazon-s3-and-cloudfront' );
+	}
+
+	/**
 	 * A description for the Rewrite Media URLs setting.
 	 *
 	 * @return string
@@ -711,18 +722,18 @@ abstract class Delivery_Provider extends Provider implements Validator_Interface
 	public function get_console_url( string $bucket = '', string $prefix = '', string $region = '' ): string {
 		if ( '' !== $prefix ) {
 			$prefix = $this->get_console_url_prefix_param() . apply_filters(
-					'as3cf_' . static::$provider_key_name . '_' . static::$service_key_name . '_console_url_prefix_value',
+					'as3cf_' . static::get_provider_key_name() . '_' . static::get_service_key_name() . '_console_url_prefix_value',
 					$prefix
 				);
 		}
 
 		$suffix = apply_filters(
-			'as3cf_' . static::$provider_key_name . '_' . static::$service_key_name . '_console_url_suffix_param',
+			'as3cf_' . static::get_provider_key_name() . '_' . static::get_service_key_name() . '_console_url_suffix_param',
 			$this->get_console_url_suffix_param( $bucket, $prefix, $region )
 		);
 
 		return apply_filters(
-			       'as3cf_' . static::$provider_key_name . '_' . static::$service_key_name . '_console_url',
+			       'as3cf_' . static::get_provider_key_name() . '_' . static::get_service_key_name() . '_console_url',
 			       $this->console_url
 		       ) . $suffix;
 	}

@@ -16,8 +16,9 @@ namespace DeliciousBrains\WP_Offload_Media\Gcp\Ramsey\Collection\Map;
  * A `TypedMapInterface` represents a map of elements where key and value are
  * typed.
  *
+ * @template K of array-key
  * @template T
- * @extends MapInterface<T>
+ * @extends MapInterface<K, T>
  */
 interface TypedMapInterface extends MapInterface
 {

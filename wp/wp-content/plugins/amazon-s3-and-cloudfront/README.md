@@ -3,9 +3,9 @@
 **Contributors:** wpengine, deliciousbrains, ianmjones, eriktorsner, kevinwhoffman, tysonreeder, dalewilliams, lewisia32, mattshaw, aaemnnosttv, a5hleyrich, polevaultweb, bradt, joetan \
 **Tags:** uploads, amazon, s3, amazon s3, digitalocean, digitalocean spaces, google cloud storage, gcs, mirror, admin, media, cdn, cloudfront \
 **Requires at least:** 5.9 \
-**Tested up to:** 6.9 \
+**Tested up to:** 7.0 \
 **Requires PHP:** 8.1 \
-**Stable tag:** 3.3.0 \
+**Stable tag:** 3.3.1 \
 **License:** GPLv2
 
 Copies files to Amazon S3, DigitalOcean Spaces or Google Cloud Storage as they are uploaded to the Media Library. Optionally configure Amazon CloudFront or another CDN for faster delivery.
@@ -67,7 +67,7 @@ If you upgrade to the pro version of [WP Offload Media](https://deliciousbrains.
 
 ### 2. Select or Create Bucket
 
-[missing image]
+![Select or Create Bucket](https://ps.w.org/amazon-s3-and-cloudfront/assets/screenshot-2.png)
 
 ### 3. Settings Screen
 
@@ -102,6 +102,20 @@ This is a major change, which ensures S3 URLs are no longer saved in post conten
 This version requires PHP 5.3.3+ and the Amazon Web Services plugin
 
 ## Changelog
+
+### WP Offload Media Lite 3.3.1 - 2026-04-15
+
+* New: Google Cloud Storage SDK has been updated to v1.49.2
+* New: PHP and JS dependencies have been updated
+* New: WordPress 7.0 compatible
+* Improvement: The current bucket's location is no longer checked when the region is defined as a constant
+* Removed: The StackPath (no longer in business) delivery provider has been marked as deprecated and can no longer be selected in the UI
+* Bug fix: Editing a footer template with an existing offloaded and removed from local image block now properly shows the image
+* Bug fix: Returning to the site editor with an offloaded and removed from local background image applied to a group block now properly shows the image
+* Bug fix: The Customizer now correctly shows just added and cropped remote only header images
+* Bug fix: The original remote only image downloaded during a Customizer header image crop is now properly re-removed from the server
+* Bug fix: Checking settings after manually changing a bucket's ACL enablement status no longer results in delivery status validation problems
+* Bug fix: Offload and remove from local triggered from outside the admin context no longer sometimes results in a fatal error
 
 ### WP Offload Media Lite 3.3.0 - 2026-02-03
 

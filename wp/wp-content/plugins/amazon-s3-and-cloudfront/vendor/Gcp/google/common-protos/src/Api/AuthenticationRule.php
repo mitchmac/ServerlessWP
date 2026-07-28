@@ -5,8 +5,8 @@
 namespace DeliciousBrains\WP_Offload_Media\Gcp\Google\Api;
 
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Internal\GPBType;
-use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Internal\RepeatedField;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Internal\GPBUtil;
+use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\RepeatedField;
 /**
  * Authentication rules for the service.
  * By default, if a method has any authentication requirements, every request
@@ -62,7 +62,7 @@ class AuthenticationRule extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Pr
      *     @type bool $allow_without_credential
      *           If true, the service accepts API keys without any other credential.
      *           This flag only applies to HTTP and gRPC requests.
-     *     @type array<\Google\Api\AuthRequirement>|\Google\Protobuf\Internal\RepeatedField $requirements
+     *     @type \Google\Api\AuthRequirement[] $requirements
      *           Requirements for additional authentication providers.
      * }
      */
@@ -158,7 +158,7 @@ class AuthenticationRule extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Pr
      * Requirements for additional authentication providers.
      *
      * Generated from protobuf field <code>repeated .google.api.AuthRequirement requirements = 7;</code>
-     * @return \Google\Protobuf\Internal\RepeatedField
+     * @return RepeatedField<\Google\Api\AuthRequirement>
      */
     public function getRequirements()
     {
@@ -168,7 +168,7 @@ class AuthenticationRule extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Pr
      * Requirements for additional authentication providers.
      *
      * Generated from protobuf field <code>repeated .google.api.AuthRequirement requirements = 7;</code>
-     * @param array<\Google\Api\AuthRequirement>|\Google\Protobuf\Internal\RepeatedField $var
+     * @param \Google\Api\AuthRequirement[] $var
      * @return $this
      */
     public function setRequirements($var)

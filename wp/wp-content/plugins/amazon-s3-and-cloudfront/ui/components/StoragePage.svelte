@@ -1,5 +1,5 @@
 <script>
-	import {afterUpdate, setContext} from "svelte";
+	import {setContext} from "svelte";
 	import {location, push} from "svelte-spa-router";
 	import {
 		current_settings,
@@ -12,11 +12,16 @@
 	import SubPages from "./SubPages.svelte";
 	import {pages} from "../js/routes";
 
-	export let name = "storage";
-	export let params = {}; // Required for regex routes.
-	const _params = params; // Stops compiler warning about unused params export;
+	/**
+	 * @typedef {Object} Props
+	 * @property {string} [name]
+	 * @property {function} [onRouteEvent]
+	 */
 
-	// During initial setup some storage sub pages behave differently.
+	/** @type {Props} */
+	let { name = "storage", onRouteEvent } = $props();
+
+	// During initial setup some storage sub-pages behave differently.
 	// Not having a bucket defined is akin to initial setup, but changing provider in sub page may also flip the switch.
 	if ( $current_settings.bucket ) {
 		setContext( "initialSetup", false );
@@ -29,10 +34,10 @@
 
 	const prefix = "/storage";
 
-	let items = pages.withPrefix( prefix );
-	let routes = pages.routes( prefix );
+	let items = $state( pages.withPrefix( prefix ) );
+	let routes = $state( pages.routes( prefix ) );
 
-	afterUpdate( () => {
+	$effect( () => {
 		items = pages.withPrefix( prefix );
 		routes = pages.routes( prefix );
 
@@ -43,10 +48,10 @@
 	} );
 </script>
 
-<Page {name} subpage on:routeEvent>
+<Page {name} subpage {onRouteEvent}>
 	<Notifications tab="media" tabParent="media"/>
 
 	<SubNav {name} {items} progress/>
 
-	<SubPages {name} {prefix} {routes} on:routeEvent/>
+	<SubPages {name} {prefix} {routes} {onRouteEvent}/>
 </Page>

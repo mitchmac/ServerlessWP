@@ -2,17 +2,18 @@
     "name": "google\/common-protos",
     "type": "library",
     "description": "Google API Common Protos for PHP",
+    "version": "4.12.5",
     "keywords": [
         "google"
     ],
     "homepage": "https:\/\/github.com\/googleapis\/common-protos-php",
     "license": "Apache-2.0",
     "require": {
-        "php": ">=7.4",
-        "google\/protobuf": "^3.6.1"
+        "php": "^8.1",
+        "google\/protobuf": "^4.31||^5.0"
     },
     "require-dev": {
-        "phpunit\/phpunit": "^9.0"
+        "phpunit\/phpunit": "^9.6"
     },
     "autoload": {
         "psr-4": {
@@ -27,6 +28,14 @@
             "DeliciousBrains\\WP_Offload_Media\\Gcp\\GPBMetadata\\Google\\Logging\\": "metadata\/Logging",
             "DeliciousBrains\\WP_Offload_Media\\Gcp\\GPBMetadata\\Google\\Rpc\\": "metadata\/Rpc",
             "DeliciousBrains\\WP_Offload_Media\\Gcp\\GPBMetadata\\Google\\Type\\": "metadata\/Type"
+        }
+    },
+    "extra": {
+        "component": {
+            "id": "common-protos",
+            "target": "googleapis\/common-protos-php.git",
+            "path": "CommonProtos",
+            "entry": "README.md"
         }
     }
 }

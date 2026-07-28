@@ -11,6 +11,7 @@ declare (strict_types=1);
  */
 namespace DeliciousBrains\WP_Offload_Media\Gcp\Monolog\Processor;
 
+use DeliciousBrains\WP_Offload_Media\Gcp\Monolog\LogRecord;
 /**
  * Adds a tags array into record
  *
@@ -19,7 +20,7 @@ namespace DeliciousBrains\WP_Offload_Media\Gcp\Monolog\Processor;
 class TagProcessor implements ProcessorInterface
 {
     /** @var string[] */
-    private $tags;
+    private array $tags;
     /**
      * @param string[] $tags
      */
@@ -28,7 +29,8 @@ class TagProcessor implements ProcessorInterface
         $this->setTags($tags);
     }
     /**
-     * @param string[] $tags
+     * @param  string[] $tags
+     * @return $this
      */
     public function addTags(array $tags = []) : self
     {
@@ -36,7 +38,8 @@ class TagProcessor implements ProcessorInterface
         return $this;
     }
     /**
-     * @param string[] $tags
+     * @param  string[] $tags
+     * @return $this
      */
     public function setTags(array $tags = []) : self
     {
@@ -44,11 +47,11 @@ class TagProcessor implements ProcessorInterface
         return $this;
     }
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
-    public function __invoke(array $record) : array
+    public function __invoke(LogRecord $record) : LogRecord
     {
-        $record['extra']['tags'] = $this->tags;
+        $record->extra['tags'] = $this->tags;
         return $record;
     }
 }

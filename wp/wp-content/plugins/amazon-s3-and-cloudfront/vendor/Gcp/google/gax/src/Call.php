@@ -56,7 +56,7 @@ class Call
      * @param array|null $descriptor
      * @param int $callType
      */
-    public function __construct(string $method, string $decodeType = null, $message = null, $descriptor = [], int $callType = Call::UNARY_CALL)
+    public function __construct(string $method, ?string $decodeType = null, $message = null, $descriptor = [], int $callType = Call::UNARY_CALL)
     {
         $this->method = $method;
         $this->decodeType = $decodeType;

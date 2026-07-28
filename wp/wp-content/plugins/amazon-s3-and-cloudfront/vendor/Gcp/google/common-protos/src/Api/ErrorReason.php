@@ -374,7 +374,7 @@ class ErrorReason
      *       "metadata": {
      *         "service": "storage.googleapis.com",
      *         "method": "google.storage.v1.Storage.GetObject",
-     *         "email": "user&#64;123.iam.gserviceaccount.com"
+     *         "email": "user\@123.iam.gserviceaccount.com"
      *       }
      *     }
      *
@@ -575,7 +575,61 @@ class ErrorReason
      * Generated from protobuf enum <code>GCP_SUSPENDED = 30;</code>
      */
     const GCP_SUSPENDED = 30;
-    private static $valueToName = [self::ERROR_REASON_UNSPECIFIED => 'ERROR_REASON_UNSPECIFIED', self::SERVICE_DISABLED => 'SERVICE_DISABLED', self::BILLING_DISABLED => 'BILLING_DISABLED', self::API_KEY_INVALID => 'API_KEY_INVALID', self::API_KEY_SERVICE_BLOCKED => 'API_KEY_SERVICE_BLOCKED', self::API_KEY_HTTP_REFERRER_BLOCKED => 'API_KEY_HTTP_REFERRER_BLOCKED', self::API_KEY_IP_ADDRESS_BLOCKED => 'API_KEY_IP_ADDRESS_BLOCKED', self::API_KEY_ANDROID_APP_BLOCKED => 'API_KEY_ANDROID_APP_BLOCKED', self::API_KEY_IOS_APP_BLOCKED => 'API_KEY_IOS_APP_BLOCKED', self::RATE_LIMIT_EXCEEDED => 'RATE_LIMIT_EXCEEDED', self::RESOURCE_QUOTA_EXCEEDED => 'RESOURCE_QUOTA_EXCEEDED', self::LOCATION_TAX_POLICY_VIOLATED => 'LOCATION_TAX_POLICY_VIOLATED', self::USER_PROJECT_DENIED => 'USER_PROJECT_DENIED', self::CONSUMER_SUSPENDED => 'CONSUMER_SUSPENDED', self::CONSUMER_INVALID => 'CONSUMER_INVALID', self::SECURITY_POLICY_VIOLATED => 'SECURITY_POLICY_VIOLATED', self::ACCESS_TOKEN_EXPIRED => 'ACCESS_TOKEN_EXPIRED', self::ACCESS_TOKEN_SCOPE_INSUFFICIENT => 'ACCESS_TOKEN_SCOPE_INSUFFICIENT', self::ACCOUNT_STATE_INVALID => 'ACCOUNT_STATE_INVALID', self::ACCESS_TOKEN_TYPE_UNSUPPORTED => 'ACCESS_TOKEN_TYPE_UNSUPPORTED', self::CREDENTIALS_MISSING => 'CREDENTIALS_MISSING', self::RESOURCE_PROJECT_INVALID => 'RESOURCE_PROJECT_INVALID', self::SESSION_COOKIE_INVALID => 'SESSION_COOKIE_INVALID', self::USER_BLOCKED_BY_ADMIN => 'USER_BLOCKED_BY_ADMIN', self::RESOURCE_USAGE_RESTRICTION_VIOLATED => 'RESOURCE_USAGE_RESTRICTION_VIOLATED', self::SYSTEM_PARAMETER_UNSUPPORTED => 'SYSTEM_PARAMETER_UNSUPPORTED', self::ORG_RESTRICTION_VIOLATION => 'ORG_RESTRICTION_VIOLATION', self::ORG_RESTRICTION_HEADER_INVALID => 'ORG_RESTRICTION_HEADER_INVALID', self::SERVICE_NOT_VISIBLE => 'SERVICE_NOT_VISIBLE', self::GCP_SUSPENDED => 'GCP_SUSPENDED'];
+    /**
+     * The request violates the location policies when creating resources in
+     * the restricted region.
+     * Example of an ErrorInfo when creating the Cloud Storage Bucket by
+     * "projects/123" for service storage.googleapis.com:
+     *     { "reason": "LOCATION_POLICY_VIOLATED",
+     *       "domain": "googleapis.com",
+     *       "metadata": {
+     *         "consumer": "projects/123",
+     *         "service": "storage.googleapis.com",
+     *       }
+     *     }
+     * This response indicates creating the Cloud Storage Bucket in
+     * "locations/asia-northeast3" violates at least one location policy.
+     * The troubleshooting guidance is provided in the Help links.
+     *
+     * Generated from protobuf enum <code>LOCATION_POLICY_VIOLATED = 31;</code>
+     */
+    const LOCATION_POLICY_VIOLATED = 31;
+    /**
+     * The request is denied because origin request header is missing.
+     * Example of an ErrorInfo when
+     * accessing "pubsub.googleapis.com" service with an empty "Origin" request
+     * header.
+     * {
+     *   reason: "MISSING_ORIGIN"
+     *   domain: "googleapis.com"
+     *   metadata {
+     *     "consumer":"projects/123456"
+     *     "service": "pubsub.googleapis.com"
+     *   }
+     * }
+     *
+     * Generated from protobuf enum <code>MISSING_ORIGIN = 33;</code>
+     */
+    const MISSING_ORIGIN = 33;
+    /**
+     * The request is denied because the request contains more than one credential
+     * type that are individually acceptable, but not together. The customer
+     * should retry their request with only one set of credentials.
+     * Example of an ErrorInfo when
+     * accessing "pubsub.googleapis.com" service with overloaded credentials.
+     * {
+     *   reason: "OVERLOADED_CREDENTIALS"
+     *   domain: "googleapis.com"
+     *   metadata {
+     *     "consumer":"projects/123456"
+     *     "service": "pubsub.googleapis.com"
+     *   }
+     * }
+     *
+     * Generated from protobuf enum <code>OVERLOADED_CREDENTIALS = 34;</code>
+     */
+    const OVERLOADED_CREDENTIALS = 34;
+    private static $valueToName = [self::ERROR_REASON_UNSPECIFIED => 'ERROR_REASON_UNSPECIFIED', self::SERVICE_DISABLED => 'SERVICE_DISABLED', self::BILLING_DISABLED => 'BILLING_DISABLED', self::API_KEY_INVALID => 'API_KEY_INVALID', self::API_KEY_SERVICE_BLOCKED => 'API_KEY_SERVICE_BLOCKED', self::API_KEY_HTTP_REFERRER_BLOCKED => 'API_KEY_HTTP_REFERRER_BLOCKED', self::API_KEY_IP_ADDRESS_BLOCKED => 'API_KEY_IP_ADDRESS_BLOCKED', self::API_KEY_ANDROID_APP_BLOCKED => 'API_KEY_ANDROID_APP_BLOCKED', self::API_KEY_IOS_APP_BLOCKED => 'API_KEY_IOS_APP_BLOCKED', self::RATE_LIMIT_EXCEEDED => 'RATE_LIMIT_EXCEEDED', self::RESOURCE_QUOTA_EXCEEDED => 'RESOURCE_QUOTA_EXCEEDED', self::LOCATION_TAX_POLICY_VIOLATED => 'LOCATION_TAX_POLICY_VIOLATED', self::USER_PROJECT_DENIED => 'USER_PROJECT_DENIED', self::CONSUMER_SUSPENDED => 'CONSUMER_SUSPENDED', self::CONSUMER_INVALID => 'CONSUMER_INVALID', self::SECURITY_POLICY_VIOLATED => 'SECURITY_POLICY_VIOLATED', self::ACCESS_TOKEN_EXPIRED => 'ACCESS_TOKEN_EXPIRED', self::ACCESS_TOKEN_SCOPE_INSUFFICIENT => 'ACCESS_TOKEN_SCOPE_INSUFFICIENT', self::ACCOUNT_STATE_INVALID => 'ACCOUNT_STATE_INVALID', self::ACCESS_TOKEN_TYPE_UNSUPPORTED => 'ACCESS_TOKEN_TYPE_UNSUPPORTED', self::CREDENTIALS_MISSING => 'CREDENTIALS_MISSING', self::RESOURCE_PROJECT_INVALID => 'RESOURCE_PROJECT_INVALID', self::SESSION_COOKIE_INVALID => 'SESSION_COOKIE_INVALID', self::USER_BLOCKED_BY_ADMIN => 'USER_BLOCKED_BY_ADMIN', self::RESOURCE_USAGE_RESTRICTION_VIOLATED => 'RESOURCE_USAGE_RESTRICTION_VIOLATED', self::SYSTEM_PARAMETER_UNSUPPORTED => 'SYSTEM_PARAMETER_UNSUPPORTED', self::ORG_RESTRICTION_VIOLATION => 'ORG_RESTRICTION_VIOLATION', self::ORG_RESTRICTION_HEADER_INVALID => 'ORG_RESTRICTION_HEADER_INVALID', self::SERVICE_NOT_VISIBLE => 'SERVICE_NOT_VISIBLE', self::GCP_SUSPENDED => 'GCP_SUSPENDED', self::LOCATION_POLICY_VIOLATED => 'LOCATION_POLICY_VIOLATED', self::MISSING_ORIGIN => 'MISSING_ORIGIN', self::OVERLOADED_CREDENTIALS => 'OVERLOADED_CREDENTIALS'];
     public static function name($value)
     {
         if (!isset(self::$valueToName[$value])) {

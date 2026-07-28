@@ -30,7 +30,11 @@ class WP_MySQL_Token extends WP_Parser_Token {
 		string $input,
 		bool $sql_mode_no_backslash_escapes_enabled
 	) {
-		parent::__construct( $id, $start, $length, $input );
+		$this->id     = $id;
+		$this->start  = $start;
+		$this->length = $length;
+		$this->input  = $input;
+
 		$this->sql_mode_no_backslash_escapes_enabled = $sql_mode_no_backslash_escapes_enabled;
 	}
 

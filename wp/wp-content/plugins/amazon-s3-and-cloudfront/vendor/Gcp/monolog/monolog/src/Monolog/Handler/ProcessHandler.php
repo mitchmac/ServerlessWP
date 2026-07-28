@@ -11,7 +11,8 @@ declare (strict_types=1);
  */
 namespace DeliciousBrains\WP_Offload_Media\Gcp\Monolog\Handler;
 
-use DeliciousBrains\WP_Offload_Media\Gcp\Monolog\Logger;
+use DeliciousBrains\WP_Offload_Media\Gcp\Monolog\Level;
+use DeliciousBrains\WP_Offload_Media\Gcp\Monolog\LogRecord;
 /**
  * Stores to STDIN of any process, specified by a command.
  *
@@ -31,20 +32,15 @@ class ProcessHandler extends AbstractProcessingHandler
      * @var resource|bool|null
      */
     private $process;
-    /**
-     * @var string
-     */
-    private $command;
-    /**
-     * @var string|null
-     */
-    private $cwd;
+    private string $command;
+    private ?string $cwd;
     /**
      * @var resource[]
      */
-    private $pipes = [];
+    private array $pipes = [];
+    private float $timeout;
     /**
-     * @var array<int, string[]>
+     * @var array<int, list<string>>
      */
     protected const DESCRIPTOR_SPEC = [
         0 => ['pipe', 'r'],
@@ -57,9 +53,10 @@ class ProcessHandler extends AbstractProcessingHandler
      * @param  string                    $command Command for the process to start. Absolute paths are recommended,
      *                                            especially if you do not use the $cwd parameter.
      * @param  string|null               $cwd     "Current working directory" (CWD) for the process to be executed in.
+     * @param  float                     $timeout The maximum timeout (in seconds) for the stream_select() function.
      * @throws \InvalidArgumentException
      */
-    public function __construct(string $command, $level = Logger::DEBUG, bool $bubble = \true, ?string $cwd = null)
+    public function __construct(string $command, int|string|Level $level = Level::Debug, bool $bubble = \true, ?string $cwd = null, float $timeout = 1.0)
     {
         if ($command === '') {
             throw new \InvalidArgumentException('The command argument must be a non-empty string.');
@@ -70,18 +67,19 @@ class ProcessHandler extends AbstractProcessingHandler
         parent::__construct($level, $bubble);
         $this->command = $command;
         $this->cwd = $cwd;
+        $this->timeout = $timeout;
     }
     /**
      * Writes the record down to the log of the implementing handler
      *
      * @throws \UnexpectedValueException
      */
-    protected function write(array $record) : void
+    protected function write(LogRecord $record) : void
     {
         $this->ensureProcessIsStarted();
-        $this->writeProcessInput($record['formatted']);
+        $this->writeProcessInput($record->formatted);
         $errors = $this->readProcessErrors();
-        if (empty($errors) === \false) {
+        if ($errors !== '') {
             throw new \UnexpectedValueException(\sprintf('Errors while writing to process: %s', $errors));
         }
     }
@@ -118,7 +116,7 @@ class ProcessHandler extends AbstractProcessingHandler
             throw new \UnexpectedValueException('Something went wrong while selecting a stream.');
         }
         $errors = $this->readProcessErrors();
-        if (\is_resource($this->process) === \false || empty($errors) === \false) {
+        if (\is_resource($this->process) === \false || $errors !== '') {
             throw new \UnexpectedValueException(\sprintf('The process "%s" could not be opened: ' . $errors, $this->command));
         }
     }
@@ -131,7 +129,8 @@ class ProcessHandler extends AbstractProcessingHandler
     {
         $empty = [];
         $errorPipes = [$this->pipes[2]];
-        return \stream_select($errorPipes, $empty, $empty, 1);
+        $seconds = (int) $this->timeout;
+        return \stream_select($errorPipes, $empty, $empty, $seconds, (int) (($this->timeout - $seconds) * 1000000));
     }
     /**
      * Reads the errors of the process, if there are any.
@@ -153,7 +152,7 @@ class ProcessHandler extends AbstractProcessingHandler
         \fwrite($this->pipes[0], $string);
     }
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
     public function close() : void
     {

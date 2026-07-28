@@ -35,7 +35,7 @@ class WP_Parser_Token {
 	 *
 	 * @var string
 	 */
-	private $input;
+	protected $input;
 
 	/**
 	 * Constructor.

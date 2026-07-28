@@ -17,7 +17,6 @@
  */
 namespace DeliciousBrains\WP_Offload_Media\Gcp\Google\Cloud\Core\Batch;
 
-use DeliciousBrains\WP_Offload_Media\Gcp\Opis\Closure\SerializableClosure;
 /**
  * A trait to assist in the registering and processing of batch jobs.
  *

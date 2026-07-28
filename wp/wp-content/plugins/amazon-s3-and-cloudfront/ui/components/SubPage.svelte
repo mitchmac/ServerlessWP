@@ -1,10 +1,17 @@
 <script>
 	import active from "svelte-spa-router/active";
 
-	export let name = "";
-	export let route = "/";
+	/**
+	 * @typedef {Object} Props
+	 * @property {string} [name]
+	 * @property {string} [route]
+	 * @property {import("svelte").Snippet} [children]
+	 */
+
+	/** @type {Props} */
+	let { name = "", route = "/", children } = $props();
 </script>
 
 <div class="{name}" use:active={route}>
-	<slot/>
+	{@render children?.()}
 </div>

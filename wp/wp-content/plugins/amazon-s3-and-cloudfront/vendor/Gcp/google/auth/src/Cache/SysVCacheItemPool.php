@@ -19,6 +19,8 @@ namespace DeliciousBrains\WP_Offload_Media\Gcp\Google\Auth\Cache;
 
 use DeliciousBrains\WP_Offload_Media\Gcp\Psr\Cache\CacheItemInterface;
 use DeliciousBrains\WP_Offload_Media\Gcp\Psr\Cache\CacheItemPoolInterface;
+use SysvSemaphore;
+use SysvSharedMemory;
 /**
  * SystemV shared memory based CacheItemPool implementation.
  *
@@ -30,6 +32,7 @@ class SysVCacheItemPool implements CacheItemPoolInterface
 {
     const VAR_KEY = 1;
     const DEFAULT_PROJ = 'A';
+    const DEFAULT_SEM_PROJ = 'B';
     const DEFAULT_MEMSIZE = 10000;
     const DEFAULT_PERM = 0600;
     /**
@@ -53,6 +56,16 @@ class SysVCacheItemPool implements CacheItemPoolInterface
      */
     private $hasLoadedItems = \false;
     /**
+     * @var SysvSemaphore|false
+     */
+    private SysvSemaphore|false $semId = \false;
+    /**
+     * Maintain the process which is currently holding the semaphore to prevent deadlock.
+     *
+     * @var int|null
+     */
+    private ?int $lockOwnerPid = null;
+    /**
      * Create a SystemV shared memory based CacheItemPool.
      *
      * @param array<mixed> $options {
@@ -61,6 +74,9 @@ class SysVCacheItemPool implements CacheItemPoolInterface
      *     @type int    $variableKey The variable key for getting the data from the shared memory. **Defaults to** 1.
      *     @type string $proj        The project identifier for ftok. This needs to be a one character string.
      *                               **Defaults to** 'A'.
+     *     @type string $semProj     The project identifier for ftok to provide to `sem_get`. This needs to be a one
+     *                               character string.
+     *                               **Defaults to** 'B'.
      *     @type int    $memsize     The memory size in bytes for shm_attach. **Defaults to** 10000.
      *     @type int    $perm        The permission for shm_attach. **Defaults to** 0600.
      * }
@@ -70,10 +86,16 @@ class SysVCacheItemPool implements CacheItemPoolInterface
         if (!\extension_loaded('sysvshm')) {
             throw new \RuntimeException('sysvshm extension is required to use this ItemPool');
         }
-        $this->options = $options + ['variableKey' => self::VAR_KEY, 'proj' => self::DEFAULT_PROJ, 'memsize' => self::DEFAULT_MEMSIZE, 'perm' => self::DEFAULT_PERM];
+        $this->options = $options + ['variableKey' => self::VAR_KEY, 'proj' => self::DEFAULT_PROJ, 'semProj' => self::DEFAULT_SEM_PROJ, 'memsize' => self::DEFAULT_MEMSIZE, 'perm' => self::DEFAULT_PERM];
         $this->items = [];
         $this->deferredItems = [];
         $this->sysvKey = \ftok(__FILE__, $this->options['proj']);
+        // gracefully handle when `sysvsem` isn't loaded
+        // @TODO(v2): throw an exception when the extension isn't loaded
+        if (\extension_loaded('sysvsem')) {
+            $semKey = \ftok(__FILE__, $this->options['semProj']);
+            $this->semId = \sem_get($semKey, 1, $this->options['perm'], \true);
+        }
     }
     /**
      * @param mixed $key
@@ -93,9 +115,8 @@ class SysVCacheItemPool implements CacheItemPoolInterface
     {
         $this->loadItems();
         $items = [];
-        $itemClass = \PHP_VERSION_ID >= 80000 ? TypedItem::class : Item::class;
         foreach ($keys as $key) {
-            $items[$key] = $this->hasItem($key) ? clone $this->items[$key] : new $itemClass($key);
+            $items[$key] = $this->hasItem($key) ? clone $this->items[$key] : new TypedItem($key);
         }
         return $items;
     }
@@ -112,9 +133,15 @@ class SysVCacheItemPool implements CacheItemPoolInterface
      */
     public function clear() : bool
     {
+        if (!$this->acquireLock()) {
+            return \false;
+        }
         $this->items = [];
         $this->deferredItems = [];
-        return $this->saveCurrentItems();
+        $ret = $this->saveCurrentItems();
+        $this->resetShm();
+        $this->releaseLock();
+        return $ret;
     }
     /**
      * {@inheritdoc}
@@ -128,24 +155,35 @@ class SysVCacheItemPool implements CacheItemPoolInterface
      */
     public function deleteItems(array $keys) : bool
     {
+        if (!$this->acquireLock()) {
+            return \false;
+        }
         if (!$this->hasLoadedItems) {
             $this->loadItems();
         }
         foreach ($keys as $key) {
             unset($this->items[$key]);
         }
-        return $this->saveCurrentItems();
+        $ret = $this->saveCurrentItems();
+        $this->resetShm();
+        $this->releaseLock();
+        return $ret;
     }
     /**
      * {@inheritdoc}
      */
     public function save(CacheItemInterface $item) : bool
     {
+        if (!$this->acquireLock()) {
+            return \false;
+        }
         if (!$this->hasLoadedItems) {
             $this->loadItems();
         }
         $this->items[$item->getKey()] = $item;
-        return $this->saveCurrentItems();
+        $ret = $this->saveCurrentItems();
+        $this->releaseLock();
+        return $ret;
     }
     /**
      * {@inheritdoc}
@@ -160,12 +198,17 @@ class SysVCacheItemPool implements CacheItemPoolInterface
      */
     public function commit() : bool
     {
+        if (!$this->acquireLock()) {
+            return \false;
+        }
         foreach ($this->deferredItems as $item) {
             if ($this->save($item) === \false) {
+                $this->releaseLock();
                 return \false;
             }
         }
         $this->deferredItems = [];
+        $this->releaseLock();
         return \true;
     }
     /**
@@ -175,12 +218,16 @@ class SysVCacheItemPool implements CacheItemPoolInterface
      */
     private function saveCurrentItems()
     {
-        $shmid = \shm_attach($this->sysvKey, $this->options['memsize'], $this->options['perm']);
-        if ($shmid !== \false) {
-            $ret = \shm_put_var($shmid, $this->options['variableKey'], $this->items);
-            \shm_detach($shmid);
-            return $ret;
+        if (!$this->acquireLock()) {
+            return \false;
         }
+        if (\false !== ($shmid = $this->attachShm())) {
+            $success = \shm_put_var($shmid, $this->options['variableKey'], $this->items);
+            \shm_detach($shmid);
+            $this->releaseLock();
+            return $success;
+        }
+        $this->releaseLock();
         return \false;
     }
     /**
@@ -190,18 +237,58 @@ class SysVCacheItemPool implements CacheItemPoolInterface
      */
     private function loadItems()
     {
-        $shmid = \shm_attach($this->sysvKey, $this->options['memsize'], $this->options['perm']);
-        if ($shmid !== \false) {
+        if (!$this->acquireLock()) {
+            return \false;
+        }
+        if (\false !== ($shmid = $this->attachShm())) {
             $data = @\shm_get_var($shmid, $this->options['variableKey']);
-            if (!empty($data)) {
-                $this->items = $data;
-            } else {
-                $this->items = [];
-            }
+            $this->items = $data ?: [];
             \shm_detach($shmid);
             $this->hasLoadedItems = \true;
+            $this->releaseLock();
+            return \true;
+        }
+        $this->releaseLock();
+        return \false;
+    }
+    private function acquireLock() : bool
+    {
+        if ($this->semId === \false) {
+            // if `sysvsem` isn't loaded, or if `sem_get` fails, return true
+            // this ensures BC with previous versions of the auth library.
+            // @TODO consider better handling when `sem_get` fails.
+            return \true;
+        }
+        $currentPid = \getmypid();
+        if ($this->lockOwnerPid === $currentPid) {
+            // We already have the lock
+            return \true;
+        }
+        if (\sem_acquire($this->semId)) {
+            $this->lockOwnerPid = (int) $currentPid;
             return \true;
         }
         return \false;
+    }
+    private function releaseLock() : bool
+    {
+        if ($this->semId === \false || $this->lockOwnerPid !== \getmypid()) {
+            return \true;
+        }
+        $this->lockOwnerPid = null;
+        return \sem_release($this->semId);
+    }
+    private function resetShm() : void
+    {
+        // Remove the shared memory segment and semaphore when clearing the cache
+        $shmid = @\shm_attach($this->sysvKey);
+        if ($shmid !== \false) {
+            @\shm_remove($shmid);
+            @\shm_detach($shmid);
+        }
+    }
+    private function attachShm() : SysvSharedMemory|false
+    {
+        return \shm_attach($this->sysvKey, $this->options['memsize'], $this->options['perm']);
     }
 }

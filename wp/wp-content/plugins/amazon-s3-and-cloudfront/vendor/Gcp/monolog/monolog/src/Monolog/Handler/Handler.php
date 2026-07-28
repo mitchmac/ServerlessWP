@@ -19,7 +19,7 @@ namespace DeliciousBrains\WP_Offload_Media\Gcp\Monolog\Handler;
 abstract class Handler implements HandlerInterface
 {
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
     public function handleBatch(array $records) : void
     {
@@ -28,7 +28,7 @@ abstract class Handler implements HandlerInterface
         }
     }
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
     public function close() : void
     {
@@ -41,16 +41,9 @@ abstract class Handler implements HandlerInterface
             // do nothing
         }
     }
-    public function __sleep()
+    public function __serialize() : array
     {
         $this->close();
-        $reflClass = new \ReflectionClass($this);
-        $keys = [];
-        foreach ($reflClass->getProperties() as $reflProp) {
-            if (!$reflProp->isStatic()) {
-                $keys[] = $reflProp->getName();
-            }
-        }
-        return $keys;
+        return (array) $this;
     }
 }

@@ -5,8 +5,8 @@
 namespace DeliciousBrains\WP_Offload_Media\Gcp\Google\Api;
 
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Internal\GPBType;
-use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Internal\RepeatedField;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Internal\GPBUtil;
+use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\RepeatedField;
 /**
  * Settings for Python client libraries.
  *
@@ -21,6 +21,12 @@ class PythonSettings extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protob
      */
     protected $common = null;
     /**
+     * Experimental features to be included during client library generation.
+     *
+     * Generated from protobuf field <code>.google.api.PythonSettings.ExperimentalFeatures experimental_features = 2;</code>
+     */
+    protected $experimental_features = null;
+    /**
      * Constructor.
      *
      * @param array $data {
@@ -28,6 +34,8 @@ class PythonSettings extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protob
      *
      *     @type \Google\Api\CommonLanguageSettings $common
      *           Some settings.
+     *     @type \Google\Api\PythonSettings\ExperimentalFeatures $experimental_features
+     *           Experimental features to be included during client library generation.
      * }
      */
     public function __construct($data = NULL)
@@ -64,6 +72,37 @@ class PythonSettings extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protob
     {
         GPBUtil::checkMessage($var, \DeliciousBrains\WP_Offload_Media\Gcp\Google\Api\CommonLanguageSettings::class);
         $this->common = $var;
+        return $this;
+    }
+    /**
+     * Experimental features to be included during client library generation.
+     *
+     * Generated from protobuf field <code>.google.api.PythonSettings.ExperimentalFeatures experimental_features = 2;</code>
+     * @return \Google\Api\PythonSettings\ExperimentalFeatures|null
+     */
+    public function getExperimentalFeatures()
+    {
+        return $this->experimental_features;
+    }
+    public function hasExperimentalFeatures()
+    {
+        return isset($this->experimental_features);
+    }
+    public function clearExperimentalFeatures()
+    {
+        unset($this->experimental_features);
+    }
+    /**
+     * Experimental features to be included during client library generation.
+     *
+     * Generated from protobuf field <code>.google.api.PythonSettings.ExperimentalFeatures experimental_features = 2;</code>
+     * @param \Google\Api\PythonSettings\ExperimentalFeatures $var
+     * @return $this
+     */
+    public function setExperimentalFeatures($var)
+    {
+        GPBUtil::checkMessage($var, \DeliciousBrains\WP_Offload_Media\Gcp\Google\Api\PythonSettings\ExperimentalFeatures::class);
+        $this->experimental_features = $var;
         return $this;
     }
 }

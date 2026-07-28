@@ -5,8 +5,8 @@
 namespace DeliciousBrains\WP_Offload_Media\Gcp\Google\Api\Distribution\BucketOptions;
 
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Internal\GPBType;
-use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Internal\RepeatedField;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Internal\GPBUtil;
+use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\RepeatedField;
 /**
  * Specifies a set of buckets with arbitrary widths.
  * There are `size(bounds) + 1` (= N) buckets. Bucket `i` has the following
@@ -33,7 +33,7 @@ class Explicit extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Int
      * @param array $data {
      *     Optional. Data for populating the Message object.
      *
-     *     @type array<float>|\Google\Protobuf\Internal\RepeatedField $bounds
+     *     @type float[] $bounds
      *           The values must be monotonically increasing.
      * }
      */
@@ -46,7 +46,7 @@ class Explicit extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Int
      * The values must be monotonically increasing.
      *
      * Generated from protobuf field <code>repeated double bounds = 1;</code>
-     * @return \Google\Protobuf\Internal\RepeatedField
+     * @return RepeatedField<float>
      */
     public function getBounds()
     {
@@ -56,7 +56,7 @@ class Explicit extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Int
      * The values must be monotonically increasing.
      *
      * Generated from protobuf field <code>repeated double bounds = 1;</code>
-     * @param array<float>|\Google\Protobuf\Internal\RepeatedField $var
+     * @param float[] $var
      * @return $this
      */
     public function setBounds($var)

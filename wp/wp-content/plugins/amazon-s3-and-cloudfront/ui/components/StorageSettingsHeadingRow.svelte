@@ -13,7 +13,7 @@
 	import Button from "./Button.svelte";
 
 	// Parent page may want to be locked.
-	let settingsLocked = writable( false );
+	let settingsLocked = $state( writable( false ) );
 
 	if ( hasContext( "settingsLocked" ) ) {
 		settingsLocked = getContext( "settingsLocked" );
@@ -29,7 +29,7 @@
 			<span class="region" title={$settings.region}>{$region_name}</span>
 		</p>
 	</div>
-	<Button outline on:click={() => push('/storage/provider')} title={$strings.edit_storage_provider} disabled={$settingsLocked}>{$strings.edit}</Button>
+	<Button outline onclick={() => push('/storage/provider')} title={$strings.edit_storage_provider} disabled={$settingsLocked}>{$strings.edit}</Button>
 </PanelRow>
 
 <style>

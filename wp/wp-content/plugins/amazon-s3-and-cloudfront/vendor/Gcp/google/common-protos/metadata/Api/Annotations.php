@@ -14,11 +14,7 @@ class Annotations
             return;
         }
         \DeliciousBrains\WP_Offload_Media\Gcp\GPBMetadata\Google\Api\Http::initOnce();
-        $pool->internalAddGeneratedFile('
-Ä
-google/api/annotations.proto
-google.api google/protobuf/descriptor.protoBn
-com.google.apiBAnnotationsProtoPZAgoogle.golang.org/genproto/googleapis/api/annotations;annotations¢GAPIbproto3', \true);
+        $pool->internalAddGeneratedFile("\n\xc4\x01\n\x1cgoogle/api/annotations.proto\x12\ngoogle.api\x1a google/protobuf/descriptor.protoBn\n\x0ecom.google.apiB\x10AnnotationsProtoP\x01ZAgoogle.golang.org/genproto/googleapis/api/annotations;annotations\xa2\x02\x04GAPIb\x06proto3", \true);
         static::$is_initialized = \true;
     }
 }

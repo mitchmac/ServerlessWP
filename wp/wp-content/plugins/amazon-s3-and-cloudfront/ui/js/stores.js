@@ -1,4 +1,4 @@
-import {derived, writable, get, readable} from "svelte/store";
+import {derived, writable, get} from "svelte/store";
 import {objectsDiffer} from "./objectsDiffer";
 
 // Initial config store.
@@ -98,7 +98,7 @@ function createSettings() {
 				return json;
 			}
 
-			return { 'saved': false };
+			return { "saved": false };
 		},
 		reset() {
 			set( { ...get( current_settings ) } );
@@ -408,7 +408,7 @@ export const postStateUpdateCallbacks = writable( [] );
  *
  * @return {Object}
  */
-function createState() {
+function createAppState() {
 	const { subscribe, set, update } = writable( [] );
 
 	return {
@@ -483,14 +483,14 @@ function createState() {
 	};
 }
 
-export const state = createState();
+export const appState = createAppState();
 
 // API functions added here to avoid JSHint errors.
 api.headers = () => {
 	return {
-		'Accept': 'application/json',
-		'Content-Type': 'application/json',
-		'X-WP-Nonce': get( nonce )
+		"Accept": "application/json",
+		"Content-Type": "application/json",
+		"X-WP-Nonce": get( nonce )
 	};
 };
 
@@ -508,7 +508,7 @@ api.get = async ( endpoint, params ) => {
 	} );
 
 	const response = await fetch( url.toString(), {
-		method: 'GET',
+		method: "GET",
 		headers: api.headers()
 	} );
 	return response.json().then( json => {
@@ -519,7 +519,7 @@ api.get = async ( endpoint, params ) => {
 
 api.post = async ( endpoint, body ) => {
 	const response = await fetch( api.url( endpoint ), {
-		method: 'POST',
+		method: "POST",
 		headers: api.headers(),
 		body: JSON.stringify( body )
 	} );
@@ -531,7 +531,7 @@ api.post = async ( endpoint, body ) => {
 
 api.put = async ( endpoint, body ) => {
 	const response = await fetch( api.url( endpoint ), {
-		method: 'PUT',
+		method: "PUT",
 		headers: api.headers(),
 		body: JSON.stringify( body )
 	} );
@@ -543,7 +543,7 @@ api.put = async ( endpoint, body ) => {
 
 api.delete = async ( endpoint, body ) => {
 	const response = await fetch( api.url( endpoint ), {
-		method: 'DELETE',
+		method: "DELETE",
 		headers: api.headers(),
 		body: JSON.stringify( body )
 	} );
@@ -557,7 +557,7 @@ api.check_errors = ( json ) => {
 	if ( json.code && json.message ) {
 		notifications.add( {
 			id: json.code,
-			type: 'error',
+			type: "error",
 			dismissible: true,
 			heading: get( strings ).api_error_notice_heading,
 			message: json.message

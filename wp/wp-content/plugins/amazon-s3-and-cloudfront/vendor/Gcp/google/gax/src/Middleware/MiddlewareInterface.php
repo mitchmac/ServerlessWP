@@ -32,11 +32,11 @@
  */
 namespace DeliciousBrains\WP_Offload_Media\Gcp\Google\ApiCore\Middleware;
 
+use DeliciousBrains\WP_Offload_Media\Gcp\Google\ApiCore\BidiStream;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\ApiCore\Call;
-use DeliciousBrains\WP_Offload_Media\Gcp\GuzzleHttp\Promise\PromiseInterface;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\ApiCore\ClientStream;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\ApiCore\ServerStream;
-use DeliciousBrains\WP_Offload_Media\Gcp\Google\ApiCore\BidiStream;
+use DeliciousBrains\WP_Offload_Media\Gcp\GuzzleHttp\Promise\PromiseInterface;
 /**
  * Middlewares must take a MiddlewareInterface as their first constructor
  * argument {@see Google\ApiCore\Middleware\ResponseMetadataMiddleware}, which

@@ -5,8 +5,8 @@
 namespace DeliciousBrains\WP_Offload_Media\Gcp\Google\Api;
 
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Internal\GPBType;
-use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Internal\RepeatedField;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Internal\GPBUtil;
+use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\RepeatedField;
 /**
  * A projection from an input message to the GRPC or REST header.
  *
@@ -38,7 +38,7 @@ class RoutingParameter extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Prot
      *              |                    |   routing header.
      *              V                    |
      *     field: "table_name"           v
-     *     path_template: "projects/&#42;&#47;{table_location=instances/&#42;}/tables/&#42;"
+     *     path_template: "projects/{@*}{table_location=instances/*}/tables/*"
      *                                                ^            ^
      *                                                |            |
      *       In the {} brackets is the pattern that --             |
@@ -49,11 +49,11 @@ class RoutingParameter extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Prot
      *      before brackets, inside brackets, after brackets.
      * When looking at this specific example, we can see that:
      * - A key-value pair with the key `table_location`
-     *   and the value matching `instances/&#42;` should be added
+     *   and the value matching `instances/*` should be added
      *   to the x-goog-request-params routing header.
      * - The value is extracted from the request message's `table_name` field
      *   if it matches the full pattern specified:
-     *   `projects/&#42;&#47;instances/&#42;&#47;tables/&#42;`.
+     *   `projects/{@*}instances/{@*}tables/*`.
      * **NB:** If the `path_template` field is not provided, the key name is
      * equal to the field name, and the whole field should be sent as a value.
      * This makes the pattern for the field and the value functionally equivalent
@@ -97,7 +97,7 @@ class RoutingParameter extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Prot
      *                        |                    |   routing header.
      *                        V                    |
      *               field: "table_name"           v
-     *               path_template: "projects/&#42;&#47;{table_location=instances/&#42;}/tables/&#42;"
+     *               path_template: "projects/{@*}{table_location=instances/*}/tables/*"
      *                                                          ^            ^
      *                                                          |            |
      *                 In the {} brackets is the pattern that --             |
@@ -108,11 +108,11 @@ class RoutingParameter extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Prot
      *                before brackets, inside brackets, after brackets.
      *           When looking at this specific example, we can see that:
      *           - A key-value pair with the key `table_location`
-     *             and the value matching `instances/&#42;` should be added
+     *             and the value matching `instances/*` should be added
      *             to the x-goog-request-params routing header.
      *           - The value is extracted from the request message's `table_name` field
      *             if it matches the full pattern specified:
-     *             `projects/&#42;&#47;instances/&#42;&#47;tables/&#42;`.
+     *             `projects/{@*}instances/{@*}tables/*`.
      *           **NB:** If the `path_template` field is not provided, the key name is
      *           equal to the field name, and the whole field should be sent as a value.
      *           This makes the pattern for the field and the value functionally equivalent
@@ -174,7 +174,7 @@ class RoutingParameter extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Prot
      *              |                    |   routing header.
      *              V                    |
      *     field: "table_name"           v
-     *     path_template: "projects/&#42;&#47;{table_location=instances/&#42;}/tables/&#42;"
+     *     path_template: "projects/{@*}{table_location=instances/*}/tables/*"
      *                                                ^            ^
      *                                                |            |
      *       In the {} brackets is the pattern that --             |
@@ -185,11 +185,11 @@ class RoutingParameter extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Prot
      *      before brackets, inside brackets, after brackets.
      * When looking at this specific example, we can see that:
      * - A key-value pair with the key `table_location`
-     *   and the value matching `instances/&#42;` should be added
+     *   and the value matching `instances/*` should be added
      *   to the x-goog-request-params routing header.
      * - The value is extracted from the request message's `table_name` field
      *   if it matches the full pattern specified:
-     *   `projects/&#42;&#47;instances/&#42;&#47;tables/&#42;`.
+     *   `projects/{@*}instances/{@*}tables/*`.
      * **NB:** If the `path_template` field is not provided, the key name is
      * equal to the field name, and the whole field should be sent as a value.
      * This makes the pattern for the field and the value functionally equivalent
@@ -229,7 +229,7 @@ class RoutingParameter extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Prot
      *              |                    |   routing header.
      *              V                    |
      *     field: "table_name"           v
-     *     path_template: "projects/&#42;&#47;{table_location=instances/&#42;}/tables/&#42;"
+     *     path_template: "projects/{@*}{table_location=instances/*}/tables/*"
      *                                                ^            ^
      *                                                |            |
      *       In the {} brackets is the pattern that --             |
@@ -240,11 +240,11 @@ class RoutingParameter extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Prot
      *      before brackets, inside brackets, after brackets.
      * When looking at this specific example, we can see that:
      * - A key-value pair with the key `table_location`
-     *   and the value matching `instances/&#42;` should be added
+     *   and the value matching `instances/*` should be added
      *   to the x-goog-request-params routing header.
      * - The value is extracted from the request message's `table_name` field
      *   if it matches the full pattern specified:
-     *   `projects/&#42;&#47;instances/&#42;&#47;tables/&#42;`.
+     *   `projects/{@*}instances/{@*}tables/*`.
      * **NB:** If the `path_template` field is not provided, the key name is
      * equal to the field name, and the whole field should be sent as a value.
      * This makes the pattern for the field and the value functionally equivalent

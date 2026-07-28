@@ -37,9 +37,10 @@ use DeliciousBrains\WP_Offload_Media\Gcp\Google\ApiCore\Page;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\ApiCore\PagedListResponse;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\ApiCore\PageStreamingDescriptor;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Internal\Message;
-use DeliciousBrains\WP_Offload_Media\Gcp\GuzzleHttp\Promise\PromiseInterface;
 /**
 * Middleware which wraps the response in an PagedListResponses object.
+*
+* @internal
 */
 class PagedMiddleware implements MiddlewareInterface
 {

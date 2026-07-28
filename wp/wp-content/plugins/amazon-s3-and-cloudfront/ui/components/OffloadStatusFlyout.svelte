@@ -6,7 +6,7 @@
 		strings,
 		urls,
 		api,
-		state
+		appState
 	} from "../js/stores";
 	import {numToString} from "../js/numToString";
 	import {delayMin} from "../js/delay";
@@ -14,11 +14,25 @@
 	import Panel from "./Panel.svelte";
 	import PanelRow from "./PanelRow.svelte";
 
-	export let expanded = false;
-	export let buttonRef = {};
-	export let panelRef = {};
-	export let hasFocus = false;
-	export let refreshing = false;
+	/**
+	 * @typedef {Object} Props
+	 * @property {boolean} [expanded]
+	 * @property {any} [buttonRef]
+	 * @property {any} [panelRef]
+	 * @property {boolean} [hasFocus]
+	 * @property {boolean} [refreshing]
+	 * @property {import("svelte").Snippet} [footer]
+	 */
+
+	/** @type {Props} */
+	let {
+		expanded = $bindable( false ),
+		buttonRef = $bindable( {} ),
+		panelRef = $bindable( {} ),
+		hasFocus = $bindable( false ),
+		refreshing = $bindable( false ),
+		footer
+	} = $props();
 
 	/**
 	 * Keep track of when a child control gets mouse focus.
@@ -37,8 +51,16 @@
 	/**
 	 * When the panel is clicked, select the first focusable element
 	 * so that clicking outside the panel triggers a lost focus event.
+	 *
+	 * @property {Event} [event]
 	 */
-	function handlePanelClick() {
+	function handlePanelClick( event ) {
+		if ( event.target.closest( "a" ) ) {
+			return;
+		}
+
+		event.preventDefault();
+
 		hasFocus = true;
 
 		const firstFocusable = panelRef.querySelector( "a:not([tabindex='-1']),button:not([tabindex='-1'])" );
@@ -98,7 +120,7 @@
 
 		let json = await api.get( "state", params );
 		await delayMin( start, 1000 );
-		state.updateState( json );
+		appState.updateState( json );
 
 		refreshing = false;
 		buttonRef.focus();
@@ -108,11 +130,11 @@
 <Button
 	expandable
 	{expanded}
-	on:click={() => expanded = !expanded}
+	onclick={() => expanded = !expanded}
 	title={expanded ? $strings.hide_details : $strings.show_details}
 	bind:ref={buttonRef}
-	on:focusout={handleFocusOut}
-	on:cancel={handleCancel}
+	onfocusout={handleFocusOut}
+	onCancel={handleCancel}
 />
 
 {#if expanded}
@@ -124,13 +146,13 @@
 		heading={$strings.offload_status_title}
 		refreshDesc={$strings.refresh_media_counts_desc}
 		bind:ref={panelRef}
-		on:focusout={handleFocusOut}
-		on:mouseenter={handleMouseEnter}
-		on:mouseleave={handleMouseLeave}
-		on:mousedown={handleMouseEnter}
-		on:click={handlePanelClick}
-		on:cancel={handleCancel}
-		on:refresh={handleRefresh}
+		onfocusout={handleFocusOut}
+		onmouseenter={handleMouseEnter}
+		onmouseleave={handleMouseLeave}
+		onmousedown={handleMouseEnter}
+		onclick={handlePanelClick}
+		onCancel={handleCancel}
+		onRefresh={handleRefresh}
 	>
 		<PanelRow class="summary">
 			<table>
@@ -176,7 +198,9 @@
 			</table>
 		</PanelRow>
 
-		<slot name="footer">
+		{#if footer}
+			{@render footer()}
+		{:else}
 			<PanelRow footer class="upsell">
 				{#if $offloadRemainingUpsell}
 					<p>{@html $offloadRemainingUpsell}</p>
@@ -186,6 +210,6 @@
 					{$strings.offload_remaining_upsell_cta}
 				</a>
 			</PanelRow>
-		</slot>
+		{/if}
 	</Panel>
 {/if}

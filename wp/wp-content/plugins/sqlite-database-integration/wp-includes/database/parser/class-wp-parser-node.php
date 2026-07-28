@@ -15,7 +15,7 @@ class WP_Parser_Node {
 	 */
 	public $rule_id;
 	public $rule_name;
-	private $children = array();
+	protected $children = array();
 
 	public function __construct( $rule_id, $rule_name ) {
 		$this->rule_id   = $rule_id;

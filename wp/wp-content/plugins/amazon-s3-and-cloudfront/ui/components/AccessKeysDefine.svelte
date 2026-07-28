@@ -1,5 +1,5 @@
 <script>
-	export let provider;
+	let { provider } = $props();
 </script>
 
 <p>{@html provider.define_access_keys_desc}</p>

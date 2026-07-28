@@ -15,6 +15,13 @@ class StackPath extends Delivery_Provider {
 	);
 
 	/**
+	 * Has the provider been deprecated?
+	 *
+	 * @var bool
+	 */
+	protected static bool $is_deprecated = true;
+
+	/**
 	 * @var string
 	 */
 	protected static $provider_name = 'StackPath';
@@ -53,7 +60,7 @@ class StackPath extends Delivery_Provider {
 	 *
 	 * @var string
 	 */
-	protected static $provider_service_name = 'StackPath';
+	protected static $provider_service_name = 'StackPath (no longer in business)';
 
 	/**
 	 * @var string

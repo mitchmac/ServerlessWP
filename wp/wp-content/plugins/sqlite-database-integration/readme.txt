@@ -2,9 +2,9 @@
 
 Contributors:      wordpressdotorg, aristath, janjakes, zieladam, berislav.grgicak, bpayton, zaerl
 Requires at least: 6.4
-Tested up to:      6.9
+Tested up to:      7.0
 Requires PHP:      7.2
-Stable tag:        2.2.23
+Stable tag:        3.0.0-rc.7
 License:           GPLv2 or later
 License URI:       https://www.gnu.org/licenses/gpl-2.0.html
 Tags:              performance, database
@@ -14,8 +14,6 @@ SQLite integration plugin by the WordPress Team.
 == Description ==
 
 The SQLite plugin is a community, feature plugin. The intent is to allow testing an SQLite integration with WordPress and gather feedback, with the goal of eventually landing it in WordPress core.
-
-This feature plugin includes code from the PHPMyAdmin project (specifically parts of the PHPMyAdmin/sql-parser library), licensed under the GPL v2 or later. More info on the PHPMyAdmin/sql-parser library can be found on [GitHub](https://github.com/phpmyadmin/sql-parser).
 
 == Frequently Asked Questions ==
 
@@ -45,6 +43,49 @@ the wpdb API, while queries are internally adapted to be compatible
 with SQLite syntax and behavior.
 
 == Changelog ==
+
+= 3.0.0-rc.7 =
+
+* Preserve configured SQLite journal mode in driver wrapper ([#447](https://github.com/WordPress/sqlite-database-integration/pull/447))
+* Release 3.0.0-rc.6 ([#444](https://github.com/WordPress/sqlite-database-integration/pull/444))
+
+= 3.0.0-rc.6 =
+
+* Don't take a write lock for SET statements (fixes "database is locked" on connect) ([#443](https://github.com/WordPress/sqlite-database-integration/pull/443))
+* Add REVERSE() to user defined functions ([#434](https://github.com/WordPress/sqlite-database-integration/pull/434))
+* LALR(1) parser from official MySQL grammar ([#429](https://github.com/WordPress/sqlite-database-integration/pull/429))
+
+= 3.0.0-rc.5 =
+
+* Default SQLite connections to WAL ([#405](https://github.com/WordPress/sqlite-database-integration/pull/405))
+
+= 3.0.0-rc.4 =
+
+* Normalize BIT column default literals ([#439](https://github.com/WordPress/sqlite-database-integration/pull/439))
+* Optimize MySQL lexer (~2× speedup) ([#424](https://github.com/WordPress/sqlite-database-integration/pull/424))
+* Fix `RAND()` function behavior ([#363](https://github.com/WordPress/sqlite-database-integration/pull/363))
+* CI: Disable Xdebug, use Rust release builds, consolidate unit-test matrix ([#425](https://github.com/WordPress/sqlite-database-integration/pull/425))
+* GitHub Actions workflow updates ([#404](https://github.com/WordPress/sqlite-database-integration/pull/404))
+* Add native Rust-based MySQL parser extension ([#381](https://github.com/WordPress/sqlite-database-integration/pull/381), [#384](https://github.com/WordPress/sqlite-database-integration/pull/384), [#386](https://github.com/WordPress/sqlite-database-integration/pull/386), [#389](https://github.com/WordPress/sqlite-database-integration/pull/389), [#390](https://github.com/WordPress/sqlite-database-integration/pull/390), [#394](https://github.com/WordPress/sqlite-database-integration/pull/394), [#398](https://github.com/WordPress/sqlite-database-integration/pull/398))
+* Ship native parser as WASM  ([#395](https://github.com/WordPress/sqlite-database-integration/pull/395), [#396](https://github.com/WordPress/sqlite-database-integration/pull/396), [#397](https://github.com/WordPress/sqlite-database-integration/pull/397), [#399](https://github.com/WordPress/sqlite-database-integration/pull/399), [#400](https://github.com/WordPress/sqlite-database-integration/pull/400), [#401](https://github.com/WordPress/sqlite-database-integration/pull/401))
+* Add SQLite plugin landing page ([#407](https://github.com/WordPress/sqlite-database-integration/pull/407), [#412](https://github.com/WordPress/sqlite-database-integration/pull/412))
+* Check Playground web runtime compatibility ([#419](https://github.com/WordPress/sqlite-database-integration/pull/419))
+
+= 3.0.0-rc.3 =
+
+* Lexer: Fix possible OOB read in quoted strings ([#374](https://github.com/WordPress/sqlite-database-integration/pull/374))
+* Add support for `NO_AUTO_VALUE_ON_ZERO` SQL mode ([#366](https://github.com/WordPress/sqlite-database-integration/pull/366))
+
+= 3.0.0-rc.2 =
+
+* Support MySQL `BINARY` operator ([#369](https://github.com/WordPress/sqlite-database-integration/pull/369))
+* Add support for `AUTO_INCREMENT` value management ([#367](https://github.com/WordPress/sqlite-database-integration/pull/367))
+* Add support for `DELETE` with `LIMIT` and `ORDER BY` ([#365](https://github.com/WordPress/sqlite-database-integration/pull/365))
+
+= 3.0.0-rc.1 =
+
+* Improve concurrent database access ([#361](https://github.com/WordPress/sqlite-database-integration/pull/361))
+* Remove legacy SQLite driver ([#358](https://github.com/WordPress/sqlite-database-integration/pull/358))
 
 = 2.2.23 =
 

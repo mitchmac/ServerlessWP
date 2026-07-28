@@ -20,9 +20,11 @@ namespace DeliciousBrains\WP_Offload_Media\Gcp\Google\Cloud\Storage;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Auth\CredentialsLoader;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Auth\SignBlobInterface;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Cloud\Core\ArrayTrait;
+use DeliciousBrains\WP_Offload_Media\Gcp\Google\Cloud\Core\Exception\ServiceException;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Cloud\Core\JsonTrait;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Cloud\Core\Timestamp;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Cloud\Storage\Connection\ConnectionInterface;
+use DeliciousBrains\WP_Offload_Media\Gcp\Google\Cloud\Storage\Connection\RetryTrait;
 /**
  * Provides common methods for signing storage URLs.
  *
@@ -32,11 +34,13 @@ class SigningHelper
 {
     use ArrayTrait;
     use JsonTrait;
+    use RetryTrait;
     const DEFAULT_URL_SIGNING_VERSION = 'v2';
     const DEFAULT_DOWNLOAD_HOST = 'storage.googleapis.com';
     const V4_ALGO_NAME = 'GOOG4-RSA-SHA256';
     const V4_TIMESTAMP_FORMAT = 'DeliciousBrains\\WP_Offload_Media\\Gcp\\Ymd\\THis\\Z';
     const V4_DATESTAMP_FORMAT = 'Ymd';
+    const MAX_RETRIES = 5;
     /**
      * Create or fetch a SigningHelper instance.
      *
@@ -138,7 +142,8 @@ class SigningHelper
         }
         $toSign[] = $resource;
         $stringToSign = $this->createV2CanonicalRequest($toSign);
-        $signature = $credentials->signBlob($stringToSign, ['forceOpenssl' => $options['forceOpenssl']]);
+        // Use exponential backOff
+        $signature = $this->retrySignBlob(fn() => $credentials->signBlob($stringToSign, ['forceOpenssl' => $options['forceOpenssl']]));
         // Start with user-provided query params and add required parameters.
         $params = $options['queryParams'];
         $params['GoogleAccessId'] = $credentials->getClientName();
@@ -146,7 +151,7 @@ class SigningHelper
         $params['Signature'] = $signature;
         // urlencode parameter values
         foreach ($params as &$value) {
-            $value = \rawurlencode($value);
+            $value = \rawurlencode($value ?? '');
         }
         $params = $this->addCommonParams($generation, $params, $options);
         $queryString = $this->buildQueryString($params);
@@ -235,7 +240,7 @@ class SigningHelper
         $requestHash = $this->createV4CanonicalRequest($canonicalRequest);
         // Construct the string to sign.
         $stringToSign = \implode("\n", [self::V4_ALGO_NAME, $requestTimestamp, $credentialScope, $requestHash]);
-        $signature = \bin2hex(\base64_decode($credentials->signBlob($stringToSign, ['forceOpenssl' => $options['forceOpenssl']])));
+        $signature = \bin2hex(\base64_decode($this->retrySignBlob(fn() => $credentials->signBlob($stringToSign, ['forceOpenssl' => $options['forceOpenssl']])) ?? ''));
         // Construct the modified resource name. If a custom hostname is provided,
         // this will remove the bucket name from the resource.
         $resource = $this->normalizeUriPath($options['bucketBoundHostname'], $resource);
@@ -424,6 +429,7 @@ class SigningHelper
             'headers' => [],
             'keyFile' => null,
             'keyFilePath' => null,
+            'credentialsFetcher' => null,
             'method' => 'GET',
             'queryParams' => [],
             'responseDisposition' => null,
@@ -569,6 +575,8 @@ class SigningHelper
         if ($keyFile) {
             $scopes = $options['scopes'] ?? $rw->scopes();
             $credentials = CredentialsLoader::makeCredentials($scopes, $keyFile);
+        } elseif (isset($options['credentialsFetcher'])) {
+            $credentials = $options['credentialsFetcher'];
         } else {
             $credentials = $rw->getCredentialsFetcher();
         }
@@ -577,7 +585,7 @@ class SigningHelper
             throw new \RuntimeException(\sprintf('Credentials object is of type `%s` and is not valid for signing.', \get_class($credentials)));
         }
         //@codeCoverageIgnoreEnd
-        unset($options['keyFilePath'], $options['keyFile'], $options['scopes']);
+        unset($options['keyFilePath'], $options['keyFile'], $options['credentialsFetcher'], $options['scopes']);
         return [$credentials, $options];
     }
     /**
@@ -618,5 +626,33 @@ class SigningHelper
             $q[] = $key . '=' . $val;
         }
         return \implode('&', $q);
+    }
+    /**
+     * Retry logic for signBlob
+     *
+     * @param callable $signBlobFn  A callable that perform the actual signBlob operation.
+     * @param string $resourceName The resource name for logging or retry strategy determination.
+     * @param array $args Arguments for the operations, include preconditions
+     * @return string The signature genarated by signBlob.
+     * @throws ServiceException If non-retryable error occur.
+     * @throws \RuntimeException If retries are exhausted.
+     */
+    private function retrySignBlob(callable $signBlobFn, string $resourceName = 'signBlob', array $args = [])
+    {
+        $attempt = 0;
+        // Generate a retry decider function using the RetryTrait logic.
+        $retryDecider = $this->getRestRetryFunction($resourceName, 'execute', $args);
+        while (\true) {
+            ++$attempt;
+            try {
+                // Attempt the operation
+                return $signBlobFn();
+            } catch (\Exception $exception) {
+                if (!$retryDecider($exception, $attempt, self::MAX_RETRIES)) {
+                    // Non-retryable error
+                    throw $exception;
+                }
+            }
+        }
     }
 }

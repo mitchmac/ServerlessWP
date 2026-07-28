@@ -24,15 +24,13 @@ use DeliciousBrains\WP_Offload_Media\Gcp\Google\Auth\GetUniverseDomainInterface;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Auth\HttpHandler\Guzzle6HttpHandler;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Auth\HttpHandler\HttpHandlerFactory;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Auth\UpdateMetadataInterface;
-use DeliciousBrains\WP_Offload_Media\Gcp\Google\Cloud\Core\Exception\ServiceException;
-use DeliciousBrains\WP_Offload_Media\Gcp\Google\Cloud\Core\RequestWrapperTrait;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Cloud\Core\Exception\GoogleException;
+use DeliciousBrains\WP_Offload_Media\Gcp\Google\Cloud\Core\Exception\ServiceException;
 use DeliciousBrains\WP_Offload_Media\Gcp\GuzzleHttp\Exception\RequestException;
 use DeliciousBrains\WP_Offload_Media\Gcp\GuzzleHttp\Promise\PromiseInterface;
 use DeliciousBrains\WP_Offload_Media\Gcp\GuzzleHttp\Psr7\Utils;
 use DeliciousBrains\WP_Offload_Media\Gcp\Psr\Http\Message\RequestInterface;
 use DeliciousBrains\WP_Offload_Media\Gcp\Psr\Http\Message\ResponseInterface;
-use DeliciousBrains\WP_Offload_Media\Gcp\Psr\Http\Message\StreamInterface;
 /**
  * The RequestWrapper is responsible for delivering and signing requests.
  */
@@ -75,6 +73,11 @@ class RequestWrapper
      * request should attempt to retry.
      */
     private $retryFunction;
+    /**
+     * @var callable|null Lets the user listen for retries and
+     * modify the next retry arguments
+     */
+    private $retryListener;
     /**
      * @var callable Executes a delay.
      */
@@ -124,17 +127,20 @@ class RequestWrapper
      *           determining how long to wait between attempts to retry. Function
      *           signature should match: `function (int $attempt) : int`.
      *     @type string $universeDomain The expected universe of the credentials. Defaults to "googleapis.com".
+     *     @type callable $restRetryListener A function to run custom logic between retries. This function can modify
+     *           the next server call arguments for the next retry.
      * }
      */
     public function __construct(array $config = [])
     {
         $this->setCommonDefaults($config);
-        $config += ['accessToken' => null, 'asyncHttpHandler' => null, 'authHttpHandler' => null, 'httpHandler' => null, 'restOptions' => [], 'shouldSignRequest' => \true, 'componentVersion' => null, 'restRetryFunction' => null, 'restDelayFunction' => null, 'restCalcDelayFunction' => null, 'universeDomain' => GetUniverseDomainInterface::DEFAULT_UNIVERSE_DOMAIN];
+        $config += ['accessToken' => null, 'asyncHttpHandler' => null, 'authHttpHandler' => null, 'httpHandler' => null, 'restOptions' => [], 'shouldSignRequest' => \true, 'componentVersion' => null, 'restRetryFunction' => null, 'restDelayFunction' => null, 'restRetryListener' => null, 'restCalcDelayFunction' => null, 'universeDomain' => GetUniverseDomainInterface::DEFAULT_UNIVERSE_DOMAIN];
         $this->componentVersion = $config['componentVersion'];
         $this->accessToken = $config['accessToken'];
         $this->restOptions = $config['restOptions'];
         $this->shouldSignRequest = $config['shouldSignRequest'];
         $this->retryFunction = $config['restRetryFunction'] ?: $this->getRetryFunction();
+        $this->retryListener = $config['restRetryListener'];
         $this->delayFunction = $config['restDelayFunction'] ?: function ($delay) {
             \usleep($delay);
         };
@@ -296,7 +302,7 @@ class RequestWrapper
      */
     private function addAuthHeaders(RequestInterface $request, FetchAuthTokenInterface $fetcher)
     {
-        $backoff = new ExponentialBackoff($this->retries, $this->getRetryFunction());
+        $backoff = new ExponentialBackoff($this->retries, $this->getRetryFunction(), $this->retryListener);
         try {
             return $backoff->execute(function () use($request, $fetcher) {
                 if (!$fetcher instanceof UpdateMetadataInterface || $fetcher instanceof FetchAuthTokenCache && !$fetcher->getFetcher() instanceof UpdateMetadataInterface) {
@@ -387,7 +393,7 @@ class RequestWrapper
      */
     private function getRetryOptions(array $options)
     {
-        return ['retries' => isset($options['retries']) ? $options['retries'] : $this->retries, 'retryFunction' => isset($options['restRetryFunction']) ? $options['restRetryFunction'] : $this->retryFunction, 'retryListener' => isset($options['restRetryListener']) ? $options['restRetryListener'] : null, 'delayFunction' => isset($options['restDelayFunction']) ? $options['restDelayFunction'] : $this->delayFunction, 'calcDelayFunction' => isset($options['restCalcDelayFunction']) ? $options['restCalcDelayFunction'] : $this->calcDelayFunction];
+        return ['retries' => isset($options['retries']) ? $options['retries'] : $this->retries, 'retryFunction' => isset($options['restRetryFunction']) ? $options['restRetryFunction'] : $this->retryFunction, 'retryListener' => isset($options['restRetryListener']) ? $options['restRetryListener'] : $this->retryListener, 'delayFunction' => isset($options['restDelayFunction']) ? $options['restDelayFunction'] : $this->delayFunction, 'calcDelayFunction' => isset($options['restCalcDelayFunction']) ? $options['restCalcDelayFunction'] : $this->calcDelayFunction];
     }
     /**
      * Builds the default async HTTP handler.
@@ -401,7 +407,7 @@ class RequestWrapper
     /**
      * Verify that the expected universe domain matches the universe domain from the credentials.
      */
-    private function checkUniverseDomain(FetchAuthTokenInterface $credentialsFetcher = null)
+    private function checkUniverseDomain(?FetchAuthTokenInterface $credentialsFetcher = null)
     {
         if (\false === $this->hasCheckedUniverse) {
             if ($this->universeDomain === '') {

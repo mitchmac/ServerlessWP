@@ -2,10 +2,13 @@
 
 This is a URI Template implementation in PHP based on [RFC 6570 URI Template](http://tools.ietf.org/html/rfc6570). In addition to URI expansion, it also supports URI extraction (used by [Google Cloud Core](https://github.com/googleapis/google-cloud-php-core) and [Google Cloud Client Library](https://github.com/googleapis/google-cloud-php)).
 
-![CI](https://github.com/rize/UriTemplate/workflows/CI/badge.svg) [![Total Downloads](https://poser.pugx.org/rize/uri-template/downloads.png)](https://packagist.org/packages/rize/uri-template)
-[![Financial Contributors on Open Collective](https://opencollective.com/rize-uri-template/all/badge.svg?label=financial+contributors)](https://opencollective.com/rize-uri-template) 
+![CI](https://github.com/rize/UriTemplate/workflows/CI/badge.svg) [![Total Downloads](https://poser.pugx.org/rize/uri-template/downloads)](https://packagist.org/packages/rize/uri-template) [![Latest Stable Version](https://poser.pugx.org/rize/uri-template/v)](https://packagist.org/packages/rize/uri-template) [![PHP Version Require](https://poser.pugx.org/rize/uri-template/require/php)](https://packagist.org/packages/rize/uri-template)
 
-* [Node.js/Javascript](https://github.com/rezigned/uri-template.js) URI Template
+> [!NOTE]
+>
+> Due to the deprecation of implictly nullable parameter types in [PHP 8.4](https://wiki.php.net/rfc/deprecate-implicitly-nullable-types), we must introduce breaking change by adding explicit nullable types (`?T`) which requires PHP 7.1+.
+>
+> As a result, version [0.4.0](https://github.com/rize/UriTemplate/releases/tag/0.4.0) and later will no longer support PHP versions below 8.1.
 
 ## Usage
 
@@ -217,6 +220,7 @@ Using `composer`
 * **0.2.5** Add strict mode support for `extract` method
 * **0.3.0** Improve code quality + RFC3986 support for `extract` method by @Maks3w
 * **0.3.1** Improve `extract` method to parse two or more adjacent variables separated by dot by @corleonis
+* **0.4.0** Fixes the deprecation of implicitly nullable parameter types introduced in PHP 8.4. This version requires PHP 8.1 or later.
 
 ## Contributors
 

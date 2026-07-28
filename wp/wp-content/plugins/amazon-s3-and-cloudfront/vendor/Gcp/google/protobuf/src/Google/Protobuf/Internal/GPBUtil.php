@@ -11,8 +11,8 @@ namespace DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Internal;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Duration;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\FieldMask;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Internal\GPBType;
-use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Internal\RepeatedField;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Internal\MapField;
+use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\RepeatedField;
 use function bccomp;
 function camel2underscore($input)
 {
@@ -354,6 +354,9 @@ class GPBUtil
             if ($nanosecondsLength > 0) {
                 $nanoseconds = \substr($timestamp, $periodIndex + 1, $nanosecondsLength);
                 $nanoseconds = \intval($nanoseconds);
+                if ($nanosecondsLength < 9) {
+                    $nanoseconds = $nanoseconds * \pow(10, 9 - $nanosecondsLength);
+                }
                 // remove the nanoseconds and preceding period from the timestamp
                 $date = \substr($timestamp, 0, $periodIndex);
                 $timezone = \substr($timestamp, $periodIndex + $nanosecondsLength + 1);

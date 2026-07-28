@@ -52,6 +52,10 @@ interface ConnectionInterface
     /**
      * @param array $args
      */
+    public function restoreBucket(array $args = []);
+    /**
+     * @param array $args
+     */
     public function getBucket(array $args = []);
     /**
      * @param array $args
@@ -84,11 +88,19 @@ interface ConnectionInterface
     /**
      * @param array $args
      */
+    public function restoreObject(array $args = []);
+    /**
+     * @param array $args
+     */
     public function copyObject(array $args = []);
     /**
      * @param array $args
      */
     public function rewriteObject(array $args = []);
+    /**
+     * @param array $args
+     */
+    public function moveObject(array $args = []);
     /**
      * @param array $args
      */

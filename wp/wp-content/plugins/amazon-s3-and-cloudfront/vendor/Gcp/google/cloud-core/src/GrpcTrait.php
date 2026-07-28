@@ -17,13 +17,11 @@
  */
 namespace DeliciousBrains\WP_Offload_Media\Gcp\Google\Cloud\Core;
 
-use DeliciousBrains\WP_Offload_Media\Gcp\Google\Auth\GetUniverseDomainInterface;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\ApiCore\CredentialsWrapper;
+use DeliciousBrains\WP_Offload_Media\Gcp\Google\Auth\GetUniverseDomainInterface;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Cloud\Core\Exception\NotFoundException;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Cloud\Core\Exception\ServiceException;
-use DeliciousBrains\WP_Offload_Media\Gcp\Google\Cloud\Core\GrpcRequestWrapper;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\NullValue;
-use DeliciousBrains\WP_Offload_Media\Gcp\Google\Cloud\Core\Duration;
 /**
  * Provides shared functionality for gRPC service implementations.
  */
@@ -83,7 +81,7 @@ trait GrpcTrait
      * @param string|null $universeDomain
      * @return array
      */
-    private function getGaxConfig($version, callable $authHttpHandler = null, string $universeDomain = null)
+    private function getGaxConfig($version, ?callable $authHttpHandler = null, ?string $universeDomain = null)
     {
         $config = ['libName' => 'gccl', 'libVersion' => $version, 'transport' => 'grpc'];
         // GAX v0.32.0 introduced the CredentialsWrapper class and a different
@@ -250,6 +248,18 @@ trait GrpcTrait
             $nanos = $d['nanos'];
         }
         return ['seconds' => $seconds, 'nanos' => $nanos];
+    }
+    /**
+     * Format a duration from the API
+     *
+     * @param array $value
+     * @return string
+     */
+    private function formatDurationFromApi($value) : string
+    {
+        $seconds = $value['seconds'];
+        $nanos = \str_pad($value['nanos'], 9, 0, \STR_PAD_LEFT);
+        return "{$seconds}.{$nanos}s";
     }
     /**
      * Construct a gapic client. Allows for tests to intercept.

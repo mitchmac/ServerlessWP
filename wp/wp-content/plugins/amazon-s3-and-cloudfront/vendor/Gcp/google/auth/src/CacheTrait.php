@@ -84,7 +84,7 @@ trait CacheTrait
         if (\is_null($key)) {
             return null;
         }
-        $key = $this->cacheConfig['prefix'] . $key;
+        $key = ($this->cacheConfig['prefix'] ?? '') . $key;
         // ensure we do not have illegal characters
         $key = \preg_replace('|[^a-zA-Z0-9_\\.!]|', '', $key);
         // Hash keys if they exceed $maxKeyLength (defaults to 64)

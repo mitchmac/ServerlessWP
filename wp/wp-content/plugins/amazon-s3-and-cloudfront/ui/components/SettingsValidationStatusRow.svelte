@@ -5,16 +5,22 @@
 	} from "../js/stores";
 	import CheckAgain from "./CheckAgain.svelte";
 
-	export let section = "";
+	/**
+	 * @typedef {Object} Props
+	 * @property {string} [section]
+	 */
 
-	$: success = $settings_validation[ section ].type === "success";
-	$: warning = $settings_validation[ section ].type === "warning";
-	$: error = $settings_validation[ section ].type === "error";
-	$: info = $settings_validation[ section ].type === "info";
-	$: type = $settings_validation[ section ].type;
+	/** @type {Props} */
+	let { section = "" } = $props();
 
-	$: message = '<p>' + $settings_validation[ section ].message + '</p>';
-	$: iconURL = $urls.assets + "img/icon/notification-" + $settings_validation[ section ].type + ".svg";
+	let success = $derived( $settings_validation[ section ].type === "success" );
+	let warning = $derived( $settings_validation[ section ].type === "warning" );
+	let error = $derived( $settings_validation[ section ].type === "error" );
+	let info = $derived( $settings_validation[ section ].type === "info" );
+	let type = $derived( $settings_validation[ section ].type );
+
+	let message = $derived( "<p>" + $settings_validation[ section ].message + "</p>" );
+	let iconURL = $derived( $urls.assets + "img/icon/notification-" + $settings_validation[ section ].type + ".svg" );
 </script>
 
 <div

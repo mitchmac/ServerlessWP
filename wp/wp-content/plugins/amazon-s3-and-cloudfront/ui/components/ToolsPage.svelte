@@ -4,10 +4,17 @@
 	import Notifications from "./Notifications.svelte";
 	import ToolsUpgrade from "./ToolsUpgrade.svelte";
 
-	export let name = "tools";
+	/**
+	 * @typedef {Object} Props
+	 * @property {string} [name]
+	 * @property {function} [onRouteEvent]
+	 */
+
+	/** @type {Props} */
+	let { name = "tools", onRouteEvent } = $props();
 </script>
 
-<Page {name} on:routeEvent>
+<Page {name} {onRouteEvent}>
 	<Notifications tab={name}/>
 	<h2 class="page-title">{$strings.tools_title}</h2>
 	<ToolsUpgrade/>

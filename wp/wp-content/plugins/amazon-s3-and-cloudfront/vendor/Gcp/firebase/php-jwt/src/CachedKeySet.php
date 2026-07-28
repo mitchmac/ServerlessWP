@@ -73,7 +73,7 @@ class CachedKeySet implements ArrayAccess
      * @var string|null
      */
     private $defaultAlg;
-    public function __construct(string $jwksUri, ClientInterface $httpClient, RequestFactoryInterface $httpFactory, CacheItemPoolInterface $cache, int $expiresAfter = null, bool $rateLimit = \false, string $defaultAlg = null)
+    public function __construct(string $jwksUri, ClientInterface $httpClient, RequestFactoryInterface $httpFactory, CacheItemPoolInterface $cache, ?int $expiresAfter = null, bool $rateLimit = \false, ?string $defaultAlg = null)
     {
         $this->jwksUri = $jwksUri;
         $this->httpClient = $httpClient;
@@ -180,15 +180,17 @@ class CachedKeySet implements ArrayAccess
             return \false;
         }
         $cacheItem = $this->cache->getItem($this->rateLimitCacheKey);
-        if (!$cacheItem->isHit()) {
-            $cacheItem->expiresAfter(1);
-            // # of calls are cached each minute
+        $cacheItemData = [];
+        if ($cacheItem->isHit() && \is_array($data = $cacheItem->get())) {
+            $cacheItemData = $data;
         }
-        $callsPerMinute = (int) $cacheItem->get();
+        $callsPerMinute = $cacheItemData['callsPerMinute'] ?? 0;
+        $expiry = $cacheItemData['expiry'] ?? new \DateTime('+60 seconds', new \DateTimeZone('UTC'));
         if (++$callsPerMinute > $this->maxCallsPerMinute) {
             return \true;
         }
-        $cacheItem->set($callsPerMinute);
+        $cacheItem->set(['expiry' => $expiry, 'callsPerMinute' => $callsPerMinute]);
+        $cacheItem->expiresAt($expiry);
         $this->cache->save($cacheItem);
         return \false;
     }

@@ -36,7 +36,7 @@ class Config
      *                                            cross requests within a single worker process.
      * @throws \RuntimeException When a failure occurs while attempting to attach to shared memory.
      */
-    public function __construct($target, $conf = null, CacheItemPoolInterface $cacheItemPool = null)
+    public function __construct($target, $conf = null, ?CacheItemPoolInterface $cacheItemPool = null)
     {
         if ($conf == null) {
             // If there is no configure file, use the default gRPC channel.

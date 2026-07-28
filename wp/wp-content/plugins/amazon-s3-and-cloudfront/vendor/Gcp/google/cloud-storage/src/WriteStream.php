@@ -18,8 +18,8 @@
 namespace DeliciousBrains\WP_Offload_Media\Gcp\Google\Cloud\Storage;
 
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Cloud\Core\Upload\AbstractUploader;
-use DeliciousBrains\WP_Offload_Media\Gcp\GuzzleHttp\Psr7\StreamDecoratorTrait;
 use DeliciousBrains\WP_Offload_Media\Gcp\GuzzleHttp\Psr7\BufferStream;
+use DeliciousBrains\WP_Offload_Media\Gcp\GuzzleHttp\Psr7\StreamDecoratorTrait;
 use DeliciousBrains\WP_Offload_Media\Gcp\Psr\Http\Message\StreamInterface;
 /**
  * A Stream implementation that uploads in chunks to a provided uploader when
@@ -43,7 +43,7 @@ class WriteStream implements StreamInterface
      *            upload data
      * }
      */
-    public function __construct(AbstractUploader $uploader = null, $options = [])
+    public function __construct(?AbstractUploader $uploader = null, $options = [])
     {
         if ($uploader) {
             $this->setUploader($uploader);
@@ -73,7 +73,7 @@ class WriteStream implements StreamInterface
     public function write($data) : int
     {
         if (!isset($this->uploader)) {
-            throw new \RuntimeException("No uploader set.");
+            throw new \RuntimeException('No uploader set.');
         }
         // Ensure we have a resume uri here because we need to create the streaming
         // upload before we have data (size of 0).
