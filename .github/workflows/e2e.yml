@@ -9,12 +9,21 @@ jobs:
 
       - name: Checkout
         uses: actions/checkout@v3
-      
+
+      # Runs before the Docker suites for fast feedback. Needs the root
+      # dependencies, not the ones in test/.
+      - name: Install root dependencies
+        run: npm install
+
+      - name: sqlite concurrency unit tests
+        run: node --test sqliteS3.concurrency.test.js
+        working-directory: ./test
+
       - run: ./run-db-test.sh
         working-directory: ./test
 
       - run: ./run-s3-test.sh
         working-directory: ./test
-      
+
       - run: ./run-blob-test.sh
         working-directory: ./test

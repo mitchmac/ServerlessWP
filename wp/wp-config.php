@@ -129,17 +129,13 @@ if (isset($_ENV['S3_KEY_ID']) && isset($_ENV['S3_ACCESS_KEY'])) {
 define('DISALLOW_FILE_EDIT', true );
 define('DISALLOW_FILE_MODS', true );
 
-// If using SQLite + S3 or SQLite + Vercel Blob instead of MySQL/MariaDB.
-if (isset($_ENV['SQLITE_S3_BUCKET']) || isset($_ENV['SERVERLESSWP_DATA_SECRET']) || isset($_ENV['BLOB_READ_WRITE_TOKEN'])) {
+// If using SQLite (S3 or Vercel Blob) instead of MySQL/MariaDB. Node owns this
+// decision (util/storage.js) and signals it with the header below, which the
+// active plugin strips of any inbound value in preRequest.
+if (!empty($_SERVER['HTTP_X_SERVERLESSWP_SQLITE_FILE'])) {
   define('DB_DIR', '/tmp');
-  // Per-invocation working file path is supplied by the Node sqlite plugin
-  // via a request header so concurrent requests on the same warm instance
-  // don't share one file. Falls back to a fixed name if the header is missing.
-  if (!empty($_SERVER['HTTP_X_SERVERLESSWP_SQLITE_FILE'])) {
-    define('DB_FILE', basename($_SERVER['HTTP_X_SERVERLESSWP_SQLITE_FILE']));
-  } else {
-    define('DB_FILE', 'wp-sqlite-s3.sqlite');
-  }
+  // Per-invocation working file so concurrent requests don't share one.
+  define('DB_FILE', basename($_SERVER['HTTP_X_SERVERLESSWP_SQLITE_FILE']));
   define('DB_NAME', 'wp-sqlite');
 
   // Force the rollback journal mode. The Node sqlite plugin uploads the

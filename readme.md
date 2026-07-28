@@ -108,6 +108,28 @@ Want to give it a try? Setup a private S3 bucket and use these environment varia
 | SQLITE_S3_REGION | region where the bucket lives - create it near your serverless functions |
 | SQLITE_S3_ENDPOINT | optional: to update where the bucket is, like a Cloudflare R2 address |
 
+### SQLite + Vercel Blob
+
+On Vercel, connecting a [Vercel Blob](https://vercel.com/docs/vercel-blob) store is enough - no environment variables, no bucket or IAM credentials to create. The git branch is added to the name, so preview deployments each get their own database.
+
+Optional overrides:
+
+| SQLite+Vercel Blob | |
+|---|---|
+| SQLITE_BLOB_PATHNAME | base name for the database - defaults to `wp-sqlite` |
+| SQLITE_BLOB_TOKEN | token for a different Blob store than the default one |
+
+If you also use Blob for uploads, keep the database in its own store with `SQLITE_BLOB_TOKEN` - it has to stay private and uncached, while uploads want public reads and CDN caching.
+
+### Which database gets used
+
+The most explicitly configured option wins, so adding a Blob store for media won't take over an existing database:
+
+1. **MySQL** - `DATABASE`, `USERNAME`, `PASSWORD`, and `HOST` all set
+2. **SQLite + S3** - `SQLITE_S3_BUCKET` set
+3. **SQLite + Vercel Blob** - a Blob store connected on Vercel
+4. otherwise the setup page is shown
+
 ## Customizing WordPress
 - WordPress and its files are in the ```/wp``` directory. You can add plugins or themes there in their respective directories in ```wp-content``` then commit the files to your repository so it will re-deploy.
 - Plugins like [Cache-Control](https://wordpress.org/plugins/cache-control/) can enable CDN caching with the s-maxage directive and make your site super fast. Refer to [Vercel Edge Caching](https://vercel.com/docs/concepts/edge-network/caching) or [Netlfiy Cache Headers](https://docs.netlify.com/edge-functions/optional-configuration/#supported-headers)

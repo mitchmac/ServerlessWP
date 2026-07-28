@@ -211,10 +211,6 @@ exports.postRequest = async function(event, response) {
     }
 }
 
-exports.branchNameToS3file = function(branch) {
-    return encodeURIComponent(branch);
-}
-
 async function getEtag() {
     try {
         return await fs.readFile(ETAG_CACHE, 'utf8');
