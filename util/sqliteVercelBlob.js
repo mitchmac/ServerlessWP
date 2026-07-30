@@ -4,7 +4,7 @@ const fsSync = require('fs');
 const { randomUUID } = require('crypto');
 const { Readable } = require('node:stream');
 const { pipeline } = require('node:stream/promises');
-const { get, put, BlobPreconditionFailedError, BlobNotFoundError } = require('@vercel/blob');
+const { get, put, head, BlobPreconditionFailedError, BlobNotFoundError } = require('@vercel/blob');
 
 const ETAG_CACHE = '/tmp/etag-vercel-blob.txt';
 const CACHE_FILE = '/tmp/wp-sqlite-cache.sqlite';
@@ -83,7 +83,7 @@ exports.preRequest = async function(event) {
             );
             await fs.rename(tmp, CACHE_FILE);
             if (response.blob?.etag) {
-                await setEtag(response.blob.etag);
+                await setEtag(response.blob.etag, 'download');
             }
         }
     }
@@ -160,7 +160,7 @@ exports.postRequest = async function(event, response) {
                 await fs.copyFile(ctx.workingPath, tmp);
                 await fs.rename(tmp, CACHE_FILE);
                 if (putResponse?.etag) {
-                    await setEtag(putResponse.etag);
+                    await setEtag(putResponse.etag, 'put');
                 }
                 return;
             }
@@ -168,7 +168,9 @@ exports.postRequest = async function(event, response) {
                 console.error('Error saving database to Vercel Blob:', err);
                 const errResponse = {
                     statusCode: 500,
+                    headers: { 'content-type': 'text/plain', 'cache-control': 'no-store' },
                     body: 'Database error. This can happen when simultaneous database updates happen. Re-try your request.'
+                        + '\n\n' + await saveFailureDetail(err)
                 }
                 if (err instanceof BlobPreconditionFailedError) {
                     errResponse.retry = true;
@@ -206,6 +208,31 @@ function readError() {
     };
 }
 
+// Why a save failed, for the error page and the logs. A 412 can mean two very
+// different things and the ETag values tell them apart: the same hash in two
+// representations means our cached ETag isn't comparable to the store's (the
+// one we keep comes from a download header, while put/head report the API's),
+// while two unrelated hashes mean another request really did write first.
+async function saveFailureDetail(err) {
+    const sent = await getEtag();
+    let stored;
+    try {
+        const options = {};
+        if (_config.token) {
+            options.token = _config.token;
+        }
+        const meta = await head(_config.pathname, options);
+        stored = meta?.etag ? JSON.stringify(meta.etag) : 'none';
+    }
+    catch (headErr) {
+        stored = `head() failed - ${headErr.name}: ${headErr.message}`;
+    }
+
+    return `${err.name}: ${err.message}\n`
+        + `ifMatch sent: ${sent ? JSON.stringify(sent) : 'none'} (from ${_etagSource})\n`
+        + `store etag:   ${stored}`;
+}
+
 async function getEtag() {
     try {
         return await fs.readFile(ETAG_CACHE, 'utf8');
@@ -214,7 +241,11 @@ async function getEtag() {
     }
 }
 
-async function setEtag(newEtag) {
+// Where the cached ETag came from - 'download' or 'put'. Diagnostics only.
+let _etagSource = 'a previous invocation';
+
+async function setEtag(newEtag, source) {
+    _etagSource = source;
     await fs.writeFile(ETAG_CACHE, newEtag);
 }
 
