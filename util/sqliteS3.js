@@ -108,7 +108,7 @@ exports.preRequest = async function(event) {
             }
             return;
         }
-        else if (err.name === 'NoSuchKey') {
+        else if (err.name === 'NoSuchKey' || err.$metadata?.httpStatusCode === 404) {
             // Handle case where the file doesn't exist on S3
             console.log('Database file not found on server');
             return;
@@ -116,7 +116,7 @@ exports.preRequest = async function(event) {
         else {
             // Handle other errors
             console.error('Error fetching database:', err);
-            return;
+            return readError();
         }
     }
 
@@ -209,6 +209,21 @@ exports.postRequest = async function(event, response) {
         try { await fs.unlink(ctx.workingPath); } catch (e) { /* file may not exist */ }
         delete event[CONTEXT_KEY];
     }
+}
+
+// Fail the request when the database can't be read. A missing key is a new site
+// and returns above, so this is only reached when the read itself failed.
+// Letting the request through would hand WordPress an empty database, and
+// postRequest would then save that over the real one. _forceResponse stops the
+// plugin chain, otherwise a later plugin returning nothing would drop this
+// response and WordPress would run anyway.
+function readError() {
+    return {
+        statusCode: 500,
+        headers: { 'content-type': 'text/plain', 'cache-control': 'no-store' },
+        body: 'Database error. The database could not be read. Re-try your request.',
+        _forceResponse: true,
+    };
 }
 
 async function getEtag() {

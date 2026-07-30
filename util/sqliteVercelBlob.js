@@ -46,7 +46,13 @@ exports.preRequest = async function(event) {
 
     const cachedEtag = await getEtag();
 
-    const options = { access: 'private' };
+    // useCache: false reads from origin instead of the CDN cache. Reads have to
+    // be consistent here: a cached read can serve the previous version of the
+    // blob for up to 60 seconds after a write, which both hands WordPress a
+    // stale database and hands us a stale ETag - so the next conditional write
+    // fails its ifMatch and the request 500s.
+    // https://vercel.com/docs/vercel-blob/private-storage#consistent-reads
+    const options = { access: 'private', useCache: false };
     if (_config.token) {
         options.token = _config.token;
     }
@@ -87,7 +93,7 @@ exports.preRequest = async function(event) {
             return;
         }
         console.error('Error fetching database blob:', err);
-        return;
+        return readError();
     }
 
     // If we have a cache file (from this request or a previous one), copy it
@@ -159,7 +165,7 @@ exports.postRequest = async function(event, response) {
                 return;
             }
             catch (err) {
-                console.log(err);
+                console.error('Error saving database to Vercel Blob:', err);
                 const errResponse = {
                     statusCode: 500,
                     body: 'Database error. This can happen when simultaneous database updates happen. Re-try your request.'
@@ -183,6 +189,21 @@ exports.postRequest = async function(event, response) {
         try { await fs.unlink(ctx.workingPath); } catch (e) { /* file may not exist */ }
         delete event[CONTEXT_KEY];
     }
+}
+
+// Fail the request when the blob can't be read. A blob that doesn't exist yet
+// is a new site and returns null instead, so this is only reached when the read
+// itself failed. Letting the request through would hand WordPress an empty
+// database, and postRequest would then save that over the real one.
+// _forceResponse stops the plugin chain, otherwise a later plugin returning
+// nothing would drop this response and WordPress would run anyway.
+function readError() {
+    return {
+        statusCode: 500,
+        headers: { 'content-type': 'text/plain', 'cache-control': 'no-store' },
+        body: 'Database error. The database could not be read. Re-try your request.',
+        _forceResponse: true,
+    };
 }
 
 async function getEtag() {

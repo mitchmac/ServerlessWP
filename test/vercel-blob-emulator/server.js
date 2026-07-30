@@ -2,10 +2,16 @@
 // Implements the endpoints our sqliteVercelBlob plugin relies on:
 //   PUT  /?pathname=<name>   upload (honors x-if-match, x-allow-overwrite)
 //   GET  /?url=<url>         head metadata
-//   GET  /<pathname>         download (honors If-None-Match)
+//   GET  /<pathname>         download (honors If-None-Match and cache=0)
 //   POST /delete             delete (honors x-if-match for single URL)
 //
 // ETags use SHA-1 of the body, wrapped in double quotes (RFC 7232).
+//
+// Downloads go through a simulated CDN cache, because that's what they do on
+// Vercel: blobs are cached for up to a month and an overwrite takes up to 60
+// seconds to propagate, so a plain get() can return the previous version.
+// Passing `useCache: false` (which the SDK turns into `?cache=0`) reads from
+// origin instead. See https://vercel.com/docs/vercel-blob#caching
 
 const http = require('node:http');
 const crypto = require('node:crypto');
@@ -15,8 +21,13 @@ const PORT = parseInt(process.env.PORT || '7000', 10);
 const STORE_ID = process.env.STORE_ID || 'test';
 const ACCESS = process.env.ACCESS || 'private';
 const BASE_HOST = `${STORE_ID}.${ACCESS}.blob.vercel-storage.com`;
+// How long a cached download keeps being served after an overwrite. 0 disables
+// the simulated cache entirely.
+const CACHE_STALE_MS = parseInt(process.env.BLOB_CACHE_STALE_MS || '60000', 10);
 
 const store = new Map();
+// pathname -> { entry, expiresAt }: what the CDN would still be serving.
+const cdnCache = new Map();
 
 function computeEtag(buffer) {
     return `"${crypto.createHash('sha1').update(buffer).digest('hex')}"`;
@@ -127,12 +138,32 @@ const server = http.createServer(async (req, res) => {
 
         if (method === 'GET') {
             const pathname = url.pathname.slice(1);
-            const entry = store.get(pathname);
+            const bypassCache = url.searchParams.get('cache') === '0';
+
+            let entry = store.get(pathname);
+            let cacheState = bypassCache ? 'BYPASS' : 'MISS';
+
+            if (!bypassCache && CACHE_STALE_MS > 0) {
+                const cached = cdnCache.get(pathname);
+                if (cached && cached.expiresAt > Date.now()) {
+                    // Still within the propagation window: serve what the CDN
+                    // has, even if the blob was overwritten since.
+                    entry = cached.entry;
+                    cacheState = 'HIT';
+                } else if (entry) {
+                    cdnCache.set(pathname, { entry, expiresAt: Date.now() + CACHE_STALE_MS });
+                } else {
+                    cdnCache.delete(pathname);
+                }
+            }
+
             if (!entry) {
                 res.statusCode = 404;
+                res.setHeader('x-vercel-blob-cache', cacheState);
                 res.end();
                 return;
             }
+            res.setHeader('x-vercel-blob-cache', cacheState);
             const lastModified = new Date(entry.uploadedAt).toUTCString();
             if (req.headers['if-none-match'] === entry.etag) {
                 res.statusCode = 304;
