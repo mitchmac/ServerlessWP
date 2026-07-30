@@ -15,8 +15,8 @@ jobs:
       - name: Install root dependencies
         run: npm install
 
-      - name: sqlite concurrency unit tests
-        run: node --test sqliteS3.concurrency.test.js
+      - name: sqlite unit tests
+        run: node --test sqliteS3.concurrency.test.js sqliteVercelBlob.etag.test.js
         working-directory: ./test
 
       - run: ./run-db-test.sh
@@ -26,4 +26,12 @@ jobs:
         working-directory: ./test
 
       - run: ./run-blob-test.sh
+        working-directory: ./test
+
+      # A warm container gets its ETag from its own upload and then only ever
+      # revalidates, so it never writes using a download's ETag. Cold instances
+      # do that on every first request, which is where conditional writes broke
+      # in production. BLOB_NO_CONDITIONAL_READS makes every read a full one.
+      - name: blob tests with cold-instance reads
+        run: BLOB_NO_CONDITIONAL_READS=1 ./run-blob-test.sh
         working-directory: ./test

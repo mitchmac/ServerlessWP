@@ -24,6 +24,22 @@ const BASE_HOST = `${STORE_ID}.${ACCESS}.blob.vercel-storage.com`;
 // How long a cached download keeps being served after an overwrite. 0 disables
 // the simulated cache entirely.
 const CACHE_STALE_MS = parseInt(process.env.BLOB_CACHE_STALE_MS || '60000', 10);
+// Downloads carry a weak ETag (`W/"..."`) while the API reports the strong one,
+// which is what Vercel Blob does. A client that reuses a download's ETag for a
+// conditional write verbatim gets rejected. Set BLOB_WEAK_DOWNLOAD_ETAG=0 to
+// serve strong ETags everywhere instead.
+const WEAK_DOWNLOAD_ETAG = process.env.BLOB_WEAK_DOWNLOAD_ETAG !== '0';
+// Never answer a download with 304, so every read is a full download and the
+// client ends up holding a download-sourced ETag. That's what a cold serverless
+// instance does on its first request, and a warm single-container test never
+// reaches it otherwise.
+const NO_CONDITIONAL_READS = process.env.BLOB_NO_CONDITIONAL_READS === '1';
+
+// Weak comparison per RFC 7232: `W/"x"` and `"x"` are the same entity.
+function etagsWeaklyEqual(a, b) {
+    const strip = (v) => (v || '').replace(/^W\//, '');
+    return !!a && strip(a) === strip(b);
+}
 
 const store = new Map();
 // pathname -> { entry, expiresAt }: what the CDN would still be serving.
@@ -165,15 +181,16 @@ const server = http.createServer(async (req, res) => {
             }
             res.setHeader('x-vercel-blob-cache', cacheState);
             const lastModified = new Date(entry.uploadedAt).toUTCString();
-            if (req.headers['if-none-match'] === entry.etag) {
+            const downloadEtag = WEAK_DOWNLOAD_ETAG ? 'W/' + entry.etag : entry.etag;
+            if (!NO_CONDITIONAL_READS && etagsWeaklyEqual(req.headers['if-none-match'], downloadEtag)) {
                 res.statusCode = 304;
-                res.setHeader('etag', entry.etag);
+                res.setHeader('etag', downloadEtag);
                 res.setHeader('last-modified', lastModified);
                 res.end();
                 return;
             }
             res.statusCode = 200;
-            res.setHeader('etag', entry.etag);
+            res.setHeader('etag', downloadEtag);
             res.setHeader('content-type', entry.contentType);
             res.setHeader('content-length', entry.body.length);
             res.setHeader('last-modified', lastModified);
