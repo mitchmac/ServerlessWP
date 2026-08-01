@@ -16,7 +16,9 @@ jobs:
         run: npm install
 
       - name: sqlite unit tests
-        run: node --test sqliteS3.concurrency.test.js sqliteVercelBlob.etag.test.js
+        # Serial: the test files share the plugin's hardcoded /tmp cache and
+        # etag paths, and node --test runs files in parallel processes.
+        run: node --test --test-concurrency=1 sqliteS3.concurrency.test.js sqliteVercelBlob.etag.test.js sqliteVercelBlob.concurrency.test.js
         working-directory: ./test
 
       - run: ./run-db-test.sh

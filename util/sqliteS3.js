@@ -48,6 +48,15 @@ exports.preRequest = async function(event) {
         workingPath: '/tmp/' + workingFileName,
         db: null,
         dataVersion: null,
+        // The S3 object version this request's working copy came from. Bound
+        // here, per request, because the shared etag file moves under
+        // concurrent requests: reading it again at write time would let a
+        // request whose copy predates another's committed write pass its
+        // IfMatch and silently revert that write.
+        etag: null,
+        // Set when the read established the object doesn't exist. Only then
+        // may postRequest write without IfMatch.
+        blobMissing: false,
     };
     event[CONTEXT_KEY] = ctx;
 
@@ -88,15 +97,19 @@ exports.preRequest = async function(event) {
             await fs.writeFile(tmp, response.Body);
             await fs.rename(tmp, CACHE_FILE);
             await setEtag(response.ETag);
+            ctx.etag = response.ETag;
         }
         else {
             // @TODO: if it doesn't exist, behave like it's a new site?
             console.log('db file not found');
+            ctx.blobMissing = true;
         }
     }
     catch (err) {
         if (err.$metadata && err.$metadata.httpStatusCode === 304) {
-            // Cache is up to date; fall through to copy below.
+            // Cache is up to date; fall through to copy below. The 304 was
+            // earned by IfNoneMatch, so cachedEtag is the version we hold.
+            ctx.etag = cachedEtag;
         }
         else if (err.$metadata?.httpStatusCode === 403) {
             if (_config.onAuthError) {
@@ -111,6 +124,7 @@ exports.preRequest = async function(event) {
         else if (err.name === 'NoSuchKey' || err.$metadata?.httpStatusCode === 404) {
             // Handle case where the file doesn't exist on S3
             console.log('Database file not found on server');
+            ctx.blobMissing = true;
             return;
         }
         else {
@@ -154,12 +168,29 @@ exports.postRequest = async function(event, response) {
         // See if the db has been mutated, if so, send the changes to s3
         const readOnly = process.env['SERVERLESSWP_READ_ONLY_MODE'] && !['false', '0', 'no'].includes(process.env['SERVERLESSWP_READ_ONLY_MODE'].toLowerCase());
         if (!readOnly && ctx.dataVersion !== versionNow && workingExists) {
+            // The object exists but we don't know which version the working
+            // copy came from (e.g. the read failed over to the auth flow).
+            // Writing anyway would be unconditional and could overwrite
+            // another instance's committed changes - fail and let the retry
+            // re-fetch.
+            if (!ctx.etag && !ctx.blobMissing) {
+                console.log('Refusing to save database without a bound ETag.');
+                return {
+                    statusCode: 500,
+                    body: 'Database error. This can happen when simultaneous database updates happen. Re-try your request.',
+                    retry: true,
+                };
+            }
+
             try {
                 await dbClose(ctx.db);
                 ctx.db = null;
 
                 const sqliteContent = await fs.readFile(ctx.workingPath);
-                let currentEtag = await getEtag();
+                // The version this request started from, captured in
+                // preRequest - never the shared etag file, which a concurrent
+                // request may have advanced since.
+                let currentEtag = ctx.etag;
 
                 let putCommandParams = {
                     Bucket: _config.bucket,

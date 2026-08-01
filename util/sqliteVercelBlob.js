@@ -4,7 +4,8 @@ const fsSync = require('fs');
 const { randomUUID } = require('crypto');
 const { Readable } = require('node:stream');
 const { pipeline } = require('node:stream/promises');
-const { get, put, BlobPreconditionFailedError, BlobNotFoundError } = require('@vercel/blob');
+const { BlobPreconditionFailedError, BlobNotFoundError } = require('@vercel/blob');
+let { get, put } = require('@vercel/blob');
 
 const ETAG_CACHE = '/tmp/etag-vercel-blob.txt';
 const CACHE_FILE = '/tmp/wp-sqlite-cache.sqlite';
@@ -29,6 +30,15 @@ exports.preRequest = async function(event) {
         workingPath: '/tmp/' + workingFileName,
         db: null,
         dataVersion: null,
+        // The blob version this request's working copy came from. Bound here,
+        // per request, because the shared etag file moves under concurrent
+        // requests: reading it again at write time would let a request whose
+        // copy predates another's committed write pass its ifMatch and
+        // silently revert that write.
+        etag: null,
+        // Set when the read established the blob doesn't exist. Only then may
+        // postRequest write without ifMatch.
+        blobMissing: false,
     };
     event[CONTEXT_KEY] = ctx;
 
@@ -67,11 +77,14 @@ exports.preRequest = async function(event) {
 
         if (!response) {
             // Blob doesn't exist yet - behave like a new site.
+            ctx.blobMissing = true;
             return;
         }
 
         if (response.statusCode === 304) {
-            // Cache is up to date; fall through to copy below.
+            // Cache is up to date; fall through to copy below. The 304 was
+            // earned by ifNoneMatch, so cachedEtag is the version we hold.
+            ctx.etag = cachedEtag;
         }
         else if (response.statusCode === 200 && response.stream) {
             // Stream to a tmp path then atomically rename into place.
@@ -82,14 +95,17 @@ exports.preRequest = async function(event) {
                 fsSync.createWriteStream(tmp)
             );
             await fs.rename(tmp, CACHE_FILE);
-            if (response.blob?.etag) {
-                await setEtag(response.blob.etag);
+            const downloadedEtag = normalizeEtag(response.blob?.etag);
+            if (downloadedEtag) {
+                await setEtag(downloadedEtag);
+                ctx.etag = downloadedEtag;
             }
         }
     }
     catch (err) {
         if (err instanceof BlobNotFoundError) {
             console.log('Database blob not found');
+            ctx.blobMissing = true;
             return;
         }
         console.error('Error fetching database blob:', err);
@@ -131,12 +147,29 @@ exports.postRequest = async function(event, response) {
         const readOnly = process.env['SERVERLESSWP_READ_ONLY_MODE'];
         const readOnlyActive = readOnly && !['false', '0', 'no'].includes(readOnly.toLowerCase());
         if (!readOnlyActive && ctx.dataVersion !== versionNow && workingExists) {
+            // The blob exists but we don't know which version the working
+            // copy came from (e.g. a download without an ETag). Writing
+            // anyway would be unconditional and could overwrite another
+            // instance's committed changes - fail and let the retry re-fetch.
+            if (!ctx.etag && !ctx.blobMissing) {
+                console.log('Refusing to save database without a bound ETag.');
+                return {
+                    statusCode: 500,
+                    headers: { 'content-type': 'text/plain', 'cache-control': 'no-store' },
+                    body: 'Database error. This can happen when simultaneous database updates happen. Re-try your request.',
+                    retry: true,
+                };
+            }
+
             try {
                 await dbClose(ctx.db);
                 ctx.db = null;
 
                 const sqliteContent = await fs.readFile(ctx.workingPath);
-                const currentEtag = await getEtag();
+                // The version this request started from, captured in
+                // preRequest - never the shared etag file, which a concurrent
+                // request may have advanced since.
+                const currentEtag = ctx.etag;
 
                 const putOptions = {
                     access: 'private',
@@ -219,6 +252,12 @@ function normalizeEtag(etag) {
 
 // Exported for tests.
 exports._normalizeEtag = normalizeEtag;
+
+// Test-only: swap the blob API for a mock without touching the real store.
+exports._setBlobForTests = function(mock) {
+    get = mock.get;
+    put = mock.put;
+}
 
 async function getEtag() {
     try {

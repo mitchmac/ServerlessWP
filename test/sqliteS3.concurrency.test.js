@@ -95,6 +95,19 @@ function makeMockS3({ initialBody, initialEtag = 'etag-1' }) {
 class GetObjectCommand { constructor(input) { this.input = input; } }
 class PutObjectCommand { constructor(input) { this.input = input; } }
 
+// Insert a row through a separate connection - PRAGMA data_version only
+// increments when another connection commits, which is how PHP's writes look
+// to the Node-held handle in production.
+function insertRow(dbPath, value) {
+    return new Promise((resolve, reject) => {
+        const writer = new sqlite3.Database(dbPath);
+        writer.run('INSERT INTO t VALUES (?)', [value], (err) => {
+            if (err) return reject(err);
+            writer.close(() => resolve());
+        });
+    });
+}
+
 async function cleanupTmp() {
     for (const p of [ETAG_CACHE, CACHE_FILE]) {
         try { await fs.unlink(p); } catch (e) {}
@@ -290,6 +303,58 @@ test('module state is not shared between concurrent requests', async () => {
 
     await sqliteS3.postRequest(a, {});
     await sqliteS3.postRequest(b, {});
+});
+
+test('a stale working copy cannot silently overwrite a committed write', async () => {
+    // Lost-update regression: A and B start from the same version. A commits
+    // first, which advances the shared etag file on this instance. B's IfMatch
+    // must still be the version B *started from*, so S3 rejects it - reading
+    // the etag file again at write time would let B's put pass and silently
+    // revert A's committed write.
+    const body = await buildDbBytes('seed');
+    const { client, state } = makeMockS3({ initialBody: body });
+    sqliteS3._setClientForTests(client, { bucket: 'b', file: 'f' });
+
+    const ctxKey = Symbol.for('serverlesswp.sqliteS3.context');
+    const a = {}, b = {};
+    await sqliteS3.preRequest(a);
+    await sqliteS3.preRequest(b);
+
+    await insertRow(a[ctxKey].workingPath, 'from-a');
+    const resultA = await sqliteS3.postRequest(a, {});
+    assert.strictEqual(resultA, undefined, 'A saves cleanly');
+    const bodyAfterA = state.body;
+
+    await insertRow(b[ctxKey].workingPath, 'from-b');
+    const resultB = await sqliteS3.postRequest(b, {});
+    assert.ok(resultB, 'B\'s save is rejected');
+    assert.strictEqual(resultB.statusCode, 500);
+    assert.strictEqual(resultB.retry, true, 'B is retried on fresh data');
+    assert.deepStrictEqual(state.body, bodyAfterA, 'A\'s committed write is preserved');
+});
+
+test('an unknown starting version refuses to write instead of clobbering', async () => {
+    // The object exists but the read never bound an ETag (here: the 403 auth
+    // path). An unconditional put could overwrite another instance's commit,
+    // so postRequest must fail the request rather than save.
+    const body = await buildDbBytes('seed');
+    const { client, state } = makeMockS3({ initialBody: body });
+    state.forceGetError = { httpStatusCode: 403 };
+    sqliteS3._setClientForTests(client, { bucket: 'b', file: 'f', onAuthError: async () => {} });
+
+    const event = {};
+    const response = await sqliteS3.preRequest(event);
+    assert.strictEqual(response, undefined, 'the auth path lets the request continue');
+
+    // Stand in for WordPress writing into the (fresh) working file.
+    const ctx = event[Symbol.for('serverlesswp.sqliteS3.context')];
+    await fs.writeFile(ctx.workingPath, await buildDbBytes('unbound'));
+
+    const result = await sqliteS3.postRequest(event, {});
+    assert.ok(result, 'the save is refused');
+    assert.strictEqual(result.statusCode, 500);
+    assert.strictEqual(result.retry, true);
+    assert.strictEqual(state.putCalls, 0, 'nothing was written to S3');
 });
 
 test('client-supplied X-Serverlesswp-Sqlite-File header is stripped', async () => {
