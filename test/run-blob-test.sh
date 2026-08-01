@@ -31,7 +31,7 @@ until curl -s -o /dev/null -w "%{http_code}" http://localhost:$FAKE_BLOB_PORT/do
 # http://host.docker.internal. Works on Docker Desktop and Docker Engine >= 20.10.
 docker run \
     --add-host=host.docker.internal:host-gateway \
-    -e BLOB_READ_WRITE_TOKEN=$BLOB_TOKEN \
+    -e SQLITE_BLOB_READ_WRITE_TOKEN=$BLOB_TOKEN \
     -e VERCEL_BLOB_API_URL=http://host.docker.internal:$FAKE_BLOB_PORT \
     -e VERCEL_BLOB_MOCK_URL=http://host.docker.internal:$FAKE_BLOB_PORT \
     -e VERCEL=$VERCEL -e VERCEL_GIT_COMMIT_REF=$VERCEL_GIT_COMMIT_REF \
@@ -75,7 +75,7 @@ docker rm serverlesswp-test
 
 docker run \
     --add-host=host.docker.internal:host-gateway \
-    -e BLOB_READ_WRITE_TOKEN=$BLOB_TOKEN \
+    -e SQLITE_BLOB_READ_WRITE_TOKEN=$BLOB_TOKEN \
     -e VERCEL_BLOB_API_URL=http://host.docker.internal:$FAKE_BLOB_PORT \
     -e VERCEL_BLOB_MOCK_URL=http://host.docker.internal:$FAKE_BLOB_PORT \
     -e VERCEL=$VERCEL -e VERCEL_GIT_COMMIT_REF=$VERCEL_GIT_COMMIT_REF \

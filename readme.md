@@ -20,7 +20,7 @@ Or click one of the options below to deploy your serverless WordPress site with 
 
 | Vercel  | Netlify  |
 |---|---|
-| [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fmitchmac%2Fserverlesswp&project-name=serverlesswp&repository-name=serverlesswp)  | [![Deploy to Netlify](https://www.netlify.com/img/deploy/button.svg)](https://app.netlify.com/start/deploy?repository=https://github.com/mitchmac/serverlesswp)  |
+| [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fmitchmac%2Fserverlesswp&project-name=serverlesswp&repository-name=serverlesswp&stores=%5B%7B%22type%22%3A%22blob%22%2C%22access%22%3A%22private%22%2C%22envVarPrefix%22%3A%22SQLITE%22%7D%5D)  | [![Deploy to Netlify](https://www.netlify.com/img/deploy/button.svg)](https://app.netlify.com/start/deploy?repository=https://github.com/mitchmac/serverlesswp)  |
 | 🕑 60 second max request duration   | 10 second max request duration  |
 | &nbsp;⎇&nbsp; automatic branch deploy config   | manual branch config  |
 | 📈 [Web analytics](https://vercel.com/docs/analytics) | paid add-on |
@@ -110,16 +110,16 @@ Want to give it a try? Setup a private S3 bucket and use these environment varia
 
 ### SQLite + Vercel Blob
 
-On Vercel, connecting a [Vercel Blob](https://vercel.com/docs/vercel-blob) store is enough - no environment variables, no bucket or IAM credentials to create. The git branch is added to the name, so preview deployments each get their own database.
-
-Optional overrides:
+On Vercel, the deploy button above creates a private [Vercel Blob](https://vercel.com/docs/vercel-blob) store for you during setup - no bucket or IAM credentials to create. The git branch is added to the name, so preview deployments each get their own database.
 
 | SQLite+Vercel Blob | |
 |---|---|
-| SQLITE_BLOB_PATHNAME | base name for the database - defaults to `wp-sqlite` |
-| SQLITE_BLOB_TOKEN | token for a different Blob store than the default one |
+| SQLITE_BLOB_READ_WRITE_TOKEN | token for the store holding the database |
+| SQLITE_BLOB_PATHNAME | optional: base name for the database - defaults to `wp-sqlite` |
 
-If you also use Blob for uploads, keep the database in its own store with `SQLITE_BLOB_TOKEN` - it has to stay private and uncached, while uploads want public reads and CDN caching.
+`SQLITE_BLOB_READ_WRITE_TOKEN` is what Vercel injects for a store created with an env var prefix of `SQLITE`, which is what the deploy button asks for. To set one up on an existing project, create the store from the Storage tab with **private** access, then copy its `BLOB_READ_WRITE_TOKEN` into a `SQLITE_BLOB_READ_WRITE_TOKEN` environment variable.
+
+The database store is deliberately separate from any store you use for media uploads: the database has to stay private and uncached, while uploads want public reads and CDN caching. That's why the unprefixed `BLOB_READ_WRITE_TOKEN` isn't used here - a store connected for uploads would otherwise be picked up as the database and fail on the first write.
 
 ### Which database gets used
 
@@ -127,7 +127,7 @@ The most explicitly configured option wins, so adding a Blob store for media won
 
 1. **MySQL** - `DATABASE`, `USERNAME`, `PASSWORD`, and `HOST` all set
 2. **SQLite + S3** - `SQLITE_S3_BUCKET` set
-3. **SQLite + Vercel Blob** - a Blob store connected on Vercel
+3. **SQLite + Vercel Blob** - `SQLITE_BLOB_READ_WRITE_TOKEN` set on Vercel
 4. otherwise the setup page is shown
 
 ## Customizing WordPress

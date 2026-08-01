@@ -5,7 +5,7 @@
 //
 //   1. MySQL          DATABASE + USERNAME + PASSWORD + HOST
 //   2. SQLite + S3    SQLITE_S3_BUCKET, or SERVERLESSWP_DATA_SECRET (sandbox)
-//   3. SQLite + Blob  a Vercel Blob store connected to a Vercel project
+//   3. SQLite + Blob  SQLITE_BLOB_READ_WRITE_TOKEN on Vercel
 //   4. none           show the install page
 //
 // wp-config.php doesn't repeat this: the active plugin tells it which file to
@@ -59,9 +59,11 @@ function sqliteBlobConfig() {
     return {
         // Optional override.
         pathname: `${process.env['SQLITE_BLOB_PATHNAME'] || 'wp-sqlite'}${branchSlug()}.sqlite`,
-        // SQLITE_BLOB_TOKEN keeps the database in a different store than
-        // uploads. BLOB_READ_WRITE_TOKEN is injected by Vercel.
-        token: process.env['SQLITE_BLOB_TOKEN'] || process.env['BLOB_READ_WRITE_TOKEN'],
+        // Injected by Vercel for a store created with an envVarPrefix of
+        // SQLITE. The unprefixed BLOB_READ_WRITE_TOKEN is deliberately not
+        // accepted: that's the token a store connected for uploads gets, and
+        // those stores are public, so every private write here would fail.
+        token: process.env['SQLITE_BLOB_READ_WRITE_TOKEN'],
     };
 }
 
@@ -81,7 +83,7 @@ exports.resolve = function () {
     }
 
     // Only wired up on Vercel, even if a token exists elsewhere.
-    if (has('VERCEL') && (has('SQLITE_BLOB_TOKEN') || has('BLOB_READ_WRITE_TOKEN'))) {
+    if (has('VERCEL') && has('SQLITE_BLOB_READ_WRITE_TOKEN')) {
         return {
             mode: 'sqlite-vercel-blob',
             plugin: require('./sqliteVercelBlob.js'),
