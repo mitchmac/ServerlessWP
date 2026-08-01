@@ -8,7 +8,7 @@ ServerlessWP puts PHP & WordPress in serverless functions. Deploy this repositor
 
 Stay up-to-date at the ServerlessWP repository: [github.com/mitchmac/serverlesswp](https://github.com/mitchmac/serverlesswp)
 
-![PHP 8.3.32](https://img.shields.io/badge/version-8.3.32-blue?logo=php&labelColor=white) ![WordPress 7.0.2](https://img.shields.io/badge/version-7.0.2-blue?logo=wordpress&labelColor=white&logoColor=black)
+![PHP 8.3.33](https://img.shields.io/badge/version-8.3.33-blue?logo=php&labelColor=white) ![WordPress 7.0.2](https://img.shields.io/badge/version-7.0.2-blue?logo=wordpress&labelColor=white&logoColor=black)
 
 ## Quick Deploy
 
