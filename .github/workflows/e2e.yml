@@ -18,7 +18,7 @@ jobs:
       - name: sqlite unit tests
         # Serial: the test files share the plugin's hardcoded /tmp cache and
         # etag paths, and node --test runs files in parallel processes.
-        run: node --test --test-concurrency=1 sqliteS3.concurrency.test.js sqliteVercelBlob.etag.test.js sqliteVercelBlob.concurrency.test.js
+        run: node --test --test-concurrency=1 storage.test.js sqliteS3.concurrency.test.js sqliteVercelBlob.etag.test.js sqliteVercelBlob.auth.test.js sqliteVercelBlob.concurrency.test.js
         working-directory: ./test
 
       - run: ./run-db-test.sh
@@ -28,6 +28,12 @@ jobs:
         working-directory: ./test
 
       - run: ./run-blob-test.sh
+        working-directory: ./test
+
+      # What the deploy button sets up: a connected store authenticating with
+      # OIDC through BLOB_STORE_ID, with no read-write token in the project.
+      - name: blob tests with OIDC credentials
+        run: BLOB_AUTH=oidc ./run-blob-test.sh
         working-directory: ./test
 
       # A warm container gets its ETag from its own upload and then only ever

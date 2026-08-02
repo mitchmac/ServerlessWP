@@ -63,9 +63,7 @@ exports.preRequest = async function(event) {
     // fails its ifMatch and the request 500s.
     // https://vercel.com/docs/vercel-blob/private-storage#consistent-reads
     const options = { access: 'private', useCache: false };
-    if (_config.token) {
-        options.token = _config.token;
-    }
+    applyAuth(options);
     // Only send ifNoneMatch if we actually have the cache file locally.
     // Otherwise a 304 leaves us with no file to copy.
     if (cachedEtag && await exists(CACHE_FILE)) {
@@ -176,9 +174,7 @@ exports.postRequest = async function(event, response) {
                     allowOverwrite: true,
                     addRandomSuffix: false,
                 };
-                if (_config.token) {
-                    putOptions.token = _config.token;
-                }
+                applyAuth(putOptions);
                 if (currentEtag) {
                     putOptions.ifMatch = currentEtag;
                 }
@@ -238,6 +234,19 @@ function readError() {
         body: 'Database error. The database could not be read. Re-try your request.',
         _forceResponse: true,
     };
+}
+
+// Tell the SDK which store to talk to and how to authenticate. storeId pairs
+// with the VERCEL_OIDC_TOKEN the platform injects, which the SDK reads from the
+// environment itself. A read-write token, where the store has one, takes
+// precedence - passing both is what the SDK expects.
+function applyAuth(options) {
+    if (_config.storeId) {
+        options.storeId = _config.storeId;
+    }
+    if (_config.token) {
+        options.token = _config.token;
+    }
 }
 
 // Downloads carry a weak validator (`W/"abc"`) while put and head report the
