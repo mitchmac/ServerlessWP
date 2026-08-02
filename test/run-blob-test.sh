@@ -20,6 +20,23 @@ STORE_ID=test
 BLOB_TOKEN="vercel_blob_rw_${STORE_ID}_testsecret"
 FAKE_BLOB_PORT=7000
 
+# How the container authenticates with the store. `oidc` is what the deploy
+# button produces: Vercel connects the store, injects BLOB_STORE_ID, and mints
+# a VERCEL_OIDC_TOKEN per deployment - no read-write token anywhere. `token`
+# covers a store that has a static one.
+BLOB_AUTH=${BLOB_AUTH:-token}
+if [[ "$BLOB_AUTH" == "oidc" ]]; then
+    # The emulator doesn't check credentials, but the SDK won't send a request
+    # without them, and it tries to refresh an OIDC token that's already
+    # expired. So the fake has to parse as a JWT with an exp in the future.
+    OIDC_PAYLOAD=$(printf '{"exp":%d}' $(( $(date +%s) + 86400 )) | base64 -w0 | tr '+/' '-_' | tr -d '=')
+    OIDC_TOKEN="e30.${OIDC_PAYLOAD}.signature"
+    BLOB_AUTH_ENV=(-e "BLOB_STORE_ID=$STORE_ID" -e "VERCEL_OIDC_TOKEN=$OIDC_TOKEN")
+else
+    BLOB_AUTH_ENV=(-e "SQLITE_BLOB_READ_WRITE_TOKEN=$BLOB_TOKEN")
+fi
+echo "Blob auth mode: $BLOB_AUTH"
+
 PORT=$FAKE_BLOB_PORT STORE_ID=$STORE_ID ACCESS=private \
     node vercel-blob-emulator/server.js > /dev/null 2>&1 &
 FAKE_BLOB_PID=$!
@@ -31,7 +48,7 @@ until curl -s -o /dev/null -w "%{http_code}" http://localhost:$FAKE_BLOB_PORT/do
 # http://host.docker.internal. Works on Docker Desktop and Docker Engine >= 20.10.
 docker run \
     --add-host=host.docker.internal:host-gateway \
-    -e SQLITE_BLOB_READ_WRITE_TOKEN=$BLOB_TOKEN \
+    "${BLOB_AUTH_ENV[@]}" \
     -e VERCEL_BLOB_API_URL=http://host.docker.internal:$FAKE_BLOB_PORT \
     -e VERCEL_BLOB_MOCK_URL=http://host.docker.internal:$FAKE_BLOB_PORT \
     -e VERCEL=$VERCEL -e VERCEL_GIT_COMMIT_REF=$VERCEL_GIT_COMMIT_REF \
@@ -75,7 +92,7 @@ docker rm serverlesswp-test
 
 docker run \
     --add-host=host.docker.internal:host-gateway \
-    -e SQLITE_BLOB_READ_WRITE_TOKEN=$BLOB_TOKEN \
+    "${BLOB_AUTH_ENV[@]}" \
     -e VERCEL_BLOB_API_URL=http://host.docker.internal:$FAKE_BLOB_PORT \
     -e VERCEL_BLOB_MOCK_URL=http://host.docker.internal:$FAKE_BLOB_PORT \
     -e VERCEL=$VERCEL -e VERCEL_GIT_COMMIT_REF=$VERCEL_GIT_COMMIT_REF \
