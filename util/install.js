@@ -1,16 +1,8 @@
+const storage = require('./storage.js');
+
 exports.validate = function(response) {
-  let hasSqliteS3 = false;
-  let hasSQL = false;
   let platform = 'AWS';
   let dashboardLink;
-
-  if (process.env['SQLITE_S3_BUCKET'] || process.env['SERVERLESSWP_DATA_SECRET']) {
-    hasSqliteS3 = true;
-  }
-
-  if (process.env['DATABASE'] && process.env['USERNAME'] && process.env['PASSWORD'] && process.env['HOST']) {
-    hasSQL = true;
-  }
 
   if (process.env['SITE_NAME']) {
     platform = 'Netlify';
@@ -24,7 +16,7 @@ exports.validate = function(response) {
     dashboardLink = 'https://console.aws.amazon.com/console/home';
   }
 
-  if (!hasSQL && !hasSqliteS3) {
+  if (storage.resolve().mode === 'none') {
     let data = {};
     data.dashboardLink = dashboardLink;
     data.platform = platform;
