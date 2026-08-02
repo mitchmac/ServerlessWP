@@ -77,37 +77,80 @@ async function cleanupTmp() {
 }
 
 // Runs one request against a recording store and returns what it saw.
-async function roundTrip(config) {
+async function roundTrip(config, headers = {}) {
     const { api, calls } = makeRecordingBlobStore(await buildDbBytes());
     sqliteVercelBlob._setBlobForTests(api);
     sqliteVercelBlob.config(config);
 
-    const event = {};
+    const event = { headers };
     await sqliteVercelBlob.preRequest(event);
     await insertRow(event[CTX_KEY].workingPath);
     const result = await sqliteVercelBlob.postRequest(event, {});
 
     assert.strictEqual(result, undefined, 'the save succeeds');
     assert.strictEqual(calls.put.length, 1, 'the change is written back');
-    return calls;
+    return { calls, event };
 }
 
 test.beforeEach(async () => {
     await cleanupTmp();
+    delete process.env.VERCEL_OIDC_TOKEN;
 });
 
-test('the store id reaches both the read and the write', async () => {
-    const calls = await roundTrip({ pathname: 'wp-sqlite-test.sqlite', storeId: 'store_abc123' });
+test.afterEach(() => {
+    delete process.env.VERCEL_OIDC_TOKEN;
+});
+
+test('the request header credential reaches both the read and the write', async () => {
+    // How a function is authenticated on Vercel: the platform puts the OIDC
+    // token on the request, and it pairs with the store id.
+    const { calls } = await roundTrip(
+        { pathname: 'wp-sqlite-test.sqlite', storeId: 'store_abc123' },
+        { 'x-vercel-oidc-token': 'header.oidc.token' }
+    );
 
     assert.strictEqual(calls.get[0].storeId, 'store_abc123');
     assert.strictEqual(calls.put[0].storeId, 'store_abc123');
-    assert.strictEqual(calls.get[0].token, undefined, 'no token is invented for OIDC');
-    assert.strictEqual(calls.put[0].token, undefined);
+    assert.strictEqual(calls.get[0].oidcToken, 'header.oidc.token');
+    assert.strictEqual(calls.put[0].oidcToken, 'header.oidc.token');
+    assert.strictEqual(calls.get[0].token, undefined, 'no read-write token is invented');
+});
+
+test('the header is matched whatever its casing, and WordPress never sees it', async () => {
+    const { event } = await roundTrip(
+        { pathname: 'wp-sqlite-test.sqlite', storeId: 'store_abc123' },
+        { 'X-Vercel-OIDC-Token': 'header.oidc.token' }
+    );
+
+    const names = Object.keys(event.headers).map(k => k.toLowerCase());
+    assert.ok(!names.includes('x-vercel-oidc-token'), 'the store credential is stripped');
+});
+
+test('the environment supplies the credential in local development', async () => {
+    process.env.VERCEL_OIDC_TOKEN = 'env.oidc.token';
+
+    const { calls } = await roundTrip({ pathname: 'wp-sqlite-test.sqlite', storeId: 'store_abc123' });
+
+    assert.strictEqual(calls.get[0].oidcToken, 'env.oidc.token');
+    assert.strictEqual(calls.put[0].oidcToken, 'env.oidc.token');
 });
 
 test('a read-write token reaches both the read and the write', async () => {
-    const calls = await roundTrip({ pathname: 'wp-sqlite-test.sqlite', token: 'vercel_blob_rw_abc123_secret' });
+    const { calls } = await roundTrip({ pathname: 'wp-sqlite-test.sqlite', token: 'vercel_blob_rw_abc123_secret' });
 
     assert.strictEqual(calls.get[0].token, 'vercel_blob_rw_abc123_secret');
     assert.strictEqual(calls.put[0].token, 'vercel_blob_rw_abc123_secret');
+});
+
+test('with no credential at all the request fails instead of reading', async () => {
+    const { api, calls } = makeRecordingBlobStore(await buildDbBytes());
+    sqliteVercelBlob._setBlobForTests(api);
+    sqliteVercelBlob.config({ pathname: 'wp-sqlite-test.sqlite', storeId: 'store_abc123' });
+
+    const event = { headers: {} };
+    const result = await sqliteVercelBlob.preRequest(event);
+
+    assert.strictEqual(result.statusCode, 500);
+    assert.strictEqual(result._forceResponse, true, 'WordPress does not run on an empty database');
+    assert.strictEqual(calls.get.length, 0, 'no unauthenticated read is attempted');
 });

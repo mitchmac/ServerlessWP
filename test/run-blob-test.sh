@@ -25,16 +25,21 @@ FAKE_BLOB_PORT=7000
 # a VERCEL_OIDC_TOKEN per deployment - no read-write token anywhere. `token`
 # covers a store that has a static one.
 BLOB_AUTH=${BLOB_AUTH:-token}
+BLOB_OIDC_TOKEN=
 if [[ "$BLOB_AUTH" == "oidc" ]]; then
     # The emulator doesn't check credentials, but the SDK won't send a request
     # without them, and it tries to refresh an OIDC token that's already
     # expired. So the fake has to parse as a JWT with an exp in the future.
     OIDC_PAYLOAD=$(printf '{"exp":%d}' $(( $(date +%s) + 86400 )) | base64 -w0 | tr '+/' '-_' | tr -d '=')
-    OIDC_TOKEN="e30.${OIDC_PAYLOAD}.signature"
-    BLOB_AUTH_ENV=(-e "BLOB_STORE_ID=$STORE_ID" -e "VERCEL_OIDC_TOKEN=$OIDC_TOKEN")
+    # The container gets the store id and nothing else. The credential reaches
+    # it the way Vercel delivers one - as a request header, injected by the
+    # proxy - so the test fails if the function can't read it off the request.
+    BLOB_OIDC_TOKEN="e30.${OIDC_PAYLOAD}.signature"
+    BLOB_AUTH_ENV=(-e "BLOB_STORE_ID=$STORE_ID")
 else
     BLOB_AUTH_ENV=(-e "SQLITE_BLOB_READ_WRITE_TOKEN=$BLOB_TOKEN")
 fi
+export BLOB_OIDC_TOKEN
 echo "Blob auth mode: $BLOB_AUTH"
 
 PORT=$FAKE_BLOB_PORT STORE_ID=$STORE_ID ACCESS=private \
