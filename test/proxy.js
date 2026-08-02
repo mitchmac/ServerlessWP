@@ -11,6 +11,12 @@ const ssl = {
 
 const WP_DIR = path.resolve(__dirname, '../wp');
 
+// Vercel puts the OIDC credential on the request for every function
+// invocation, so the blob tests authenticate the way a deployment does rather
+// than reading a token out of the container's environment.
+// https://vercel.com/docs/oidc#in-vercel-functions
+const OIDC_TOKEN = process.env.BLOB_OIDC_TOKEN;
+
 const STATIC_MIME = {
     '.js':   'application/javascript',
     '.css':  'text/css',
@@ -96,6 +102,9 @@ https.createServer(ssl, (req, res) => {
         const body = Buffer.concat(chunks);
         // Strip accept-encoding so PHP returns plain (uncompressed) responses.
         const { 'accept-encoding': _ae, ...forwardHeaders } = req.headers;
+        if (OIDC_TOKEN) {
+            forwardHeaders['x-vercel-oidc-token'] = OIDC_TOKEN;
+        }
         const event = JSON.stringify({
             path: urlPath,
             httpMethod: req.method,

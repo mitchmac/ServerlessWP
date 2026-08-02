@@ -39,6 +39,8 @@ exports.preRequest = async function(event) {
         // Set when the read established the blob doesn't exist. Only then may
         // postRequest write without ifMatch.
         blobMissing: false,
+        // The OIDC credential for this request, taken off the headers below.
+        oidcToken: null,
     };
     event[CONTEXT_KEY] = ctx;
 
@@ -48,11 +50,39 @@ exports.preRequest = async function(event) {
     // passes the value through basename() defensively.
     if (!event.headers) event.headers = {};
     for (const k of Object.keys(event.headers)) {
-        if (k.toLowerCase() === 'x-serverlesswp-sqlite-file') {
+        const name = k.toLowerCase();
+        if (name === 'x-serverlesswp-sqlite-file') {
+            delete event.headers[k];
+        }
+        // Vercel hands functions their OIDC token as a request header, not an
+        // environment variable - VERCEL_OIDC_TOKEN only exists in builds and
+        // in local development. The SDK looks for the header in Vercel's
+        // request context, which isn't set up for a function built in AWS
+        // handler mode (NODEJS_AWS_HANDLER_NAME in vercel.json), so take the
+        // token off the event and pass it to the SDK explicitly.
+        // https://vercel.com/docs/oidc#in-vercel-functions
+        else if (name === 'x-vercel-oidc-token') {
+            ctx.oidcToken = event.headers[k];
+            // WordPress has no use for a store credential.
             delete event.headers[k];
         }
     }
     event.headers['x-serverlesswp-sqlite-file'] = workingFileName;
+
+    // Local development and the test suite get the token from the environment.
+    if (!ctx.oidcToken) {
+        ctx.oidcToken = process.env['VERCEL_OIDC_TOKEN'] || null;
+    }
+
+    // A store reached over OIDC needs the request's token. The SDK's own error
+    // for this is a generic "No blob credentials found", which says nothing
+    // about which of the two ways in is missing.
+    if (_config.storeId && !ctx.oidcToken && !_config.token) {
+        console.error('No Vercel Blob credentials: no x-vercel-oidc-token header on the request '
+            + '(OIDC federation is per project, under Settings > Security) and no '
+            + 'SQLITE_BLOB_READ_WRITE_TOKEN set.');
+        return readError();
+    }
 
     const cachedEtag = await getEtag();
 
@@ -63,7 +93,7 @@ exports.preRequest = async function(event) {
     // fails its ifMatch and the request 500s.
     // https://vercel.com/docs/vercel-blob/private-storage#consistent-reads
     const options = { access: 'private', useCache: false };
-    applyAuth(options);
+    applyAuth(options, ctx);
     // Only send ifNoneMatch if we actually have the cache file locally.
     // Otherwise a 304 leaves us with no file to copy.
     if (cachedEtag && await exists(CACHE_FILE)) {
@@ -174,7 +204,7 @@ exports.postRequest = async function(event, response) {
                     allowOverwrite: true,
                     addRandomSuffix: false,
                 };
-                applyAuth(putOptions);
+                applyAuth(putOptions, ctx);
                 if (currentEtag) {
                     putOptions.ifMatch = currentEtag;
                 }
@@ -236,13 +266,15 @@ function readError() {
     };
 }
 
-// Tell the SDK which store to talk to and how to authenticate. storeId pairs
-// with the VERCEL_OIDC_TOKEN the platform injects, which the SDK reads from the
-// environment itself. A read-write token, where the store has one, takes
-// precedence - passing both is what the SDK expects.
-function applyAuth(options) {
+// Tell the SDK which store to talk to and how to authenticate: the store id
+// pairs with the request's OIDC token. A read-write token, where the store has
+// one, takes precedence - passing both is what the SDK expects.
+function applyAuth(options, ctx) {
     if (_config.storeId) {
         options.storeId = _config.storeId;
+    }
+    if (ctx?.oidcToken) {
+        options.oidcToken = ctx.oidcToken;
     }
     if (_config.token) {
         options.token = _config.token;
