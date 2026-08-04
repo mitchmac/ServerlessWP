@@ -144,6 +144,32 @@ The most explicitly configured option wins, so adding a Blob store for media won
 - WordPress and its files are in the ```/wp``` directory. You can add plugins or themes there in their respective directories in ```wp-content``` then commit the files to your repository so it will re-deploy.
 - Plugins like [Cache-Control](https://wordpress.org/plugins/cache-control/) can enable CDN caching with the s-maxage directive and make your site super fast. Refer to [Vercel Edge Caching](https://vercel.com/docs/concepts/edge-network/caching) or [Netlfiy Cache Headers](https://docs.netlify.com/edge-functions/optional-configuration/#supported-headers)
 
+## Keeping WordPress updated
+WordPress lives in your repository, so updates arrive as a pull request instead of through wp-admin. The **Update WordPress** action checks daily for a new release and opens a pull request against your default branch; merging it re-deploys your site.
+
+Two settings need turning on once in your own copy of the repository:
+
+1. **Settings → Actions → General → Workflow permissions**, tick *Allow GitHub Actions to create and approve pull requests*. GitHub leaves this off by default and it cannot be enabled from a workflow file. Without it the branch is still pushed, so you can open the pull request yourself.
+2. **Actions → Update WordPress → Enable workflow**, if GitHub has disabled it. Scheduled workflows are switched off automatically after 60 days without a push — the normal state of a site repository. You can also run the update at any time with **Run workflow**.
+
+The update only replaces files that WordPress itself ships, and it checks each one against the checksums wordpress.org publishes before touching it. Your themes, plugins, uploads and `wp-config.php` are never candidates, and neither is a bundled file you have edited or deleted.
+
+The pull request body lists anything the update skipped and why, along with any core file that differs from what WordPress ships — so an edit you made to WordPress itself shows up before a later release collides with it.
+
+Bundled plugins are updated the same way, in a **separate** pull request, so a plugin update never rides along with a core one and either can be reverted on its own. A plugin is only replaced when wordpress.org can prove file by file that what's on disk is exactly the release it claims to be — so your own plugins, anything premium, and anything bundled from outside wordpress.org are left alone and listed in the pull request instead. If even one file of a plugin has been edited, the whole plugin is skipped rather than left running a mix of two releases.
+
+One exception: **SQLite Database Integration** is bundled from its GitHub repository rather than wordpress.org, and follows that repository's default branch. wordpress.org carries an older release of it, so there is nothing to check it against and the pull request diff is the review. Because the copy mirrors the branch, files you add inside that plugin's directory are removed by an update — keep your own code in its own plugin.
+
+Themes are only ever **reported on**, never updated. wordpress.org publishes no checksums for themes, so there is no way to tell a theme you have edited from an untouched one, and overwriting it would risk your work. Themes bundled with WordPress are excluded from the report because the core update already covers them. Anything else with a newer release is listed in the workflow run summary, and updating it is a manual step.
+
+To check any of this without changing anything:
+
+```bash
+node util/wp-update --dry-run
+node util/wp-update --plugins --dry-run
+node util/wp-update --themes
+```
+
 ## Customizing ServerlessWP
 - `netlify.toml` or `vercel.json` are where we configure ```/api/index.js``` to handle all requests
 - [mitchmac/serverlesswp-node](https://github.com/mitchmac/serverlesswp-node) is used to run PHP and handle the request

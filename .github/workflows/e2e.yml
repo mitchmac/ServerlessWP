@@ -21,6 +21,12 @@ jobs:
         run: node --test --test-concurrency=1 storage.test.js sqliteS3.concurrency.test.js sqliteVercelBlob.etag.test.js sqliteVercelBlob.auth.test.js sqliteVercelBlob.concurrency.test.js
         working-directory: ./test
 
+      # The WordPress update rules. These decide which files an update
+      # overwrites and deletes in a fork, so they run before anything slow.
+      - name: WordPress updater unit tests
+        run: node --test wpUpdate.plan.test.js wpUpdate.apply.test.js wpUpdate.plugins.test.js wpUpdate.themes.test.js wpUpdate.github.test.js
+        working-directory: ./test
+
       - run: ./run-db-test.sh
         working-directory: ./test
 
