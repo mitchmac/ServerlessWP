@@ -14,7 +14,16 @@
 name: Update WordPress
 on:
   schedule:
-  - cron: "0 0 * * *"
+  # 21:10 UTC. Core release parties start at 15:00 or 17:00 UTC depending on
+  # the cycle and the package ships an hour or two in, so this picks up a
+  # release the same day rather than the next one. Cron here is always UTC, so
+  # the time does not shift with daylight saving. The odd minute is deliberate:
+  # GitHub queues everything scheduled on the hour together and drops runs when
+  # that queue is full.
+  - cron: "10 21 * * *"
+  # A release that slips past the evening run, or an evening run GitHub drops,
+  # is picked up twelve hours later instead of twenty-four.
+  - cron: "10 9 * * *"
   workflow_dispatch:
 
 # Repositories created after February 2023 give GITHUB_TOKEN read-only access
