@@ -4,3 +4,8 @@ package-lock.json
 test/auth.json
 test/screenshots/
 test/test-results/
+# Tarball packed by build-test.sh when SERVERLESSWP_LOCAL is set.
+test/local-pkg/*.tgz
+# Claude Code project memory and instructions.
+memory/
+CLAUDE.md

@@ -1,0 +1,250 @@
+<?php
+
+declare(strict_types=1);
+
+namespace WpAltStreamWrapper\Adapters;
+
+/**
+ * Vercel Blob adapter speaking the same wire protocol as the official
+ * @vercel/blob JS SDK (Vercel ships no PHP SDK). The request shapes mirror
+ * what the SDK sends, as captured by the blob emulator in the ServerlessWP
+ * repo (test/vercel-blob-emulator/server.js):
+ *
+ *   PUT  {api}/?pathname=<key>   upload; x-allow-overwrite: 1 or re-writing
+ *                                an existing key is rejected with 400
+ *   GET  {api}/?url=<blobUrl>    metadata JSON (size, uploadedAt, etag)
+ *   GET  {store}/<key>?cache=0   download; cache=0 bypasses the CDN cache,
+ *                                which can serve a stale blob for up to 60s
+ *                                after an overwrite
+ *   POST {api}/delete            body {"urls": [...]}
+ *   GET  {api}/?prefix=<p>       list (SDK list(); not covered by emulator)
+ *
+ * Base URLs are injectable so tests can point the adapter at the emulator.
+ */
+class VercelBlobAdapter implements StorageAdapterInterface
+{
+    private const DEFAULT_API_BASE = 'https://blob.vercel-storage.com';
+
+    private string $apiBase;
+    private string $downloadBase;
+
+    public function __construct(
+        private readonly string $token,
+        private readonly string $storeId,
+        private readonly string $access = 'public',
+        ?string $apiBase = null,
+        ?string $downloadBase = null,
+    ) {
+        $this->apiBase      = rtrim($apiBase ?: self::DEFAULT_API_BASE, '/');
+        $this->downloadBase = rtrim(
+            $downloadBase ?: "https://{$storeId}.{$access}.blob.vercel-storage.com",
+            '/',
+        );
+    }
+
+    /** Deterministic blob URL for a key (uploads use addRandomSuffix=false). */
+    private function blobUrl(string $key): string
+    {
+        return $this->downloadBase . '/' . $this->encodedPath($key);
+    }
+
+    /**
+     * URL-encode each path segment of a storage key while preserving slashes.
+     * Prevents query-string injection or path traversal in HTTP requests.
+     */
+    private function encodedPath(string $key): string
+    {
+        return implode('/', array_map('rawurlencode', explode('/', ltrim($key, '/'))));
+    }
+
+    public function get(string $key): string|false
+    {
+        // cache=0 is the SDK's useCache:false — read from origin, not the CDN,
+        // so a just-overwritten file is never served stale.
+        $response = $this->request('GET', $this->blobUrl($key) . '?cache=0', [
+            'Authorization' => "Bearer {$this->token}",
+        ]);
+        return $response['status'] === 200 ? $response['body'] : false;
+    }
+
+    public function put(string $key, string $contents): bool
+    {
+        // RFC3986 encoding: a space must travel as %20, not the form-encoding
+        // '+', which a server reading the parameter as a raw path would store
+        // literally and hand back a key nobody can read.
+        $url      = $this->apiBase . '/?' . http_build_query(
+            ['pathname' => ltrim($key, '/')],
+            '',
+            '&',
+            PHP_QUERY_RFC3986,
+        );
+        $response = $this->request('PUT', $url, [
+            'Authorization'          => "Bearer {$this->token}",
+            'x-vercel-blob-store-id' => $this->storeId,
+            // wp-content files are rewritten in place (thumbnails, generated
+            // CSS); without this the API rejects any write to an existing key.
+            'x-allow-overwrite'      => '1',
+            'x-content-type'         => $this->detectMimeType($key),
+        ], $contents);
+        return $response['status'] === 200;
+    }
+
+    public function delete(string $key): bool
+    {
+        $response = $this->request('POST', $this->apiBase . '/delete', [
+            'Authorization' => "Bearer {$this->token}",
+            'Content-Type'  => 'application/json',
+        ], json_encode(['urls' => [$this->blobUrl($key)]]));
+        return $response['status'] === 200;
+    }
+
+    public function exists(string $key): bool
+    {
+        return $this->stat($key) !== false;
+    }
+
+    public function stat(string $key): array|false
+    {
+        $url      = $this->apiBase . '/?' . http_build_query(
+            ['url' => $this->blobUrl($key)],
+            '',
+            '&',
+            PHP_QUERY_RFC3986,
+        );
+        $response = $this->request('GET', $url, [
+            'Authorization' => "Bearer {$this->token}",
+        ]);
+
+        if ($response['status'] !== 200) {
+            return false;
+        }
+
+        $meta = json_decode($response['body'], true);
+        if (!is_array($meta)) {
+            return false;
+        }
+
+        $mtime = time();
+        if (!empty($meta['uploadedAt'])) {
+            $parsed = strtotime($meta['uploadedAt']);
+            if ($parsed !== false) {
+                $mtime = $parsed;
+            }
+        }
+
+        return [
+            'size'  => (int) ($meta['size'] ?? 0),
+            'mtime' => $mtime,
+            'type'  => 'file',
+        ];
+    }
+
+    public function listPrefix(string $prefix): array
+    {
+        $url      = $this->apiBase . '/?' . http_build_query(
+            [
+                'prefix'  => ltrim($prefix, '/'),
+                'storeId' => $this->storeId,
+            ],
+            '',
+            '&',
+            PHP_QUERY_RFC3986,
+        );
+        $response = $this->request('GET', $url, [
+            'Authorization' => "Bearer {$this->token}",
+        ]);
+
+        if ($response['status'] !== 200 || $response['body'] === '') {
+            return [];
+        }
+
+        $data = json_decode($response['body'], true);
+        $keys = [];
+        foreach ($data['blobs'] ?? [] as $blob) {
+            $keys[] = $blob['pathname'];
+        }
+        return $keys;
+    }
+
+    public function rename(string $from, string $to): bool
+    {
+        $contents = $this->get($from);
+        if ($contents === false) {
+            return false;
+        }
+        if (!$this->put($to, $contents)) {
+            return false;
+        }
+        $this->delete($from);
+        return true;
+    }
+
+    /**
+     * Execute an HTTP request. Extracted to a protected method so tests can override it.
+     *
+     * Returns ['status' => int, 'headers' => array<string,string>, 'body' => string]
+     */
+    protected function request(string $method, string $url, array $headers = [], ?string $body = null): array
+    {
+        $ch = curl_init($url);
+
+        $curlHeaders = [];
+        foreach ($headers as $name => $value) {
+            $curlHeaders[] = "{$name}: {$value}";
+        }
+
+        $opts = [
+            CURLOPT_CUSTOMREQUEST  => $method,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_HEADER         => true,
+            CURLOPT_HTTPHEADER     => $curlHeaders,
+            CURLOPT_FOLLOWLOCATION => true,
+            CURLOPT_TIMEOUT        => 30,
+        ];
+
+        if ($method === 'HEAD') {
+            $opts[CURLOPT_NOBODY] = true;
+        }
+
+        if ($body !== null) {
+            $opts[CURLOPT_POSTFIELDS] = $body;
+        }
+
+        curl_setopt_array($ch, $opts);
+
+        $raw    = (string) curl_exec($ch);
+        $status = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $hSize  = (int) curl_getinfo($ch, CURLINFO_HEADER_SIZE);
+        curl_close($ch);
+
+        $headerBlock  = substr($raw, 0, $hSize);
+        $responseBody = substr($raw, $hSize);
+
+        $parsedHeaders = [];
+        foreach (explode("\r\n", $headerBlock) as $line) {
+            if (str_contains($line, ':')) {
+                [$name, $value]                         = explode(':', $line, 2);
+                $parsedHeaders[strtolower(trim($name))] = trim($value);
+            }
+        }
+
+        return ['status' => $status, 'headers' => $parsedHeaders, 'body' => $responseBody];
+    }
+
+    private function detectMimeType(string $key): string
+    {
+        return match (strtolower(pathinfo($key, PATHINFO_EXTENSION))) {
+            'jpg', 'jpeg' => 'image/jpeg',
+            'png'         => 'image/png',
+            'gif'         => 'image/gif',
+            'webp'        => 'image/webp',
+            'svg'         => 'image/svg+xml',
+            'css'         => 'text/css',
+            'js'          => 'application/javascript',
+            'html', 'htm' => 'text/html',
+            'txt'         => 'text/plain',
+            'pdf'         => 'application/pdf',
+            default       => 'application/octet-stream',
+        };
+    }
+}
