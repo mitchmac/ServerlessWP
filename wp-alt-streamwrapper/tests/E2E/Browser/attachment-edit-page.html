@@ -1,0 +1,951 @@
+<!DOCTYPE html><html class="wp-toolbar" lang="en-US"><head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+	<title>Edit Media “e2e-download” ‹ Stream Wrapper E2E — WordPress</title>
+<script type="text/javascript">
+addLoadEvent = function(func){if(typeof jQuery!=='undefined')jQuery(function(){func();});else if(typeof wpOnload!=='function'){wpOnload=func;}else{var oldonload=wpOnload;wpOnload=function(){oldonload();func();}}};
+var ajaxurl = '/wp-admin/admin-ajax.php',
+	pagenow = 'attachment',
+	typenow = 'attachment',
+	adminpage = 'post-php',
+	thousandsSeparator = ',',
+	decimalPoint = '.',
+	isRtl = 0;
+</script>
+<link rel="stylesheet" href="http://wordpress/wp-admin/load-styles.php?c=0&amp;dir=ltr&amp;load%5Bchunk_0%5D=dashicons,admin-bar,common,forms,admin-menu,dashboard,list-tables,edit,revisions,media,themes,about,nav-menus,wp-pointer,widgets&amp;load%5Bchunk_1%5D=,site-icon,l10n,buttons,wp-auth-check,wp-components,wp-commands&amp;ver=6.9.4" media="all">
+<style>
+@media print { #wpadminbar { display:none; } }
+/*# sourceURL=css-inline-concat-dashicons%2Cadmin-bar%2Ccommon%2Cforms%2Cadmin-menu%2Cdashboard%2Clist-tables%2Cedit%2Crevisions%2Cmedia%2Cthemes%2Cabout%2Cnav-menus%2Cwp-pointer%2Cwidgets%2Csite-icon%2Cl10n%2Cbuttons%2Cwp-auth-check%2Cwp-components%2Cwp-commands */
+</style>
+<link rel="stylesheet" id="imgareaselect-css" href="http://wordpress/wp-includes/js/imgareaselect/imgareaselect.css?ver=0.9.8" media="all">
+<style id="wp-emoji-styles-inline-css">
+
+	img.wp-smiley, img.emoji {
+		display: inline !important;
+		border: none !important;
+		box-shadow: none !important;
+		height: 1em !important;
+		width: 1em !important;
+		margin: 0 0.07em !important;
+		vertical-align: -0.1em !important;
+		background: none !important;
+		padding: 0 !important;
+	}
+</style>
+<style class="wp-fonts-local">
+@font-face{font-family:Manrope;font-style:normal;font-weight:200 800;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/manrope/Manrope-VariableFont_wght.woff2') format('woff2');}
+@font-face{font-family:"Fira Code";font-style:normal;font-weight:300 700;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/fira-code/FiraCode-VariableFont_wght.woff2') format('woff2');}
+</style>
+<style class="wp-fonts-local">
+@font-face{font-family:Beiruti;font-style:normal;font-weight:200 900;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/beiruti/Beiruti-VariableFont_wght.woff2') format('woff2');}
+@font-face{font-family:Literata;font-style:normal;font-weight:200;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/literata/Literata72pt-ExtraLight.woff2') format('woff2');}
+@font-face{font-family:Literata;font-style:italic;font-weight:200;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/literata/Literata72pt-ExtraLightItalic.woff2') format('woff2');}
+@font-face{font-family:Literata;font-style:normal;font-weight:300;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/literata/Literata72pt-Light.woff2') format('woff2');}
+@font-face{font-family:Literata;font-style:italic;font-weight:300;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/literata/Literata72pt-LightItalic.woff2') format('woff2');}
+@font-face{font-family:Literata;font-style:normal;font-weight:400;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/literata/Literata72pt-Regular.woff2') format('woff2');}
+@font-face{font-family:Literata;font-style:italic;font-weight:400;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/literata/Literata72pt-RegularItalic.woff2') format('woff2');}
+@font-face{font-family:Literata;font-style:normal;font-weight:500;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/literata/Literata72pt-Medium.woff2') format('woff2');}
+@font-face{font-family:Literata;font-style:italic;font-weight:500;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/literata/Literata72pt-MediumItalic.woff2') format('woff2');}
+@font-face{font-family:Literata;font-style:normal;font-weight:600;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/literata/Literata72pt-SemiBold.woff2') format('woff2');}
+@font-face{font-family:Literata;font-style:italic;font-weight:600;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/literata/Literata72pt-SemiBoldItalic.woff2') format('woff2');}
+@font-face{font-family:Literata;font-style:normal;font-weight:700;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/literata/Literata72pt-Bold.woff2') format('woff2');}
+@font-face{font-family:Literata;font-style:italic;font-weight:700;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/literata/Literata72pt-BoldItalic.woff2') format('woff2');}
+@font-face{font-family:Literata;font-style:normal;font-weight:800;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/literata/Literata72pt-ExtraBold.woff2') format('woff2');}
+@font-face{font-family:Literata;font-style:italic;font-weight:800;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/literata/Literata72pt-ExtraBoldItalic.woff2') format('woff2');}
+@font-face{font-family:Literata;font-style:normal;font-weight:900;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/literata/Literata72pt-Black.woff2') format('woff2');}
+@font-face{font-family:Literata;font-style:italic;font-weight:900;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/literata/Literata72pt-BlackItalic.woff2') format('woff2');}
+@font-face{font-family:Vollkorn;font-style:italic;font-weight:400 900;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/vollkorn/Vollkorn-Italic-VariableFont_wght.woff2') format('woff2');}
+@font-face{font-family:Vollkorn;font-style:normal;font-weight:400 900;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/vollkorn/Vollkorn-VariableFont_wght.woff2') format('woff2');}
+@font-face{font-family:"Fira Code";font-style:normal;font-weight:300 700;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/fira-code/FiraCode-VariableFont_wght.woff2') format('woff2');}
+@font-face{font-family:Platypi;font-style:normal;font-weight:300 800;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/platypi/Platypi-VariableFont_wght.woff2') format('woff2');}
+@font-face{font-family:Platypi;font-style:italic;font-weight:300 800;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/platypi/Platypi-Italic-VariableFont_wght.woff2') format('woff2');}
+@font-face{font-family:"Ysabeau Office";font-style:normal;font-weight:100 900;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/ysabeau-office/YsabeauOffice-VariableFont_wght.woff2') format('woff2');}
+@font-face{font-family:"Ysabeau Office";font-style:italic;font-weight:100 900;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/ysabeau-office/YsabeauOffice-Italic-VariableFont_wght.woff2') format('woff2');}
+@font-face{font-family:"Roboto Slab";font-style:normal;font-weight:100 900;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/roboto-slab/RobotoSlab-VariableFont_wght.woff2') format('woff2');}
+@font-face{font-family:Manrope;font-style:normal;font-weight:200 800;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/manrope/Manrope-VariableFont_wght.woff2') format('woff2');}
+@font-face{font-family:Literata;font-style:normal;font-weight:200;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/literata/Literata72pt-ExtraLight.woff2') format('woff2');}
+@font-face{font-family:Literata;font-style:italic;font-weight:200;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/literata/Literata72pt-ExtraLightItalic.woff2') format('woff2');}
+@font-face{font-family:Literata;font-style:normal;font-weight:300;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/literata/Literata72pt-Light.woff2') format('woff2');}
+@font-face{font-family:Literata;font-style:italic;font-weight:300;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/literata/Literata72pt-LightItalic.woff2') format('woff2');}
+@font-face{font-family:Literata;font-style:normal;font-weight:400;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/literata/Literata72pt-Regular.woff2') format('woff2');}
+@font-face{font-family:Literata;font-style:italic;font-weight:400;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/literata/Literata72pt-RegularItalic.woff2') format('woff2');}
+@font-face{font-family:Literata;font-style:normal;font-weight:500;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/literata/Literata72pt-Medium.woff2') format('woff2');}
+@font-face{font-family:Literata;font-style:italic;font-weight:500;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/literata/Literata72pt-MediumItalic.woff2') format('woff2');}
+@font-face{font-family:Literata;font-style:normal;font-weight:600;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/literata/Literata72pt-SemiBold.woff2') format('woff2');}
+@font-face{font-family:Literata;font-style:italic;font-weight:600;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/literata/Literata72pt-SemiBoldItalic.woff2') format('woff2');}
+@font-face{font-family:Literata;font-style:normal;font-weight:700;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/literata/Literata72pt-Bold.woff2') format('woff2');}
+@font-face{font-family:Literata;font-style:italic;font-weight:700;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/literata/Literata72pt-BoldItalic.woff2') format('woff2');}
+@font-face{font-family:Literata;font-style:normal;font-weight:800;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/literata/Literata72pt-ExtraBold.woff2') format('woff2');}
+@font-face{font-family:Literata;font-style:italic;font-weight:800;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/literata/Literata72pt-ExtraBoldItalic.woff2') format('woff2');}
+@font-face{font-family:Literata;font-style:normal;font-weight:900;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/literata/Literata72pt-Black.woff2') format('woff2');}
+@font-face{font-family:Literata;font-style:italic;font-weight:900;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/literata/Literata72pt-BlackItalic.woff2') format('woff2');}
+@font-face{font-family:"Ysabeau Office";font-style:normal;font-weight:100 900;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/ysabeau-office/YsabeauOffice-VariableFont_wght.woff2') format('woff2');}
+@font-face{font-family:"Ysabeau Office";font-style:italic;font-weight:100 900;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/ysabeau-office/YsabeauOffice-Italic-VariableFont_wght.woff2') format('woff2');}
+@font-face{font-family:Platypi;font-style:normal;font-weight:300 800;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/platypi/Platypi-VariableFont_wght.woff2') format('woff2');}
+@font-face{font-family:Platypi;font-style:italic;font-weight:300 800;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/platypi/Platypi-Italic-VariableFont_wght.woff2') format('woff2');}
+@font-face{font-family:Literata;font-style:normal;font-weight:200;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/literata/Literata72pt-ExtraLight.woff2') format('woff2');}
+@font-face{font-family:Literata;font-style:italic;font-weight:200;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/literata/Literata72pt-ExtraLightItalic.woff2') format('woff2');}
+@font-face{font-family:Literata;font-style:normal;font-weight:300;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/literata/Literata72pt-Light.woff2') format('woff2');}
+@font-face{font-family:Literata;font-style:italic;font-weight:300;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/literata/Literata72pt-LightItalic.woff2') format('woff2');}
+@font-face{font-family:Literata;font-style:normal;font-weight:400;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/literata/Literata72pt-Regular.woff2') format('woff2');}
+@font-face{font-family:Literata;font-style:italic;font-weight:400;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/literata/Literata72pt-RegularItalic.woff2') format('woff2');}
+@font-face{font-family:Literata;font-style:normal;font-weight:500;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/literata/Literata72pt-Medium.woff2') format('woff2');}
+@font-face{font-family:Literata;font-style:italic;font-weight:500;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/literata/Literata72pt-MediumItalic.woff2') format('woff2');}
+@font-face{font-family:Literata;font-style:normal;font-weight:600;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/literata/Literata72pt-SemiBold.woff2') format('woff2');}
+@font-face{font-family:Literata;font-style:italic;font-weight:600;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/literata/Literata72pt-SemiBoldItalic.woff2') format('woff2');}
+@font-face{font-family:Literata;font-style:normal;font-weight:700;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/literata/Literata72pt-Bold.woff2') format('woff2');}
+@font-face{font-family:Literata;font-style:italic;font-weight:700;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/literata/Literata72pt-BoldItalic.woff2') format('woff2');}
+@font-face{font-family:Literata;font-style:normal;font-weight:800;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/literata/Literata72pt-ExtraBold.woff2') format('woff2');}
+@font-face{font-family:Literata;font-style:italic;font-weight:800;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/literata/Literata72pt-ExtraBoldItalic.woff2') format('woff2');}
+@font-face{font-family:Literata;font-style:normal;font-weight:900;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/literata/Literata72pt-Black.woff2') format('woff2');}
+@font-face{font-family:Literata;font-style:italic;font-weight:900;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/literata/Literata72pt-BlackItalic.woff2') format('woff2');}
+@font-face{font-family:Literata;font-style:normal;font-weight:200;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/literata/Literata72pt-ExtraLight.woff2') format('woff2');}
+@font-face{font-family:Literata;font-style:italic;font-weight:200;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/literata/Literata72pt-ExtraLightItalic.woff2') format('woff2');}
+@font-face{font-family:Literata;font-style:normal;font-weight:300;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/literata/Literata72pt-Light.woff2') format('woff2');}
+@font-face{font-family:Literata;font-style:italic;font-weight:300;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/literata/Literata72pt-LightItalic.woff2') format('woff2');}
+@font-face{font-family:Literata;font-style:normal;font-weight:400;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/literata/Literata72pt-Regular.woff2') format('woff2');}
+@font-face{font-family:Literata;font-style:italic;font-weight:400;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/literata/Literata72pt-RegularItalic.woff2') format('woff2');}
+@font-face{font-family:Literata;font-style:normal;font-weight:500;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/literata/Literata72pt-Medium.woff2') format('woff2');}
+@font-face{font-family:Literata;font-style:italic;font-weight:500;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/literata/Literata72pt-MediumItalic.woff2') format('woff2');}
+@font-face{font-family:Literata;font-style:normal;font-weight:600;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/literata/Literata72pt-SemiBold.woff2') format('woff2');}
+@font-face{font-family:Literata;font-style:italic;font-weight:600;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/literata/Literata72pt-SemiBoldItalic.woff2') format('woff2');}
+@font-face{font-family:Literata;font-style:normal;font-weight:700;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/literata/Literata72pt-Bold.woff2') format('woff2');}
+@font-face{font-family:Literata;font-style:italic;font-weight:700;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/literata/Literata72pt-BoldItalic.woff2') format('woff2');}
+@font-face{font-family:Literata;font-style:normal;font-weight:800;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/literata/Literata72pt-ExtraBold.woff2') format('woff2');}
+@font-face{font-family:Literata;font-style:italic;font-weight:800;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/literata/Literata72pt-ExtraBoldItalic.woff2') format('woff2');}
+@font-face{font-family:Literata;font-style:normal;font-weight:900;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/literata/Literata72pt-Black.woff2') format('woff2');}
+@font-face{font-family:Literata;font-style:italic;font-weight:900;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/literata/Literata72pt-BlackItalic.woff2') format('woff2');}
+@font-face{font-family:"Fira Sans";font-style:normal;font-weight:100;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/fira-sans/FiraSans-Thin.woff2') format('woff2');}
+@font-face{font-family:"Fira Sans";font-style:italic;font-weight:100;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/fira-sans/FiraSans-ThinItalic.woff2') format('woff2');}
+@font-face{font-family:"Fira Sans";font-style:normal;font-weight:200;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/fira-sans/FiraSans-ExtraLight.woff2') format('woff2');}
+@font-face{font-family:"Fira Sans";font-style:italic;font-weight:200;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/fira-sans/FiraSans-ExtraLightItalic.woff2') format('woff2');}
+@font-face{font-family:"Fira Sans";font-style:normal;font-weight:300;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/fira-sans/FiraSans-Light.woff2') format('woff2');}
+@font-face{font-family:"Fira Sans";font-style:italic;font-weight:300;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/fira-sans/FiraSans-LightItalic.woff2') format('woff2');}
+@font-face{font-family:"Fira Sans";font-style:italic;font-weight:400;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/fira-sans/FiraSans-Italic.woff2') format('woff2');}
+@font-face{font-family:"Fira Sans";font-style:normal;font-weight:400;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/fira-sans/FiraSans-Regular.woff2') format('woff2');}
+@font-face{font-family:"Fira Sans";font-style:normal;font-weight:500;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/fira-sans/FiraSans-Medium.woff2') format('woff2');}
+@font-face{font-family:"Fira Sans";font-style:italic;font-weight:500;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/fira-sans/FiraSans-MediumItalic.woff2') format('woff2');}
+@font-face{font-family:"Fira Sans";font-style:normal;font-weight:600;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/fira-sans/FiraSans-SemiBold.woff2') format('woff2');}
+@font-face{font-family:"Fira Sans";font-style:italic;font-weight:600;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/fira-sans/FiraSans-SemiBoldItalic.woff2') format('woff2');}
+@font-face{font-family:"Fira Sans";font-style:normal;font-weight:700;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/fira-sans/FiraSans-Bold.woff2') format('woff2');}
+@font-face{font-family:"Fira Sans";font-style:italic;font-weight:700;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/fira-sans/FiraSans-BoldItalic.woff2') format('woff2');}
+@font-face{font-family:"Fira Sans";font-style:normal;font-weight:800;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/fira-sans/FiraSans-ExtraBold.woff2') format('woff2');}
+@font-face{font-family:"Fira Sans";font-style:italic;font-weight:800;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/fira-sans/FiraSans-ExtraBoldItalic.woff2') format('woff2');}
+@font-face{font-family:"Fira Sans";font-style:normal;font-weight:900;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/fira-sans/FiraSans-Black.woff2') format('woff2');}
+@font-face{font-family:"Fira Sans";font-style:italic;font-weight:900;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/fira-sans/FiraSans-BlackItalic.woff2') format('woff2');}
+@font-face{font-family:Beiruti;font-style:normal;font-weight:200 900;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/beiruti/Beiruti-VariableFont_wght.woff2') format('woff2');}
+@font-face{font-family:Literata;font-style:normal;font-weight:200;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/literata/Literata72pt-ExtraLight.woff2') format('woff2');}
+@font-face{font-family:Literata;font-style:italic;font-weight:200;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/literata/Literata72pt-ExtraLightItalic.woff2') format('woff2');}
+@font-face{font-family:Literata;font-style:normal;font-weight:300;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/literata/Literata72pt-Light.woff2') format('woff2');}
+@font-face{font-family:Literata;font-style:italic;font-weight:300;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/literata/Literata72pt-LightItalic.woff2') format('woff2');}
+@font-face{font-family:Literata;font-style:normal;font-weight:400;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/literata/Literata72pt-Regular.woff2') format('woff2');}
+@font-face{font-family:Literata;font-style:italic;font-weight:400;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/literata/Literata72pt-RegularItalic.woff2') format('woff2');}
+@font-face{font-family:Literata;font-style:normal;font-weight:500;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/literata/Literata72pt-Medium.woff2') format('woff2');}
+@font-face{font-family:Literata;font-style:italic;font-weight:500;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/literata/Literata72pt-MediumItalic.woff2') format('woff2');}
+@font-face{font-family:Literata;font-style:normal;font-weight:600;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/literata/Literata72pt-SemiBold.woff2') format('woff2');}
+@font-face{font-family:Literata;font-style:italic;font-weight:600;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/literata/Literata72pt-SemiBoldItalic.woff2') format('woff2');}
+@font-face{font-family:Literata;font-style:normal;font-weight:700;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/literata/Literata72pt-Bold.woff2') format('woff2');}
+@font-face{font-family:Literata;font-style:italic;font-weight:700;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/literata/Literata72pt-BoldItalic.woff2') format('woff2');}
+@font-face{font-family:Literata;font-style:normal;font-weight:800;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/literata/Literata72pt-ExtraBold.woff2') format('woff2');}
+@font-face{font-family:Literata;font-style:italic;font-weight:800;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/literata/Literata72pt-ExtraBoldItalic.woff2') format('woff2');}
+@font-face{font-family:Literata;font-style:normal;font-weight:900;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/literata/Literata72pt-Black.woff2') format('woff2');}
+@font-face{font-family:Literata;font-style:italic;font-weight:900;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/literata/Literata72pt-BlackItalic.woff2') format('woff2');}
+@font-face{font-family:Vollkorn;font-style:italic;font-weight:400 900;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/vollkorn/Vollkorn-Italic-VariableFont_wght.woff2') format('woff2');}
+@font-face{font-family:Vollkorn;font-style:normal;font-weight:400 900;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/vollkorn/Vollkorn-VariableFont_wght.woff2') format('woff2');}
+@font-face{font-family:"Fira Code";font-style:normal;font-weight:300 700;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/fira-code/FiraCode-VariableFont_wght.woff2') format('woff2');}
+@font-face{font-family:Platypi;font-style:normal;font-weight:300 800;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/platypi/Platypi-VariableFont_wght.woff2') format('woff2');}
+@font-face{font-family:Platypi;font-style:italic;font-weight:300 800;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/platypi/Platypi-Italic-VariableFont_wght.woff2') format('woff2');}
+@font-face{font-family:"Ysabeau Office";font-style:normal;font-weight:100 900;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/ysabeau-office/YsabeauOffice-VariableFont_wght.woff2') format('woff2');}
+@font-face{font-family:"Ysabeau Office";font-style:italic;font-weight:100 900;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/ysabeau-office/YsabeauOffice-Italic-VariableFont_wght.woff2') format('woff2');}
+@font-face{font-family:"Roboto Slab";font-style:normal;font-weight:100 900;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/roboto-slab/RobotoSlab-VariableFont_wght.woff2') format('woff2');}
+@font-face{font-family:Manrope;font-style:normal;font-weight:200 800;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/manrope/Manrope-VariableFont_wght.woff2') format('woff2');}
+@font-face{font-family:Literata;font-style:normal;font-weight:200;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/literata/Literata72pt-ExtraLight.woff2') format('woff2');}
+@font-face{font-family:Literata;font-style:italic;font-weight:200;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/literata/Literata72pt-ExtraLightItalic.woff2') format('woff2');}
+@font-face{font-family:Literata;font-style:normal;font-weight:300;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/literata/Literata72pt-Light.woff2') format('woff2');}
+@font-face{font-family:Literata;font-style:italic;font-weight:300;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/literata/Literata72pt-LightItalic.woff2') format('woff2');}
+@font-face{font-family:Literata;font-style:normal;font-weight:400;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/literata/Literata72pt-Regular.woff2') format('woff2');}
+@font-face{font-family:Literata;font-style:italic;font-weight:400;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/literata/Literata72pt-RegularItalic.woff2') format('woff2');}
+@font-face{font-family:Literata;font-style:normal;font-weight:500;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/literata/Literata72pt-Medium.woff2') format('woff2');}
+@font-face{font-family:Literata;font-style:italic;font-weight:500;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/literata/Literata72pt-MediumItalic.woff2') format('woff2');}
+@font-face{font-family:Literata;font-style:normal;font-weight:600;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/literata/Literata72pt-SemiBold.woff2') format('woff2');}
+@font-face{font-family:Literata;font-style:italic;font-weight:600;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/literata/Literata72pt-SemiBoldItalic.woff2') format('woff2');}
+@font-face{font-family:Literata;font-style:normal;font-weight:700;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/literata/Literata72pt-Bold.woff2') format('woff2');}
+@font-face{font-family:Literata;font-style:italic;font-weight:700;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/literata/Literata72pt-BoldItalic.woff2') format('woff2');}
+@font-face{font-family:Literata;font-style:normal;font-weight:800;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/literata/Literata72pt-ExtraBold.woff2') format('woff2');}
+@font-face{font-family:Literata;font-style:italic;font-weight:800;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/literata/Literata72pt-ExtraBoldItalic.woff2') format('woff2');}
+@font-face{font-family:Literata;font-style:normal;font-weight:900;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/literata/Literata72pt-Black.woff2') format('woff2');}
+@font-face{font-family:Literata;font-style:italic;font-weight:900;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/literata/Literata72pt-BlackItalic.woff2') format('woff2');}
+@font-face{font-family:"Ysabeau Office";font-style:normal;font-weight:100 900;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/ysabeau-office/YsabeauOffice-VariableFont_wght.woff2') format('woff2');}
+@font-face{font-family:"Ysabeau Office";font-style:italic;font-weight:100 900;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/ysabeau-office/YsabeauOffice-Italic-VariableFont_wght.woff2') format('woff2');}
+@font-face{font-family:Platypi;font-style:normal;font-weight:300 800;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/platypi/Platypi-VariableFont_wght.woff2') format('woff2');}
+@font-face{font-family:Platypi;font-style:italic;font-weight:300 800;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/platypi/Platypi-Italic-VariableFont_wght.woff2') format('woff2');}
+@font-face{font-family:Literata;font-style:normal;font-weight:200;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/literata/Literata72pt-ExtraLight.woff2') format('woff2');}
+@font-face{font-family:Literata;font-style:italic;font-weight:200;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/literata/Literata72pt-ExtraLightItalic.woff2') format('woff2');}
+@font-face{font-family:Literata;font-style:normal;font-weight:300;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/literata/Literata72pt-Light.woff2') format('woff2');}
+@font-face{font-family:Literata;font-style:italic;font-weight:300;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/literata/Literata72pt-LightItalic.woff2') format('woff2');}
+@font-face{font-family:Literata;font-style:normal;font-weight:400;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/literata/Literata72pt-Regular.woff2') format('woff2');}
+@font-face{font-family:Literata;font-style:italic;font-weight:400;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/literata/Literata72pt-RegularItalic.woff2') format('woff2');}
+@font-face{font-family:Literata;font-style:normal;font-weight:500;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/literata/Literata72pt-Medium.woff2') format('woff2');}
+@font-face{font-family:Literata;font-style:italic;font-weight:500;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/literata/Literata72pt-MediumItalic.woff2') format('woff2');}
+@font-face{font-family:Literata;font-style:normal;font-weight:600;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/literata/Literata72pt-SemiBold.woff2') format('woff2');}
+@font-face{font-family:Literata;font-style:italic;font-weight:600;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/literata/Literata72pt-SemiBoldItalic.woff2') format('woff2');}
+@font-face{font-family:Literata;font-style:normal;font-weight:700;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/literata/Literata72pt-Bold.woff2') format('woff2');}
+@font-face{font-family:Literata;font-style:italic;font-weight:700;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/literata/Literata72pt-BoldItalic.woff2') format('woff2');}
+@font-face{font-family:Literata;font-style:normal;font-weight:800;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/literata/Literata72pt-ExtraBold.woff2') format('woff2');}
+@font-face{font-family:Literata;font-style:italic;font-weight:800;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/literata/Literata72pt-ExtraBoldItalic.woff2') format('woff2');}
+@font-face{font-family:Literata;font-style:normal;font-weight:900;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/literata/Literata72pt-Black.woff2') format('woff2');}
+@font-face{font-family:Literata;font-style:italic;font-weight:900;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/literata/Literata72pt-BlackItalic.woff2') format('woff2');}
+@font-face{font-family:Literata;font-style:normal;font-weight:200;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/literata/Literata72pt-ExtraLight.woff2') format('woff2');}
+@font-face{font-family:Literata;font-style:italic;font-weight:200;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/literata/Literata72pt-ExtraLightItalic.woff2') format('woff2');}
+@font-face{font-family:Literata;font-style:normal;font-weight:300;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/literata/Literata72pt-Light.woff2') format('woff2');}
+@font-face{font-family:Literata;font-style:italic;font-weight:300;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/literata/Literata72pt-LightItalic.woff2') format('woff2');}
+@font-face{font-family:Literata;font-style:normal;font-weight:400;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/literata/Literata72pt-Regular.woff2') format('woff2');}
+@font-face{font-family:Literata;font-style:italic;font-weight:400;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/literata/Literata72pt-RegularItalic.woff2') format('woff2');}
+@font-face{font-family:Literata;font-style:normal;font-weight:500;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/literata/Literata72pt-Medium.woff2') format('woff2');}
+@font-face{font-family:Literata;font-style:italic;font-weight:500;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/literata/Literata72pt-MediumItalic.woff2') format('woff2');}
+@font-face{font-family:Literata;font-style:normal;font-weight:600;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/literata/Literata72pt-SemiBold.woff2') format('woff2');}
+@font-face{font-family:Literata;font-style:italic;font-weight:600;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/literata/Literata72pt-SemiBoldItalic.woff2') format('woff2');}
+@font-face{font-family:Literata;font-style:normal;font-weight:700;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/literata/Literata72pt-Bold.woff2') format('woff2');}
+@font-face{font-family:Literata;font-style:italic;font-weight:700;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/literata/Literata72pt-BoldItalic.woff2') format('woff2');}
+@font-face{font-family:Literata;font-style:normal;font-weight:800;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/literata/Literata72pt-ExtraBold.woff2') format('woff2');}
+@font-face{font-family:Literata;font-style:italic;font-weight:800;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/literata/Literata72pt-ExtraBoldItalic.woff2') format('woff2');}
+@font-face{font-family:Literata;font-style:normal;font-weight:900;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/literata/Literata72pt-Black.woff2') format('woff2');}
+@font-face{font-family:Literata;font-style:italic;font-weight:900;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/literata/Literata72pt-BlackItalic.woff2') format('woff2');}
+@font-face{font-family:"Fira Sans";font-style:normal;font-weight:100;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/fira-sans/FiraSans-Thin.woff2') format('woff2');}
+@font-face{font-family:"Fira Sans";font-style:italic;font-weight:100;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/fira-sans/FiraSans-ThinItalic.woff2') format('woff2');}
+@font-face{font-family:"Fira Sans";font-style:normal;font-weight:200;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/fira-sans/FiraSans-ExtraLight.woff2') format('woff2');}
+@font-face{font-family:"Fira Sans";font-style:italic;font-weight:200;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/fira-sans/FiraSans-ExtraLightItalic.woff2') format('woff2');}
+@font-face{font-family:"Fira Sans";font-style:normal;font-weight:300;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/fira-sans/FiraSans-Light.woff2') format('woff2');}
+@font-face{font-family:"Fira Sans";font-style:italic;font-weight:300;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/fira-sans/FiraSans-LightItalic.woff2') format('woff2');}
+@font-face{font-family:"Fira Sans";font-style:italic;font-weight:400;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/fira-sans/FiraSans-Italic.woff2') format('woff2');}
+@font-face{font-family:"Fira Sans";font-style:normal;font-weight:400;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/fira-sans/FiraSans-Regular.woff2') format('woff2');}
+@font-face{font-family:"Fira Sans";font-style:normal;font-weight:500;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/fira-sans/FiraSans-Medium.woff2') format('woff2');}
+@font-face{font-family:"Fira Sans";font-style:italic;font-weight:500;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/fira-sans/FiraSans-MediumItalic.woff2') format('woff2');}
+@font-face{font-family:"Fira Sans";font-style:normal;font-weight:600;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/fira-sans/FiraSans-SemiBold.woff2') format('woff2');}
+@font-face{font-family:"Fira Sans";font-style:italic;font-weight:600;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/fira-sans/FiraSans-SemiBoldItalic.woff2') format('woff2');}
+@font-face{font-family:"Fira Sans";font-style:normal;font-weight:700;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/fira-sans/FiraSans-Bold.woff2') format('woff2');}
+@font-face{font-family:"Fira Sans";font-style:italic;font-weight:700;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/fira-sans/FiraSans-BoldItalic.woff2') format('woff2');}
+@font-face{font-family:"Fira Sans";font-style:normal;font-weight:800;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/fira-sans/FiraSans-ExtraBold.woff2') format('woff2');}
+@font-face{font-family:"Fira Sans";font-style:italic;font-weight:800;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/fira-sans/FiraSans-ExtraBoldItalic.woff2') format('woff2');}
+@font-face{font-family:"Fira Sans";font-style:normal;font-weight:900;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/fira-sans/FiraSans-Black.woff2') format('woff2');}
+@font-face{font-family:"Fira Sans";font-style:italic;font-weight:900;font-display:fallback;src:url('http://wordpress/wp-content/themes/twentytwentyfive/assets/fonts/fira-sans/FiraSans-BlackItalic.woff2') format('woff2');}
+</style>
+	<script>
+		if ( typeof performance !== 'undefined' && performance.navigation && performance.navigation.type === 2 ) {
+			document.location.reload( true );
+		}
+	</script>
+	
+<script>
+/* <![CDATA[ */
+var userSettings = {"url":"/","uid":"1","time":"1777119990","secure":""};
+//# sourceURL=js-inline-concat-jquery-core%2Cjquery-migrate%2Cutils
+/* ]]> */
+</script>
+<script src="http://wordpress/wp-admin/load-scripts.php?c=0&amp;load%5Bchunk_0%5D=jquery-core,jquery-migrate,utils&amp;ver=6.9.4"></script>
+<script type="text/javascript">var _wpColorScheme = {"icons":{"base":"#a7aaad","focus":"#72aee6","current":"#fff"}};</script>
+	<link id="wp-admin-canonical" rel="canonical" href="http://wordpress/wp-admin/post.php?post=26&amp;action=edit">
+	<script>
+		if ( window.history.replaceState ) {
+			window.history.replaceState( null, null, document.getElementById( 'wp-admin-canonical' ).href + window.location.hash );
+		}
+	</script>
+	<meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+<body class="wp-admin wp-core-ui js post-php auto-fold admin-bar post-type-attachment branch-6-9 version-6-9-4 admin-color-fresh locale-en-us svg wp-theme-twentytwentyfive customize-support sticky-menu">
+<script type="text/javascript">
+	document.body.className = document.body.className.replace('no-js','js');
+</script>
+
+<script>
+		(function() {
+			var request, b = document.body, c = 'className', cs = 'customize-support', rcs = new RegExp('(^|\\s+)(no-)?'+cs+'(\\s+|$)');
+
+				request = true;
+	
+			b[c] = b[c].replace( rcs, ' ' );
+			// The customizer requires postMessage and CORS (if the site is cross domain).
+			b[c] += ( window.postMessage && request ? ' ' : ' no-' ) + cs;
+		}());
+	
+//# sourceURL=wp_customize_support_script
+</script>
+
+<div id="wpwrap">
+
+<div id="adminmenumain" role="navigation" aria-label="Main menu">
+<a href="#wpbody-content" class="screen-reader-shortcut">Skip to main content</a>
+<a href="#wp-toolbar" class="screen-reader-shortcut">Skip to toolbar</a>
+<div id="adminmenuback"></div>
+<div id="adminmenuwrap">
+<ul id="adminmenu">
+
+
+	<li class="wp-first-item wp-has-submenu wp-not-current-submenu menu-top menu-top-first menu-icon-dashboard menu-top-last" id="menu-dashboard">
+	<a href="index.php" class="wp-first-item wp-has-submenu wp-not-current-submenu menu-top menu-top-first menu-icon-dashboard menu-top-last" data-ariahaspopup=""><div class="wp-menu-image dashicons-before dashicons-dashboard" aria-hidden="true"><br></div><div class="wp-menu-name">Dashboard</div></a>
+	<ul class="wp-submenu wp-submenu-wrap"><li class="wp-submenu-head" aria-hidden="true">Dashboard</li><li class="wp-first-item"><a href="index.php" class="wp-first-item">Home</a></li><li><a href="update-core.php">Updates <span class="update-plugins count-1"><span class="update-count">1</span></span></a></li></ul></li>
+	<li class="wp-not-current-submenu wp-menu-separator" aria-hidden="true"><div class="separator"></div></li>
+	<li class="wp-has-submenu wp-not-current-submenu menu-top menu-icon-post open-if-no-js menu-top-first" id="menu-posts">
+	<a href="edit.php" class="wp-has-submenu wp-not-current-submenu menu-top menu-icon-post open-if-no-js menu-top-first" data-ariahaspopup=""><div class="wp-menu-image dashicons-before dashicons-admin-post" aria-hidden="true"><br></div><div class="wp-menu-name">Posts</div></a>
+	<ul class="wp-submenu wp-submenu-wrap"><li class="wp-submenu-head" aria-hidden="true">Posts</li><li class="wp-first-item"><a href="edit.php" class="wp-first-item">All Posts</a></li><li><a href="post-new.php">Add Post</a></li><li><a href="edit-tags.php?taxonomy=category">Categories</a></li><li><a href="edit-tags.php?taxonomy=post_tag">Tags</a></li></ul></li>
+	<li class="wp-has-submenu wp-has-current-submenu wp-menu-open menu-top menu-icon-media" id="menu-media">
+	<a href="upload.php" class="wp-has-submenu wp-has-current-submenu wp-menu-open menu-top menu-icon-media"><div class="wp-menu-image dashicons-before dashicons-admin-media" aria-hidden="true"><br></div><div class="wp-menu-name">Media</div></a>
+	<ul class="wp-submenu wp-submenu-wrap"><li class="wp-submenu-head" aria-hidden="true">Media</li><li class="wp-first-item current"><a href="upload.php" class="wp-first-item current" aria-current="page">Library</a></li><li><a href="media-new.php">Add Media File</a></li></ul></li>
+	<li class="wp-has-submenu wp-not-current-submenu menu-top menu-icon-page" id="menu-pages">
+	<a href="edit.php?post_type=page" class="wp-has-submenu wp-not-current-submenu menu-top menu-icon-page" data-ariahaspopup=""><div class="wp-menu-image dashicons-before dashicons-admin-page" aria-hidden="true"><br></div><div class="wp-menu-name">Pages</div></a>
+	<ul class="wp-submenu wp-submenu-wrap"><li class="wp-submenu-head" aria-hidden="true">Pages</li><li class="wp-first-item"><a href="edit.php?post_type=page" class="wp-first-item">All Pages</a></li><li><a href="post-new.php?post_type=page">Add Page</a></li></ul></li>
+	<li class="wp-not-current-submenu menu-top menu-icon-comments menu-top-last" id="menu-comments">
+	<a href="edit-comments.php" class="wp-not-current-submenu menu-top menu-icon-comments menu-top-last"><div class="wp-menu-image dashicons-before dashicons-admin-comments" aria-hidden="true"><br></div><div class="wp-menu-name">Comments <span class="awaiting-mod count-0"><span class="pending-count" aria-hidden="true">0</span><span class="comments-in-moderation-text screen-reader-text">0 Comments in moderation</span></span></div></a></li>
+	<li class="wp-not-current-submenu wp-menu-separator" aria-hidden="true"><div class="separator"></div></li>
+	<li class="wp-has-submenu wp-not-current-submenu menu-top menu-icon-appearance menu-top-first" id="menu-appearance">
+	<a href="themes.php" class="wp-has-submenu wp-not-current-submenu menu-top menu-icon-appearance menu-top-first" data-ariahaspopup=""><div class="wp-menu-image dashicons-before dashicons-admin-appearance" aria-hidden="true"><br></div><div class="wp-menu-name">Appearance</div></a>
+	<ul class="wp-submenu wp-submenu-wrap"><li class="wp-submenu-head" aria-hidden="true">Appearance</li><li class="wp-first-item"><a href="themes.php" class="wp-first-item">Themes <span class="update-plugins count-0"><span class="theme-count">0</span></span></a></li><li><a href="site-editor.php">Editor</a></li></ul></li>
+	<li class="wp-has-submenu wp-not-current-submenu menu-top menu-icon-plugins" id="menu-plugins">
+	<a href="plugins.php" class="wp-has-submenu wp-not-current-submenu menu-top menu-icon-plugins" data-ariahaspopup=""><div class="wp-menu-image dashicons-before dashicons-admin-plugins" aria-hidden="true"><br></div><div class="wp-menu-name">Plugins <span class="update-plugins count-1"><span class="plugin-count">1</span></span></div></a>
+	<ul class="wp-submenu wp-submenu-wrap"><li class="wp-submenu-head" aria-hidden="true">Plugins <span class="update-plugins count-1"><span class="plugin-count">1</span></span></li><li class="wp-first-item"><a href="plugins.php" class="wp-first-item">Installed Plugins</a></li><li><a href="plugin-install.php">Add Plugin</a></li></ul></li>
+	<li class="wp-has-submenu wp-not-current-submenu menu-top menu-icon-users" id="menu-users">
+	<a href="users.php" class="wp-has-submenu wp-not-current-submenu menu-top menu-icon-users" data-ariahaspopup=""><div class="wp-menu-image dashicons-before dashicons-admin-users" aria-hidden="true"><br></div><div class="wp-menu-name">Users</div></a>
+	<ul class="wp-submenu wp-submenu-wrap"><li class="wp-submenu-head" aria-hidden="true">Users</li><li class="wp-first-item"><a href="users.php" class="wp-first-item">All Users</a></li><li><a href="user-new.php">Add User</a></li><li><a href="profile.php">Profile</a></li></ul></li>
+	<li class="wp-has-submenu wp-not-current-submenu menu-top menu-icon-tools" id="menu-tools">
+	<a href="tools.php" class="wp-has-submenu wp-not-current-submenu menu-top menu-icon-tools" data-ariahaspopup=""><div class="wp-menu-image dashicons-before dashicons-admin-tools" aria-hidden="true"><br></div><div class="wp-menu-name">Tools</div></a>
+	<ul class="wp-submenu wp-submenu-wrap"><li class="wp-submenu-head" aria-hidden="true">Tools</li><li class="wp-first-item"><a href="tools.php" class="wp-first-item">Available Tools</a></li><li><a href="import.php">Import</a></li><li><a href="export.php">Export</a></li><li><a href="site-health.php">Site Health <span class="menu-counter site-health-counter count-0"><span class="count">0</span></span></a></li><li><a href="export-personal-data.php">Export Personal Data</a></li><li><a href="erase-personal-data.php">Erase Personal Data</a></li><li><a href="theme-editor.php">Theme File Editor</a></li><li><a href="plugin-editor.php">Plugin File Editor</a></li></ul></li>
+	<li class="wp-has-submenu wp-not-current-submenu menu-top menu-icon-settings menu-top-last" id="menu-settings">
+	<a href="options-general.php" class="wp-has-submenu wp-not-current-submenu menu-top menu-icon-settings menu-top-last" data-ariahaspopup=""><div class="wp-menu-image dashicons-before dashicons-admin-settings" aria-hidden="true"><br></div><div class="wp-menu-name">Settings</div></a>
+	<ul class="wp-submenu wp-submenu-wrap"><li class="wp-submenu-head" aria-hidden="true">Settings</li><li class="wp-first-item"><a href="options-general.php" class="wp-first-item">General</a></li><li><a href="options-writing.php">Writing</a></li><li><a href="options-reading.php">Reading</a></li><li><a href="options-discussion.php">Discussion</a></li><li><a href="options-media.php">Media</a></li><li><a href="options-permalink.php">Permalinks</a></li><li><a href="options-privacy.php">Privacy</a></li></ul></li><li id="collapse-menu" class="hide-if-no-js"><button type="button" id="collapse-button" aria-label="Collapse Main menu" aria-expanded="true"><span class="collapse-button-icon" aria-hidden="true"></span><span class="collapse-button-label">Collapse Menu</span></button></li></ul>
+</div>
+</div>
+<div id="wpcontent">
+
+		<div id="wpadminbar" class="nojq">
+						<div class="quicklinks" id="wp-toolbar" role="navigation" aria-label="Toolbar">
+				<ul role="menu" id="wp-admin-bar-root-default" class="ab-top-menu"><li role="group" id="wp-admin-bar-menu-toggle"><a class="ab-item" role="menuitem" href="#" aria-expanded="false"><span class="ab-icon" aria-hidden="true"></span><span class="screen-reader-text">Menu</span></a></li><li role="group" id="wp-admin-bar-wp-logo" class="menupop"><a class="ab-item" role="menuitem" aria-expanded="false" href="http://wordpress/wp-admin/about.php"><span class="ab-icon" aria-hidden="true"></span><span class="screen-reader-text">About WordPress</span></a><div class="ab-sub-wrapper"><ul role="menu" aria-label="About WordPress" id="wp-admin-bar-wp-logo-default" class="ab-submenu"><li role="group" id="wp-admin-bar-about"><a class="ab-item" role="menuitem" href="http://wordpress/wp-admin/about.php">About WordPress</a></li><li role="group" id="wp-admin-bar-contribute"><a class="ab-item" role="menuitem" href="http://wordpress/wp-admin/contribute.php">Get Involved</a></li></ul><ul role="menu" aria-label="About WordPress" id="wp-admin-bar-wp-logo-external" class="ab-sub-secondary ab-submenu"><li role="group" id="wp-admin-bar-wporg"><a class="ab-item" role="menuitem" href="https://wordpress.org/">WordPress.org</a></li><li role="group" id="wp-admin-bar-documentation"><a class="ab-item" role="menuitem" href="https://wordpress.org/documentation/">Documentation</a></li><li role="group" id="wp-admin-bar-learn"><a class="ab-item" role="menuitem" href="https://learn.wordpress.org/">Learn WordPress</a></li><li role="group" id="wp-admin-bar-support-forums"><a class="ab-item" role="menuitem" href="https://wordpress.org/support/forums/">Support</a></li><li role="group" id="wp-admin-bar-feedback"><a class="ab-item" role="menuitem" href="https://wordpress.org/support/forum/requests-and-feedback">Feedback</a></li></ul></div></li><li role="group" id="wp-admin-bar-site-name" class="menupop"><a class="ab-item" role="menuitem" aria-expanded="false" href="http://wordpress/">Stream Wrapper E2E</a><div class="ab-sub-wrapper"><ul role="menu" aria-label="Stream Wrapper E2E" id="wp-admin-bar-site-name-default" class="ab-submenu"><li role="group" id="wp-admin-bar-view-site"><a class="ab-item" role="menuitem" href="http://wordpress/">Visit Site</a></li></ul></div></li><li role="group" id="wp-admin-bar-updates"><a class="ab-item" role="menuitem" href="http://wordpress/wp-admin/update-core.php"><span class="ab-icon" aria-hidden="true"></span><span class="ab-label" aria-hidden="true">1</span><span class="screen-reader-text updates-available-text">1 update available</span></a></li><li role="group" id="wp-admin-bar-comments"><a class="ab-item" role="menuitem" href="http://wordpress/wp-admin/edit-comments.php"><span class="ab-icon" aria-hidden="true"></span><span class="ab-label awaiting-mod pending-count count-0" aria-hidden="true">0</span><span class="screen-reader-text comments-in-moderation-text">0 Comments in moderation</span></a></li><li role="group" id="wp-admin-bar-new-content" class="menupop"><a class="ab-item" role="menuitem" aria-expanded="false" href="http://wordpress/wp-admin/post-new.php"><span class="ab-icon" aria-hidden="true"></span><span class="ab-label">New</span></a><div class="ab-sub-wrapper"><ul role="menu" aria-label="New" id="wp-admin-bar-new-content-default" class="ab-submenu"><li role="group" id="wp-admin-bar-new-post"><a class="ab-item" role="menuitem" href="http://wordpress/wp-admin/post-new.php">Post</a></li><li role="group" id="wp-admin-bar-new-media"><a class="ab-item" role="menuitem" href="http://wordpress/wp-admin/media-new.php">Media</a></li><li role="group" id="wp-admin-bar-new-page"><a class="ab-item" role="menuitem" href="http://wordpress/wp-admin/post-new.php?post_type=page">Page</a></li><li role="group" id="wp-admin-bar-new-user"><a class="ab-item" role="menuitem" href="http://wordpress/wp-admin/user-new.php">User</a></li></ul></div></li><li role="group" id="wp-admin-bar-view"><a class="ab-item" role="menuitem" href="http://wordpress/e2e-download-6/">View Media File</a></li></ul><ul role="menu" id="wp-admin-bar-top-secondary" class="ab-top-secondary ab-top-menu"><li role="group" id="wp-admin-bar-my-account" class="menupop with-avatar"><a class="ab-item" role="menuitem" aria-expanded="false" href="http://wordpress/wp-admin/profile.php">Howdy, <span class="display-name">admin</span><img alt="" src="https://secure.gravatar.com/avatar/258d8dc916db8cea2cafb6c3cd0cb0246efe061421dbd83ec3a350428cabda4f?s=26&amp;d=mm&amp;r=g" srcset="https://secure.gravatar.com/avatar/258d8dc916db8cea2cafb6c3cd0cb0246efe061421dbd83ec3a350428cabda4f?s=52&amp;d=mm&amp;r=g 2x" class="avatar avatar-26 photo" height="26" width="26" loading="lazy" decoding="async"></a><div class="ab-sub-wrapper"><ul role="menu" aria-label="Howdy, admin" id="wp-admin-bar-user-actions" class="ab-submenu"><li role="group" id="wp-admin-bar-user-info"><a class="ab-item" role="menuitem" href="http://wordpress/wp-admin/profile.php"><img alt="" src="https://secure.gravatar.com/avatar/258d8dc916db8cea2cafb6c3cd0cb0246efe061421dbd83ec3a350428cabda4f?s=64&amp;d=mm&amp;r=g" srcset="https://secure.gravatar.com/avatar/258d8dc916db8cea2cafb6c3cd0cb0246efe061421dbd83ec3a350428cabda4f?s=128&amp;d=mm&amp;r=g 2x" class="avatar avatar-64 photo" height="64" width="64" loading="lazy" decoding="async"><span class="display-name">admin</span><span class="display-name edit-profile">Edit Profile</span></a></li><li role="group" id="wp-admin-bar-logout"><a class="ab-item" role="menuitem" href="http://wordpress/wp-login.php?action=logout&amp;_wpnonce=c25734aee0">Log Out</a></li></ul></div></li></ul>			</div>
+		</div>
+
+		
+<div id="wpbody" role="main">
+
+<div id="wpbody-content">
+		<div id="screen-meta" class="metabox-prefs">
+
+			<div id="contextual-help-wrap" class="hidden" tabindex="-1" aria-label="Contextual Help Tab">
+				<div id="contextual-help-back"></div>
+				<div id="contextual-help-columns">
+					<div class="contextual-help-tabs">
+						<ul>
+						
+							<li id="tab-link-overview" class="active">
+								<a href="#tab-panel-overview" aria-controls="tab-panel-overview">
+									Overview								</a>
+							</li>
+													</ul>
+					</div>
+
+										<div class="contextual-help-sidebar">
+						<p><strong>For more information:</strong></p><p><a href="https://wordpress.org/documentation/article/edit-media/">Documentation on Edit Media</a></p><p><a href="https://wordpress.org/support/forums/">Support forums</a></p>					</div>
+					
+					<div class="contextual-help-tabs-wrap">
+						
+							<div id="tab-panel-overview" class="help-tab-content active">
+								<p>This screen allows you to edit fields for metadata in a file within the media library.</p><p>For images only, you can click on Edit Image under the thumbnail to expand out an inline image editor with icons for cropping, rotating, or flipping the image as well as for undoing and redoing. The boxes on the right give you more options for scaling the image, for cropping it, and for cropping the thumbnail in a different way than you crop the original image. You can click on Help in those boxes to get more information.</p><p>Note that you crop the image by clicking on it (the Crop icon is already selected) and dragging the cropping frame to select the desired part. Then click Save to retain the cropping.</p><p>Remember to click Update to save metadata entered or changed.</p>							</div>
+												</div>
+				</div>
+			</div>
+		<div id="screen-options-wrap" class="hidden" tabindex="-1" aria-label="Screen Options Tab">
+<form id="adv-settings" method="post">
+		<fieldset class="metabox-prefs">
+		<legend>Screen elements</legend>
+		<p>
+			Some screen elements can be shown or hidden by using the checkboxes.			Expand or collapse the elements by clicking on their headings, and arrange them by dragging their headings or by clicking on the up and down arrows.		</p>
+		<div class="metabox-prefs-container">
+		<label for="commentstatusdiv-hide"><input class="hide-postbox-tog" name="commentstatusdiv-hide" type="checkbox" id="commentstatusdiv-hide" value="commentstatusdiv">Discussion</label><label for="commentsdiv-hide"><input class="hide-postbox-tog" name="commentsdiv-hide" type="checkbox" id="commentsdiv-hide" value="commentsdiv">Comments</label><label for="slugdiv-hide"><input class="hide-postbox-tog" name="slugdiv-hide" type="checkbox" id="slugdiv-hide" value="slugdiv">Slug</label><label for="authordiv-hide"><input class="hide-postbox-tog" name="authordiv-hide" type="checkbox" id="authordiv-hide" value="authordiv">Author</label>		</div>
+		</fieldset>
+				<fieldset class="columns-prefs">
+		<legend class="screen-layout">Layout</legend>
+					<label class="columns-prefs-1">
+			<input type="radio" name="screen_columns" value="1">
+			1 column			</label>
+					<label class="columns-prefs-2">
+			<input type="radio" name="screen_columns" value="2" checked="checked">
+			2 columns			</label>
+				</fieldset>
+		<fieldset class="editor-expand hidden"><legend>Additional settings</legend><label for="editor-expand-toggle"><input type="checkbox" id="editor-expand-toggle" checked="checked">Enable full-height editor and distraction-free functionality.</label></fieldset>
+<input type="hidden" id="screenoptionnonce" name="screenoptionnonce" value="3ef55c05fb">
+</form>
+</div>		</div>
+				<div id="screen-meta-links">
+					<div id="screen-options-link-wrap" class="hide-if-no-js screen-meta-toggle">
+			<button type="button" id="show-settings-link" class="button show-settings" aria-controls="screen-options-wrap" aria-expanded="false">Screen Options</button>
+			</div>
+						<div id="contextual-help-link-wrap" class="hide-if-no-js screen-meta-toggle">
+			<button type="button" id="contextual-help-link" class="button show-settings" aria-controls="contextual-help-wrap" aria-expanded="false">Help</button>
+			</div>
+				</div>
+		
+<div class="wrap">
+<h1 class="wp-heading-inline">
+Edit Media</h1>
+
+ <a href="http://wordpress/wp-admin/media-new.php" class="page-title-action">Add Media File</a>
+<hr class="wp-header-end"><div id="lost-connection-notice" class="notice error hidden"><p><span class="spinner"></span> <strong>Connection lost.</strong> Saving has been disabled until you are reconnected. <span class="hide-if-no-sessionstorage">This post is being backed up in your browser, just in case.</span></p></div><div id="local-storage-notice" class="notice is-dismissible hidden"><p class="local-restore">The backup of this post in your browser is different from the version below.<button type="button" class="button restore-backup">Restore the backup</button></p><p class="help">This will replace the current editor content with the last backup version. You can use undo and redo in the editor to get the old content back or to return to the restored version.</p><button type="button" class="notice-dismiss"><span class="screen-reader-text">Dismiss this notice.</span></button></div>
+
+<form name="post" action="post.php" method="post" id="post">
+<input type="hidden" id="_wpnonce" name="_wpnonce" value="a048b2f798"><input type="hidden" name="_wp_http_referer" value="/wp-admin/post.php?post=26&amp;action=edit"><input type="hidden" id="user-id" name="user_ID" value="1">
+<input type="hidden" id="hiddenaction" name="action" value="editpost">
+<input type="hidden" id="originalaction" name="originalaction" value="editpost">
+<input type="hidden" id="post_author" name="post_author" value="1">
+<input type="hidden" id="post_type" name="post_type" value="attachment">
+<input type="hidden" id="original_post_status" name="original_post_status" value="inherit">
+<input type="hidden" id="referredby" name="referredby" value="">
+<input type="hidden" id="active_post_lock" value="1777119990:1">
+	<input type="hidden" name="_wp_original_http_referer" value=""><input type="hidden" id="post_ID" name="post_ID" value="26"><input type="hidden" id="meta-box-order-nonce" name="meta-box-order-nonce" value="1f2ac945e4"><input type="hidden" id="closedpostboxesnonce" name="closedpostboxesnonce" value="368f37d0d9">
+
+<div id="poststuff">
+<div id="post-body" class="metabox-holder columns-2">
+<div id="post-body-content">
+
+<div id="titlediv">
+<div id="titlewrap">
+		<label class="screen-reader-text" id="title-prompt-text" for="title">Add title</label>
+	<input type="text" name="post_title" size="30" value="e2e-download" id="title" spellcheck="true" autocomplete="off">
+	</div>
+	<div class="inside">
+		<div id="edit-slug-box" class="hide-if-no-js">
+			<strong>Permalink:</strong>
+<a id="sample-permalink" href="http://wordpress/e2e-download-6/">http://wordpress/e2e-download-6/</a>
+	</div>
+			</div>
+	<input type="hidden" id="samplepermalinknonce" name="samplepermalinknonce" value="8685f2a81d"></div><!-- /titlediv -->
+		<div class="wp_attachment_holder wp-clearfix">
+			<div class="imgedit-response" id="imgedit-response-26"></div>
+
+		<div class="wp_attachment_image wp-clearfix" id="media-head-26">
+			<p id="thumbnail-head-26"><img class="thumbnail" src="http://wordpress/wp-content/uploads/2026/04/e2e-download-5.png" style="max-width:100%" alt=""></p>
+			<p><input type="button" id="imgedit-open-btn-26" onclick="imageEdit.open( 26, &quot;4ab2210b39&quot; )" class="button" value="Edit Image"> <span class="spinner"></span></p>
+		</div>
+		<div style="display:none" class="image-editor" id="image-editor-26">
+				</div>
+			</div>
+	<div class="wp_attachment_details edit-form-section">
+			<p class="attachment-alt-text">
+			<label for="attachment_alt"><strong>Alternative Text</strong></label><br>
+			<textarea class="widefat" name="_wp_attachment_image_alt" id="attachment_alt" aria-describedby="alt-text-description"></textarea>
+		</p>
+		<p class="attachment-alt-text-description" id="alt-text-description">
+		<a href="https://www.w3.org/WAI/tutorials/images/decision-tree/" target="_blank">Learn how to describe the purpose of the image<span class="screen-reader-text"> (opens in a new tab)</span></a>. Leave empty if the image is purely decorative.		</p>
+	
+		<p>
+			<label for="attachment_caption"><strong>Caption</strong></label><br>
+			<textarea class="widefat" name="excerpt" id="attachment_caption"></textarea>
+		</p>
+
+	
+	<label for="attachment_content" class="attachment-content-description"><strong>Description</strong>
+		</label>
+	<div id="wp-attachment_content-wrap" class="wp-core-ui wp-editor-wrap html-active"><link rel="stylesheet" id="editor-buttons-css" href="http://wordpress/wp-includes/css/editor.min.css?ver=6.9.4" media="all">
+<div id="wp-attachment_content-editor-container" class="wp-editor-container"><div id="qt_attachment_content_toolbar" class="quicktags-toolbar hide-if-no-js"><input type="button" id="qt_attachment_content_strong" class="ed_button button button-small" aria-label="Bold" value="b"><input type="button" id="qt_attachment_content_em" class="ed_button button button-small" aria-label="Italic" value="i"><input type="button" id="qt_attachment_content_link" class="ed_button button button-small" aria-label="Insert link" value="link"><input type="button" id="qt_attachment_content_block" class="ed_button button button-small" aria-label="Blockquote" value="b-quote"><input type="button" id="qt_attachment_content_del" class="ed_button button button-small" aria-label="Deleted text (strikethrough)" value="del"><input type="button" id="qt_attachment_content_ins" class="ed_button button button-small" aria-label="Inserted text" value="ins"><input type="button" id="qt_attachment_content_img" class="ed_button button button-small" aria-label="Insert image" value="img"><input type="button" id="qt_attachment_content_ul" class="ed_button button button-small" aria-label="Bulleted list" value="ul"><input type="button" id="qt_attachment_content_ol" class="ed_button button button-small" aria-label="Numbered list" value="ol"><input type="button" id="qt_attachment_content_li" class="ed_button button button-small" aria-label="List item" value="li"><input type="button" id="qt_attachment_content_code" class="ed_button button button-small" aria-label="Code" value="code"><input type="button" id="qt_attachment_content_close" class="ed_button button button-small" title="Close all open tags" value="close tags"></div><textarea class="wp-editor-area" rows="5" cols="40" name="content" id="attachment_content"></textarea></div>
+</div>
+
+
+	</div>
+	<input type="hidden" id="image-edit-context" value="edit-attachment">
+</div><!-- /post-body-content -->
+
+<div id="postbox-container-1" class="postbox-container">
+<div id="side-sortables" class="meta-box-sortables ui-sortable"><div id="submitdiv" class="postbox ">
+<div class="postbox-header"><h2 class="hndle ui-sortable-handle">Save</h2>
+<div class="handle-actions hide-if-no-js"><button type="button" class="handle-order-higher" aria-disabled="true" aria-describedby="submitdiv-handle-order-higher-description"><span class="screen-reader-text">Move up</span><span class="order-higher-indicator" aria-hidden="true"></span></button><span class="hidden" id="submitdiv-handle-order-higher-description">Move Save box up</span><button type="button" class="handle-order-lower" aria-disabled="false" aria-describedby="submitdiv-handle-order-lower-description"><span class="screen-reader-text">Move down</span><span class="order-lower-indicator" aria-hidden="true"></span></button><span class="hidden" id="submitdiv-handle-order-lower-description">Move Save box down</span><button type="button" class="handlediv" aria-expanded="true"><span class="screen-reader-text">Toggle panel: Save</span><span class="toggle-indicator" aria-hidden="true"></span></button></div></div><div class="inside">
+<div class="submitbox" id="submitpost">
+
+<div id="minor-publishing">
+
+	<div style="display:none;">
+	<p class="submit"><input type="submit" name="save" id="save" class="button" value="Save"></p></div>
+
+
+<div id="misc-publishing-actions">
+	<div class="misc-pub-section curtime misc-pub-curtime">
+		<span id="timestamp">
+			Uploaded on: <b>Apr 25, 2026 at 12:26</b>		</span>
+	</div><!-- .misc-pub-section -->
+
+		<div class="misc-pub-section misc-pub-uploadedby word-wrap-break-word">
+					Uploaded by: <a href="http://wordpress/wp-admin/profile.php"><strong>admin</strong></a>
+			</div>
+
+	
+	<div class="misc-pub-section misc-pub-attachment">
+		<label for="attachment_url">File URL:</label>
+		<input type="text" class="widefat urlfield" readonly="readonly" name="attachment_url" id="attachment_url" value="http://wordpress/wp-content/uploads/2026/04/e2e-download-5.png">
+		<span class="copy-to-clipboard-container">
+			<button type="button" class="button copy-attachment-url edit-media" data-clipboard-target="#attachment_url">Copy URL to clipboard</button>
+			<span class="success hidden" aria-hidden="true">Copied!</span>
+		</span>
+	</div>
+	<div class="misc-pub-section misc-pub-download">
+		<a href="http://wordpress/wp-content/uploads/2026/04/e2e-download-5.png" download="">Download file</a>
+	</div>
+	<div class="misc-pub-section misc-pub-filename">
+		File name: <strong>e2e-download-5.png</strong>
+	</div>
+	<div class="misc-pub-section misc-pub-filetype">
+		File type:		<strong>
+		PNG		</strong>
+	</div>
+
+			<div class="misc-pub-section misc-pub-filesize">
+			File size: <strong>8 KB</strong>
+		</div>
+				<div class="misc-pub-section misc-pub-dimensions">
+			Dimensions: <strong><span id="media-dims-26">800 by 600 pixels</span></strong>
+		</div>
+		</div><!-- #misc-publishing-actions -->
+<div class="clear"></div>
+</div><!-- #minor-publishing -->
+
+<div id="major-publishing-actions">
+	<div id="delete-action">
+	<a class="submitdelete deletion" onclick="return showNotice.warn();" href="http://wordpress/wp-admin/post.php?post=26&amp;action=delete&amp;_wpnonce=f9405f08c0">Delete permanently</a>	</div>
+
+	<div id="publishing-action">
+		<span class="spinner"></span>
+		<input name="original_publish" type="hidden" id="original_publish" value="Update">
+		<input name="save" type="submit" class="button button-primary button-large" id="publish" value="Update">
+	</div>
+	<div class="clear"></div>
+</div><!-- #major-publishing-actions -->
+
+</div>
+
+	</div>
+</div>
+</div></div>
+<div id="postbox-container-2" class="postbox-container">
+<div id="normal-sortables" class="meta-box-sortables ui-sortable"><div id="commentstatusdiv" class="postbox  hide-if-js" style="">
+<div class="postbox-header"><h2 class="hndle ui-sortable-handle">Discussion</h2>
+<div class="handle-actions hide-if-no-js"><button type="button" class="handle-order-higher" aria-disabled="false" aria-describedby="commentstatusdiv-handle-order-higher-description"><span class="screen-reader-text">Move up</span><span class="order-higher-indicator" aria-hidden="true"></span></button><span class="hidden" id="commentstatusdiv-handle-order-higher-description">Move Discussion box up</span><button type="button" class="handle-order-lower" aria-disabled="false" aria-describedby="commentstatusdiv-handle-order-lower-description"><span class="screen-reader-text">Move down</span><span class="order-lower-indicator" aria-hidden="true"></span></button><span class="hidden" id="commentstatusdiv-handle-order-lower-description">Move Discussion box down</span><button type="button" class="handlediv" aria-expanded="true"><span class="screen-reader-text">Toggle panel: Discussion</span><span class="toggle-indicator" aria-hidden="true"></span></button></div></div><div class="inside">
+<input name="advanced_view" type="hidden" value="1">
+<p class="meta-options">
+	<label for="comment_status" class="selectit"><input name="comment_status" type="checkbox" id="comment_status" value="open" checked="checked"> Allow comments</label><br>
+	<label for="ping_status" class="selectit"><input name="ping_status" type="checkbox" id="ping_status" value="open">
+		Allow <a href="https://wordpress.org/documentation/article/introduction-to-blogging/#managing-comments">trackbacks and pingbacks</a>	</label>
+	</p>
+	</div>
+</div>
+<div id="commentsdiv" class="postbox  hide-if-js" style="">
+<div class="postbox-header"><h2 class="hndle ui-sortable-handle">Comments</h2>
+<div class="handle-actions hide-if-no-js"><button type="button" class="handle-order-higher" aria-disabled="false" aria-describedby="commentsdiv-handle-order-higher-description"><span class="screen-reader-text">Move up</span><span class="order-higher-indicator" aria-hidden="true"></span></button><span class="hidden" id="commentsdiv-handle-order-higher-description">Move Comments box up</span><button type="button" class="handle-order-lower" aria-disabled="false" aria-describedby="commentsdiv-handle-order-lower-description"><span class="screen-reader-text">Move down</span><span class="order-lower-indicator" aria-hidden="true"></span></button><span class="hidden" id="commentsdiv-handle-order-lower-description">Move Comments box down</span><button type="button" class="handlediv" aria-expanded="true"><span class="screen-reader-text">Toggle panel: Comments</span><span class="toggle-indicator" aria-hidden="true"></span></button></div></div><div class="inside">
+<input type="hidden" id="add_comment_nonce" name="add_comment_nonce" value="913f972eff">	<p class="hide-if-no-js" id="add-new-comment"><button type="button" class="button" onclick="window.commentReply &amp;&amp; commentReply.addcomment(26);">Add Comment</button></p>
+	<input type="hidden" id="_ajax_fetch_list_nonce" name="_ajax_fetch_list_nonce" value="dfe13e943f"><input type="hidden" name="_wp_http_referer" value="/wp-admin/post.php?post=26&amp;action=edit"><table class="widefat fixed striped table-view-list comments wp-list-table comments-box" style="display:none;">
+	<tbody id="the-comment-list" data-wp-lists="list:comment">
+			</tbody>
+</table>
+		<p id="no-comments">No comments yet.</p><div class="hidden" id="trash-undo-holder">
+	<div class="trash-undo-inside">
+		Comment by <strong></strong> moved to the Trash.		<span class="undo untrash"><a href="#">Undo</a></span>
+	</div>
+</div>
+<div class="hidden" id="spam-undo-holder">
+	<div class="spam-undo-inside">
+		Comment by <strong></strong> marked as spam.		<span class="undo unspam"><a href="#">Undo</a></span>
+	</div>
+</div>
+	</div>
+</div>
+<div id="slugdiv" class="postbox  hide-if-js" style="">
+<div class="postbox-header"><h2 class="hndle ui-sortable-handle">Slug</h2>
+<div class="handle-actions hide-if-no-js"><button type="button" class="handle-order-higher" aria-disabled="false" aria-describedby="slugdiv-handle-order-higher-description"><span class="screen-reader-text">Move up</span><span class="order-higher-indicator" aria-hidden="true"></span></button><span class="hidden" id="slugdiv-handle-order-higher-description">Move Slug box up</span><button type="button" class="handle-order-lower" aria-disabled="false" aria-describedby="slugdiv-handle-order-lower-description"><span class="screen-reader-text">Move down</span><span class="order-lower-indicator" aria-hidden="true"></span></button><span class="hidden" id="slugdiv-handle-order-lower-description">Move Slug box down</span><button type="button" class="handlediv" aria-expanded="true"><span class="screen-reader-text">Toggle panel: Slug</span><span class="toggle-indicator" aria-hidden="true"></span></button></div></div><div class="inside">
+<label class="screen-reader-text" for="post_name">
+	Slug</label><input name="post_name" type="text" class="large-text" id="post_name" value="e2e-download-6">
+	</div>
+</div>
+<div id="authordiv" class="postbox  hide-if-js" style="">
+<div class="postbox-header"><h2 class="hndle ui-sortable-handle">Author</h2>
+<div class="handle-actions hide-if-no-js"><button type="button" class="handle-order-higher" aria-disabled="false" aria-describedby="authordiv-handle-order-higher-description"><span class="screen-reader-text">Move up</span><span class="order-higher-indicator" aria-hidden="true"></span></button><span class="hidden" id="authordiv-handle-order-higher-description">Move Author box up</span><button type="button" class="handle-order-lower" aria-disabled="false" aria-describedby="authordiv-handle-order-lower-description"><span class="screen-reader-text">Move down</span><span class="order-lower-indicator" aria-hidden="true"></span></button><span class="hidden" id="authordiv-handle-order-lower-description">Move Author box down</span><button type="button" class="handlediv" aria-expanded="true"><span class="screen-reader-text">Toggle panel: Author</span><span class="toggle-indicator" aria-hidden="true"></span></button></div></div><div class="inside">
+<label class="screen-reader-text" for="post_author_override">
+	Author</label>
+	<select name="post_author_override" id="post_author_override" class="">
+	<option value="1" selected="selected">admin (admin)</option>
+	<option value="2">testuser (testuser)</option>
+</select></div>
+</div>
+</div><div id="advanced-sortables" class="meta-box-sortables ui-sortable"></div></div>
+</div><!-- /post-body -->
+<br class="clear">
+</div><!-- /poststuff -->
+</form>
+</div>
+
+<form method="get">
+	<table style="display:none;"><tbody id="com-reply"><tr id="replyrow" class="inline-edit-row" style="display:none;"><td colspan="2" class="colspanchange">
+	<fieldset class="comment-reply">
+	<legend>
+		<span class="hidden" id="editlegend">Edit Comment</span>
+		<span class="hidden" id="replyhead">Reply to Comment</span>
+		<span class="hidden" id="addhead">Add Comment</span>
+	</legend>
+
+	<div id="replycontainer">
+	<label for="replycontent" class="screen-reader-text">
+		Comment	</label>
+	<div id="wp-replycontent-wrap" class="wp-core-ui wp-editor-wrap html-active"><div id="wp-replycontent-editor-container" class="wp-editor-container"><div id="qt_replycontent_toolbar" class="quicktags-toolbar hide-if-no-js"><input type="button" id="qt_replycontent_strong" class="ed_button button button-small" aria-label="Bold" value="b"><input type="button" id="qt_replycontent_em" class="ed_button button button-small" aria-label="Italic" value="i"><input type="button" id="qt_replycontent_link" class="ed_button button button-small" aria-label="Insert link" value="link"><input type="button" id="qt_replycontent_block" class="ed_button button button-small" aria-label="Blockquote" value="b-quote"><input type="button" id="qt_replycontent_del" class="ed_button button button-small" aria-label="Deleted text (strikethrough)" value="del"><input type="button" id="qt_replycontent_ins" class="ed_button button button-small" aria-label="Inserted text" value="ins"><input type="button" id="qt_replycontent_img" class="ed_button button button-small" aria-label="Insert image" value="img"><input type="button" id="qt_replycontent_ul" class="ed_button button button-small" aria-label="Bulleted list" value="ul"><input type="button" id="qt_replycontent_ol" class="ed_button button button-small" aria-label="Numbered list" value="ol"><input type="button" id="qt_replycontent_li" class="ed_button button button-small" aria-label="List item" value="li"><input type="button" id="qt_replycontent_code" class="ed_button button button-small" aria-label="Code" value="code"><input type="button" id="qt_replycontent_close" class="ed_button button button-small" title="Close all open tags" value="close tags"></div><textarea class="wp-editor-area" rows="20" cols="40" name="replycontent" id="replycontent"></textarea></div>
+</div>
+
+	</div>
+
+	<div id="edithead" style="display:none;">
+		<div class="inside">
+		<label for="author-name">Name</label>
+		<input type="text" name="newcomment_author" size="50" value="" id="author-name">
+		</div>
+
+		<div class="inside">
+		<label for="author-email">Email</label>
+		<input type="text" name="newcomment_author_email" size="50" value="" id="author-email">
+		</div>
+
+		<div class="inside">
+		<label for="author-url">URL</label>
+		<input type="text" id="author-url" name="newcomment_author_url" class="code" size="103" value="">
+		</div>
+	</div>
+
+	<div id="replysubmit" class="submit">
+		<p class="reply-submit-buttons">
+			<button type="button" class="save button button-primary">
+				<span id="addbtn" style="display: none;">Add Comment</span>
+				<span id="savebtn" style="display: none;">Update Comment</span>
+				<span id="replybtn" style="display: none;">Submit Reply</span>
+			</button>
+			<button type="button" class="cancel button">Cancel</button>
+			<span class="waiting spinner"></span>
+		</p>
+		<div class="notice notice-error notice-alt inline hidden"><p class="error"></p></div>	</div>
+
+	<input type="hidden" name="action" id="action" value="">
+	<input type="hidden" name="comment_ID" id="comment_ID" value="">
+	<input type="hidden" name="comment_post_ID" id="comment_post_ID" value="">
+	<input type="hidden" name="status" id="status" value="">
+	<input type="hidden" name="position" id="position" value="1">
+	<input type="hidden" name="checkbox" id="checkbox" value="0">
+	<input type="hidden" name="mode" id="mode" value="single">
+	<input type="hidden" id="_ajax_nonce-replyto-comment" name="_ajax_nonce-replyto-comment" value="951d303db7"><input type="hidden" id="_wp_unfiltered_html_comment" name="_wp_unfiltered_html_comment" value="236d0cbf09">	</fieldset>
+	</td></tr></tbody></table>
+	</form>
+	
+
+<div class="clear"></div></div><!-- wpbody-content -->
+<div class="clear"></div></div><!-- wpbody -->
+<div class="clear"></div></div><!-- wpcontent -->
+
+<div id="wpfooter" role="contentinfo">
+		<p id="footer-left" class="alignleft">
+		<span id="footer-thankyou">Thank you for creating with <a href="https://wordpress.org/">WordPress</a>.</span>	</p>
+	<p id="footer-upgrade" class="alignright">
+		Version 6.9.4	</p>
+	<div class="clear"></div>
+</div>
+	<div id="post-lock-dialog" class="notification-dialog-wrap hidden">
+	<div class="notification-dialog-background"></div>
+	<div class="notification-dialog">
+			<div class="post-taken-over">
+			<div class="post-locked-avatar"></div>
+			<p class="wp-tab-first" tabindex="0">
+			<span class="currently-editing"></span><br>
+			<span class="locked-saving hidden"><img src="http://wordpress/wp-admin/images/spinner-2x.gif" width="16" height="16" alt=""> Saving revision…</span>
+			<span class="locked-saved hidden">Your latest changes were saved as a revision.</span>
+			</p>
+						<p><a class="button button-primary wp-tab-last" href="http://wordpress/wp-admin/edit.php?post_type=attachment">Media</a></p>
+		</div>
+			</div>
+	</div>
+	<script type="text/javascript">list_args = {"class":"WP_Post_Comments_List_Table","screen":{"id":"attachment","base":"post"}};</script>
+<script type="text/javascript">list_args = {"class":"WP_Post_Comments_List_Table","screen":{"id":"attachment","base":"post"}};</script>
+	<div id="wp-auth-check-wrap" class="hidden">
+	<div id="wp-auth-check-bg"></div>
+	<div id="wp-auth-check">
+	<button type="button" class="wp-auth-check-close button-link"><span class="screen-reader-text">
+		Close dialog	</span></button>
+			<div id="wp-auth-check-form" class="loading" data-src="http://wordpress/wp-login.php?interim-login=1&amp;wp_lang=en_US"></div>
+			<div class="wp-auth-fallback">
+		<p><b class="wp-auth-fallback-expired" tabindex="0">Session expired</b></p>
+		<p><a href="http://wordpress/wp-login.php" target="_blank">Please log in again.</a>
+		The login page will open in a new tab. After logging in you can close it and return to this page.</p>
+	</div>
+	</div>
+	</div>
+	<script src="http://wordpress/wp-admin/load-scripts.php?c=0&amp;load%5Bchunk_0%5D=hoverIntent,wp-dom-ready,wp-hooks&amp;ver=6.9.4"></script>
+<script src="http://wordpress/wp-includes/js/dist/i18n.min.js?ver=c26c3dc7bed366793375" id="wp-i18n-js"></script>
+<script id="wp-i18n-js-after">
+wp.i18n.setLocaleData( { 'text direction\u0004ltr': [ 'ltr' ] } );
+//# sourceURL=wp-i18n-js-after
+</script>
+<script src="http://wordpress/wp-includes/js/dist/a11y.min.js?ver=cb460b4676c94bd228ed" id="wp-a11y-js"></script>
+<script id="common-js-extra">
+var bulkActionObserverIds = {"bulk_action":"action","changeit":"new_role"};
+//# sourceURL=common-js-extra
+</script>
+<script src="http://wordpress/wp-admin/js/common.min.js?ver=6.9.4" id="common-js"></script>
+<script src="http://wordpress/wp-includes/js/hoverintent-js.min.js?ver=2.2.1" id="hoverintent-js-js"></script>
+<script src="http://wordpress/wp-includes/js/admin-bar.min.js?ver=6.9.4" id="admin-bar-js"></script>
+<script id="wp-ajax-response-js-extra">
+var wpAjax = {"noPerm":"Sorry, you are not allowed to do that.","broken":"An error occurred while processing your request. Please try again later."};
+//# sourceURL=wp-ajax-response-js-extra
+</script>
+<script src="http://wordpress/wp-includes/js/wp-ajax-response.min.js?ver=6.9.4" id="wp-ajax-response-js"></script>
+<script src="http://wordpress/wp-includes/js/jquery/jquery.color.min.js?ver=3.0.0" id="jquery-color-js"></script>
+<script src="http://wordpress/wp-includes/js/wp-lists.min.js?ver=6.9.4" id="wp-lists-js"></script>
+<script id="quicktags-js-extra">
+var quicktagsL10n = {"closeAllOpenTags":"Close all open tags","closeTags":"close tags","enterURL":"Enter the URL","enterImageURL":"Enter the URL of the image","enterImageDescription":"Enter a description of the image","textdirection":"text direction","toggleTextdirection":"Toggle Editor Text Direction","dfw":"Distraction-free writing mode","strong":"Bold","strongClose":"Close bold tag","em":"Italic","emClose":"Close italic tag","link":"Insert link","blockquote":"Blockquote","blockquoteClose":"Close blockquote tag","del":"Deleted text (strikethrough)","delClose":"Close deleted text tag","ins":"Inserted text","insClose":"Close inserted text tag","image":"Insert image","ul":"Bulleted list","ulClose":"Close bulleted list tag","ol":"Numbered list","olClose":"Close numbered list tag","li":"List item","liClose":"Close list item tag","code":"Code","codeClose":"Close code tag","more":"Insert Read More tag"};
+//# sourceURL=quicktags-js-extra
+</script>
+<script src="http://wordpress/wp-includes/js/quicktags.min.js?ver=6.9.4" id="quicktags-js"></script>
+<script src="http://wordpress/wp-includes/js/jquery/jquery.query.js?ver=2.2.3" id="jquery-query-js"></script>
+<script id="admin-comments-js-extra">
+var adminCommentsSettings = {"hotkeys_highlight_first":"","hotkeys_highlight_last":""};
+//# sourceURL=admin-comments-js-extra
+</script>
+<script src="http://wordpress/wp-admin/js/edit-comments.min.js?ver=6.9.4" id="admin-comments-js"></script>
+<script src="http://wordpress/wp-includes/js/jquery/suggest.min.js?ver=1.1-20110113" id="suggest-js"></script>
+<script src="http://wordpress/wp-includes/js/jquery/ui/core.min.js?ver=1.13.3" id="jquery-ui-core-js"></script>
+<script src="http://wordpress/wp-includes/js/jquery/ui/mouse.min.js?ver=1.13.3" id="jquery-ui-mouse-js"></script>
+<script src="http://wordpress/wp-includes/js/jquery/ui/sortable.min.js?ver=1.13.3" id="jquery-ui-sortable-js"></script>
+<script src="http://wordpress/wp-admin/js/postbox.min.js?ver=6.9.4" id="postbox-js"></script>
+<script src="http://wordpress/wp-includes/js/jquery/ui/menu.min.js?ver=1.13.3" id="jquery-ui-menu-js"></script>
+<script src="http://wordpress/wp-includes/js/jquery/ui/autocomplete.min.js?ver=1.13.3" id="jquery-ui-autocomplete-js"></script>
+<script src="http://wordpress/wp-admin/js/tags-suggest.min.js?ver=6.9.4" id="tags-suggest-js"></script>
+<script src="http://wordpress/wp-admin/js/tags-box.min.js?ver=6.9.4" id="tags-box-js"></script>
+<script src="http://wordpress/wp-includes/js/underscore.min.js?ver=1.13.7" id="underscore-js"></script>
+<script id="word-count-js-extra">
+var wordCountL10n = {"type":"words","shortcodes":["wp_caption","caption","gallery","playlist","audio","video","embed"]};
+//# sourceURL=word-count-js-extra
+</script>
+<script src="http://wordpress/wp-admin/js/word-count.min.js?ver=6.9.4" id="word-count-js"></script>
+<script src="http://wordpress/wp-includes/js/wp-sanitize.min.js?ver=6.9.4" id="wp-sanitize-js"></script>
+<script src="http://wordpress/wp-includes/js/clipboard.min.js?ver=2.0.11" id="clipboard-js"></script>
+<script src="http://wordpress/wp-admin/js/post.min.js?ver=6.9.4" id="post-js"></script>
+<script src="http://wordpress/wp-includes/js/imgareaselect/jquery.imgareaselect.min.js?ver=6.9.4" id="imgareaselect-js"></script>
+<script src="http://wordpress/wp-admin/js/image-edit.min.js?ver=6.9.4" id="image-edit-js"></script>
+<script src="http://wordpress/wp-admin/js/svg-painter.js?ver=6.9.4" id="svg-painter-js"></script>
+<script id="heartbeat-js-extra">
+var heartbeatSettings = {"nonce":"2453140277","suspension":"disable"};
+//# sourceURL=heartbeat-js-extra
+</script>
+<script src="http://wordpress/wp-includes/js/heartbeat.min.js?ver=6.9.4" id="heartbeat-js"></script>
+<script src="http://wordpress/wp-includes/js/wp-auth-check.min.js?ver=6.9.4" id="wp-auth-check-js"></script>
+<script src="http://wordpress/wp-includes/js/dist/vendor/react.min.js?ver=18.3.1.1" id="react-js"></script>
+<script src="http://wordpress/wp-includes/js/dist/vendor/react-dom.min.js?ver=18.3.1.1" id="react-dom-js"></script>
+<script src="http://wordpress/wp-includes/js/dist/vendor/react-jsx-runtime.min.js?ver=18.3.1" id="react-jsx-runtime-js"></script>
+<script src="http://wordpress/wp-includes/js/dist/deprecated.min.js?ver=e1f84915c5e8ae38964c" id="wp-deprecated-js"></script>
+<script src="http://wordpress/wp-includes/js/dist/dom.min.js?ver=26edef3be6483da3de2e" id="wp-dom-js"></script>
+<script src="http://wordpress/wp-includes/js/dist/escape-html.min.js?ver=6561a406d2d232a6fbd2" id="wp-escape-html-js"></script>
+<script src="http://wordpress/wp-includes/js/dist/element.min.js?ver=6a582b0c827fa25df3dd" id="wp-element-js"></script>
+<script src="http://wordpress/wp-includes/js/dist/is-shallow-equal.min.js?ver=e0f9f1d78d83f5196979" id="wp-is-shallow-equal-js"></script>
+<script src="http://wordpress/wp-includes/js/dist/keycodes.min.js?ver=34c8fb5e7a594a1c8037" id="wp-keycodes-js"></script>
+<script src="http://wordpress/wp-includes/js/dist/priority-queue.min.js?ver=2d59d091223ee9a33838" id="wp-priority-queue-js"></script>
+<script src="http://wordpress/wp-includes/js/dist/compose.min.js?ver=7a9b375d8c19cf9d3d9b" id="wp-compose-js"></script>
+<script src="http://wordpress/wp-includes/js/dist/vendor/moment.min.js?ver=2.30.1" id="moment-js"></script>
+<script id="moment-js-after">
+moment.updateLocale( 'en_US', {"months":["January","February","March","April","May","June","July","August","September","October","November","December"],"monthsShort":["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"],"weekdays":["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"],"weekdaysShort":["Sun","Mon","Tue","Wed","Thu","Fri","Sat"],"week":{"dow":1},"longDateFormat":{"LT":"g:i a","LTS":null,"L":null,"LL":"F j, Y","LLL":"F j, Y g:i a","LLLL":null}} );
+//# sourceURL=moment-js-after
+</script>
+<script src="http://wordpress/wp-includes/js/dist/date.min.js?ver=795a56839718d3ff7eae" id="wp-date-js"></script>
+<script id="wp-date-js-after">
+wp.date.setSettings( {"l10n":{"locale":"en_US","months":["January","February","March","April","May","June","July","August","September","October","November","December"],"monthsShort":["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"],"weekdays":["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"],"weekdaysShort":["Sun","Mon","Tue","Wed","Thu","Fri","Sat"],"meridiem":{"am":"am","pm":"pm","AM":"AM","PM":"PM"},"relative":{"future":"%s from now","past":"%s ago","s":"a second","ss":"%d seconds","m":"a minute","mm":"%d minutes","h":"an hour","hh":"%d hours","d":"a day","dd":"%d days","M":"a month","MM":"%d months","y":"a year","yy":"%d years"},"startOfWeek":1},"formats":{"time":"g:i a","date":"F j, Y","datetime":"F j, Y g:i a","datetimeAbbreviated":"M j, Y g:i a"},"timezone":{"offset":0,"offsetFormatted":"0","string":"","abbr":""}} );
+//# sourceURL=wp-date-js-after
+</script>
+<script src="http://wordpress/wp-includes/js/dist/html-entities.min.js?ver=e8b78b18a162491d5e5f" id="wp-html-entities-js"></script>
+<script src="http://wordpress/wp-includes/js/dist/primitives.min.js?ver=0b5dcc337aa7cbf75570" id="wp-primitives-js"></script>
+<script src="http://wordpress/wp-includes/js/dist/private-apis.min.js?ver=4f465748bda624774139" id="wp-private-apis-js"></script>
+<script src="http://wordpress/wp-includes/js/dist/redux-routine.min.js?ver=8bb92d45458b29590f53" id="wp-redux-routine-js"></script>
+<script src="http://wordpress/wp-includes/js/dist/data.min.js?ver=f940198280891b0b6318" id="wp-data-js"></script>
+<script id="wp-data-js-after">
+( function() {
+	var userId = 1;
+	var storageKey = "WP_DATA_USER_" + userId;
+	wp.data
+		.use( wp.data.plugins.persistence, { storageKey: storageKey } );
+} )();
+//# sourceURL=wp-data-js-after
+</script>
+<script src="http://wordpress/wp-includes/js/dist/rich-text.min.js?ver=5bdbb44f3039529e3645" id="wp-rich-text-js"></script>
+<script src="http://wordpress/wp-includes/js/dist/warning.min.js?ver=d69bc18c456d01c11d5a" id="wp-warning-js"></script>
+<script src="http://wordpress/wp-includes/js/dist/components.min.js?ver=0d72a218dfea8f6f442f" id="wp-components-js"></script>
+<script src="http://wordpress/wp-includes/js/dist/keyboard-shortcuts.min.js?ver=fbc45a34ce65c5723afa" id="wp-keyboard-shortcuts-js"></script>
+<script src="http://wordpress/wp-includes/js/dist/commands.min.js?ver=cac8f4817ab7cea0ac49" id="wp-commands-js"></script>
+<script src="http://wordpress/wp-includes/js/dist/url.min.js?ver=9e178c9516d1222dc834" id="wp-url-js"></script>
+<script src="http://wordpress/wp-includes/js/dist/api-fetch.min.js?ver=3a4d9af2b423048b0dee" id="wp-api-fetch-js"></script>
+<script id="wp-api-fetch-js-after">
+wp.apiFetch.use( wp.apiFetch.createRootURLMiddleware( "http://wordpress/wp-json/" ) );
+wp.apiFetch.nonceMiddleware = wp.apiFetch.createNonceMiddleware( "559b8ae837" );
+wp.apiFetch.use( wp.apiFetch.nonceMiddleware );
+wp.apiFetch.use( wp.apiFetch.mediaUploadMiddleware );
+wp.apiFetch.nonceEndpoint = "http://wordpress/wp-admin/admin-ajax.php?action=rest-nonce";
+//# sourceURL=wp-api-fetch-js-after
+</script>
+<script src="http://wordpress/wp-includes/js/dist/blob.min.js?ver=9113eed771d446f4a556" id="wp-blob-js"></script>
+<script src="http://wordpress/wp-includes/js/dist/block-serialization-default-parser.min.js?ver=14d44daebf663d05d330" id="wp-block-serialization-default-parser-js"></script>
+<script src="http://wordpress/wp-includes/js/dist/autop.min.js?ver=9fb50649848277dd318d" id="wp-autop-js"></script>
+<script src="http://wordpress/wp-includes/js/dist/shortcode.min.js?ver=0b3174183b858f2df320" id="wp-shortcode-js"></script>
+<script src="http://wordpress/wp-includes/js/dist/blocks.min.js?ver=57eca4d23daac7159d88" id="wp-blocks-js"></script>
+<script src="http://wordpress/wp-includes/js/dist/notices.min.js?ver=f62fbf15dcc23301922f" id="wp-notices-js"></script>
+<script src="http://wordpress/wp-includes/js/dist/preferences-persistence.min.js?ver=e954d3a4426d311f7d1a" id="wp-preferences-persistence-js"></script>
+<script src="http://wordpress/wp-includes/js/dist/preferences.min.js?ver=2ca086aed510c242a1ed" id="wp-preferences-js"></script>
+<script id="wp-preferences-js-after">
+( function() {
+				var serverData = "";
+				var userId = "1";
+				var persistenceLayer = wp.preferencesPersistence.__unstableCreatePersistenceLayer( serverData, userId );
+				var preferencesStore = wp.preferences.store;
+				wp.data.dispatch( preferencesStore ).setPersistenceLayer( persistenceLayer );
+			} ) ();
+//# sourceURL=wp-preferences-js-after
+</script>
+<script src="http://wordpress/wp-includes/js/dist/style-engine.min.js?ver=7c6fcedc37dadafb8a81" id="wp-style-engine-js"></script>
+<script src="http://wordpress/wp-includes/js/dist/token-list.min.js?ver=cfdf635a436c3953a965" id="wp-token-list-js"></script>
+<script src="http://wordpress/wp-includes/js/dist/block-editor.min.js?ver=addf558a422e2ee57920" id="wp-block-editor-js"></script>
+<script src="http://wordpress/wp-includes/js/dist/core-data.min.js?ver=15baadfe6e1374188072" id="wp-core-data-js"></script>
+<script src="http://wordpress/wp-includes/js/dist/router.min.js?ver=2dfc4b954318a03e6a76" id="wp-router-js"></script>
+<script src="http://wordpress/wp-includes/js/dist/core-commands.min.js?ver=effe2d88d7f0c50a8ce9" id="wp-core-commands-js"></script>
+<script id="wp-core-commands-js-after">
+wp.coreCommands.initializeCommandPalette( {"is_network_admin":false,"menu_commands":[{"label":"Dashboard","url":"index.php","name":"index.php"},{"label":"Dashboard \u003E Home","url":"index.php","name":"index.php-index.php"},{"label":"Dashboard \u003E Updates","url":"update-core.php","name":"index.php-update-core.php"},{"label":"Posts","url":"edit.php","name":"edit.php"},{"label":"Posts \u003E All Posts","url":"edit.php","name":"edit.php-edit.php"},{"label":"Posts \u003E Add Post","url":"post-new.php","name":"edit.php-post-new.php"},{"label":"Posts \u003E Categories","url":"edit-tags.php?taxonomy=category","name":"edit.php-edit-tags.php?taxonomy=category"},{"label":"Posts \u003E Tags","url":"edit-tags.php?taxonomy=post_tag","name":"edit.php-edit-tags.php?taxonomy=post_tag"},{"label":"Media","url":"upload.php","name":"upload.php"},{"label":"Media \u003E Library","url":"upload.php","name":"upload.php-upload.php"},{"label":"Media \u003E Add Media File","url":"media-new.php","name":"upload.php-media-new.php"},{"label":"Pages","url":"edit.php?post_type=page","name":"edit.php?post_type=page"},{"label":"Pages \u003E All Pages","url":"edit.php?post_type=page","name":"edit.php?post_type=page-edit.php?post_type=page"},{"label":"Pages \u003E Add Page","url":"post-new.php?post_type=page","name":"edit.php?post_type=page-post-new.php?post_type=page"},{"label":"Comments","url":"edit-comments.php","name":"edit-comments.php"},{"label":"Appearance","url":"themes.php","name":"themes.php"},{"label":"Appearance \u003E Themes","url":"themes.php","name":"themes.php-themes.php"},{"label":"Appearance \u003E Editor","url":"site-editor.php","name":"themes.php-site-editor.php"},{"label":"Plugins","url":"plugins.php","name":"plugins.php"},{"label":"Plugins \u003E Installed Plugins","url":"plugins.php","name":"plugins.php-plugins.php"},{"label":"Plugins \u003E Add Plugin","url":"plugin-install.php","name":"plugins.php-plugin-install.php"},{"label":"Users","url":"users.php","name":"users.php"},{"label":"Users \u003E All Users","url":"users.php","name":"users.php-users.php"},{"label":"Users \u003E Add User","url":"user-new.php","name":"users.php-user-new.php"},{"label":"Users \u003E Profile","url":"profile.php","name":"users.php-profile.php"},{"label":"Tools","url":"tools.php","name":"tools.php"},{"label":"Tools \u003E Available Tools","url":"tools.php","name":"tools.php-tools.php"},{"label":"Tools \u003E Import","url":"import.php","name":"tools.php-import.php"},{"label":"Tools \u003E Export","url":"export.php","name":"tools.php-export.php"},{"label":"Tools \u003E Site Health","url":"site-health.php","name":"tools.php-site-health.php"},{"label":"Tools \u003E Export Personal Data","url":"export-personal-data.php","name":"tools.php-export-personal-data.php"},{"label":"Tools \u003E Erase Personal Data","url":"erase-personal-data.php","name":"tools.php-erase-personal-data.php"},{"label":"Tools \u003E Theme File Editor","url":"theme-editor.php","name":"tools.php-theme-editor.php"},{"label":"Tools \u003E Plugin File Editor","url":"plugin-editor.php","name":"tools.php-plugin-editor.php"},{"label":"Settings","url":"options-general.php","name":"options-general.php"},{"label":"Settings \u003E General","url":"options-general.php","name":"options-general.php-options-general.php"},{"label":"Settings \u003E Writing","url":"options-writing.php","name":"options-general.php-options-writing.php"},{"label":"Settings \u003E Reading","url":"options-reading.php","name":"options-general.php-options-reading.php"},{"label":"Settings \u003E Discussion","url":"options-discussion.php","name":"options-general.php-options-discussion.php"},{"label":"Settings \u003E Media","url":"options-media.php","name":"options-general.php-options-media.php"},{"label":"Settings \u003E Permalinks","url":"options-permalink.php","name":"options-general.php-options-permalink.php"},{"label":"Settings \u003E Privacy","url":"options-privacy.php","name":"options-general.php-options-privacy.php"}]} );
+//# sourceURL=wp-core-commands-js-after
+</script>
+<script id="wplink-js-extra">
+var wpLinkL10n = {"title":"Insert/edit link","update":"Update","save":"Add Link","noTitle":"(no title)","noMatchesFound":"No results found.","linkSelected":"Link selected.","linkInserted":"Link inserted.","minInputLength":"3"};
+//# sourceURL=wplink-js-extra
+</script>
+<script src="http://wordpress/wp-includes/js/wplink.min.js?ver=6.9.4" id="wplink-js"></script>
+
+		<script type="text/javascript">
+		tinyMCEPreInit = {
+			baseURL: "http://wordpress/wp-includes/js/tinymce",
+			suffix: ".min",
+						mceInit: {},
+			qtInit: {'attachment_content':{id:"attachment_content",buttons:"strong,em,link,block,del,ins,img,ul,ol,li,code,close"},'replycontent':{id:"replycontent",buttons:"strong,em,link,block,del,ins,img,ul,ol,li,code,close"}},
+			ref: {plugins:"",theme:"modern",language:""},
+			load_ext: function(url,lang){var sl=tinymce.ScriptLoader;sl.markDone(url+'/langs/'+lang+'.js');sl.markDone(url+'/langs/'+lang+'_dlg.js');}
+		};
+		</script>
+				<script type="text/javascript">
+		
+		( function() {
+			var initialized = [];
+			var initialize  = function() {
+				var init, id, inPostbox, $wrap;
+				var readyState = document.readyState;
+
+				if ( readyState !== 'complete' && readyState !== 'interactive' ) {
+					return;
+				}
+
+				for ( id in tinyMCEPreInit.mceInit ) {
+					if ( initialized.indexOf( id ) > -1 ) {
+						continue;
+					}
+
+					init      = tinyMCEPreInit.mceInit[id];
+					$wrap     = tinymce.$( '#wp-' + id + '-wrap' );
+					inPostbox = $wrap.parents( '.postbox' ).length > 0;
+
+					if (
+						! init.wp_skip_init &&
+						( $wrap.hasClass( 'tmce-active' ) || ! tinyMCEPreInit.qtInit.hasOwnProperty( id ) ) &&
+						( readyState === 'complete' || ( ! inPostbox && readyState === 'interactive' ) )
+					) {
+						tinymce.init( init );
+						initialized.push( id );
+
+						if ( ! window.wpActiveEditor ) {
+							window.wpActiveEditor = id;
+						}
+					}
+				}
+			}
+
+			if ( typeof tinymce !== 'undefined' ) {
+				if ( tinymce.Env.ie && tinymce.Env.ie < 11 ) {
+					tinymce.$( '.wp-editor-wrap ' ).removeClass( 'tmce-active' ).addClass( 'html-active' );
+				} else {
+					if ( document.readyState === 'complete' ) {
+						initialize();
+					} else {
+						document.addEventListener( 'readystatechange', initialize );
+					}
+				}
+			}
+
+			if ( typeof quicktags !== 'undefined' ) {
+				for ( id in tinyMCEPreInit.qtInit ) {
+					quicktags( tinyMCEPreInit.qtInit[id] );
+
+					if ( ! window.wpActiveEditor ) {
+						window.wpActiveEditor = id;
+					}
+				}
+			}
+		}());
+		</script>
+				<div id="wp-link-backdrop" style="display: none"></div>
+		<div id="wp-link-wrap" class="wp-core-ui" style="display: none" role="dialog" aria-modal="true" aria-labelledby="link-modal-title">
+		<form id="wp-link" tabindex="-1">
+		<input type="hidden" id="_ajax_linking_nonce" name="_ajax_linking_nonce" value="4b0f5d8e9c">		<h1 id="link-modal-title">Insert/edit link</h1>
+		<button type="button" id="wp-link-close"><span class="screen-reader-text">
+			Close		</span></button>
+		<div id="link-selector">
+			<div id="link-options">
+				<p class="howto" id="wplink-enter-url">Enter the destination URL</p>
+				<div>
+					<label><span>URL</span>
+					<input id="wp-link-url" type="text" aria-describedby="wplink-enter-url"></label>
+				</div>
+				<div class="wp-link-text-field">
+					<label><span>Link Text</span>
+					<input id="wp-link-text" type="text"></label>
+				</div>
+				<div class="link-target">
+					<label><span></span>
+					<input type="checkbox" id="wp-link-target"> Open link in a new tab</label>
+				</div>
+			</div>
+			<p class="howto" id="wplink-link-existing-content">Or link to existing content</p>
+			<div id="search-panel">
+				<div class="link-search-wrapper">
+					<label>
+						<span class="search-label">Search</span>
+						<input type="search" id="wp-link-search" class="link-search-field" autocomplete="off" aria-describedby="wplink-link-existing-content">
+						<span class="spinner"></span>
+					</label>
+				</div>
+				<div id="search-results" class="query-results" tabindex="0">
+					<ul></ul>
+					<div class="river-waiting">
+						<span class="spinner"></span>
+					</div>
+				</div>
+				<div id="most-recent-results" class="query-results" tabindex="0">
+					<div class="query-notice" id="query-notice-message">
+						<em class="query-notice-default">No search term specified. Showing recent items.</em>
+						<em class="query-notice-hint screen-reader-text">
+							Search or use up and down arrow keys to select an item.						</em>
+					</div>
+					<ul></ul>
+					<div class="river-waiting">
+						<span class="spinner"></span>
+					</div>
+				</div>
+			</div>
+		</div>
+		<div class="submitbox">
+			<div id="wp-link-cancel">
+				<button type="button" class="button">Cancel</button>
+			</div>
+			<div id="wp-link-update">
+				<input type="submit" value="Add Link" class="button button-primary" id="wp-link-submit" name="wp-link-submit">
+			</div>
+		</div>
+		</form>
+		</div>
+		
+<div class="clear"></div></div><div></div><!-- wpwrap -->
+<script type="text/javascript">if(typeof wpOnload==='function')wpOnload();</script>
+
+
+<p id="a11y-speak-intro-text" class="a11y-speak-intro-text" style="position:absolute;margin:-1px;padding:0;height:1px;width:1px;overflow:hidden;clip-path:inset(50%);border:0;word-wrap:normal !important;" hidden="">Notifications</p><div id="a11y-speak-assertive" class="a11y-speak-region" style="position:absolute;margin:-1px;padding:0;height:1px;width:1px;overflow:hidden;clip-path:inset(50%);border:0;word-wrap:normal !important;" aria-live="assertive" aria-relevant="additions text" aria-atomic="true"></div><div id="a11y-speak-polite" class="a11y-speak-region" style="position:absolute;margin:-1px;padding:0;height:1px;width:1px;overflow:hidden;clip-path:inset(50%);border:0;word-wrap:normal !important;" aria-live="polite" aria-relevant="additions text" aria-atomic="true"></div></body></html>

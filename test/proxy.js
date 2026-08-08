@@ -37,7 +37,24 @@ const STATIC_MIME = {
     '.map':  'application/json',
 };
 
-function serveStatic(urlPath, res) {
+// Files that live only in object storage are served by the PHP function, which
+// on Vercel happens because a rewrite whose destination is missing from the
+// deployment falls through to the catch-all.
+//
+// Reproducing that is opt-in per request, via a header only
+// e2e-stream-wrapper.spec.js sets, and limited to wp-content. The Lambda RIE
+// runs one invocation at a time, so every static miss that reaches it competes
+// with real requests — serving core assets locally is what keeps that queue
+// short, and no other spec should pay for this.
+const FALLTHROUGH_HEADER = 'x-streamwrapper-fallthrough';
+
+function canFallThrough(urlPath, req) {
+    return req.headers[FALLTHROUGH_HEADER] === '1' && urlPath.startsWith('/wp-content/');
+}
+
+// Serves a file from the local wp/ directory, mirroring the platform rewrite
+// rules that point static extensions there. On a miss it calls onMiss.
+function serveStatic(urlPath, res, onMiss) {
     const ext = path.extname(urlPath).toLowerCase();
     const filePath = path.join(WP_DIR, urlPath);
     // Prevent path traversal outside WP_DIR
@@ -48,8 +65,7 @@ function serveStatic(urlPath, res) {
     }
     fs.readFile(filePath, (err, data) => {
         if (err) {
-            res.statusCode = 404;
-            res.end();
+            onMiss();
             return;
         }
         res.setHeader('content-type', STATIC_MIME[ext] || 'application/octet-stream');
@@ -90,12 +106,23 @@ https.createServer(ssl, (req, res) => {
     const [urlPath, qs] = req.url.split('?');
     const ext = path.extname(urlPath).toLowerCase();
 
-    // Serve static files directly — no Lambda needed
+    // Serve static files directly — no Lambda needed.
     if (ext in STATIC_MIME && !urlPath.endsWith('.php')) {
-        serveStatic(urlPath, res);
+        serveStatic(urlPath, res, () => {
+            if (canFallThrough(urlPath, req)) {
+                forwardToLambda(req, res, urlPath, qs);
+                return;
+            }
+            res.statusCode = 404;
+            res.end();
+        });
         return;
     }
 
+    forwardToLambda(req, res, urlPath, qs);
+}).listen(3000, () => console.log('proxy ready'));
+
+function forwardToLambda(req, res, urlPath, qs) {
     const chunks = [];
     req.on('data', c => chunks.push(c));
     req.on('end', () => {
@@ -140,4 +167,4 @@ https.createServer(ssl, (req, res) => {
             })
             .catch(e => { res.statusCode = 502; res.end(e.message); });
     });
-}).listen(3000, () => console.log('proxy ready'));
+}
