@@ -1,5 +1,8 @@
 name: e2e Tests
-on: [push, pull_request]
+on:
+  push:
+    branches: [main]
+  pull_request:
 jobs:
   routing:
     name: vercel routing
