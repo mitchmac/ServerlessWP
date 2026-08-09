@@ -1,23 +1,19 @@
 {
-  "rewrites": [
+  "routes": [
     {
-      "source": "/(.+)\\.(css|js|svg|png|gif|jpg|jpeg|webp|woff|woff2|ico|otf)",
-      "destination": "/wp/$1.$2"
+      "src": "^/((?:wp-admin|wp-content|wp-includes)/.+)\\.(css|js|svg|png|gif|jpg|jpeg|webp|woff|woff2|ico|otf)$",
+      "headers": {
+        "Cache-Control": "max-age=864000, s-maxage=864000"
+      },
+      "continue": true
     },
     {
-      "source": "/(.*)",
-      "destination": "/api/vercel.js"
-    }
-  ],
-  "headers": [
+      "src": "^/((?:wp-admin|wp-content|wp-includes)/.+)\\.(css|js|svg|png|gif|jpg|jpeg|webp|woff|woff2|ico|otf)$",
+      "dest": "/wp/$1.$2"
+    },
     {
-      "source": "/(.+)\\.(css|js|svg|png|gif|jpg|jpeg|webp|woff|woff2|ico|otf)",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "max-age=864000, s-maxage=864000"
-        }
-      ]
+      "src": "/(.*)",
+      "dest": "/api/vercel.js"
     }
   ],
   "functions": {

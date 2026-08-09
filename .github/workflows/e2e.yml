@@ -1,6 +1,19 @@
 name: e2e Tests
-on: [push, pull_request]
+on:
+  push:
+    branches: [main]
+  pull_request:
 jobs:
+  routing:
+    name: vercel routing
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - run: ./test/run-vercel-routing-test.sh
+
   jest:
     name: e2e tests
     runs-on: ubuntu-latest
