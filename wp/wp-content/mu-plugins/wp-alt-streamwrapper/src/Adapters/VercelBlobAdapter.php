@@ -59,15 +59,54 @@ class VercelBlobAdapter implements StorageAdapterInterface
 
     public function get(string $key): string|false
     {
-        // cache=0 is the SDK's useCache:false — read from origin, not the CDN,
-        // so a just-overwritten file is never served stale.
-        $response = $this->request('GET', $this->blobUrl($key) . '?cache=0', [
-            'Authorization' => "Bearer {$this->token}",
-        ]);
-        return $response['status'] === 200 ? $response['body'] : false;
+        $result = $this->fetch($key);
+        return $result['status'] === self::FETCH_FOUND ? (string) $result['contents'] : false;
     }
 
-    public function put(string $key, string $contents): bool
+    public function fetch(string $key): array
+    {
+        $response = $this->download($key);
+
+        if ($response['status'] !== 200) {
+            return [
+                'status'   => $response['status'] === 404 ? self::FETCH_NOT_FOUND : self::FETCH_ERROR,
+                'contents' => null,
+                'etag'     => null,
+            ];
+        }
+
+        return [
+            'status'   => self::FETCH_FOUND,
+            'contents' => $response['body'],
+            'etag'     => $this->strongEtag($response['headers']['etag'] ?? null),
+        ];
+    }
+
+    /**
+     * cache=0 is the SDK's useCache:false — read from origin, not the CDN, so a
+     * just-overwritten file is never served stale.
+     */
+    private function download(string $key): array
+    {
+        return $this->request('GET', $this->blobUrl($key) . '?cache=0', [
+            'Authorization' => "Bearer {$this->token}",
+        ]);
+    }
+
+    /**
+     * A download can answer with a weak validator (W/"abc") while x-if-match
+     * only accepts the strong form, so the prefix is stripped here. Mirrors
+     * normalizeEtag() in ServerlessWP's util/sqliteVercelBlob.js.
+     */
+    private function strongEtag(?string $etag): ?string
+    {
+        if ($etag === null || $etag === '') {
+            return null;
+        }
+        return preg_replace('#^W/#', '', $etag);
+    }
+
+    public function put(string $key, string $contents, ?Precondition $condition = null): bool
     {
         // RFC3986 encoding: a space must travel as %20, not the form-encoding
         // '+', which a server reading the parameter as a raw path would store
@@ -78,14 +117,41 @@ class VercelBlobAdapter implements StorageAdapterInterface
             '&',
             PHP_QUERY_RFC3986,
         );
-        $response = $this->request('PUT', $url, [
+        $headers = [
             'Authorization'          => "Bearer {$this->token}",
             'x-vercel-blob-store-id' => $this->storeId,
-            // wp-content files are rewritten in place (thumbnails, generated
-            // CSS); without this the API rejects any write to an existing key.
-            'x-allow-overwrite'      => '1',
             'x-content-type'         => $this->detectMimeType($key),
-        ], $contents);
+        ];
+
+        // wp-content files are rewritten in place (thumbnails, generated CSS), so
+        // overwriting is normally required — the API rejects a write to an
+        // existing key with 400 without this header. Withholding it is also the
+        // only create-only precondition Vercel Blob offers: the SDK's
+        // ifNoneMatch option is a conditional *read*, not a write condition.
+        if (!$condition?->requireAbsent) {
+            $headers['x-allow-overwrite'] = '1';
+        }
+
+        if ($condition?->ifMatch !== null) {
+            // Same header the @vercel/blob SDK sends for its ifMatch option.
+            $headers['x-if-match'] = $condition->ifMatch;
+        }
+
+        $response = $this->request('PUT', $url, $headers, $contents);
+
+        if ($condition?->ifMatch !== null && $response['status'] === 412) {
+            throw new PreconditionFailedException(
+                "conditional write on '{$key}' lost: blob changed since it was read",
+            );
+        }
+
+        // Overwrite refused: the key exists, which is exactly the condition.
+        if ($condition?->requireAbsent && $response['status'] === 400) {
+            throw new PreconditionFailedException(
+                "conditional create of '{$key}' lost: another writer created it first",
+            );
+        }
+
         return $response['status'] === 200;
     }
 

@@ -35,15 +35,15 @@ test.describe('Path traversal protection', () => {
 
   // ── 2. Write: traversal within wp-content stores file at dot-resolved key ──
   test('writing via traversal path stores file at the dot-resolved storage key', async ({ page }) => {
-    // The helper writes to uploads/../cache/e2e-traversal-write.txt.
-    // With dot-resolution the stream wrapper resolves this to cache/e2e-traversal-write.txt
+    // The helper writes to uploads/../cache/e2e-traversal-write.css.
+    // With dot-resolution the stream wrapper resolves this to cache/e2e-traversal-write.css
     // and stores the file in MinIO under that key, making it accessible at the
     // expected normalized URL.  Without resolution the key contains literal ".."
     // and the proxy cannot map the clean URL to the object.
     const writeResp = await page.request.get(`${HELPER}?action=write`);
     expect(writeResp.status(), 'write action must succeed').toBe(200);
     const fileUrl = (await writeResp.text()).trim();
-    expect(fileUrl).toContain('/wp-content/cache/e2e-traversal-write.txt');
+    expect(fileUrl).toContain('/wp-content/cache/e2e-traversal-write.css');
 
     await clearLocalFiles(page);
 

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace WpAltStreamWrapper;
 
+use WpAltStreamWrapper\Adapters\Precondition;
+use WpAltStreamWrapper\Adapters\PreconditionFailedException;
 use WpAltStreamWrapper\Adapters\StorageAdapterInterface;
 
 /**
@@ -26,6 +28,19 @@ class StreamWrapper
     private static ?StorageAdapterInterface $adapter = null;
     private static ?PathRouter $router = null;
 
+    /**
+     * Storage keys whose remote write failed during this request.
+     *
+     * fclose() cannot report failure, so a caller that used file_put_contents()
+     * sees the full byte count for a write that never landed. This is the only
+     * record that it didn't — and the only way to tell a file GD wrote straight
+     * to storage (no local copy, present remotely) from one whose upload failed
+     * (no local copy, absent remotely), which otherwise look identical.
+     *
+     * @var array<string, true>
+     */
+    private static array $failedWrites = [];
+
     // -------- Per-handle state --------
 
     /** Whether the current open path is a remote (adapter-backed) target. */
@@ -43,6 +58,32 @@ class StreamWrapper
     /** True if data was written to the buffer and must be uploaded on close. */
     private bool $isDirty = false;
 
+    /**
+     * ETag of the version this handle downloaded at open, or null when the mode
+     * did not download (w/x) or the provider sent none. Non-null means the write
+     * on close can be made conditional at no extra cost — the ETag arrived on
+     * the response that carried the body.
+     */
+    private ?string $openEtag = null;
+
+    /** True for modes that download first and then write back (r+, a, a+, c, c+). */
+    private bool $isReadModifyWrite = false;
+
+    /** True when no object existed at open, so the write on close creates it. */
+    private bool $absentAtOpen = false;
+
+    /** True for modes whose write may be conditioned on the object not existing yet. */
+    private bool $canConditionOnAbsence = false;
+
+    /** True for append modes, the only ones whose write can be replayed after a conflict. */
+    private bool $isAppend = false;
+
+    /** Length of the downloaded content in append mode; bytes past it are this handle's. */
+    private int $appendBaseLength = 0;
+
+    /** Re-read-and-reapply attempts before an append write is abandoned. */
+    private const CONFLICT_RETRIES = 3;
+
     // -------- Per-opendir state --------
 
     /** Buffered directory entries for remote opendir. */
@@ -56,14 +97,21 @@ class StreamWrapper
 
     public static function register(StorageAdapterInterface $adapter, PathRouter $router): void
     {
-        self::$adapter = $adapter;
-        self::$router  = $router;
+        self::$adapter      = $adapter;
+        self::$router       = $router;
+        self::$failedWrites = [];
 
         if (in_array('file', stream_get_wrappers(), true)) {
             stream_wrapper_unregister('file');
         }
         stream_wrapper_register('file', static::class);
     }
+
+    /** pushLocalFileStatus() outcomes. */
+    public const PUSH_OK = 'pushed';
+    public const PUSH_NOT_REMOTE = 'not-remote';
+    public const PUSH_NO_LOCAL_COPY = 'no-local-copy';
+    public const PUSH_FAILED = 'failed';
 
     /**
      * Push a file that was placed on the local filesystem by move_uploaded_file()
@@ -74,11 +122,26 @@ class StreamWrapper
      */
     public static function pushLocalFile(string $absolutePath, bool $deleteLocal = true): bool
     {
+        return self::pushLocalFileStatus($absolutePath, $deleteLocal) === self::PUSH_OK;
+    }
+
+    /**
+     * pushLocalFile() with the reason it did not push.
+     *
+     * Callers that must react to a failure need to tell "the storage write
+     * failed" apart from "there was no local file to push", which is the normal
+     * case for anything GD wrote through the wrapper — that content is already
+     * in remote storage.
+     *
+     * @return self::PUSH_* one of the outcome constants above
+     */
+    public static function pushLocalFileStatus(string $absolutePath, bool $deleteLocal = true): string
+    {
         if (self::$adapter === null || self::$router === null) {
-            return false;
+            return self::PUSH_NOT_REMOTE;
         }
         if (!self::$router->isRemote($absolutePath)) {
-            return false;
+            return self::PUSH_NOT_REMOTE;
         }
 
         $key = self::$router->toStorageKey($absolutePath);
@@ -90,17 +153,19 @@ class StreamWrapper
         stream_wrapper_register('file', static::class);
 
         if ($contents === false) {
-            return false;
+            return self::PUSH_NO_LOCAL_COPY;
         }
 
         if (!self::$adapter->put($key, $contents)) {
+            self::$failedWrites[$key] = true;
             trigger_error(
                 "wp-alt-streamwrapper: failed to push uploaded file '{$key}' to remote storage",
                 E_USER_WARNING,
             );
-            return false;
+            return self::PUSH_FAILED;
         }
 
+        unset(self::$failedWrites[$key]);
         StatCache::set($key, ['size' => strlen($contents), 'mtime' => time(), 'type' => 'file']);
 
         if ($deleteLocal) {
@@ -110,7 +175,27 @@ class StreamWrapper
             stream_wrapper_register('file', static::class);
         }
 
-        return true;
+        return self::PUSH_OK;
+    }
+
+    /**
+     * Drop a local copy and the stat-cache entry that says it exists, after a
+     * push failed and the upload is being reported as failed. Without this,
+     * file_exists() keeps answering true for a file that only lives on a disk
+     * the next invocation will not have.
+     */
+    public static function discardLocalFile(string $absolutePath): void
+    {
+        if (self::$router === null || !self::$router->isRemote($absolutePath)) {
+            return;
+        }
+
+        StatCache::invalidate(self::$router->toStorageKey($absolutePath));
+
+        stream_wrapper_restore('file');
+        @unlink($absolutePath);
+        stream_wrapper_unregister('file');
+        stream_wrapper_register('file', static::class);
     }
 
     public static function unregister(): void
@@ -129,6 +214,54 @@ class StreamWrapper
     public static function isRemotePath(string $path): bool
     {
         return self::$router !== null && self::$router->isRemote($path);
+    }
+
+    /**
+     * Whether an object exists in storage for this path, in one request at most.
+     *
+     * Deliberately not file_exists(): url_stat() falls back to directory probing
+     * on a miss — an empty-dir marker HEAD plus a prefix listing — which is
+     * three storage requests where a caller asking "is this file really there"
+     * needs one.
+     */
+    public static function existsInStorage(string $absolutePath): bool
+    {
+        if (self::$adapter === null || self::$router === null) {
+            return false;
+        }
+        if (!self::$router->isRemote($absolutePath)) {
+            return false;
+        }
+
+        $key    = self::$router->toStorageKey($absolutePath);
+        $cached = StatCache::get($key);
+        if ($cached !== null) {
+            return $cached['type'] !== 'missing';
+        }
+
+        $stat = self::$adapter->stat($key);
+        if ($stat === false) {
+            StatCache::set($key, ['type' => 'missing', 'size' => 0, 'mtime' => 0]);
+            return false;
+        }
+
+        StatCache::set($key, $stat);
+        return true;
+    }
+
+    /**
+     * Whether a remote write for this path failed earlier in this request.
+     *
+     * Request-scoped and one-directional: false means "nothing failed here",
+     * not "the object exists" — a file never written at all has no record.
+     * Callers that need presence must ask the adapter.
+     */
+    public static function writeFailed(string $absolutePath): bool
+    {
+        if (self::$router === null || !self::$router->isRemote($absolutePath)) {
+            return false;
+        }
+        return isset(self::$failedWrites[self::$router->toStorageKey($absolutePath)]);
     }
 
     /**
@@ -193,6 +326,11 @@ class StreamWrapper
                 return false;
             }
             $this->isDirty = true; // create the (possibly empty) object on close
+            // fopen() has to answer now, so absence is checked here — but that
+            // answer is stale by the time the write happens, which is what the
+            // create condition on close closes.
+            $this->absentAtOpen          = true;
+            $this->canConditionOnAbsence = true;
         }
 
         // w/w+ truncate: mark dirty so closing without writing still creates/empties the object.
@@ -200,9 +338,13 @@ class StreamWrapper
             $this->isDirty = true;
         }
 
+        // Modes below read the object before writing it back, so the write on
+        // close is conditional on the version they read.
+        $this->isReadModifyWrite = in_array($baseMode, ['r+', 'a', 'a+', 'c', 'c+'], true);
+
         if ($baseMode === 'r' || $baseMode === 'r+') {
-            $contents = self::$adapter->get($this->storageKey);
-            if ($contents === false) {
+            $existing = $this->download();
+            if ($existing === null) {
                 fclose($this->buffer);
                 $this->buffer = null;
                 if ($options & STREAM_REPORT_ERRORS) {
@@ -210,32 +352,78 @@ class StreamWrapper
                 }
                 return false;
             }
-            fwrite($this->buffer, $contents);
+            fwrite($this->buffer, $existing);
             rewind($this->buffer);
             if ($baseMode === 'r+') {
                 $this->isDirty = false; // will be set true on first write
             }
         }
 
-        if ($baseMode === 'a' || $baseMode === 'a+') {
-            $existing = self::$adapter->get($this->storageKey);
-            if ($existing !== false) {
-                fwrite($this->buffer, $existing);
-            }
-            fseek($this->buffer, 0, SEEK_END);
-        }
+        // a/a+ and c/c+ tolerate a missing object — they create it. A failed
+        // read is a different matter: the current contents are unknown, so
+        // carrying on would write this handle's bytes over content still there.
+        // Fail the open instead and let the caller retry.
+        if (in_array($baseMode, ['a', 'a+', 'c', 'c+'], true)) {
+            $existing = $this->download();
 
-        // c: write without truncation, position at start (unlike w which truncates).
-        // c+: same but also readable.
-        if ($baseMode === 'c' || $baseMode === 'c+') {
-            $existing = self::$adapter->get($this->storageKey);
-            if ($existing !== false) {
+            if ($existing === null && !$this->absentAtOpen) {
+                fclose($this->buffer);
+                $this->buffer = null;
+                if ($options & STREAM_REPORT_ERRORS) {
+                    trigger_error(
+                        "wp-alt-streamwrapper: cannot read '{$this->storageKey}' to open it for "
+                        . 'writing; refusing to overwrite contents that could not be read',
+                        E_USER_WARNING,
+                    );
+                }
+                return false;
+            }
+
+            // Absent at open means the write creates the object, so it can be
+            // conditioned on the key still being free.
+            $this->canConditionOnAbsence = $this->absentAtOpen;
+
+            if ($existing !== null) {
                 fwrite($this->buffer, $existing);
             }
-            rewind($this->buffer);
+
+            if ($baseMode === 'a' || $baseMode === 'a+') {
+                $this->isAppend         = true;
+                $this->appendBaseLength = $existing === null ? 0 : strlen($existing);
+                fseek($this->buffer, 0, SEEK_END);
+            } else {
+                // c/c+: write without truncation, positioned at the start
+                // (unlike w, which truncates).
+                rewind($this->buffer);
+            }
         }
 
         return true;
+    }
+
+    /**
+     * Fetch the open file's current contents, remembering the ETag of the
+     * version read so stream_close() can write back conditionally.
+     *
+     * Returns null when there is nothing to read, with $absentAtOpen telling the
+     * two reasons apart: the object does not exist (fine, the write creates it)
+     * versus the read failed (not fine, the contents are unknown).
+     */
+    private function download(): ?string
+    {
+        $result = self::$adapter->fetch($this->storageKey);
+
+        if ($result['status'] === StorageAdapterInterface::FETCH_NOT_FOUND) {
+            $this->absentAtOpen = true;
+            return null;
+        }
+
+        if ($result['status'] !== StorageAdapterInterface::FETCH_FOUND) {
+            return null;
+        }
+
+        $this->openEtag = $result['etag'];
+        return (string) $result['contents'];
     }
 
     public function stream_read(int $count): string|false
@@ -265,25 +453,145 @@ class StreamWrapper
 
         if ($this->isRemote && $this->isDirty && $this->buffer !== null) {
             rewind($this->buffer);
-            $contents = stream_get_contents($this->buffer);
-            if (self::$adapter->put($this->storageKey, $contents)) {
-                StatCache::set($this->storageKey, [
-                    'size'  => strlen($contents),
-                    'mtime' => time(),
-                    'type'  => 'file',
-                ]);
-            } else {
-                trigger_error(
-                    "wp-alt-streamwrapper: failed to upload '{$this->storageKey}' to remote storage",
-                    E_USER_WARNING,
-                );
-            }
+            $this->commit(stream_get_contents($this->buffer));
         }
 
         if ($this->buffer !== null) {
             fclose($this->buffer);
             $this->buffer = null;
         }
+    }
+
+    /**
+     * Upload the buffer to remote storage.
+     *
+     * Writes that downloaded the object first are conditional on the ETag from
+     * that download, so a concurrent invocation's changes are never silently
+     * overwritten. Modes that replace the whole object (w, x) write
+     * unconditionally — there is nothing to preserve, and requiring a match
+     * would break in-place rewrites like regenerated thumbnails or CSS.
+     *
+     * fclose() cannot report failure to the caller, so a lost write can only
+     * warn. Losing the write is still better than clobbering: the version that
+     * survives is a version somebody wrote, not a stale buffer.
+     */
+    private function commit(string $contents): void
+    {
+        try {
+            if (self::$adapter->put($this->storageKey, $contents, $this->writeCondition())) {
+                $this->cacheWritten($contents);
+                return;
+            }
+            $this->recordFailedWrite();
+            trigger_error(
+                "wp-alt-streamwrapper: failed to upload '{$this->storageKey}' to remote storage",
+                E_USER_WARNING,
+            );
+            return;
+        } catch (PreconditionFailedException) {
+            // Fall through to the conflict handling below.
+        }
+
+        if (!$this->isAppend) {
+            $this->recordFailedWrite();
+            trigger_error(
+                $this->absentAtOpen
+                    ? "wp-alt-streamwrapper: dropped write to '{$this->storageKey}' — another "
+                        . 'writer created it first, and this handle has nothing of theirs to '
+                        . 'merge with'
+                    : "wp-alt-streamwrapper: dropped write to '{$this->storageKey}' — another "
+                        . 'writer changed it after this handle read it, and replaying an '
+                        . 'in-place edit would discard that change',
+                E_USER_WARNING,
+            );
+            return;
+        }
+
+        // Appends are the one case that can be replayed: the bytes this handle
+        // added are known, and adding them to the version that won produces the
+        // same result as if the two writes had been ordered.
+        $replayed = $this->replayAppend(substr($contents, $this->appendBaseLength));
+        if ($replayed === false) {
+            $this->recordFailedWrite();
+            trigger_error(
+                "wp-alt-streamwrapper: dropped append to '{$this->storageKey}' after "
+                . self::CONFLICT_RETRIES . ' conflicting writes',
+                E_USER_WARNING,
+            );
+            return;
+        }
+
+        $this->cacheWritten($replayed);
+    }
+
+    private function recordFailedWrite(): void
+    {
+        self::$failedWrites[$this->storageKey] = true;
+    }
+
+    /**
+     * The condition this handle's write must satisfy, or null for an
+     * unconditional replacement.
+     *
+     * Read-modify-write on an existing object conditions on the version read.
+     * A write that creates the object conditions on the key still being free,
+     * which closes the window between the open deciding the file was absent and
+     * the close acting on it — `fopen(..., 'x')` being the clearest case, since
+     * its whole contract is "only if it does not exist".
+     *
+     * w and w+ get neither: replacing the object is the point, and a condition
+     * would break every in-place rewrite (thumbnails, regenerated CSS).
+     */
+    private function writeCondition(): ?Precondition
+    {
+        if ($this->isReadModifyWrite && $this->openEtag !== null) {
+            return Precondition::matches($this->openEtag);
+        }
+
+        if ($this->canConditionOnAbsence && $this->absentAtOpen) {
+            return Precondition::absent();
+        }
+
+        return null;
+    }
+
+    /** @return string|false the committed contents, or false if every attempt lost */
+    private function replayAppend(string $appended): string|false
+    {
+        for ($attempt = 0; $attempt < self::CONFLICT_RETRIES; $attempt++) {
+            $current = self::$adapter->fetch($this->storageKey);
+            if ($current['status'] !== StorageAdapterInterface::FETCH_FOUND) {
+                // Gone again, or unreadable. Either way there is no known base
+                // to append to, and guessing would risk replacing content.
+                return false;
+            }
+
+            $merged   = (string) $current['contents'] . $appended;
+            $etag     = $current['etag'];
+            $condition = $etag !== null ? Precondition::matches($etag) : null;
+
+            try {
+                return self::$adapter->put($this->storageKey, $merged, $condition)
+                    ? $merged
+                    : false;
+            } catch (PreconditionFailedException) {
+                continue; // lost again — re-read and re-append
+            }
+        }
+
+        return false;
+    }
+
+    private function cacheWritten(string $contents): void
+    {
+        // A later successful write clears an earlier failure for the same key.
+        unset(self::$failedWrites[$this->storageKey]);
+
+        StatCache::set($this->storageKey, [
+            'size'  => strlen($contents),
+            'mtime' => time(),
+            'type'  => 'file',
+        ]);
     }
 
     public function stream_flush(): bool
@@ -535,7 +843,7 @@ class StreamWrapper
 
         $key = self::$router->toStorageKey($resolved);
 
-        // Refuse to recursively delete an entire top-level target (e.g. 'uploads', 'cache').
+        // Refuse to delete an entire top-level target (e.g. 'uploads', 'cache').
         // A key with no slash means it is the root of a configured target path.
         if (!str_contains($key, '/')) {
             trigger_error(
@@ -545,11 +853,35 @@ class StreamWrapper
             return false;
         }
 
-        $children = self::$adapter->listPrefix($key);
-        foreach ($children as $childKey) {
-            self::$adapter->delete($childKey);
+        $marker = rtrim($key, '/') . '/';
+
+        // Native rmdir() fails on a non-empty directory and callers depend on
+        // that: code that deletes a tree walks it and removes each entry first,
+        // and code that does not expects the directory to survive. Deleting
+        // descendants here would erase files the caller never named. Object
+        // storage has no real directories, so "empty" means no keys under the
+        // prefix other than the empty-dir marker itself.
+        $children = array_filter(
+            self::$adapter->listPrefix($key),
+            fn(string $childKey) => $childKey !== $marker,
+        );
+
+        if ($children !== []) {
+            trigger_error(
+                "wp-alt-streamwrapper: rmdir('{$resolved}') failed — directory not empty",
+                E_USER_WARNING,
+            );
+            return false;
         }
-        self::$adapter->delete(rtrim($key, '/') . '/'); // empty-dir marker
+
+        if (!self::$adapter->delete($marker)) {
+            trigger_error(
+                "wp-alt-streamwrapper: failed to delete directory marker '{$marker}'",
+                E_USER_WARNING,
+            );
+            return false;
+        }
+
         StatCache::invalidatePrefix($key);
         return true;
     }

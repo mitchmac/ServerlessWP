@@ -12,7 +12,7 @@
  * action=write       — writes a sentinel file via a traversal path that starts
  *                      inside uploads/ but resolves to cache/.  Returns the
  *                      expected normalized URL.  With dot-resolution the file lands
- *                      in MinIO under key "cache/e2e-traversal-write.txt"; without
+ *                      in MinIO under key "cache/e2e-traversal-write.css"; without
  *                      it the key contains literal ".." and is unreachable at the
  *                      normalized URL.
  *
@@ -66,10 +66,10 @@ if ($action === 'write') {
     }
 
     // Traversal path starting in uploads/ that resolves to cache/ via "..".
-    // With dot-resolution: stored in MinIO under key "cache/e2e-traversal-write.txt".
+    // With dot-resolution: stored in MinIO under key "cache/e2e-traversal-write.css".
     // Without it: stored under a raw key like "uploads/../cache/..." which the
     // proxy cannot map to the expected normalized URL.
-    $traversalPath = $wpContent . '/uploads/../cache/e2e-traversal-write.txt';
+    $traversalPath = $wpContent . '/uploads/../cache/e2e-traversal-write.css';
     $result        = file_put_contents($traversalPath, "traversal-write-sentinel\n");
 
     if ($result === false) {
@@ -79,13 +79,13 @@ if ($action === 'write') {
     }
 
     $host = $_SERVER['HTTP_HOST'] ?? 'wordpress';
-    echo "http://{$host}/wp-content/cache/e2e-traversal-write.txt\n";
+    echo "http://{$host}/wp-content/cache/e2e-traversal-write.css\n";
     exit;
 }
 
 // ── cleanup ───────────────────────────────────────────────────────────────────
 if ($action === 'cleanup') {
-    $normalizedPath = $wpContent . '/cache/e2e-traversal-write.txt';
+    $normalizedPath = $wpContent . '/cache/e2e-traversal-write.css';
     @unlink($normalizedPath);                               // removes from MinIO via stream wrapper
     shell_exec('rm -f ' . escapeshellarg($normalizedPath)); // removes local copy
     echo "cleaned\n";

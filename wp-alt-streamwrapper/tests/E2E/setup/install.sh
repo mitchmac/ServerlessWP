@@ -31,6 +31,10 @@ $WP plugin install https://github.com/WP-API/Basic-Auth/archive/refs/heads/maste
 # No activation step: the plugin ships as a must-use plugin, so it loads
 # automatically. See build-plugin.sh.
 
+echo "Installing the public-path filter fixture..."
+cp "$(dirname "${BASH_SOURCE[0]}")/public-path-filter.php" \
+    /var/www/html/wp-content/mu-plugins/e2e-public-path-filter.php
+
 echo "Flushing rewrite rules..."
 $WP rewrite flush --hard
 

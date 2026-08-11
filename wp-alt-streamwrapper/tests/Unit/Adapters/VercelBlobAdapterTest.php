@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace WpAltStreamWrapper\Tests\Unit\Adapters;
 
 use PHPUnit\Framework\TestCase;
+use WpAltStreamWrapper\Adapters\Precondition;
+use WpAltStreamWrapper\Adapters\PreconditionFailedException;
 use WpAltStreamWrapper\Adapters\VercelBlobAdapter;
 
 /**
@@ -102,6 +104,126 @@ class VercelBlobAdapterTest extends TestCase
         $this->assertSame('1', $headers['x-allow-overwrite']);
         $this->assertSame('store_abc123', $headers['x-vercel-blob-store-id']);
         $this->assertSame('image/jpeg', $headers['x-content-type']);
+    }
+
+    // -------- conditional writes --------
+
+    public function testFetchReturnsContentsAndEtag(): void
+    {
+        $this->adapter->enqueue(200, 'image data', ['etag' => '"abc123"']);
+
+        $result = $this->adapter->fetch('uploads/photo.jpg');
+
+        $this->assertSame(VercelBlobAdapter::FETCH_FOUND, $result['status']);
+        $this->assertSame('image data', $result['contents']);
+        $this->assertSame('"abc123"', $result['etag']);
+    }
+
+    public function testFetchStripsWeakValidatorPrefix(): void
+    {
+        // A download can answer with a weak validator; x-if-match only accepts
+        // the strong form.
+        $this->adapter->enqueue(200, 'image data', ['etag' => 'W/"abc123"']);
+
+        $result = $this->adapter->fetch('uploads/photo.jpg');
+        $this->assertSame('"abc123"', $result['etag']);
+    }
+
+    public function testFetchReturnsNullEtagWhenAbsent(): void
+    {
+        $this->adapter->enqueue(200, 'image data');
+
+        $result = $this->adapter->fetch('uploads/photo.jpg');
+        $this->assertNull($result['etag']);
+    }
+
+    public function testFetchSeparatesNotFoundFromError(): void
+    {
+        // The difference decides whether a write creates or would truncate.
+        $this->adapter->enqueue(404, '');
+        $this->assertSame(
+            VercelBlobAdapter::FETCH_NOT_FOUND,
+            $this->adapter->fetch('uploads/missing.jpg')['status'],
+        );
+
+        $this->adapter->enqueue(500, 'upstream exploded');
+        $this->assertSame(
+            VercelBlobAdapter::FETCH_ERROR,
+            $this->adapter->fetch('uploads/photo.jpg')['status'],
+        );
+    }
+
+    public function testPutSendsIfMatchHeaderWhenGiven(): void
+    {
+        $this->adapter->enqueue(200, '{}');
+        $this->adapter->put('uploads/log.txt', 'data', Precondition::matches('"abc123"'));
+
+        // Same header name the @vercel/blob SDK sends for its ifMatch option.
+        $this->assertSame('"abc123"', $this->adapter->lastRequest()['headers']['x-if-match']);
+    }
+
+    public function testPutOmitsIfMatchHeaderByDefault(): void
+    {
+        $this->adapter->enqueue(200, '{}');
+        $this->adapter->put('uploads/photo.jpg', 'data');
+
+        $this->assertArrayNotHasKey('x-if-match', $this->adapter->lastRequest()['headers']);
+    }
+
+    public function testCreateOnlyWriteWithholdsAllowOverwrite(): void
+    {
+        // Vercel Blob has no put-side ifNoneMatch — its SDK option of that name
+        // is a conditional read. Withholding x-allow-overwrite is the create-only
+        // precondition: the API rejects an existing key without it.
+        $this->adapter->enqueue(200, '{}');
+        $this->adapter->put('uploads/new.txt', 'data', Precondition::absent());
+
+        $headers = $this->adapter->lastRequest()['headers'];
+        $this->assertArrayNotHasKey('x-allow-overwrite', $headers);
+        $this->assertArrayNotHasKey('x-if-match', $headers);
+    }
+
+    public function testOrdinaryWriteStillAllowsOverwrite(): void
+    {
+        $this->adapter->enqueue(200, '{}');
+        $this->adapter->put('uploads/photo.jpg', 'data');
+
+        $this->assertSame('1', $this->adapter->lastRequest()['headers']['x-allow-overwrite']);
+    }
+
+    public function testConditionalPutThrowsOnPreconditionFailure(): void
+    {
+        $this->adapter->enqueue(412, '{"error":{"code":"precondition_failed"}}');
+
+        $this->expectException(PreconditionFailedException::class);
+        $this->adapter->put('uploads/log.txt', 'data', Precondition::matches('"stale"'));
+    }
+
+    public function testLostCreateMapsRefusedOverwriteToPreconditionFailed(): void
+    {
+        // The API answers 400 "Blob exists and overwrite is not allowed", which
+        // for a create-only write is precisely the condition failing.
+        $this->adapter->enqueue(400, '{"error":{"code":"bad_request"}}');
+
+        $this->expectException(PreconditionFailedException::class);
+        $this->adapter->put('uploads/new.txt', 'data', Precondition::absent());
+    }
+
+    public function testUnconditionalPutDoesNotThrowOnRefusedOverwrite(): void
+    {
+        // Without a create condition a 400 is just a failed write.
+        $this->adapter->enqueue(400, '{}');
+
+        $this->assertFalse($this->adapter->put('uploads/photo.jpg', 'data'));
+    }
+
+    public function testUnconditionalPutDoesNotThrowOnPreconditionFailure(): void
+    {
+        // Without an ifMatch there is no conflict to recover from, so a 412 is
+        // just a failed write.
+        $this->adapter->enqueue(412, '{}');
+
+        $this->assertFalse($this->adapter->put('uploads/log.txt', 'data'));
     }
 
     // -------- delete --------
