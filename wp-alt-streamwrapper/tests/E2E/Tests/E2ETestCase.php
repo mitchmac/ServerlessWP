@@ -93,6 +93,25 @@ abstract class E2ETestCase extends TestCase
         );
     }
 
+    /**
+     * GET a URL and return [status, body].
+     *
+     * @return array{0: int, 1: string}
+     */
+    protected function fetchBody(string $url): array
+    {
+        $ch = curl_init($url);
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT        => 10,
+        ]);
+        $body   = (string) curl_exec($ch);
+        $status = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        return [$status, $body];
+    }
+
     protected function fixturesDir(): string
     {
         return dirname(__DIR__, 2) . '/Fixtures';

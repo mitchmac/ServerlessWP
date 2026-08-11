@@ -6,11 +6,38 @@ namespace WpAltStreamWrapper\Adapters;
 
 interface StorageAdapterInterface
 {
+    /** fetch() outcomes. */
+    public const FETCH_FOUND = 'found';
+    public const FETCH_NOT_FOUND = 'not-found';
+    public const FETCH_ERROR = 'error';
+
     /** Download and return the full contents of a stored object. */
     public function get(string $key): string|false;
 
-    /** Upload contents under the given key, overwriting any existing object. */
-    public function put(string $key, string $contents): bool;
+    /**
+     * Download an object, reporting absence separately from failure.
+     *
+     * The three outcomes have to be distinguishable or a caller cannot write
+     * safely: "not there" means a create, while "the request failed" means the
+     * current contents are unknown, and treating the second as the first turns a
+     * transient error into a truncation.
+     *
+     * On FETCH_FOUND, 'etag' is the version read — it arrives on the same
+     * response as the body, so conditioning a later write on it costs no extra
+     * round trip. It is null if the provider sent none, and the caller must then
+     * treat the write as unconditional.
+     *
+     * @return array{status: self::FETCH_*, contents: ?string, etag: ?string}
+     */
+    public function fetch(string $key): array;
+
+    /**
+     * Upload contents under the given key, overwriting any existing object
+     * unless $condition says otherwise.
+     *
+     * @throws PreconditionFailedException if $condition is not satisfied.
+     */
+    public function put(string $key, string $contents, ?Precondition $condition = null): bool;
 
     /** Delete the object at the given key. Returns true even if not found. */
     public function delete(string $key): bool;

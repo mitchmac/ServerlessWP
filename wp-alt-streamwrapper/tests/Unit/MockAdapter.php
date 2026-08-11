@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace WpAltStreamWrapper\Tests\Unit;
 
+use WpAltStreamWrapper\Adapters\Precondition;
+use WpAltStreamWrapper\Adapters\PreconditionFailedException;
 use WpAltStreamWrapper\Adapters\StorageAdapterInterface;
 
 /**
@@ -16,13 +18,63 @@ class MockAdapter implements StorageAdapterInterface
 
     private bool $failNextPut = false;
 
+    private bool $failNextFetch = false;
+
+    /** @var array<string, true> keys whose delete() must fail */
+    private array $undeletable = [];
+
+    /** @var array<string, true> keys mutated on every put() to force conflicts */
+    private array $churn = [];
+
+    /** Every put() this adapter has seen, as ['key' => ..., 'ifMatch' => ...]. */
+    private array $putLog = [];
+
     public function get(string $key): string|false
     {
-        return array_key_exists($key, $this->files) ? $this->files[$key] : false;
+        $result = $this->fetch($key);
+        return $result['status'] === self::FETCH_FOUND ? (string) $result['contents'] : false;
     }
 
-    public function put(string $key, string $contents): bool
+    public function fetch(string $key): array
     {
+        if ($this->failNextFetch) {
+            $this->failNextFetch = false;
+            return ['status' => self::FETCH_ERROR, 'contents' => null, 'etag' => null];
+        }
+
+        if (!array_key_exists($key, $this->files)) {
+            return ['status' => self::FETCH_NOT_FOUND, 'contents' => null, 'etag' => null];
+        }
+
+        return [
+            'status'   => self::FETCH_FOUND,
+            'contents' => $this->files[$key],
+            'etag'     => $this->etag($key),
+        ];
+    }
+
+    public function put(string $key, string $contents, ?Precondition $condition = null): bool
+    {
+        $this->putLog[] = [
+            'key'           => $key,
+            'ifMatch'       => $condition?->ifMatch,
+            'requireAbsent' => (bool) $condition?->requireAbsent,
+        ];
+
+        if (isset($this->churn[$key])) {
+            // Stand in for a writer that commits between every read and write,
+            // so no conditional put can ever match.
+            $this->files[$key] = 'churn-' . count($this->putLog);
+        }
+
+        if ($condition?->ifMatch !== null && $condition->ifMatch !== $this->etag($key)) {
+            throw new PreconditionFailedException("mock conflict on '{$key}'");
+        }
+
+        if ($condition?->requireAbsent && array_key_exists($key, $this->files)) {
+            throw new PreconditionFailedException("mock key '{$key}' already exists");
+        }
+
         if ($this->failNextPut) {
             $this->failNextPut = false;
             return false;
@@ -37,8 +89,40 @@ class MockAdapter implements StorageAdapterInterface
         $this->failNextPut = true;
     }
 
+    /** Test helper: make the next fetch() report a transport error, not absence. */
+    public function failOnNextFetch(): void
+    {
+        $this->failNextFetch = true;
+    }
+
+    /** Test helper: make this key change on every put(), so no ifMatch ever matches. */
+    public function changeOnEveryPut(string $key): void
+    {
+        $this->churn[$key] = true;
+    }
+
+    /** Test helper: make delete() fail for this key, as a storage error would. */
+    public function failOnDelete(string $key): void
+    {
+        $this->undeletable[$key] = true;
+    }
+
+    /** Test helper: the ifMatch value passed with each put(), in order. */
+    public function putLog(): array
+    {
+        return $this->putLog;
+    }
+
+    private function etag(string $key): ?string
+    {
+        return array_key_exists($key, $this->files) ? '"' . md5($this->files[$key]) . '"' : null;
+    }
+
     public function delete(string $key): bool
     {
+        if (isset($this->undeletable[$key])) {
+            return false;
+        }
         unset($this->files[$key]);
         return true;
     }

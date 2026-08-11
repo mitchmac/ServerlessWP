@@ -16,7 +16,7 @@ class PathRouterTest extends TestCase
         $this->router = new PathRouter(
             wpContentDir:    '/srv/www/wp-content',
             targetRelPaths:  ['wp-content/uploads', 'wp-content/cache', 'wp-content/wflogs'],
-            excludePatterns: ['*.sqlite', '*.db', '*.php', '.htaccess'],
+            excludePatterns: ['*.sqlite', '*.db', '*.php', '*.log', '.htaccess'],
         );
     }
 
@@ -32,9 +32,13 @@ class PathRouterTest extends TestCase
         $this->assertTrue($this->router->isRemote('/srv/www/wp-content/cache/page.html'));
     }
 
-    public function testWflogsPathIsRemote(): void
+    public function testDirectoryOtherThanUploadsOrCacheIsRemote(): void
     {
-        $this->assertTrue($this->router->isRemote('/srv/www/wp-content/wflogs/debug.log'));
+        // Any directory a plugin invents under wp-content routes to storage;
+        // targeting is not limited to the well-known ones. (Wordfence's wflogs
+        // here — its own state files are *.php and excluded by pattern, which is
+        // a separate question from whether the directory is targeted.)
+        $this->assertTrue($this->router->isRemote('/srv/www/wp-content/wflogs/attack-data.bin'));
     }
 
     public function testNestedPathIsRemote(): void
@@ -89,6 +93,16 @@ class PathRouterTest extends TestCase
     public function testHtaccessIsExcluded(): void
     {
         $this->assertFalse($this->router->isRemote('/srv/www/wp-content/uploads/.htaccess'));
+    }
+
+    public function testLogFileIsExcluded(): void
+    {
+        // WordPress points error_log at WP_CONTENT_DIR/debug.log under
+        // WP_DEBUG_LOG. Routed, every line would cost a GET plus a conditional
+        // PUT of an ever-growing object; the same lines already reach the
+        // platform's function logs.
+        $this->assertFalse($this->router->isRemote('/srv/www/wp-content/debug.log'));
+        $this->assertFalse($this->router->isRemote('/srv/www/wp-content/uploads/plugin-errors.log'));
     }
 
     public function testJpegIsNotExcluded(): void

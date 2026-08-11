@@ -8,6 +8,8 @@ class Config
 {
     private string $provider;
     private string $targetPaths;
+    private string $publicPaths;
+    private string $publicAssetPaths;
     private string $excludePaths;
     private string $excludePatterns;
     private ?string $wpContentDir;
@@ -31,8 +33,31 @@ class Config
     {
         $this->provider        = $this->read('WP_STREAM_PROVIDER', '');
         $this->targetPaths     = $this->read('WP_STREAM_TARGET_PATHS', 'wp-content');
+
+        // Which stored paths the proxy will hand back over HTTP. Narrower than
+        // the routed set on purpose: routing decides what persists, this decides
+        // what the public can download. Uploads by default — the one tree whose
+        // entire purpose is to be fetched by URL.
+        $this->publicPaths     = $this->read('WP_STREAM_PUBLIC_PATHS', 'wp-content/uploads');
+
+        // Paths served only when the filename has a web-asset extension.
+        //
+        // wp-content/cache holds two unrelated kinds of file. Asset bundlers
+        // (Autoptimize and friends) put CSS and JS there that the browser must
+        // fetch or the site renders unstyled. Page caches put rendered HTML
+        // there, including pages only some users are meant to see. The extension
+        // is what separates them, and gating on it means the bundler case works
+        // untouched while the HTML stays unreachable — neither outcome depending
+        // on an admin knowing to set a variable.
+        $this->publicAssetPaths = $this->read('WP_STREAM_PUBLIC_ASSET_PATHS', 'wp-content/cache');
         $this->excludePaths    = $this->read('WP_STREAM_EXCLUDE_PATHS', 'wp-content/plugins,wp-content/themes,wp-content/mu-plugins,wp-content/languages,wp-content/upgrade');
-        $this->excludePatterns = $this->read('WP_STREAM_EXCLUDE_PATTERNS', '*.sqlite,*.db,*.php,.htaccess');
+        // *.log stays local: WordPress points error_log at
+        // WP_CONTENT_DIR/debug.log when WP_DEBUG_LOG is set, and routing that
+        // would turn every logged line into an append — a GET plus a conditional
+        // PUT of an object that only grows. The same lines already reach the
+        // platform's function logs via stderr, so persisting them is not worth a
+        // pair of storage requests per line.
+        $this->excludePatterns = $this->read('WP_STREAM_EXCLUDE_PATTERNS', '*.sqlite,*.db,*.php,*.log,.htaccess');
         $this->wpContentDir    = $this->readNullable('WP_STREAM_WP_CONTENT_DIR');
 
         // S3 settings fall back to the SQLITE_S3_* / S3_* variables ServerlessWP
@@ -116,6 +141,37 @@ class Config
             return [];
         }
         return array_filter(array_map('trim', explode(',', $this->targetPaths)));
+    }
+
+    /**
+     * Extensions treated as web assets under publicAssetPaths().
+     *
+     * Deliberately excludes anything that can carry page content or data —
+     * html, htm, json, xml, txt, log, sql, php — because that is what a page
+     * cache writes into the same directories as bundled CSS and JS.
+     */
+    public const PUBLIC_ASSET_EXTENSIONS = [
+        'css', 'js', 'mjs',
+        'svg', 'png', 'jpg', 'jpeg', 'gif', 'webp', 'avif', 'ico', 'bmp',
+        'woff', 'woff2', 'ttf', 'otf', 'eot',
+    ];
+
+    /** @return string[] relative paths the HTTP proxy may serve, e.g. 'wp-content/uploads' */
+    public function publicPaths(): array
+    {
+        if ($this->publicPaths === '') {
+            return [];
+        }
+        return array_filter(array_map('trim', explode(',', $this->publicPaths)));
+    }
+
+    /** @return string[] relative paths served only for PUBLIC_ASSET_EXTENSIONS files */
+    public function publicAssetPaths(): array
+    {
+        if ($this->publicAssetPaths === '') {
+            return [];
+        }
+        return array_filter(array_map('trim', explode(',', $this->publicAssetPaths)));
     }
 
     /** @return string[] relative path prefixes that must stay on local disk, e.g. 'wp-content/plugins' */

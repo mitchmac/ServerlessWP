@@ -51,6 +51,61 @@ class ConfigTest extends TestCase
         $this->assertSame(['wp-content'], $config->targetPaths());
     }
 
+    public function testDefaultPublicPathsAreUploadsOnly(): void
+    {
+        // Serving is narrower than routing on purpose. Cache directories hold
+        // rendered HTML that may not be public, so they are opt-in even though
+        // routing covers them.
+        $this->unsetEnv('WP_STREAM_PUBLIC_PATHS');
+        $config = new Config();
+        $this->assertSame(['wp-content/uploads'], $config->publicPaths());
+    }
+
+    public function testCustomPublicPaths(): void
+    {
+        putenv('WP_STREAM_PUBLIC_PATHS=wp-content/uploads,wp-content/cache');
+        $config = new Config();
+        $this->assertSame(['wp-content/uploads', 'wp-content/cache'], $config->publicPaths());
+    }
+
+    public function testEmptyPublicPathsServesNothing(): void
+    {
+        putenv('WP_STREAM_PUBLIC_PATHS=');
+        $config = new Config();
+        $this->assertSame([], $config->publicPaths());
+    }
+
+    public function testDefaultPublicAssetPathsIsCache(): void
+    {
+        // Bundled CSS/JS under wp-content/cache must resolve without an opt-in;
+        // the extension gate is what keeps cached HTML in the same tree private.
+        $this->unsetEnv('WP_STREAM_PUBLIC_ASSET_PATHS');
+        $config = new Config();
+        $this->assertSame(['wp-content/cache'], $config->publicAssetPaths());
+    }
+
+    public function testCustomPublicAssetPaths(): void
+    {
+        putenv('WP_STREAM_PUBLIC_ASSET_PATHS=wp-content/cache/autoptimize,wp-content/bundles');
+        $config = new Config();
+        $this->assertSame(
+            ['wp-content/cache/autoptimize', 'wp-content/bundles'],
+            $config->publicAssetPaths(),
+        );
+    }
+
+    public function testAssetExtensionsExcludeContentTypes(): void
+    {
+        // A page cache writes .html/.json into the same directories as bundled
+        // assets, so those extensions must never be on this list.
+        foreach (['css', 'js', 'svg', 'woff2'] as $asset) {
+            $this->assertContains($asset, Config::PUBLIC_ASSET_EXTENSIONS);
+        }
+        foreach (['html', 'htm', 'json', 'xml', 'txt', 'log', 'sql', 'php'] as $content) {
+            $this->assertNotContains($content, Config::PUBLIC_ASSET_EXTENSIONS);
+        }
+    }
+
     public function testCustomTargetPaths(): void
     {
         putenv('WP_STREAM_TARGET_PATHS=wp-content/uploads,wp-content/custom');
@@ -74,6 +129,9 @@ class ConfigTest extends TestCase
         $this->assertContains('*.db', $patterns);
         $this->assertContains('*.php', $patterns);
         $this->assertContains('.htaccess', $patterns);
+        // Routing debug.log would make every logged line an append: a GET plus a
+        // conditional PUT of an object that only grows.
+        $this->assertContains('*.log', $patterns);
     }
 
     public function testS3Config(): void
@@ -221,6 +279,8 @@ class ConfigTest extends TestCase
         return [
             'WP_STREAM_PROVIDER',
             'WP_STREAM_TARGET_PATHS',
+            'WP_STREAM_PUBLIC_PATHS',
+            'WP_STREAM_PUBLIC_ASSET_PATHS',
             'WP_STREAM_EXCLUDE_PATTERNS',
             'WP_STREAM_WP_CONTENT_DIR',
             'WP_STREAM_S3_BUCKET',

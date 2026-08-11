@@ -151,15 +151,44 @@ class StreamWrapperTest extends TestCase
         $this->assertSame('dir', $stat['type']);
     }
 
-    public function testRmdirDeletesChildren(): void
+    public function testRmdirRefusesNonEmptyDirectory(): void
     {
         $this->adapter->seed('uploads/2024/photo.jpg', 'jpg data');
         $this->adapter->seed('uploads/2024/thumb.jpg', 'thumb data');
 
-        rmdir(self::UPLOADS . '/2024');
+        // Native rmdir() fails on a non-empty directory rather than deleting
+        // descendants the caller never named.
+        $this->assertFalse(@rmdir(self::UPLOADS . '/2024'));
+        $this->assertTrue($this->adapter->exists('uploads/2024/photo.jpg'));
+        $this->assertTrue($this->adapter->exists('uploads/2024/thumb.jpg'));
+    }
 
-        $this->assertFalse($this->adapter->exists('uploads/2024/photo.jpg'));
-        $this->assertFalse($this->adapter->exists('uploads/2024/thumb.jpg'));
+    public function testRmdirRefusesDirectoryContainingOnlyASubdirectory(): void
+    {
+        $this->adapter->seed('uploads/2024/', '');    // empty-dir marker
+        $this->adapter->seed('uploads/2024/01/', ''); // empty child directory
+
+        $this->assertFalse(@rmdir(self::UPLOADS . '/2024'));
+        $this->assertTrue($this->adapter->exists('uploads/2024/'));
+    }
+
+    public function testRmdirRemovesEmptyDirectory(): void
+    {
+        mkdir(self::UPLOADS . '/2024', 0755, true);
+        $this->assertTrue($this->adapter->exists('uploads/2024/'));
+
+        $this->assertTrue(rmdir(self::UPLOADS . '/2024'));
+        $this->assertFalse($this->adapter->exists('uploads/2024/'));
+        $this->assertNull(StatCache::get('uploads/2024'));
+    }
+
+    public function testRmdirReportsFailureWhenMarkerDeleteFails(): void
+    {
+        mkdir(self::UPLOADS . '/2024', 0755, true);
+        $this->adapter->failOnDelete('uploads/2024/');
+
+        $this->assertFalse(@rmdir(self::UPLOADS . '/2024'));
+        $this->assertTrue($this->adapter->exists('uploads/2024/'));
     }
 
     // -------- opendir / readdir --------
@@ -239,6 +268,14 @@ class StreamWrapperTest extends TestCase
         $this->assertTrue($result, 'flock() should work on passthrough file handles.');
     }
 
+    /**
+     * A deliberate lie, kept because the alternative is worse: WP_Filesystem and
+     * caching plugins treat a false return as a hard failure and abort, so
+     * reporting the truth would break writes that work fine. Nothing excludes
+     * anything here — data safety under concurrency comes from the conditional
+     * writes below, not from this. A real advisory lock would cost 2-3 extra
+     * round trips per acquire; see NEXT-STEPS.md §4a.
+     */
     public function testStreamLockReportsSuccessForRemoteFiles(): void
     {
         $this->adapter->seed('uploads/remote.txt', 'data');
@@ -342,14 +379,235 @@ class StreamWrapperTest extends TestCase
         $this->assertTrue($this->adapter->exists('uploads/photo.jpg'));
     }
 
-    public function testRmdirOnSubdirectorySucceeds(): void
+    public function testRmdirOnEmptySubdirectorySucceeds(): void
     {
-        $this->adapter->seed('uploads/2024/photo.jpg', 'data');
-        $this->adapter->seed('uploads/2024/thumb.jpg', 'thumb');
+        // The root guard applies to target roots only; a subdirectory below one
+        // is removable on the same terms as any other empty directory.
+        $this->adapter->seed('uploads/2024/', '');
 
-        $result = rmdir(self::UPLOADS . '/2024');
-        $this->assertTrue($result);
-        $this->assertFalse($this->adapter->exists('uploads/2024/photo.jpg'));
+        $this->assertTrue(rmdir(self::UPLOADS . '/2024'));
+        $this->assertFalse($this->adapter->exists('uploads/2024/'));
+    }
+
+    // -------- concurrent writes --------
+
+    public function testWholeFileWriteIsUnconditional(): void
+    {
+        $this->adapter->seed('uploads/style.css', 'old');
+
+        // A replacement write (w mode) has nothing to preserve, so requiring an
+        // ETag match would only break in-place rewrites like regenerated CSS.
+        file_put_contents(self::UPLOADS . '/style.css', 'new');
+
+        $this->assertSame('new', $this->adapter->getContent('uploads/style.css'));
+        $this->assertSame([null], array_column($this->adapter->putLog(), 'ifMatch'));
+        $this->assertSame([false], array_column($this->adapter->putLog(), 'requireAbsent'));
+    }
+
+    public function testWholeFileWriteToANewKeyIsAlsoUnconditional(): void
+    {
+        // w means "the content is now this", so it does not matter whether the
+        // key existed. Conditioning it would break in-place rewrites.
+        file_put_contents(self::UPLOADS . '/fresh.css', 'body{}');
+
+        $this->assertSame([false], array_column($this->adapter->putLog(), 'requireAbsent'));
+    }
+
+    public function testAppendWritesConditionallyOnTheVersionItRead(): void
+    {
+        $this->adapter->seed('uploads/log.txt', 'line1');
+        $expectedIfMatch = '"' . md5('line1') . '"';
+
+        $fh = fopen(self::UPLOADS . '/log.txt', 'a');
+        fwrite($fh, 'line2');
+        fclose($fh);
+
+        $this->assertSame('line1line2', $this->adapter->getContent('uploads/log.txt'));
+        $this->assertSame([$expectedIfMatch], array_column($this->adapter->putLog(), 'ifMatch'));
+    }
+
+    public function testInPlaceEditDoesNotOverwriteAConcurrentWriter(): void
+    {
+        $this->adapter->seed('uploads/counter.txt', 'aaaa');
+
+        $fh = fopen(self::UPLOADS . '/counter.txt', 'r+');
+        fwrite($fh, 'b');
+
+        // Another invocation commits while this handle holds a stale buffer.
+        $this->adapter->seed('uploads/counter.txt', 'zzzz');
+
+        @fclose($fh);
+
+        // The write is dropped rather than resurrecting 'aaaa' over 'zzzz'.
+        $this->assertSame('zzzz', $this->adapter->getContent('uploads/counter.txt'));
+    }
+
+    public function testAppendIsReplayedOnTopOfTheWinningVersion(): void
+    {
+        $this->adapter->seed('uploads/log.txt', 'first\n');
+
+        $fh = fopen(self::UPLOADS . '/log.txt', 'a');
+        fwrite($fh, 'mine\n');
+
+        // Another invocation appends its own line first.
+        $this->adapter->seed('uploads/log.txt', 'first\ntheirs\n');
+
+        fclose($fh);
+
+        // Both lines survive: neither writer's bytes are lost.
+        $this->assertSame('first\ntheirs\nmine\n', $this->adapter->getContent('uploads/log.txt'));
+    }
+
+    public function testAppendGivesUpAfterRepeatedConflicts(): void
+    {
+        $this->adapter->seed('uploads/log.txt', 'start');
+        $this->adapter->changeOnEveryPut('uploads/log.txt');
+
+        $fh = fopen(self::UPLOADS . '/log.txt', 'a');
+        fwrite($fh, 'mine');
+        @fclose($fh);
+
+        // Every attempt lost, so nothing this handle wrote was committed — but
+        // the version that did win is intact.
+        $this->assertStringNotContainsString('mine', (string) $this->adapter->getContent('uploads/log.txt'));
+        $this->assertCount(4, $this->adapter->putLog()); // first attempt + 3 replays
+    }
+
+    // -------- conditional creation --------
+
+    public function testAppendToAMissingKeyRequiresTheKeyToStillBeFree(): void
+    {
+        $fh = fopen(self::UPLOADS . '/new-log.txt', 'a');
+        fwrite($fh, 'first line');
+        fclose($fh);
+
+        $this->assertSame('first line', $this->adapter->getContent('uploads/new-log.txt'));
+        $this->assertSame([true], array_column($this->adapter->putLog(), 'requireAbsent'));
+    }
+
+    public function testAppendToAMissingKeyMergesWithAWriterThatGotThereFirst(): void
+    {
+        $path = self::UPLOADS . '/race-log.txt';
+
+        $fh = fopen($path, 'a');
+        fwrite($fh, 'mine\n');
+
+        // Another invocation creates and writes the same key in between.
+        $this->adapter->seed('uploads/race-log.txt', 'theirs\n');
+
+        fclose($fh);
+
+        // Neither line is lost: the create condition fails, and the append is
+        // replayed on top of what landed.
+        $this->assertSame('theirs\nmine\n', $this->adapter->getContent('uploads/race-log.txt'));
+    }
+
+    public function testExclusiveCreateDoesNotOverwriteAKeyThatAppearedAfterOpen(): void
+    {
+        $path = self::UPLOADS . '/exclusive.txt';
+
+        // fopen(..., 'x') checks absence to answer immediately, but that answer
+        // is stale by the time the write happens.
+        $fh = fopen($path, 'x');
+        fwrite($fh, 'mine');
+
+        $this->adapter->seed('uploads/exclusive.txt', 'theirs');
+
+        @fclose($fh);
+
+        $this->assertSame('theirs', $this->adapter->getContent('uploads/exclusive.txt'));
+        $this->assertTrue(StreamWrapper::writeFailed($path));
+    }
+
+    public function testCreatingWithCModeDoesNotOverwriteAConcurrentCreate(): void
+    {
+        $path = self::UPLOADS . '/c-mode-race.txt';
+
+        $fh = fopen($path, 'c');
+        fwrite($fh, 'mine');
+
+        $this->adapter->seed('uploads/c-mode-race.txt', 'theirs');
+
+        @fclose($fh);
+
+        // c is an in-place edit, so there is nothing to merge — the write is
+        // dropped rather than replacing the other writer's object.
+        $this->assertSame('theirs', $this->adapter->getContent('uploads/c-mode-race.txt'));
+    }
+
+    public function testOpenForAppendFailsWhenTheCurrentContentsCannotBeRead(): void
+    {
+        $this->adapter->seed('uploads/log.txt', 'existing data');
+        $this->adapter->failOnNextFetch();
+
+        // A failed read is not an empty file. Treating it as one would append to
+        // nothing and replace 'existing data' with just the new bytes.
+        $fh = @fopen(self::UPLOADS . '/log.txt', 'a');
+
+        $this->assertFalse($fh);
+        $this->assertSame('existing data', $this->adapter->getContent('uploads/log.txt'));
+    }
+
+    // -------- failed writes are recorded --------
+
+    public function testFailedWriteIsRecorded(): void
+    {
+        $path = self::UPLOADS . '/never-lands.css';
+        $this->adapter->failOnNextPut();
+
+        // file_put_contents() reports the full byte count: the write is buffered
+        // and only fails in stream_close(), which cannot report anything.
+        $written = @file_put_contents($path, 'body{}');
+
+        $this->assertSame(6, $written);
+        $this->assertFalse($this->adapter->exists('uploads/never-lands.css'));
+        $this->assertTrue(
+            StreamWrapper::writeFailed($path),
+            'A discarded remote write must leave a record; nothing else can distinguish it '
+            . 'from a file that was written straight to storage.',
+        );
+    }
+
+    public function testSuccessfulWriteLeavesNoFailureRecord(): void
+    {
+        $path = self::UPLOADS . '/lands.css';
+        file_put_contents($path, 'body{}');
+
+        $this->assertFalse(StreamWrapper::writeFailed($path));
+    }
+
+    public function testLaterSuccessfulWriteClearsTheFailureRecord(): void
+    {
+        $path = self::UPLOADS . '/retried.css';
+
+        $this->adapter->failOnNextPut();
+        @file_put_contents($path, 'first try');
+        $this->assertTrue(StreamWrapper::writeFailed($path));
+
+        file_put_contents($path, 'second try');
+
+        $this->assertFalse(StreamWrapper::writeFailed($path));
+        $this->assertSame('second try', $this->adapter->getContent('uploads/retried.css'));
+    }
+
+    public function testDroppedConflictingWriteIsRecordedAsFailed(): void
+    {
+        $this->adapter->seed('uploads/counter.txt', 'aaaa');
+        $path = self::UPLOADS . '/counter.txt';
+
+        $fh = fopen($path, 'r+');
+        fwrite($fh, 'b');
+        $this->adapter->seed('uploads/counter.txt', 'zzzz');
+        @fclose($fh);
+
+        $this->assertTrue(StreamWrapper::writeFailed($path));
+    }
+
+    public function testWriteFailedIsFalseForPathsNeverWritten(): void
+    {
+        // One-directional: no record means nothing failed, not that the object
+        // exists.
+        $this->assertFalse(StreamWrapper::writeFailed(self::UPLOADS . '/untouched.txt'));
     }
 
     // -------- path traversal --------
