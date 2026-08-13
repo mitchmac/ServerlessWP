@@ -1,9 +1,6 @@
 <?php
 /**
  * Extend and replace the wpdb class.
- *
- * @package wp-sqlite-integration
- * @since 1.0.0
  */
 
 /**
@@ -57,6 +54,20 @@ class WP_SQLite_DB extends wpdb {
 	}
 
 	/**
+	 * Returns the active MySQL-on-SQLite driver.
+	 *
+	 * @return WP_MySQL_On_SQLite The active driver.
+	 * @throws RuntimeException When there is no active database connection.
+	 */
+	public function get_driver(): WP_MySQL_On_SQLite {
+		if ( ! $this->dbh ) {
+			throw new RuntimeException( 'Cannot access the driver without an active database connection.' );
+		}
+
+		return $this->dbh;
+	}
+
+	/**
 	 * Method to set character set for the database.
 	 *
 	 * This overrides wpdb::set_charset(), only to dummy out the MySQL function.
@@ -71,17 +82,59 @@ class WP_SQLite_DB extends wpdb {
 	}
 
 	/**
-	 * Method to get the character set for the database.
-	 * Hardcoded to utf8mb4 for now.
+	 * Retrieves the character set for the given column.
 	 *
-	 * @param string $table  The table name.
-	 * @param string $column The column name.
+	 * This overrides wpdb::get_col_charset() to enable the parent's implementation
+	 * for SQLite by temporarily setting the is_mysql flag.
 	 *
-	 * @return string The character set.
+	 * @see wpdb::get_col_charset()
+	 *
+	 * @param string $table  Table name.
+	 * @param string $column Column name.
+	 * @return string|false|WP_Error Column character set as a string. False if the column has
+	 *                               no character set. WP_Error object on failure.
 	 */
 	public function get_col_charset( $table, $column ) {
-		// Hardcoded for now.
-		return 'utf8mb4';
+		$original_is_mysql = $this->is_mysql ?? null;
+
+		/*
+		 * The parent method returns early when `$this->is_mysql` is falsy.
+		 * Since SQLite doesn't set this flag, we enable it temporarily so
+		 * the parent can run its full logic — querying column metadata via
+		 * SHOW FULL COLUMNS (which the SQLite driver translates) and
+		 * populating the `$this->col_meta` cache.
+		 */
+		try {
+			$this->is_mysql = true;
+			return parent::get_col_charset( $table, $column );
+		} finally {
+			$this->is_mysql = $original_is_mysql;
+		}
+	}
+
+	/**
+	 * Retrieves the maximum string length allowed in a given column.
+	 *
+	 * This overrides wpdb::get_col_length() to enable the parent's implementation
+	 * for SQLite by temporarily setting the is_mysql flag.
+	 *
+	 * @see wpdb::get_col_length()
+	 *
+	 * @param string $table  Table name.
+	 * @param string $column Column name.
+	 * @return array|false|WP_Error Column length information, false if the column has
+	 *                              no length. WP_Error object on failure.
+	 */
+	public function get_col_length( $table, $column ) {
+		$original_is_mysql = $this->is_mysql ?? null;
+
+		// See get_col_charset() for an explanation of the is_mysql flag.
+		try {
+			$this->is_mysql = true;
+			return parent::get_col_length( $table, $column );
+		} finally {
+			$this->is_mysql = $original_is_mysql;
+		}
 	}
 
 	/**
@@ -130,12 +183,96 @@ class WP_SQLite_DB extends wpdb {
 
 	/**
 	 * Closes the current database connection.
-	 * Noop in SQLite.
 	 *
-	 * @return bool True to indicate the connection was successfully closed.
+	 * This overrides wpdb::close() while closely mirroring its implementation.
+	 *
+	 * @see wpdb::close()
+	 *
+	 * @return bool True if the connection was successfully closed,
+	 *              false if it wasn't, or if the connection doesn't exist.
 	 */
 	public function close() {
+		if ( ! $this->dbh ) {
+			return false;
+		}
+
+		$connection = $this->dbh->get_connection();
+		$pdo        = $connection->get_pdo();
+
+		try {
+			if ( $this->dbh->inTransaction() ) {
+				$this->dbh->rollBack();
+			} elseif ( $pdo->inTransaction() ) {
+				$pdo->rollBack();
+			} else {
+				/*
+				 * On PHP < 8.4, PDO cannot detect transactions started via SQL.
+				 * A savepoint ensures ROLLBACK succeeds with or without one.
+				 */
+				$pdo->exec( 'SAVEPOINT wp_sqlite_db_close' );
+				$pdo->exec( 'ROLLBACK' );
+			}
+		} catch ( Throwable $e ) {
+			return false;
+		}
+
+		if (
+			isset( $GLOBALS['@pdo'] )
+			&& $GLOBALS['@pdo'] === $pdo
+		) {
+			unset( $GLOBALS['@pdo'] );
+		}
+
+		$connection->set_query_logger( null );
+		$this->result        = null;
+		$this->dbh           = null;
+		$this->ready         = false;
+		$this->has_connected = false;
+
 		return true;
+	}
+
+	/**
+	 * Determines the best charset and collation to use given a charset and collation.
+	 *
+	 * For example, when able, utf8mb4 should be used instead of utf8.
+	 *
+	 * This overrides wpdb::determine_charset() while closely mirroring its implementation.
+	 * The override is needed because the parent checks for a mysqli connection object.
+	 *
+	 * @param string $charset The character set to check.
+	 * @param string $collate The collation to check.
+	 * @return array {
+	 *     The most appropriate character set and collation to use.
+	 *
+	 *     @type string $charset Character set.
+	 *     @type string $collate Collation.
+	 * }
+	 */
+	public function determine_charset( $charset, $collate ) {
+		if ( ! $this->dbh ) {
+			return compact( 'charset', 'collate' );
+		}
+
+		if ( 'utf8' === $charset ) {
+			$charset = 'utf8mb4';
+		}
+
+		if ( 'utf8mb4' === $charset ) {
+			// _general_ is outdated, so we can upgrade it to _unicode_, instead.
+			if ( ! $collate || 'utf8_general_ci' === $collate ) {
+				$collate = 'utf8mb4_unicode_ci';
+			} else {
+				$collate = str_replace( 'utf8_', 'utf8mb4_', $collate );
+			}
+		}
+
+		// _unicode_520_ is a better collation, we should use that when it's available.
+		if ( $this->has_cap( 'utf8mb4_520' ) && 'utf8mb4_unicode_ci' === $collate ) {
+			$collate = 'utf8mb4_unicode_520_ci';
+		}
+
+		return compact( 'charset', 'collate' );
 	}
 
 	/**
@@ -162,12 +299,20 @@ class WP_SQLite_DB extends wpdb {
 	 * @param string $data The string to escape.
 	 *
 	 * @return string escaped
+	 * @throws RuntimeException When the database connection is not initialized.
 	 */
 	public function _real_escape( $data ) {
 		if ( ! is_scalar( $data ) ) {
 			return '';
 		}
-		$escaped = addslashes( $data );
+
+		if ( ! $this->dbh ) {
+			throw new RuntimeException( 'Cannot escape data without an active database connection.' );
+		}
+
+		// Escape the string without bounding quotes to mirror mysqli_real_escape_string().
+		$quoted  = $this->dbh->quote( (string) $data );
+		$escaped = substr( $quoted, 1, -1 );
 		return $this->add_placeholder_escape( $escaped );
 	}
 
@@ -268,17 +413,23 @@ class WP_SQLite_DB extends wpdb {
 	 * @see wpdb::db_connect()
 	 *
 	 * @param bool $allow_bail Not used.
-	 * @return void
+	 * @return bool True on a successful connection, false on failure.
 	 */
 	public function db_connect( $allow_bail = true ) {
 		if ( $this->dbh ) {
-			return;
+			return $this->ready;
 		}
-		$this->init_charset();
 
-		$pdo = null;
+		$this->last_error = '';
 		if ( isset( $GLOBALS['@pdo'] ) ) {
-			$pdo = $GLOBALS['@pdo'];
+			trigger_error(
+				'PDO injection via $GLOBALS[\'@pdo\'] is no longer supported. The existing PDO will be ignored and a new connection will be created.',
+				E_USER_WARNING
+			);
+		}
+
+		if ( ! isset( $this->charset ) ) {
+			$this->init_charset();
 		}
 
 		// Migrate the database file from a legacy path, if it exists.
@@ -312,12 +463,9 @@ class WP_SQLite_DB extends wpdb {
 
 		try {
 			$options = array(
-				'journal_mode' => defined( 'SQLITE_JOURNAL_MODE' ) ? SQLITE_JOURNAL_MODE : null,
+				'sqlite_journal_mode' => defined( 'SQLITE_JOURNAL_MODE' ) ? SQLITE_JOURNAL_MODE : null,
 			);
-			if ( null !== $pdo ) {
-				$options['pdo'] = $pdo;
-			}
-			$this->dbh = new WP_MySQL_On_SQLite(
+			$dbh     = new WP_MySQL_On_SQLite(
 				sprintf(
 					'mysql-on-sqlite:path=%s;dbname=%s',
 					str_replace( ';', ';;', FQDB ),
@@ -327,27 +475,44 @@ class WP_SQLite_DB extends wpdb {
 				null,
 				$options
 			);
-			$this->dbh->setAttribute( PDO::ATTR_STRINGIFY_FETCHES, true ); // phpcs:ignore WordPress.DB.RestrictedClasses.mysql__PDO
-			$GLOBALS['@pdo'] = $this->dbh->get_connection()->get_pdo();
+			$dbh->setAttribute( PDO::ATTR_STRINGIFY_FETCHES, true ); // phpcs:ignore WordPress.DB.RestrictedClasses.mysql__PDO
+			$this->dbh = $dbh;
+
+			/**
+			 * Exposes the underlying PDO SQLite connection for backward compatibility.
+			 *
+			 * @deprecated 3.0.0 Use WP_SQLite_DB::get_driver() with
+			 *                   WP_MySQL_On_SQLite::get_sqlite_pdo() instead.
+			 */
+			$GLOBALS['@pdo'] = $dbh->get_sqlite_pdo();
 		} catch ( Throwable $e ) {
 			$this->last_error = $this->format_error_message( $e );
 		}
 		if ( $this->last_error ) {
 			return false;
 		}
+
+		$this->has_connected = true;
+		$this->set_charset( $this->dbh );
+
 		$this->ready = true;
 		$this->set_sql_mode();
+		return true;
 	}
 
 	/**
-	 * Method to dummy out wpdb::check_connection()
+	 * Checks that the database connection is available.
 	 *
 	 * @param bool $allow_bail Not used.
 	 *
-	 * @return bool
+	 * @return bool True when the connection is available, false otherwise.
 	 */
 	public function check_connection( $allow_bail = true ) {
-		return true;
+		if ( $this->dbh ) {
+			return true;
+		}
+
+		return $this->db_connect( $allow_bail );
 	}
 
 	/**
@@ -420,14 +585,13 @@ class WP_SQLite_DB extends wpdb {
 		$last_query_count = count( $this->queries ?? array() );
 
 		/*
-		 * @TODO: WPDB uses "$this->check_current_query" to check table/column
-		 *        charset and strip all invalid characters from the query.
-		 *        This is an involved process that we can bypass for SQLite,
-		 *        if we simply strip all invalid UTF-8 characters from the query.
+		 * @TODO: wpdb uses "$this->check_current_query" and table metadata to
+		 * reject queries containing invalid text. Implement equivalent handling
+		 * for SQLite without relying on the MySQL-specific conversion pipeline.
 		 *
-		 *        To do so, mb_convert_encoding can be used with an optional
-		 *        fallback to a htmlspecialchars method. E.g.:
-		 *          https://github.com/nette/utils/blob/be534713c227aeef57ce1883fc17bc9f9e29eca2/src/Utils/Strings.php#L42
+		 * PCRE's "u" modifier can validate UTF-8 without constructing a converted
+		 * query copy: 1 === preg_match( '//u', $query ). The implementation must
+		 * preserve wpdb's exemptions for prevalidated and binary data.
 		 */
 		$this->_do_query( $query );
 
@@ -448,7 +612,7 @@ class WP_SQLite_DB extends wpdb {
 
 			// Take note of the insert_id.
 			if ( preg_match( '/^\s*(insert|replace)\s/i', $query ) ) {
-				$this->insert_id = $this->dbh->get_insert_id();
+				$this->insert_id = (int) $this->dbh->lastInsertId();
 			}
 
 			// Return number of rows affected.
@@ -539,7 +703,11 @@ class WP_SQLite_DB extends wpdb {
 			return;
 		}
 		$this->col_info = array();
-		foreach ( $this->dbh->get_last_column_meta() as $column ) {
+		if ( null === $this->result ) {
+			return;
+		}
+		for ( $i = 0; $i < $this->result->columnCount(); $i++ ) {
+			$column           = $this->result->getColumnMeta( $i );
 			$this->col_info[] = (object) array(
 				'name'       => $column['name'],
 				'orgname'    => $column['mysqli:orgname'],
@@ -559,43 +727,52 @@ class WP_SQLite_DB extends wpdb {
 	}
 
 	/**
-	 * Method to return what the database can do.
+	 * Determines whether the database supports a given feature.
 	 *
-	 * This overrides wpdb::has_cap() to avoid using MySQL functions.
-	 * SQLite supports subqueries, but not support collation, group_concat and set_charset.
+	 * The utf8mb4 check is handled here because older WordPress versions inspect
+	 * the MySQL client library. All other capabilities use the parent logic.
 	 *
 	 * @see wpdb::has_cap()
 	 *
-	 * @param string $db_cap The feature to check for. Accepts 'collation',
-	 *                       'group_concat', 'subqueries', 'set_charset',
-	 *                       'utf8mb4', or 'utf8mb4_520'.
-	 *
-	 * @return bool Whether the database feature is supported, false otherwise.
+	 * @param string $db_cap The feature to check for.
+	 * @return bool True when the database feature is supported, false otherwise.
 	 */
 	public function has_cap( $db_cap ) {
-		return 'subqueries' === strtolower( $db_cap );
+		if ( 'utf8mb4' === strtolower( $db_cap ) ) {
+			return true;
+		}
+
+		return parent::has_cap( $db_cap );
 	}
 
 	/**
-	 * Method to return database version number.
+	 * Retrieves the emulated database server version number.
 	 *
-	 * This overrides wpdb::db_version() to avoid using MySQL function.
-	 * It returns mysql version number, but it means nothing for SQLite.
-	 * So it return the newest mysql version.
+	 * This mirrors wpdb::db_version(), but must also be defined here because
+	 * WordPress 5.4 and older fetch server information directly from the MySQL
+	 * extension instead of delegating to wpdb::db_server_info().
 	 *
 	 * @see wpdb::db_version()
+	 *
+	 * @return string Version number on success, or an empty string while disconnected.
 	 */
 	public function db_version() {
-		return '8.0';
+		return preg_replace( '/[^0-9.].*/', '', $this->db_server_info() );
 	}
 
 	/**
-	 * Returns the version of the SQLite engine.
+	 * Returns the raw version string of the emulated MySQL server.
 	 *
-	 * @return string SQLite engine version as a string.
+	 * @see wpdb::db_server_info()
+	 *
+	 * @return string Emulated MySQL server version, or an empty string while disconnected.
 	 */
 	public function db_server_info() {
-		return $this->dbh->get_sqlite_version();
+		if ( ! $this->dbh ) {
+			return '';
+		}
+
+		return $this->dbh->getAttribute( PDO::ATTR_SERVER_VERSION ); // phpcs:ignore WordPress.DB.RestrictedClasses.mysql__PDO
 	}
 
 	/**
@@ -647,7 +824,7 @@ class WP_SQLite_DB extends wpdb {
 
 
 	/**
-	 * Format SQLite driver error message.
+	 * Format MySQL-on-SQLite driver error message.
 	 *
 	 * @return string
 	 */
@@ -655,8 +832,8 @@ class WP_SQLite_DB extends wpdb {
 		$output = '<div style="clear:both">&nbsp;</div>' . PHP_EOL;
 
 		// Queries.
-		if ( $e instanceof WP_SQLite_Driver_Exception ) {
-			$driver = $e->getDriver();
+		if ( $e instanceof WP_MySQL_On_SQLite_Exception ) {
+			$driver = $e->get_driver();
 
 			$output .= '<div class="queries" style="clear:both;margin-bottom:2px;border:red dotted thin;">' . PHP_EOL;
 			$output .= '<p>MySQL query:</p>' . PHP_EOL;

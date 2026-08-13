@@ -8,6 +8,8 @@
  * Each node can contain children, consisting of other nodes and grammar tokens.
  * In this way, a parser node constitutes a recursive structure that represents
  * a parse (sub)tree at each level of the full grammar tree.
+ *
+ * @access private
  */
 class WP_Parser_Node {
 	/**

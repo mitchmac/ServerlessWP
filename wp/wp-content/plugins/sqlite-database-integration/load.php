@@ -3,13 +3,12 @@
  * Plugin Name: SQLite Database Integration
  * Description: SQLite database driver drop-in.
  * Author: The WordPress Team
- * Version: 3.0.0-rc.7
+ * Version: 3.0.0-rc.9
  * Requires PHP: 7.2
+ * Network: true
  * Textdomain: sqlite-database-integration
  *
  * This feature plugin allows WordPress to use SQLite instead of MySQL as its database.
- *
- * @package wp-sqlite-integration
  */
 
 /**
@@ -20,6 +19,7 @@ require_once __DIR__ . '/wp-includes/database/version.php';
 
 define( 'SQLITE_MAIN_FILE', __FILE__ );
 
+require_once __DIR__ . '/capabilities.php';
 require_once __DIR__ . '/admin-page.php';
 require_once __DIR__ . '/activate.php';
 require_once __DIR__ . '/deactivate.php';
