@@ -385,6 +385,45 @@ test('client-supplied X-Serverlesswp-Sqlite-File header is stripped', async () =
     await sqliteS3.postRequest(event, {});
 });
 
+test('a data_version failure returns an error instead of the WordPress success response', async () => {
+    const body = await buildDbBytes('seed');
+    const { client, state } = makeMockS3({ initialBody: body });
+    sqliteS3._setClientForTests(client, { bucket: 'b', file: 'f' });
+
+    const event = {};
+    await sqliteS3.preRequest(event);
+    const ctx = event[Symbol.for('serverlesswp.sqliteS3.context')];
+    await insertRow(ctx.workingPath, 'not-persisted');
+
+    // A closed handle makes PRAGMA data_version fail, standing in for any
+    // unexpected SQLite error at the change-detection boundary.
+    await new Promise((resolve, reject) => {
+        ctx.db.close((err) => err ? reject(err) : resolve());
+    });
+
+    const result = await sqliteS3.postRequest(event, { statusCode: 200, body: 'saved' });
+    assert.strictEqual(result.statusCode, 500);
+    assert.strictEqual(result.headers['cache-control'], 'no-store');
+    assert.match(result.body, /check your function logs for more information/i);
+    assert.strictEqual(state.putCalls, 0, 'the uncertain database is not uploaded');
+});
+
+test('a missing working file returns an error instead of the WordPress success response', async () => {
+    const body = await buildDbBytes('seed');
+    const { client, state } = makeMockS3({ initialBody: body });
+    sqliteS3._setClientForTests(client, { bucket: 'b', file: 'f' });
+
+    const event = {};
+    await sqliteS3.preRequest(event);
+    const ctx = event[Symbol.for('serverlesswp.sqliteS3.context')];
+    await fs.unlink(ctx.workingPath);
+
+    const result = await sqliteS3.postRequest(event, { statusCode: 200, body: 'saved' });
+    assert.strictEqual(result.statusCode, 500);
+    assert.match(result.body, /check your function logs for more information/i);
+    assert.strictEqual(state.putCalls, 0, 'nothing is uploaded when the working file disappeared');
+});
+
 // The sqliteS3 module imports the real @aws-sdk PutObjectCommand /
 // GetObjectCommand classes. Our mock dispatches by constructor.name, but the
 // production code constructs the *real* SDK command instances. So our mock
