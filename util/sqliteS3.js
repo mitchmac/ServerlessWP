@@ -154,13 +154,13 @@ exports.postRequest = async function(event, response) {
         // If db wasn't initialized but the working file somehow exists, treat
         // it as a new database (e.g. fresh install path).
         const workingExists = await exists(ctx.workingPath);
+        if (!workingExists) {
+            console.error('Database persistence failed: the per-request SQLite working file is missing.');
+            return persistenceError();
+        }
         if (!ctx.db) {
-            if (workingExists) {
-                ctx.db = new sqlite3.Database(ctx.workingPath);
-                ctx.dataVersion = null;
-            } else {
-                return;
-            }
+            ctx.db = new sqlite3.Database(ctx.workingPath);
+            ctx.dataVersion = null;
         }
 
         let versionNow = await getDataVersion(ctx.db);
@@ -175,11 +175,7 @@ exports.postRequest = async function(event, response) {
             // re-fetch.
             if (!ctx.etag && !ctx.blobMissing) {
                 console.log('Refusing to save database without a bound ETag.');
-                return {
-                    statusCode: 500,
-                    body: 'Database error. This can happen when simultaneous database updates happen. Re-try your request.',
-                    retry: true,
-                };
+                return persistenceError(true);
             }
 
             try {
@@ -217,10 +213,7 @@ exports.postRequest = async function(event, response) {
             }
             catch (err) {
                 console.log(err);
-                let errResponse = {
-                    statusCode: 500,
-                    body: 'Database error. This can happen when simultaneous database updates happen. Re-try your request.'
-                }
+                let errResponse = persistenceError();
                 if (err.$metadata && err.$metadata.httpStatusCode === 412) {
                    errResponse.retry = true;
                    console.log('Retrying database save to s3 because of a conflicting update.');
@@ -230,7 +223,8 @@ exports.postRequest = async function(event, response) {
         }
     }
     catch (err) {
-        console.log(err);
+        console.error('Unexpected database persistence error:', err);
+        return persistenceError();
     }
     finally {
         if (ctx.db) {
@@ -255,6 +249,18 @@ function readError() {
         body: 'Database error. The database could not be read. Re-try your request.',
         _forceResponse: true,
     };
+}
+
+function persistenceError(retry = false) {
+    const response = {
+        statusCode: 500,
+        headers: { 'content-type': 'text/plain', 'cache-control': 'no-store' },
+        body: 'Database persistence failed. Your changes may not have been saved. If this is your site, check your function logs for more information.',
+    };
+    if (retry) {
+        response.retry = true;
+    }
+    return response;
 }
 
 async function getEtag() {
@@ -311,7 +317,10 @@ async function exists(path) {
       await fs.access(path);
       return true;
     } catch (error) {
-      return false;
+      if (error?.code === 'ENOENT') {
+        return false;
+      }
+      throw error;
     }
 }
 

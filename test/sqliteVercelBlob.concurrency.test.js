@@ -192,3 +192,39 @@ test('an unknown starting version refuses to write instead of clobbering', async
     assert.strictEqual(result.retry, true);
     assert.strictEqual(state.putCalls, 0, 'nothing was written to the store');
 });
+
+test('a data_version failure returns an error instead of the WordPress success response', async () => {
+    const { api, state } = makeMockBlobStore({ initialBody: await buildDbBytes('seed') });
+    sqliteVercelBlob._setBlobForTests(api);
+    sqliteVercelBlob.config({ pathname: 'wp-sqlite-test.sqlite' });
+
+    const event = {};
+    await sqliteVercelBlob.preRequest(event);
+    const ctx = event[CTX_KEY];
+    await insertRow(ctx.workingPath, 'not-persisted');
+
+    await new Promise((resolve, reject) => {
+        ctx.db.close((err) => err ? reject(err) : resolve());
+    });
+
+    const result = await sqliteVercelBlob.postRequest(event, { statusCode: 200, body: 'saved' });
+    assert.strictEqual(result.statusCode, 500);
+    assert.strictEqual(result.headers['cache-control'], 'no-store');
+    assert.match(result.body, /check your function logs for more information/i);
+    assert.strictEqual(state.putCalls, 0, 'the uncertain database is not uploaded');
+});
+
+test('a missing working file returns an error instead of the WordPress success response', async () => {
+    const { api, state } = makeMockBlobStore({ initialBody: await buildDbBytes('seed') });
+    sqliteVercelBlob._setBlobForTests(api);
+    sqliteVercelBlob.config({ pathname: 'wp-sqlite-test.sqlite' });
+
+    const event = {};
+    await sqliteVercelBlob.preRequest(event);
+    await fs.unlink(event[CTX_KEY].workingPath);
+
+    const result = await sqliteVercelBlob.postRequest(event, { statusCode: 200, body: 'saved' });
+    assert.strictEqual(result.statusCode, 500);
+    assert.match(result.body, /check your function logs for more information/i);
+    assert.strictEqual(state.putCalls, 0, 'nothing is uploaded when the working file disappeared');
+});
