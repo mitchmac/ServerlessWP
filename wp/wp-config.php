@@ -154,6 +154,12 @@ if (!empty($_SERVER['HTTP_X_SERVERLESSWP_SQLITE_FILE'])) {
   define('WP_POST_REVISIONS', 3);
 }
 
+define( 'WP_DEFAULT_THEME', 'argon' );
+
+define('AUTOMATIC_UPDATER_DISABLED', true);
+
+define('WP_AUTO_UPDATE_CORE', false);
+
 /* That's all, stop editing! Happy publishing. */
 
 /** Absolute path to the WordPress directory. */
