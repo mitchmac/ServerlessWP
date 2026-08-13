@@ -1,25 +1,31 @@
 name: Update WordPress
 on:
   schedule:
-  - cron: "0 0 * * *"
+    - cron: "0 0 * * *"
   workflow_dispatch:
 jobs:
   update:
     name: Update WordPress
     runs-on: ubuntu-latest
-    if: github.repository_owner == 'mitchmac'
+    if: github.repository_owner == 'xiaohuihuib'
     steps:
       - name: Checkout
         uses: actions/checkout@v3
-      - run: ./upgrade-wp.sh
+        with:
+          token: ${{ secrets.PAT }}  # 使用 PAT 检出，确保有推送权限
+
+      - name: Run upgrade script
+        run: ./upgrade-wp.sh
         working-directory: ./util
+
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v5
         with:
+          token: ${{ secrets.PAT }}  # 关键：使用 PAT 创建 PR 和推送
           commit-message: Automated WordPress version update
           title: WordPress version update
           body: 'This is an automated update of the bundled WordPress files'
-          committer: "Mitch MacKenzie <mitchmac@gmail.com>"
-          assignees: mitchmac
+          committer: "xiaohuihuib <3083869156@qq.com>"
+          assignees: xiaohuihuib
           delete-branch: true
           branch: 'wordpress-version-update'
