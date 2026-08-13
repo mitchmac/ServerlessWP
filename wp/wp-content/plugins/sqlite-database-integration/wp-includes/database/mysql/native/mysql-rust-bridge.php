@@ -8,6 +8,8 @@
 /**
  * Export grammar internals for the native parser.
  *
+ * @access private
+ *
  * @param WP_Parser_Grammar $grammar Parser grammar.
  * @return array<string, mixed>
  */

@@ -1,0 +1,182 @@
+/* Global styles to prevent overflow */
+.wrap {
+    max-width: 100%;
+    overflow-x: hidden;
+}
+
+/* Table overflow fix */
+.form-table {
+    table-layout: fixed;
+    width: 100%;
+}
+
+.form-table td {
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+}
+
+/* Input fields max width */
+.regular-text {
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+/* Test result container */
+#test-result {
+    margin-top: 10px;
+    max-width: 100%;
+    overflow-x: hidden;
+}
+
+#test-result .notice {
+    max-width: 100%;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+}
+
+#test-result .notice p {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Debug info container */
+#yctvn-media-offload-debug-info {
+    max-width: 100%;
+    overflow: hidden;
+}
+
+/* Code blocks */
+code {
+    word-wrap: break-word;
+    word-break: break-all;
+    overflow-wrap: anywhere;
+    display: inline-block;
+    max-width: 100%;
+}
+
+pre {
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    max-width: 100%;
+    overflow-x: auto;
+}
+
+/* Wide table fix */
+.widefat {
+    table-layout: fixed !important;
+    width: 100% !important;
+}
+
+.widefat td,
+.widefat th {
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Container for sync log */
+#sync-log {
+    max-height: 400px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    background: #f9f9f9;
+    padding: 10px;
+    margin: 10px 0;
+    border: 1px solid #ddd;
+    font-family: 'Courier New', monospace;
+    font-size: 11px;
+    line-height: 1.5;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* Individual log entries */
+#sync-log .log-entry {
+    margin: 4px 0;
+    padding: 6px 10px;
+    border-radius: 3px;
+    /* Force text wrapping */
+    word-wrap: break-word;
+    word-break: break-word;
+    overflow-wrap: break-word;
+    white-space: pre-wrap;
+    /* Prevent overflow */
+    max-width: 100%;
+    overflow: hidden;
+    display: block;
+    box-sizing: border-box;
+}
+
+/* Success messages */
+#sync-log .log-entry.success {
+    background: #d4edda;
+    border-left: 3px solid #28a745;
+    color: #155724;
+}
+
+/* Error messages */
+#sync-log .log-entry.error {
+    background: #f8d7da;
+    border-left: 3px solid #dc3545;
+    color: #721c24;
+}
+
+/* Warning messages */
+#sync-log .log-entry.warning {
+    background: #fff3cd;
+    border-left: 3px solid #ffc107;
+    color: #856404;
+}
+
+/* Info messages */
+#sync-log .log-entry.info {
+    background: #d1ecf1;
+    border-left: 3px solid #17a2b8;
+    color: #0c5460;
+}
+
+/* Scrollbar styling */
+#sync-log::-webkit-scrollbar {
+    width: 8px;
+}
+
+#sync-log::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+#sync-log::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 4px;
+}
+
+#sync-log::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
+
+/* Progress bar container */
+#sync-progress {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .wrap {
+        padding: 10px;
+    }
+    
+    #sync-log {
+        font-size: 11px;
+        max-height: 300px;
+    }
+    
+    .form-table th,
+    .form-table td {
+        display: block;
+        width: 100%;
+        box-sizing: border-box;
+    }
+}

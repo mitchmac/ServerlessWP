@@ -8,6 +8,8 @@
  * caller actually walks the tree. On the first mutation (append_child or
  * merge_fragment), the node materializes its children into the inherited
  * `$children` array and behaves like a plain WP_Parser_Node from then on.
+ *
+ * @access private
  */
 class WP_MySQL_Native_Parser_Node extends WP_Parser_Node {
 	private $was_mutated = false;
