@@ -4,19 +4,9 @@ declare(strict_types=1);
 
 namespace WpAltStreamWrapper\Tests\E2E\Tests;
 
-/**
- * What the HTTP proxy will and will not hand back.
- *
- * Storage routing covers all of wp-content, which is right for persistence and
- * too broad for serving: everything routed there would otherwise be downloadable
- * by anyone who guesses the URL. WP_STREAM_PUBLIC_PATHS is the separate,
- * narrower policy, and these tests pin both directions of it.
- */
 class ServingPolicyTest extends E2ETestCase
 {
-    /** @var string[] */
     private array $seeded = [];
-
     protected function tearDown(): void
     {
         foreach ($this->seeded as $key) {
@@ -48,8 +38,6 @@ class ServingPolicyTest extends E2ETestCase
 
     public function testCacheIsServedForAssetFilenames(): void
     {
-        // No opt-in: a bundler's CSS under wp-content/cache has to resolve or
-        // the site renders unstyled, and nobody would know why.
         $key = 'cache/e2e-generated-' . getmypid() . '.css';
         $this->seed($key, 'body{color:red}');
 
@@ -61,9 +49,6 @@ class ServingPolicyTest extends E2ETestCase
 
     public function testCacheIsNotServedForPageContent(): void
     {
-        // The same directory holds rendered HTML from page caches, which can be
-        // a page only some users are meant to see. The extension is what
-        // separates it from the bundle above.
         $secret = '<html><body>members-only page</body></html>';
         $key    = 'cache/e2e-cached-page-' . getmypid() . '.html';
         $this->seed($key, $secret);
@@ -72,13 +57,11 @@ class ServingPolicyTest extends E2ETestCase
 
         $this->assertNotSame(200, $status, 'Cached HTML must not be served.');
         $this->assertStringNotContainsString('members-only', $body);
-        $this->assertStorageKeyExists($key); // stored, just not downloadable
+        $this->assertStorageKeyExists($key);
     }
 
     public function testUploadsAreServedWhateverTheFileType(): void
     {
-        // The extension gate applies to asset paths only. Uploads is media by
-        // definition, and WordPress serves whatever is in it on any host.
         $key = 'uploads/e2e-document-' . getmypid() . '.html';
         $this->seed($key, '<html><body>uploaded document</body></html>');
 
@@ -90,9 +73,6 @@ class ServingPolicyTest extends E2ETestCase
 
     public function testDirectoryOutsideThePublicSetIsNotServed(): void
     {
-        // A backup directory is stored (so it survives the invocation) but must
-        // not be downloadable: there is no .htaccess to stop it on serverless,
-        // and this proxy answers before any such rule would apply.
         $secret = 'top secret database dump';
         $key    = 'backups/e2e-dump-' . getmypid() . '.txt';
         $this->seed($key, $secret);
@@ -102,16 +82,12 @@ class ServingPolicyTest extends E2ETestCase
         $this->assertNotSame(200, $status, 'A non-public stored path must not be served.');
         $this->assertStringNotContainsString($secret, $body);
 
-        // Still stored — the policy governs serving, not persistence.
         $this->assertStorageKeyExists($key);
     }
-
-    // -------- reporting a refusal --------
 
     private const NOTICE_HELPER =
         '/wp-content/mu-plugins/wp-alt-streamwrapper/tests/E2E/setup/blocked-notice.php';
 
-    /** @return array{notice_path: ?string, cooldown_held: bool} */
     private function reportingState(string $action = 'state'): array
     {
         [$status, $body] = $this->fetchBody(
@@ -129,17 +105,13 @@ class ServingPolicyTest extends E2ETestCase
     {
         $this->reportingState('reset');
 
-        // Nothing was ever written here. An unauthenticated request for an
-        // invented path must not produce a log line calling it stored, nor put
-        // an attacker's path in front of an admin as if it were real.
         $absent = 'backups/e2e-invented-' . getmypid() . '.css';
         [$status] = $this->fetchBody($this->contentUrl($absent));
         $this->assertNotSame(200, $status);
 
         $state = $this->reportingState();
         $this->assertNull($state['notice_path'], 'A path with no object behind it must not be reported.');
-        // The cooldown is still taken: it is claimed before the existence check
-        // so a flood of invented paths cannot become a flood of storage requests.
+
         $this->assertTrue($state['cooldown_held']);
     }
 
@@ -170,17 +142,12 @@ class ServingPolicyTest extends E2ETestCase
         $this->seed($second, 'body{}');
         $this->fetchBody($this->contentUrl($second));
 
-        // The window is held, so the second refusal neither logs nor overwrites
-        // the notice — one report per cooldown however many requests arrive.
         $state = $this->reportingState();
         $this->assertStringEndsWith(basename($first), (string) $state['notice_path']);
     }
 
     public function testPublicPathFilterCanOptInADirectory(): void
     {
-        // The filter is the documented way to widen the policy.
-        // tests/E2E/setup/public-path-filter.php opts 'wp-content/e2e-opt-in'
-        // in; install.sh copies it into mu-plugins.
         $key = 'e2e-opt-in/e2e-file-' . getmypid() . '.txt';
         $this->seed($key, 'opted in');
 

@@ -28,27 +28,19 @@ class Config
     private ?string $vercelApiBase;
     private ?string $vercelDownloadBase;
     private ?string $cdnBaseUrl;
-
     public function __construct()
     {
         $this->provider        = $this->read('WP_STREAM_PROVIDER', '');
         $this->targetPaths     = $this->read('WP_STREAM_TARGET_PATHS', 'wp-content');
 
-        // Public serving is deliberately narrower than persistence routing.
         $this->publicPaths     = $this->read('WP_STREAM_PUBLIC_PATHS', 'wp-content/uploads');
 
-        // Cache directories mix public assets with private rendered pages, so
-        // only filenames with web-asset extensions are served from them.
         $this->publicAssetPaths = $this->read('WP_STREAM_PUBLIC_ASSET_PATHS', 'wp-content/cache');
         $this->excludePaths    = $this->read('WP_STREAM_EXCLUDE_PATHS', 'wp-content/plugins,wp-content/themes,wp-content/mu-plugins,wp-content/languages,wp-content/upgrade');
-        // Logs stay local; remote appends would rewrite the growing object for
-        // every line while the same output already reaches function logs.
+
         $this->excludePatterns = $this->read('WP_STREAM_EXCLUDE_PATTERNS', '*.sqlite,*.db,*.php,*.log,.htaccess');
         $this->wpContentDir    = $this->readNullable('WP_STREAM_WP_CONTENT_DIR');
 
-        // S3 settings fall back to the SQLITE_S3_* / S3_* variables ServerlessWP
-        // users already configure, so a typical SQLite+S3 site only needs to set
-        // WP_STREAM_PROVIDER=s3.
         $this->s3Bucket         = $this->readFirst(['WP_STREAM_S3_BUCKET', 'SQLITE_S3_BUCKET', 'S3_OFFLOAD_BUCKET']);
         $this->s3Region         = $this->readFirst(['WP_STREAM_S3_REGION', 'SQLITE_S3_REGION']) ?? 'us-east-1';
         $this->s3Prefix         = $this->read('WP_STREAM_S3_PREFIX', '');
@@ -58,7 +50,6 @@ class Config
         $this->s3ForcePathStyle = $this->truthy($this->readFirst(['WP_STREAM_S3_FORCE_PATH_STYLE', 'SQLITE_S3_FORCE_PATH_STYLE']));
         $this->s3Acl            = $this->readNullable('WP_STREAM_S3_ACL');
 
-        // Moderate defaults allow in-place replacement of uploads and assets.
         $this->cacheControl = $this->read('WP_STREAM_CACHE_CONTROL', 'public, max-age=3600, s-maxage=86400');
 
         $this->vercelToken        = $this->readNullable('WP_STREAM_VERCEL_TOKEN');
@@ -69,7 +60,6 @@ class Config
         $this->cdnBaseUrl      = $this->readNullable('WP_STREAM_CDN_BASE_URL');
     }
 
-    // Priority: PHP constant > environment variable > default
     private function read(string $name, string $default): string
     {
         if (defined($name)) {
@@ -88,7 +78,6 @@ class Config
         return $env !== false ? $env : null;
     }
 
-    /** First non-empty value across a list of names, each constant-then-env. */
     private function readFirst(array $names): ?string
     {
         foreach ($names as $name) {
@@ -116,7 +105,7 @@ class Config
         return $this->provider;
     }
 
-    /** @return string[] relative paths like 'wp-content/uploads' */
+    /** @return string[] */
     public function targetPaths(): array
     {
         if ($this->targetPaths === '') {
@@ -125,14 +114,13 @@ class Config
         return array_filter(array_map('trim', explode(',', $this->targetPaths)));
     }
 
-    /** Extensions safe to serve from directories that may also hold page data. */
     public const PUBLIC_ASSET_EXTENSIONS = [
         'css', 'js', 'mjs',
         'svg', 'png', 'jpg', 'jpeg', 'gif', 'webp', 'avif', 'ico', 'bmp',
         'woff', 'woff2', 'ttf', 'otf', 'eot',
     ];
 
-    /** @return string[] relative paths the HTTP proxy may serve, e.g. 'wp-content/uploads' */
+    /** @return string[] */
     public function publicPaths(): array
     {
         if ($this->publicPaths === '') {
@@ -141,7 +129,7 @@ class Config
         return array_filter(array_map('trim', explode(',', $this->publicPaths)));
     }
 
-    /** @return string[] relative paths served only for PUBLIC_ASSET_EXTENSIONS files */
+    /** @return string[] */
     public function publicAssetPaths(): array
     {
         if ($this->publicAssetPaths === '') {
@@ -150,7 +138,7 @@ class Config
         return array_filter(array_map('trim', explode(',', $this->publicAssetPaths)));
     }
 
-    /** @return string[] relative path prefixes that must stay on local disk, e.g. 'wp-content/plugins' */
+    /** @return string[] */
     public function excludePaths(): array
     {
         if ($this->excludePaths === '') {
@@ -159,7 +147,7 @@ class Config
         return array_filter(array_map('trim', explode(',', $this->excludePaths)));
     }
 
-    /** @return string[] glob patterns matched against basename */
+    /** @return string[] */
     public function excludePatterns(): array
     {
         if ($this->excludePatterns === '') {
@@ -208,13 +196,11 @@ class Config
         return $this->s3ForcePathStyle;
     }
 
-    /** Canned ACL applied to writes (e.g. 'public-read'), or null for bucket default. */
     public function s3Acl(): ?string
     {
         return $this->s3Acl;
     }
 
-    /** Cache-Control header value for proxy-served remote files. */
     public function cacheControl(): string
     {
         return $this->cacheControl;
@@ -230,19 +216,16 @@ class Config
         return $this->vercelStoreId;
     }
 
-    /** Blob store access mode: 'public' or 'private'. Shapes the download host. */
     public function vercelAccess(): string
     {
         return $this->vercelAccess;
     }
 
-    /** Override for the Blob API base URL (tests/emulator). */
     public function vercelApiBase(): ?string
     {
         return $this->vercelApiBase;
     }
 
-    /** Override for the blob download base URL (tests/emulator). */
     public function vercelDownloadBase(): ?string
     {
         return $this->vercelDownloadBase;

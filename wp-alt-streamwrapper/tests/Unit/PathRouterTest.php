@@ -10,7 +10,6 @@ use WpAltStreamWrapper\PathRouter;
 class PathRouterTest extends TestCase
 {
     private PathRouter $router;
-
     protected function setUp(): void
     {
         $this->router = new PathRouter(
@@ -19,8 +18,6 @@ class PathRouterTest extends TestCase
             excludePatterns: ['*.sqlite', '*.db', '*.php', '*.log', '.htaccess'],
         );
     }
-
-    // -------- isRemote: targeted paths --------
 
     public function testUploadPathIsRemote(): void
     {
@@ -34,10 +31,6 @@ class PathRouterTest extends TestCase
 
     public function testDirectoryOtherThanUploadsOrCacheIsRemote(): void
     {
-        // Any directory a plugin invents under wp-content routes to storage;
-        // targeting is not limited to the well-known ones. (Wordfence's wflogs
-        // here — its own state files are *.php and excluded by pattern, which is
-        // a separate question from whether the directory is targeted.)
         $this->assertTrue($this->router->isRemote('/srv/www/wp-content/wflogs/attack-data.bin'));
     }
 
@@ -50,8 +43,6 @@ class PathRouterTest extends TestCase
     {
         $this->assertTrue($this->router->isRemote('/srv/www/wp-content/uploads'));
     }
-
-    // -------- isRemote: non-targeted paths --------
 
     public function testPluginPathIsLocal(): void
     {
@@ -72,8 +63,6 @@ class PathRouterTest extends TestCase
     {
         $this->assertFalse($this->router->isRemote('/etc/passwd'));
     }
-
-    // -------- isRemote: exclusion patterns --------
 
     public function testSqliteFileIsExcluded(): void
     {
@@ -97,10 +86,6 @@ class PathRouterTest extends TestCase
 
     public function testLogFileIsExcluded(): void
     {
-        // WordPress points error_log at WP_CONTENT_DIR/debug.log under
-        // WP_DEBUG_LOG. Routed, every line would cost a GET plus a conditional
-        // PUT of an ever-growing object; the same lines already reach the
-        // platform's function logs.
         $this->assertFalse($this->router->isRemote('/srv/www/wp-content/debug.log'));
         $this->assertFalse($this->router->isRemote('/srv/www/wp-content/uploads/plugin-errors.log'));
     }
@@ -110,14 +95,10 @@ class PathRouterTest extends TestCase
         $this->assertTrue($this->router->isRemote('/srv/www/wp-content/uploads/photo.jpeg'));
     }
 
-    // -------- file:// protocol prefix --------
-
     public function testFileProtocolStripped(): void
     {
         $this->assertTrue($this->router->isRemote('file:///srv/www/wp-content/uploads/photo.jpg'));
     }
-
-    // -------- toStorageKey --------
 
     public function testStorageKeyStripsWpContentPrefix(): void
     {
@@ -131,8 +112,6 @@ class PathRouterTest extends TestCase
         $this->assertSame('cache/index.html', $key);
     }
 
-    // -------- toAbsolutePath --------
-
     public function testAbsolutePathRoundTrip(): void
     {
         $original = '/srv/www/wp-content/uploads/2024/photo.jpg';
@@ -141,18 +120,13 @@ class PathRouterTest extends TestCase
         $this->assertSame($original, $restored);
     }
 
-    // -------- wpContentDir --------
-
     public function testWpContentDir(): void
     {
         $this->assertSame('/srv/www/wp-content', $this->router->wpContentDir());
     }
 
-    // -------- path traversal prevention --------
-
     public function testPathTraversalEscapingUploadsIsNotRemote(): void
     {
-        // Resolves to /etc/passwd — outside any target prefix.
         $this->assertFalse(
             $this->router->isRemote('/srv/www/wp-content/uploads/../../../etc/passwd'),
         );
@@ -160,8 +134,6 @@ class PathRouterTest extends TestCase
 
     public function testPathTraversalEscapingToCacheIsNotRemoteForUploadsOnly(): void
     {
-        // Resolves to /srv/www/wp-content/cache/foo which IS a target, but only
-        // because cache is in the list — the traversal itself resolved correctly.
         $this->assertTrue(
             $this->router->isRemote('/srv/www/wp-content/uploads/../cache/foo.html'),
         );
@@ -169,7 +141,6 @@ class PathRouterTest extends TestCase
 
     public function testPathTraversalEscapingToPluginsIsNotRemote(): void
     {
-        // Resolves to /srv/www/wp-content/plugins/foo.php — not a target.
         $this->assertFalse(
             $this->router->isRemote('/srv/www/wp-content/uploads/../plugins/foo.php'),
         );
@@ -177,7 +148,6 @@ class PathRouterTest extends TestCase
 
     public function testDotSegmentsAreNormalized(): void
     {
-        // /./foo resolves to /foo; this should still match uploads.
         $this->assertTrue(
             $this->router->isRemote('/srv/www/wp-content/uploads/./2024/photo.jpg'),
         );

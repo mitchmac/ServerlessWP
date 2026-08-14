@@ -14,7 +14,6 @@ class FileUploadTest extends E2ETestCase
         $this->assertArrayHasKey('id', $attachment);
         $this->assertGreaterThan(0, $attachment['id']);
 
-        // The file should be stored in MinIO under the uploads/ prefix.
         $keys = $this->listStorageKeys('uploads');
         $found = array_filter($keys, fn($k) => str_contains($k, 'e2e-upload-test'));
         $this->assertNotEmpty($found, 'Uploaded file not found in MinIO storage.');
@@ -25,9 +24,6 @@ class FileUploadTest extends E2ETestCase
         $fixture    = $this->fixturesDir() . '/test-image.jpg';
         $attachment = $this->uploadMedia($fixture, 'e2e-url-test.jpg');
 
-        // Without WP_STREAM_CDN_BASE_URL the plugin serves files at normal
-        // WordPress URLs via the template_redirect proxy.  Verify the source_url
-        // is a /wp-content/ URL and returns HTTP 200.
         $sourceUrl = $attachment['source_url'] ?? '';
         $this->assertStringContainsString('/wp-content/', $sourceUrl, "source_url must be a wp-content URL, got: {$sourceUrl}");
 
@@ -69,7 +65,6 @@ class FileUploadTest extends E2ETestCase
         $fixture    = $this->fixturesDir() . '/test-image.jpg';
         $attachment = $this->uploadMedia($fixture, 'e2e-readable-test.jpg');
 
-        // Find the key for this upload.
         $keys = $this->listStorageKeys('uploads');
         $key  = '';
         foreach ($keys as $k) {
@@ -84,7 +79,6 @@ class FileUploadTest extends E2ETestCase
         $contents = $this->storage->get($key);
         $this->assertNotFalse($contents, 'Could not retrieve file from MinIO.');
 
-        // Verify it is a JPEG (starts with JPEG magic bytes FF D8 FF).
         $this->assertSame("\xFF\xD8\xFF", substr($contents, 0, 3));
     }
 }

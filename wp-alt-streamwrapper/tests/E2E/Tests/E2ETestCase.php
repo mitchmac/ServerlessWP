@@ -13,7 +13,6 @@ abstract class E2ETestCase extends TestCase
     protected S3Adapter $storage;
     protected string $wpUser     = 'testuser';
     protected string $wpPassword = 'testpassword';
-
     protected function setUp(): void
     {
         $this->wpUrl = getenv('WP_URL') ?: 'http://wordpress';
@@ -27,10 +26,6 @@ abstract class E2ETestCase extends TestCase
         );
     }
 
-    /**
-     * Upload a file to WordPress via the REST API.
-     * Returns the attachment JSON response as an array.
-     */
     protected function uploadMedia(string $localPath, string $filename = ''): array
     {
         if ($filename === '') {
@@ -63,16 +58,11 @@ abstract class E2ETestCase extends TestCase
         return json_decode($body, true);
     }
 
-    /**
-     * Return all S3 keys that begin with the given prefix.
-     * @return string[]
-     */
     protected function listStorageKeys(string $prefix = ''): array
     {
         return $this->storage->listPrefix($prefix);
     }
 
-    /** Assert that a storage key exists in MinIO. */
     protected function assertStorageKeyExists(string $key): void
     {
         $this->assertTrue(
@@ -81,23 +71,14 @@ abstract class E2ETestCase extends TestCase
         );
     }
 
-    /** Assert that a storage key does NOT exist on the local filesystem. */
     protected function assertNotOnLocalFilesystem(string $absolutePath): void
     {
-        // We can't inspect the WordPress container's FS from here, but we can verify
-        // via the REST API that the file URL is served from MinIO, not from the WP host.
-        // (This check is best-effort; the definitive test is assertStorageKeyExists.)
         $this->assertFalse(
             is_file($absolutePath),
             "File '{$absolutePath}' should not exist on the test-runner filesystem.",
         );
     }
 
-    /**
-     * GET a URL and return [status, body].
-     *
-     * @return array{0: int, 1: string}
-     */
     protected function fetchBody(string $url): array
     {
         $ch = curl_init($url);
@@ -117,12 +98,6 @@ abstract class E2ETestCase extends TestCase
         return dirname(__DIR__, 2) . '/Fixtures';
     }
 
-    /**
-     * GET a URL and return [status, headers] with lowercase header names.
-     * Repeated headers keep the last value.
-     *
-     * @return array{0: int, 1: array<string, string>}
-     */
     protected function fetchHeaders(string $url): array
     {
         $ch = curl_init($url);

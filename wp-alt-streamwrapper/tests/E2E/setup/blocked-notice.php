@@ -1,17 +1,5 @@
 <?php
-/**
- * E2E test helper: read or reset the serving-policy reporting state.
- *
- * The report is rate-limited across requests and only fires for objects that
- * really exist, so a test has to be able to see the resulting transients and
- * clear them between cases.
- *
- * action=state  — JSON: the asset path in the admin-notice transient (or null)
- *                 and whether the cooldown is currently held.
- * action=reset  — delete both transients, so the next blocked request reports.
- */
 
-// dirname(__DIR__, 6): setup → E2E → tests → wp-alt-streamwrapper → mu-plugins → wp-content → html
 require_once dirname(__DIR__, 6) . '/wp-load.php';
 
 const NOTICE_KEY   = 'wp_alt_streamwrapper_blocked_asset';

@@ -1,10 +1,5 @@
 #!/usr/bin/env bash
-#
-# Build the committed must-use plugin copy under wp/wp-content/mu-plugins:
-#   wp-content/mu-plugins/wp-alt-streamwrapper.php   loader
-#   wp-content/mu-plugins/wp-alt-streamwrapper/      runtime files + vendor
-#   ./build-plugin.sh          rebuild the copy
-#   ./build-plugin.sh --check  exit non-zero if the committed copy is stale
+# Build or verify the committed MU-plugin bundle.
 
 set -euo pipefail
 
@@ -22,7 +17,6 @@ fi
 
 STAGING="$(mktemp -d)"
 trap 'rm -rf "$STAGING"' EXIT
-# mktemp gives 0700; the output is copied verbatim into a web-served tree.
 chmod 755 "$STAGING"
 
 PAYLOAD="$STAGING/payload"
@@ -32,10 +26,8 @@ mkdir -p "$PAYLOAD"
 echo "==> Installing production dependencies"
 cp composer.json composer.lock "$PAYLOAD/"
 
-# Docker first: the AWS SDK requires ext-simplexml, which the host PHP often
-# lacks. config.platform pins the PHP version, not the extension set.
+# Composer dependencies require ext-simplexml.
 if command -v docker >/dev/null 2>&1; then
-    # Run as the invoking user so the committed copy isn't root-owned.
     docker run --rm -u "$(id -u):$(id -g)" -e COMPOSER_HOME=/tmp/composer \
         -v "$PAYLOAD:/app" -w /app composer:2 \
         install --no-dev --no-interaction --quiet
@@ -58,7 +50,6 @@ Edit the plugin in wp-alt-streamwrapper/ at the repository root and re-run
 that script. Everything in this directory is overwritten.
 EOF
 
-# Same file the E2E compose mounts, so the two can't drift.
 cp "$SOURCE_DIR/bootstrap/mu-loader.php" "$LOADER"
 
 if [ "$CHECK_ONLY" = true ]; then

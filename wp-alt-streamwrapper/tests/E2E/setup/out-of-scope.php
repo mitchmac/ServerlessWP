@@ -1,15 +1,5 @@
 <?php
-/**
- * E2E test helper for the out-of-scope test.
- *
- * action=create  — writes a file to wp-content/themes (an excluded path) via
- *                  file_put_contents, which hits the stream wrapper passthrough
- *                  and lands on the local filesystem only.  Returns the URL.
- * action=delete  — removes the local file so the next HTTP request confirms
- *                  the file is NOT in remote storage.
- */
 
-// dirname levels: setup → E2E → tests → wp-alt-streamwrapper → plugins → wp-content → html
 $wpRoot   = dirname(__DIR__, 6);
 $filePath = $wpRoot . '/wp-content/themes/e2e-out-of-scope.txt';
 

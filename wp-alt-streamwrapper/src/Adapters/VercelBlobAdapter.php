@@ -4,17 +4,12 @@ declare(strict_types=1);
 
 namespace WpAltStreamWrapper\Adapters;
 
-/**
- * Vercel Blob adapter using the official JavaScript SDK's wire protocol because
- * Vercel provides no PHP SDK. Base URLs are injectable for the emulator.
- */
+// Implements the Blob wire protocol; Vercel has no PHP SDK.
 class VercelBlobAdapter implements StorageAdapterInterface
 {
     private const DEFAULT_API_BASE = 'https://blob.vercel-storage.com';
-
     private string $apiBase;
     private string $downloadBase;
-
     public function __construct(
         private readonly string $token,
         private readonly string $storeId,
@@ -29,16 +24,11 @@ class VercelBlobAdapter implements StorageAdapterInterface
         );
     }
 
-    /** Deterministic blob URL for a key (uploads use addRandomSuffix=false). */
     private function blobUrl(string $key): string
     {
         return $this->downloadBase . '/' . $this->encodedPath($key);
     }
 
-    /**
-     * URL-encode each path segment of a storage key while preserving slashes.
-     * Prevents query-string injection or path traversal in HTTP requests.
-     */
     private function encodedPath(string $key): string
     {
         return implode('/', array_map('rawurlencode', explode('/', ltrim($key, '/'))));
@@ -69,10 +59,6 @@ class VercelBlobAdapter implements StorageAdapterInterface
         ];
     }
 
-    /**
-     * cache=0 is the SDK's useCache:false — read from origin, not the CDN, so a
-     * just-overwritten file is never served stale.
-     */
     private function download(string $key): array
     {
         return $this->request('GET', $this->blobUrl($key) . '?cache=0', [
@@ -80,11 +66,6 @@ class VercelBlobAdapter implements StorageAdapterInterface
         ]);
     }
 
-    /**
-     * A download can answer with a weak validator (W/"abc") while x-if-match
-     * only accepts the strong form, so the prefix is stripped here. Mirrors
-     * normalizeEtag() in ServerlessWP's util/sqliteVercelBlob.js.
-     */
     private function strongEtag(?string $etag): ?string
     {
         if ($etag === null || $etag === '') {
@@ -95,9 +76,6 @@ class VercelBlobAdapter implements StorageAdapterInterface
 
     public function put(string $key, string $contents, ?Precondition $condition = null): bool
     {
-        // RFC3986 encoding: a space must travel as %20, not the form-encoding
-        // '+', which a server reading the parameter as a raw path would store
-        // literally and hand back a key nobody can read.
         $url      = $this->apiBase . '/?' . http_build_query(
             ['pathname' => ltrim($key, '/')],
             '',
@@ -110,14 +88,12 @@ class VercelBlobAdapter implements StorageAdapterInterface
             'x-content-type'         => $this->detectMimeType($key),
         ];
 
-        // Omitting overwrite is Vercel Blob's create-only write condition;
-        // ordinary wp-content rewrites require it.
+        // Omitting this header means create-only.
         if (!$condition?->requireAbsent) {
             $headers['x-allow-overwrite'] = '1';
         }
 
         if ($condition?->ifMatch !== null) {
-            // Same header the @vercel/blob SDK sends for its ifMatch option.
             $headers['x-if-match'] = $condition->ifMatch;
         }
 
@@ -129,7 +105,6 @@ class VercelBlobAdapter implements StorageAdapterInterface
             );
         }
 
-        // Overwrite refused: the key exists, which is exactly the condition.
         if ($condition?->requireAbsent && $response['status'] === 400) {
             throw new PreconditionFailedException(
                 "conditional create of '{$key}' lost: another writer created it first",
@@ -229,11 +204,7 @@ class VercelBlobAdapter implements StorageAdapterInterface
         return true;
     }
 
-    /**
-     * Execute an HTTP request. Extracted to a protected method so tests can override it.
-     *
-     * Returns ['status' => int, 'headers' => array<string,string>, 'body' => string]
-     */
+    /** @return array{status:int, headers:array<string,string>, body:string} */
     protected function request(string $method, string $url, array $headers = [], ?string $body = null): array
     {
         $ch = curl_init($url);

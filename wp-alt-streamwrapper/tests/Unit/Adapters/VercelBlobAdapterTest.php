@@ -9,16 +9,9 @@ use WpAltStreamWrapper\Adapters\Precondition;
 use WpAltStreamWrapper\Adapters\PreconditionFailedException;
 use WpAltStreamWrapper\Adapters\VercelBlobAdapter;
 
-/**
- * Uses a testable subclass that overrides the protected request() method,
- * avoiding real HTTP calls. The asserted request shapes mirror what the
- * official @vercel/blob SDK sends (see the emulator in the ServerlessWP repo,
- * test/vercel-blob-emulator/server.js).
- */
 class VercelBlobAdapterTest extends TestCase
 {
     private TestableVercelBlobAdapter $adapter;
-
     protected function setUp(): void
     {
         $this->adapter = new TestableVercelBlobAdapter(
@@ -26,8 +19,6 @@ class VercelBlobAdapterTest extends TestCase
             storeId: 'store_abc123',
         );
     }
-
-    // -------- get (download) --------
 
     public function testGetReturnsBodyOnSuccess(): void
     {
@@ -47,8 +38,6 @@ class VercelBlobAdapterTest extends TestCase
 
     public function testGetBypassesCdnCache(): void
     {
-        // cache=0 = the SDK's useCache:false. Without it a read can serve the
-        // previous version of an overwritten blob for up to 60 seconds.
         $this->adapter->enqueue(200, 'data');
         $this->adapter->get('uploads/photo.jpg');
 
@@ -58,8 +47,6 @@ class VercelBlobAdapterTest extends TestCase
             $url,
         );
     }
-
-    // -------- put (upload) --------
 
     public function testPutReturnsTrueOnSuccess(): void
     {
@@ -82,9 +69,6 @@ class VercelBlobAdapterTest extends TestCase
 
     public function testPutEncodesSpacesAsPercentTwenty(): void
     {
-        // Not '+': that only decodes back to a space under form-encoding
-        // rules, so a server reading the parameter as a raw path would store a
-        // literal '+' and the file could never be read back.
         $this->adapter->enqueue(200, '{}');
         $this->adapter->put('uploads/my file.jpg', 'data');
 
@@ -95,8 +79,6 @@ class VercelBlobAdapterTest extends TestCase
 
     public function testPutAllowsOverwrite(): void
     {
-        // wp-content files are rewritten in place; without x-allow-overwrite
-        // the API rejects a write to an existing key with 400.
         $this->adapter->enqueue(200, '{}');
         $this->adapter->put('uploads/photo.jpg', 'data');
 
@@ -105,8 +87,6 @@ class VercelBlobAdapterTest extends TestCase
         $this->assertSame('store_abc123', $headers['x-vercel-blob-store-id']);
         $this->assertSame('image/jpeg', $headers['x-content-type']);
     }
-
-    // -------- conditional writes --------
 
     public function testFetchReturnsContentsAndEtag(): void
     {
@@ -121,8 +101,6 @@ class VercelBlobAdapterTest extends TestCase
 
     public function testFetchStripsWeakValidatorPrefix(): void
     {
-        // A download can answer with a weak validator; x-if-match only accepts
-        // the strong form.
         $this->adapter->enqueue(200, 'image data', ['etag' => 'W/"abc123"']);
 
         $result = $this->adapter->fetch('uploads/photo.jpg');
@@ -139,7 +117,6 @@ class VercelBlobAdapterTest extends TestCase
 
     public function testFetchSeparatesNotFoundFromError(): void
     {
-        // The difference decides whether a write creates or would truncate.
         $this->adapter->enqueue(404, '');
         $this->assertSame(
             VercelBlobAdapter::FETCH_NOT_FOUND,
@@ -158,7 +135,6 @@ class VercelBlobAdapterTest extends TestCase
         $this->adapter->enqueue(200, '{}');
         $this->adapter->put('uploads/log.txt', 'data', Precondition::matches('"abc123"'));
 
-        // Same header name the @vercel/blob SDK sends for its ifMatch option.
         $this->assertSame('"abc123"', $this->adapter->lastRequest()['headers']['x-if-match']);
     }
 
@@ -172,9 +148,6 @@ class VercelBlobAdapterTest extends TestCase
 
     public function testCreateOnlyWriteWithholdsAllowOverwrite(): void
     {
-        // Vercel Blob has no put-side ifNoneMatch — its SDK option of that name
-        // is a conditional read. Withholding x-allow-overwrite is the create-only
-        // precondition: the API rejects an existing key without it.
         $this->adapter->enqueue(200, '{}');
         $this->adapter->put('uploads/new.txt', 'data', Precondition::absent());
 
@@ -201,8 +174,6 @@ class VercelBlobAdapterTest extends TestCase
 
     public function testLostCreateMapsRefusedOverwriteToPreconditionFailed(): void
     {
-        // The API answers 400 "Blob exists and overwrite is not allowed", which
-        // for a create-only write is precisely the condition failing.
         $this->adapter->enqueue(400, '{"error":{"code":"bad_request"}}');
 
         $this->expectException(PreconditionFailedException::class);
@@ -211,7 +182,6 @@ class VercelBlobAdapterTest extends TestCase
 
     public function testUnconditionalPutDoesNotThrowOnRefusedOverwrite(): void
     {
-        // Without a create condition a 400 is just a failed write.
         $this->adapter->enqueue(400, '{}');
 
         $this->assertFalse($this->adapter->put('uploads/photo.jpg', 'data'));
@@ -219,14 +189,10 @@ class VercelBlobAdapterTest extends TestCase
 
     public function testUnconditionalPutDoesNotThrowOnPreconditionFailure(): void
     {
-        // Without an ifMatch there is no conflict to recover from, so a 412 is
-        // just a failed write.
         $this->adapter->enqueue(412, '{}');
 
         $this->assertFalse($this->adapter->put('uploads/log.txt', 'data'));
     }
-
-    // -------- delete --------
 
     public function testDeleteReturnsTrueOnSuccess(): void
     {
@@ -249,8 +215,6 @@ class VercelBlobAdapterTest extends TestCase
             json_decode($lastRequest['body'], true),
         );
     }
-
-    // -------- stat (metadata) --------
 
     public function testStatReturnsFalseOnNotFound(): void
     {
@@ -280,8 +244,6 @@ class VercelBlobAdapterTest extends TestCase
         $this->assertStringContainsString(rawurlencode('uploads/photo.jpg'), $url);
     }
 
-    // -------- listPrefix --------
-
     public function testListPrefixReturnsPathnames(): void
     {
         $this->adapter->enqueue(200, json_encode([
@@ -302,8 +264,6 @@ class VercelBlobAdapterTest extends TestCase
         $keys = $this->adapter->listPrefix('uploads/2024');
         $this->assertSame([], $keys);
     }
-
-    // -------- URL construction --------
 
     public function testBlobUrlEncodesSpecialCharacters(): void
     {
@@ -362,13 +322,11 @@ class VercelBlobAdapterTest extends TestCase
         );
     }
 
-    // -------- rename --------
-
     public function testRenameGetsThenPutsThenDeletes(): void
     {
-        $this->adapter->enqueue(200, 'original content');   // get (from)
-        $this->adapter->enqueue(200, '{}');                 // put (to)
-        $this->adapter->enqueue(200, '{}');                 // delete (from)
+        $this->adapter->enqueue(200, 'original content');
+        $this->adapter->enqueue(200, '{}');
+        $this->adapter->enqueue(200, '{}');
 
         $result = $this->adapter->rename('uploads/old.jpg', 'uploads/new.jpg');
         $this->assertTrue($result);
@@ -376,14 +334,10 @@ class VercelBlobAdapterTest extends TestCase
     }
 }
 
-/**
- * Testable subclass that replaces the protected request() method with a queue.
- */
 class TestableVercelBlobAdapter extends VercelBlobAdapter
 {
     private array $queue    = [];
     private array $requests = [];
-
     public function enqueue(int $status, string $body, array $headers = []): void
     {
         $this->queue[] = ['status' => $status, 'headers' => $headers, 'body' => $body];

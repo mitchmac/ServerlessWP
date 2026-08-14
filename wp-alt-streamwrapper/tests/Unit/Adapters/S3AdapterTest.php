@@ -23,8 +23,7 @@ class S3AdapterTest extends TestCase
             'region'      => 'us-east-1',
             'handler'     => $mock,
             'credentials' => ['key' => 'test', 'secret' => 'test'],
-            // Without this the SDK retries a 5xx and drains the mock queue, so a
-            // test asserting a single response sees "Mock queue is empty".
+
             'retries'     => 0,
         ]);
 
@@ -76,8 +75,6 @@ class S3AdapterTest extends TestCase
         $this->assertFalse($adapter->put('uploads/new.jpg', 'binary data'));
     }
 
-    // -------- conditional writes --------
-
     public function testFetchReturnsBodyAndEtag(): void
     {
         $mock = new MockHandler();
@@ -91,8 +88,7 @@ class S3AdapterTest extends TestCase
 
         $this->assertSame(S3Adapter::FETCH_FOUND, $result['status']);
         $this->assertSame('file contents', $result['contents']);
-        // Quoted on the way in and on the way back out: If-Match wants the
-        // quotes S3 sends.
+
         $this->assertSame('"d41d8cd98f00b204e9800998ecf8427e"', $result['etag']);
     }
 
@@ -107,8 +103,6 @@ class S3AdapterTest extends TestCase
 
     public function testFetchSeparatesNotFoundFromError(): void
     {
-        // The difference decides whether a write creates or would truncate, so a
-        // missing key and a broken request must not look alike.
         $missing = new MockHandler();
         $missing->append(function () {
             throw new S3Exception('Not found', new \Aws\Command('GetObject'), [
@@ -210,8 +204,6 @@ class S3AdapterTest extends TestCase
 
     public function testUnconditionalPutDoesNotThrowOnPreconditionFailure(): void
     {
-        // Without an ifMatch there is no conflict to recover from, so a 412 is
-        // just a failed write.
         $mock = new MockHandler();
         $mock->append(function () {
             throw new S3Exception('Precondition Failed', new \Aws\Command('PutObject'), [
@@ -293,8 +285,7 @@ class S3AdapterTest extends TestCase
             'region'      => 'us-east-1',
             'handler'     => $mock,
             'credentials' => ['key' => 'test', 'secret' => 'test'],
-            // Without this the SDK retries a 5xx and drains the mock queue, so a
-            // test asserting a single response sees "Mock queue is empty".
+
             'retries'     => 0,
         ]);
         $adapter = new S3Adapter(
@@ -310,15 +301,15 @@ class S3AdapterTest extends TestCase
     public function testRenameCopiesToNewKeyThenDeletes(): void
     {
         $mock = new MockHandler();
-        // CopyObject
+
         $mock->append(new Result(['@metadata' => ['statusCode' => 200]]));
-        // DeleteObject
+
         $mock->append(new Result(['@metadata' => ['statusCode' => 204]]));
 
         $adapter = $this->makeAdapter($mock);
         $result  = $adapter->rename('uploads/old.jpg', 'uploads/new.jpg');
 
         $this->assertTrue($result);
-        $this->assertSame(0, $mock->count()); // both queued results were consumed
+        $this->assertSame(0, $mock->count());
     }
 }

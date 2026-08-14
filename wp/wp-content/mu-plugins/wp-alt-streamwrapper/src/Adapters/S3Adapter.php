@@ -13,7 +13,6 @@ class S3Adapter implements StorageAdapterInterface
     private string $bucket;
     private string $prefix;
     private ?string $acl;
-
     public function __construct(
         string $bucket,
         string $region = 'us-east-1',
@@ -43,7 +42,7 @@ class S3Adapter implements StorageAdapterInterface
             $config['endpoint'] = $endpoint;
         }
         if ($endpoint || $forcePathStyle) {
-            $config['use_path_style_endpoint'] = true; // required for MinIO and some S3-compatible stores
+            $config['use_path_style_endpoint'] = true;
         }
 
         if ($key && $secret) {
@@ -59,7 +58,6 @@ class S3Adapter implements StorageAdapterInterface
         return $this->prefix ? $this->prefix . '/' . $key : $key;
     }
 
-    /** Strip the configured prefix to recover the storage key. */
     private function stripPrefix(string $s3Key): string
     {
         if ($this->prefix && str_starts_with($s3Key, $this->prefix . '/')) {
@@ -89,8 +87,6 @@ class S3Adapter implements StorageAdapterInterface
             ];
         }
 
-        // S3 ETags arrive quoted ("d41d8..."), and If-Match wants them quoted
-        // too, so this travels back out unchanged.
         $etag = isset($result['ETag']) ? (string) $result['ETag'] : null;
 
         return [
@@ -140,11 +136,6 @@ class S3Adapter implements StorageAdapterInterface
             || in_array($e->getAwsErrorCode(), ['NoSuchKey', 'NotFound'], true);
     }
 
-    /**
-     * A conditional PutObject that loses answers 412 PreconditionFailed. Some
-     * S3-compatible stores answer 409 ConditionalRequestConflict instead when a
-     * concurrent write is in flight; both mean re-read and retry.
-     */
     private function isPreconditionFailure(AwsException $e): bool
     {
         return in_array($e->getStatusCode(), [409, 412], true)
@@ -189,7 +180,7 @@ class S3Adapter implements StorageAdapterInterface
     public function listPrefix(string $prefix): array
     {
         $s3Prefix = $this->s3Key($prefix);
-        // Ensure a trailing slash so we only list objects under this prefix.
+
         if ($s3Prefix !== '' && !str_ends_with($s3Prefix, '/')) {
             $s3Prefix .= '/';
         }

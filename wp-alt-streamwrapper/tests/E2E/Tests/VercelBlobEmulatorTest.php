@@ -7,18 +7,9 @@ namespace WpAltStreamWrapper\Tests\E2E\Tests;
 use PHPUnit\Framework\TestCase;
 use WpAltStreamWrapper\Adapters\VercelBlobAdapter;
 
-/**
- * Runs the real VercelBlobAdapter (actual curl requests) against the blob
- * emulator container, which implements the wire protocol of the official
- * @vercel/blob SDK. This is the closest we get to the live API without a
- * store token, and it validates the request shapes the unit tests only mock:
- * pathname-as-query uploads, x-allow-overwrite, POST /delete, ?url= metadata,
- * and cache-bypassed downloads.
- */
 class VercelBlobEmulatorTest extends TestCase
 {
     private VercelBlobAdapter $adapter;
-
     protected function setUp(): void
     {
         $base = getenv('BLOB_EMULATOR_URL') ?: 'http://blob:7000';

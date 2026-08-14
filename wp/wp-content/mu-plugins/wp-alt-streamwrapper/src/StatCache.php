@@ -4,16 +4,10 @@ declare(strict_types=1);
 
 namespace WpAltStreamWrapper;
 
-/**
- * In-process remote stat cache. Missing entries expire quickly so a warm
- * function does not retain stale negatives written by another invocation.
- */
 class StatCache
 {
-    private const MISSING_TTL = 5; // seconds
-
+    private const MISSING_TTL = 5;
     private static array $cache = [];
-
     public static function get(string $key): ?array
     {
         $entry = self::$cache[$key] ?? null;
@@ -52,16 +46,11 @@ class StatCache
         }
     }
 
-    /** Reset the entire cache (used in tests). */
     public static function flush(): void
     {
         self::$cache = [];
     }
 
-    /**
-     * Build the 26-element PHP stat array expected by stream wrappers.
-     * File mode bits: regular file = 0100644, directory = 040755.
-     */
     public static function buildStatArray(array $entry): array
     {
         $isDir = ($entry['type'] ?? 'file') === 'dir';

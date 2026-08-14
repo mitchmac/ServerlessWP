@@ -4,18 +4,8 @@ declare(strict_types=1);
 
 namespace WpAltStreamWrapper;
 
-/**
- * Helpers for bootstrap/prepend.php, kept here so they can be unit tested —
- * the prepend file itself runs before anything else and can't be loaded twice.
- */
 final class Bootstrap
 {
-    /**
-     * Resolve the runtime wp-content directory and warn when routing would
-     * silently target the wrong tree.
-     *
-     * @return array{dir: ?string, warning: ?string}
-     */
     public static function resolveWpContentDir(?string $configured, string $inferred, ?string $documentRoot = null): array
     {
         if ($configured !== null && $configured !== '') {
@@ -39,10 +29,6 @@ final class Bootstrap
             ];
         }
 
-        // The bootstrap is deliberately loaded from a read-only copy of the
-        // WordPress tree on serverless platforms, while WordPress itself runs
-        // from a writable copy elsewhere. Both directories exist, so only the
-        // document root reveals the mismatch.
         if ($documentRoot !== null && $documentRoot !== '' && !self::isWithin($inferred, $documentRoot)) {
             return [
                 'dir'     => $inferred,
