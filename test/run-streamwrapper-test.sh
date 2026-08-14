@@ -8,11 +8,10 @@ set -euo pipefail
 # and load the prepend from a php.ini in conf.d, so the npm package and
 # api/index.js never execute there.
 #
-# The autoPrependFile option is unreleased, so until it ships this must build
-# against a local checkout:
+# By default this tests the published serverlesswp version locked by the root
+# package-lock.json. To test an unpublished package change against this project,
+# build against a local checkout instead:
 #   SERVERLESSWP_LOCAL=/path/to/serverlesswp-node ./run-streamwrapper-test.sh
-#
-# Once it is published and package.json is bumped, drop that variable.
 
 cd "$(dirname "$0")"
 
@@ -83,7 +82,7 @@ trap cleanup EXIT
 
 until curl -sfko /dev/null https://localhost:3000/; do sleep 1; done
 
-npm install
+npm ci
 npx playwright install chromium
 ldconfig -p | grep -q libnspr4 || sudo env PATH="$PATH" node_modules/.bin/playwright install-deps chromium
 

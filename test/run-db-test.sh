@@ -60,7 +60,26 @@ content_type=${static_check#* }
 [[ "$content_type" == *"text/css"* ]] || { echo "Static file content-type FAILED: expected text/css, got $content_type"; exit 1; }
 echo "Static file test passed."
 
-npm install
+echo "Testing sensitive upload policy without the stream wrapper..."
+policy_dir=/tmp/wp/wp-content/uploads/serverlesswp-policy-probe
+docker exec serverlesswp-test mkdir -p "$policy_dir/php-index"
+for extension in php sql sqlite sqlite3 db log env ini; do
+    docker exec serverlesswp-test sh -c "printf '%s' 'sensitive-${extension}' > '${policy_dir}/secret.${extension}'"
+    policy_response=$(curl -sk -w $'\n%{http_code}' "https://localhost:3000/wp-content/uploads/serverlesswp-policy-probe/secret.${extension}")
+    policy_status=${policy_response##*$'\n'}
+    policy_body=${policy_response%$'\n'*}
+    [[ "$policy_status" == "404" ]] || { echo "Sensitive upload .${extension} FAILED: expected 404, got $policy_status"; exit 1; }
+    [[ "$policy_body" == "Not Found" ]] || { echo "Sensitive upload .${extension} FAILED: response revealed file content"; exit 1; }
+done
+docker exec serverlesswp-test sh -c "printf '%s' '<?php echo \"INDEX-EXECUTED\";' > '${policy_dir}/php-index/index.php'"
+index_status=$(curl -sk -o /dev/null -w '%{http_code}' "https://localhost:3000/wp-content/uploads/serverlesswp-policy-probe/php-index/")
+[[ "$index_status" == "404" ]] || { echo "Sensitive upload PHP index FAILED: expected 404, got $index_status"; exit 1; }
+docker exec serverlesswp-test sh -c "printf '%s' 'public-upload' > '${policy_dir}/public.txt'"
+public_body=$(curl -sk "https://localhost:3000/wp-content/uploads/serverlesswp-policy-probe/public.txt")
+[[ "$public_body" == "public-upload" ]] || { echo "Normal upload FAILED after applying sensitive-file policy"; exit 1; }
+echo "Sensitive upload policy test passed."
+
+npm ci
 npx playwright install chromium
 ldconfig -p | grep -q libnspr4 || sudo env PATH="$PATH" node_modules/.bin/playwright install-deps chromium
 SCREENSHOTS=${SCREENSHOTS:-} npx playwright test e2e.spec.js "$@"

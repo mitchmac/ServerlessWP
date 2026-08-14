@@ -197,6 +197,12 @@ exports.postRequest = async function(event, response) {
                 if (currentEtag) {
                     putCommandParams.IfMatch = currentEtag;
                 }
+                else if (ctx.blobMissing) {
+                    // The GET established that this is a new site. Create the
+                    // object only if it is still absent, so two first requests
+                    // cannot silently replace one another's database.
+                    putCommandParams.IfNoneMatch = '*';
+                }
                 const command = new PutObjectCommand(putCommandParams);
 
                 const putResponse = await client.send(command);
@@ -214,9 +220,17 @@ exports.postRequest = async function(event, response) {
             catch (err) {
                 console.log(err);
                 let errResponse = persistenceError();
-                if (err.$metadata && err.$metadata.httpStatusCode === 412) {
-                   errResponse.retry = true;
-                   console.log('Retrying database save to s3 because of a conflicting update.');
+                const statusCode = err.$metadata?.httpStatusCode;
+                if (statusCode === 412 || (ctx.blobMissing && statusCode === 409)) {
+                    if (ctx.blobMissing) {
+                        // Do not automatically replay an installation request.
+                        // The next request will fetch the database that won.
+                        console.log('Database creation was rejected because another request created it first.');
+                    }
+                    else {
+                        errResponse.retry = true;
+                        console.log('Retrying database save to s3 because of a conflicting update.');
+                    }
                 }
                 return errResponse;
             }
