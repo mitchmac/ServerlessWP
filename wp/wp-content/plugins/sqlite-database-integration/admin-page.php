@@ -1,31 +1,36 @@
 <?php
 /**
  * Functions for the admin page of the plugin.
- *
- * @since 1.0.0
- * @package wp-sqlite-integration
  */
 
 /**
  * Add an admin menu page.
- *
- * @since 1.0.0
  */
 function sqlite_add_admin_menu() {
-	add_options_page(
+	$parent_slug = is_multisite() ? 'settings.php' : 'options-general.php';
+
+	add_submenu_page(
+		$parent_slug,
 		__( 'SQLite integration', 'sqlite-database-integration' ),
 		__( 'SQLite integration', 'sqlite-database-integration' ),
-		'manage_options',
+		sqlite_plugin_get_manage_capability(),
 		'sqlite-integration',
 		'sqlite_integration_admin_screen'
 	);
 }
-add_action( 'admin_menu', 'sqlite_add_admin_menu' );
+add_action( is_multisite() ? 'network_admin_menu' : 'admin_menu', 'sqlite_add_admin_menu' );
 
 /**
  * The admin page contents.
  */
 function sqlite_integration_admin_screen() {
+	if ( ! current_user_can( sqlite_plugin_get_manage_capability() ) ) {
+		wp_die(
+			esc_html__( 'Sorry, you are not allowed to access the SQLite integration settings.', 'sqlite-database-integration' ),
+			403
+		);
+	}
+
 	$db_dropin_path = WP_CONTENT_DIR . '/db.php';
 
 	/*
@@ -56,7 +61,7 @@ function sqlite_integration_admin_screen() {
 					printf(
 						/* translators: 1: Admin URL to deactivate the module, 2: db.php drop-in path, */
 						__( 'The SQLite drop-in is enabled. To disable it and get back to your previous, MySQL database, you can <a href="%1$s">deactivate the plugin</a>. Alternatively, you can manually delete the %2$s file from your server.', 'sqlite-database-integration' ),
-						esc_url( admin_url( 'plugins.php' ) ),
+						esc_url( self_admin_url( 'plugins.php' ) ),
 						'<code>' . esc_html( basename( WP_CONTENT_DIR ) ) . '/db.php</code>'
 					);
 				?>
@@ -66,40 +71,17 @@ function sqlite_integration_admin_screen() {
 				<p><?php esc_html_e( 'We detected that the PDO SQLite driver is missing from your server (the pdo_sqlite extension is not loaded). Please make sure that SQLite is enabled in your PHP installation before proceeding.', 'sqlite-database-integration' ); ?></p>
 			</div>
 		<?php elseif ( file_exists( $db_dropin_path ) && ! defined( 'SQLITE_DB_DROPIN_VERSION' ) && ! $override_db_dropin ) : ?>
-			<?php if ( defined( 'PERFLAB_SQLITE_DB_DROPIN_VERSION' ) ) : ?>
-				<div class="notice notice-warning">
-					<p>
-						<?php
-						printf(
-							/* translators: %s: db.php drop-in path */
-							esc_html__( 'An older %s file was detected. Please click the button below to update the file.', 'sqlite-database-integration' ),
-							'<code>' . esc_html( basename( WP_CONTENT_DIR ) ) . '/db.php</code>'
-						);
-						?>
-					</p>
-				</div>
-				<a class="button button-primary" href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin.php?page=sqlite-integration&confirm-install&upgrade-from-pl' ), 'sqlite-install' ) ); ?>">
+			<div class="notice notice-error">
+				<p>
 					<?php
 					printf(
 						/* translators: %s: db.php drop-in path */
-						esc_html__( 'Update %s file', 'sqlite-database-integration' ),
+						esc_html__( 'The SQLite plugin cannot be activated because a different %s drop-in already exists.', 'sqlite-database-integration' ),
 						'<code>' . esc_html( basename( WP_CONTENT_DIR ) ) . '/db.php</code>'
 					);
 					?>
-				</a>
-			<?php else : ?>
-				<div class="notice notice-error">
-					<p>
-						<?php
-						printf(
-							/* translators: %s: db.php drop-in path */
-							esc_html__( 'The SQLite plugin cannot be activated because a different %s drop-in already exists.', 'sqlite-database-integration' ),
-							'<code>' . esc_html( basename( WP_CONTENT_DIR ) ) . '/db.php</code>'
-						);
-						?>
-					</p>
-				</div>
-			<?php endif; ?>
+				</p>
+			</div>
 		<?php elseif ( ! is_writable( WP_CONTENT_DIR ) ) : ?>
 			<div class="notice notice-error">
 				<p>
@@ -136,7 +118,7 @@ function sqlite_integration_admin_screen() {
 
 			<p><?php esc_html_e( 'By clicking the button below, you will be redirected to the WordPress installation screen to setup your new database', 'sqlite-database-integration' ); ?></p>
 
-			<a class="button button-primary" href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin.php?page=sqlite-integration&confirm-install' ), 'sqlite-install' ) ); ?>"><?php esc_html_e( 'Install SQLite database', 'sqlite-database-integration' ); ?></a>
+			<a class="button button-primary" href="<?php echo esc_url( wp_nonce_url( add_query_arg( 'confirm-install', '1', sqlite_plugin_get_admin_page_url() ), 'sqlite-install' ) ); ?>"><?php esc_html_e( 'Install SQLite database', 'sqlite-database-integration' ); ?></a>
 		<?php endif; ?>
 	</div>
 	<?php
@@ -145,13 +127,15 @@ function sqlite_integration_admin_screen() {
 /**
  * Adds a link to the admin bar.
  *
- * @since n.e.x.t
- *
  * @global wpdb $wpdb WordPress database abstraction object.
  *
  * @param WP_Admin_Bar $admin_bar The admin bar object.
  */
 function sqlite_plugin_adminbar_item( $admin_bar ) {
+	if ( ! current_user_can( sqlite_plugin_get_manage_capability() ) ) {
+		return;
+	}
+
 	global $wpdb;
 
 	if ( defined( 'SQLITE_DB_DROPIN_VERSION' ) && defined( 'DB_ENGINE' ) && 'sqlite' === DB_ENGINE ) {
@@ -166,9 +150,23 @@ function sqlite_plugin_adminbar_item( $admin_bar ) {
 		'id'     => 'sqlite-db-integration',
 		'parent' => 'top-secondary',
 		'title'  => $title,
-		'href'   => esc_url( admin_url( 'options-general.php?page=sqlite-integration' ) ),
+		'href'   => esc_url( sqlite_plugin_get_admin_page_url() ),
 		'meta'   => false,
 	);
 	$admin_bar->add_node( $args );
 }
 add_action( 'admin_bar_menu', 'sqlite_plugin_adminbar_item', 999 );
+
+/**
+ * Get the SQLite integration admin page URL.
+ *
+ * @access private
+ *
+ * @return string Admin page URL.
+ */
+function sqlite_plugin_get_admin_page_url() {
+	if ( is_multisite() ) {
+		return network_admin_url( 'settings.php?page=sqlite-integration' );
+	}
+	return admin_url( 'options-general.php?page=sqlite-integration' );
+}

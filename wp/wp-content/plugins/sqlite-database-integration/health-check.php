@@ -1,9 +1,6 @@
 <?php
 /**
  * Tweaks for the health-check screens.
- *
- * @since 1.0.0
- * @package wp-sqlite-integration
  */
 
 /**
