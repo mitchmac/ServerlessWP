@@ -8,7 +8,7 @@ ServerlessWP puts WordPress in serverless functions and the database in a file. 
 
 Stay up-to-date at the ServerlessWP repository: [github.com/mitchmac/serverlesswp](https://github.com/mitchmac/serverlesswp)
 
-![WordPress 7.0.2](https://img.shields.io/badge/version-7.0.2-blue?logo=wordpress&labelColor=white&logoColor=black) ![PHP 8.3.33](https://img.shields.io/badge/version-8.3.33-blue?logo=php&labelColor=white)
+![WordPress 7.0.4](https://img.shields.io/badge/version-7.0.4-blue?logo=wordpress&labelColor=white&logoColor=black) ![PHP 8.3.33](https://img.shields.io/badge/version-8.3.33-blue?logo=php&labelColor=white)
 
 ## Use Cases
 
