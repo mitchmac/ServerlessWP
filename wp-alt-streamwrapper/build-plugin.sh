@@ -1,27 +1,10 @@
 #!/usr/bin/env bash
 #
-# Assembles the deployable copy of this plugin under wp/wp-content/mu-plugins.
-#
-# It ships as a must-use plugin so it is active whenever WP_STREAM_PROVIDER is
-# set, with no activation step in wp-admin. A half-configured site — wrapper
-# registered by the prepend, WordPress hooks inactive — would break thumbnails
-# and 404 uploads with nothing to explain why.
-#
-# Two entries are produced, because WordPress only auto-loads .php files
-# sitting directly in mu-plugins:
-#
+# Build the committed must-use plugin copy under wp/wp-content/mu-plugins:
 #   wp-content/mu-plugins/wp-alt-streamwrapper.php   loader
 #   wp-content/mu-plugins/wp-alt-streamwrapper/      runtime files + vendor
-#
-# The copy is committed because the platforms ServerlessWP deploys to have no
-# PHP or Composer at build time, and Vercel/Netlify only bundle files under
-# wp/. Tests, the Docker harness and dev dependencies stay in this directory.
-#
 #   ./build-plugin.sh          rebuild the copy
 #   ./build-plugin.sh --check  exit non-zero if the committed copy is stale
-#
-# Resolution is pinned to PHP 8.2 via config.platform in composer.json, so the
-# output does not depend on which PHP the machine running this happens to have.
 
 set -euo pipefail
 

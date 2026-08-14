@@ -5,21 +5,8 @@ declare(strict_types=1);
 namespace WpAltStreamWrapper\Adapters;
 
 /**
- * Vercel Blob adapter speaking the same wire protocol as the official
- * @vercel/blob JS SDK (Vercel ships no PHP SDK). The request shapes mirror
- * what the SDK sends, as captured by the blob emulator in the ServerlessWP
- * repo (test/vercel-blob-emulator/server.js):
- *
- *   PUT  {api}/?pathname=<key>   upload; x-allow-overwrite: 1 or re-writing
- *                                an existing key is rejected with 400
- *   GET  {api}/?url=<blobUrl>    metadata JSON (size, uploadedAt, etag)
- *   GET  {store}/<key>?cache=0   download; cache=0 bypasses the CDN cache,
- *                                which can serve a stale blob for up to 60s
- *                                after an overwrite
- *   POST {api}/delete            body {"urls": [...]}
- *   GET  {api}/?prefix=<p>       list (SDK list(); not covered by emulator)
- *
- * Base URLs are injectable so tests can point the adapter at the emulator.
+ * Vercel Blob adapter using the official JavaScript SDK's wire protocol because
+ * Vercel provides no PHP SDK. Base URLs are injectable for the emulator.
  */
 class VercelBlobAdapter implements StorageAdapterInterface
 {
@@ -123,11 +110,8 @@ class VercelBlobAdapter implements StorageAdapterInterface
             'x-content-type'         => $this->detectMimeType($key),
         ];
 
-        // wp-content files are rewritten in place (thumbnails, generated CSS), so
-        // overwriting is normally required — the API rejects a write to an
-        // existing key with 400 without this header. Withholding it is also the
-        // only create-only precondition Vercel Blob offers: the SDK's
-        // ifNoneMatch option is a conditional *read*, not a write condition.
+        // Omitting overwrite is Vercel Blob's create-only write condition;
+        // ordinary wp-content rewrites require it.
         if (!$condition?->requireAbsent) {
             $headers['x-allow-overwrite'] = '1';
         }

@@ -5,14 +5,8 @@ declare(strict_types=1);
 namespace WpAltStreamWrapper;
 
 /**
- * In-process cache for remote file stat results.
- *
- * Keyed by storage key (e.g. 'uploads/2024/01/photo.jpg').
- * Entries: ['size' => int, 'mtime' => int, 'type' => 'file'|'dir'|'missing']
- *
- * 'missing' entries carry a short TTL so that warm Lambda containers (where the
- * same PHP process may handle multiple requests) don't serve stale negatives if
- * another invocation writes the file after we cached it as absent.
+ * In-process remote stat cache. Missing entries expire quickly so a warm
+ * function does not retain stale negatives written by another invocation.
  */
 class StatCache
 {

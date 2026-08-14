@@ -43,18 +43,10 @@ class Plugin
         $rewriter     = new UrlRewriter($config);
         $rewriter->register();
 
-        // GD writes go through PHP stream wrappers → thumbnails reach remote storage directly.
-        // Imagick uses C-level I/O and bypasses PHP streams, so thumbnails end up only on
-        // the local filesystem and WordPress cannot verify them via our url_stat.
+        // Imagick bypasses PHP streams; prefer GD so thumbnails reach storage.
         add_filter('wp_image_editors', [$this, 'preferGd']);
 
-        // Phase 1 (pre_move_uploaded_file): write the uploaded file to the real
-        // local filesystem, push it to remote storage, and keep the local copy so
-        // that Imagick (if ever used as fallback) can still read the original.
-        //
-        // Phase 2 (wp_generate_attachment_metadata): GD thumbnail writes go through
-        // the stream wrapper directly to remote storage.  pushAfterGeneration pushes
-        // the original file (which was kept locally) and cleans up local copies.
+        // Persist the original before generation, then push generated sizes.
         add_filter('pre_move_uploaded_file',          [$this, 'moveUploadedFile'],    10, 4);
         add_filter('wp_generate_attachment_metadata', [$this, 'pushAfterGeneration'], 10, 3);
 
@@ -63,24 +55,14 @@ class Plugin
         // filter returns null, so a false return there reads as success.
         add_filter('wp_handle_upload', [$this, 'failUploadIfNotPersisted'], 10, 2);
 
-        // Serve files that live in remote storage at their normal WordPress URLs.
-        // When a request arrives for a path under wp-content that does not exist
-        // on the local filesystem, Apache's .htaccess routes it through index.php.
-        // We intercept it here, read from the stream wrapper (which proxies MinIO/S3),
-        // and stream the bytes back to the browser.
+        // Serve remote files at their normal WordPress URLs.
         add_action('template_redirect', [$this, 'serveRemoteFile'], 1);
 
         // Surface a refused asset request in wp-admin; see reportBlocked().
         add_action('admin_notices', [$this, 'renderBlockedNotice']);
     }
 
-    /**
-     * Intercept HTTP requests for files that live in remote storage and serve
-     * them transparently at their normal /wp-content/... URL.
-     *
-     * This makes plugin-generated files (Elementor CSS, Autoptimize bundles,
-     * WP Super Cache HTML, etc.) work without any per-plugin URL rewriting.
-     */
+    /** Prefer the editor whose writes pass through the stream wrapper. */
     public function preferGd(array $editors): array
     {
         $gd    = array_filter($editors, fn($e) => $e === 'WP_Image_Editor_GD');
@@ -88,12 +70,7 @@ class Plugin
         return array_values(array_merge($gd, $other));
     }
 
-    /**
-     * Names this handler's decision in a response header when WP_STREAM_DEBUG
-     * is set. Every decline below is silent by design (fall through to
-     * WordPress), which makes a misroute invisible from the outside — this is
-     * the only way to see which branch ran on a real request.
-     */
+    /** Expose otherwise silent routing decisions when WP_STREAM_DEBUG is set. */
     private function debug(string $value): void
     {
         if (getenv('WP_STREAM_DEBUG') !== false && !headers_sent()) {
@@ -123,9 +100,7 @@ class Plugin
         $absolutePath = WP_CONTENT_DIR . substr($requestPath, strlen($contentUrlPath));
 
         if (!StreamWrapper::isRegistered()) {
-            // The likely cause is the prepend never running for this request —
-            // e.g. a `php -S` router that handles requests inline without
-            // loading it (see ServerlessWP's wp/router.php).
+            // The prepend likely did not run for this request.
             $this->debug('decline=unregistered');
             return;
         }
@@ -135,12 +110,8 @@ class Plugin
             return;
         }
 
-        // Being stored remotely is not permission to be downloaded. Routing
-        // covers all of wp-content by default, which is right for persistence
-        // and wrong for serving: a plugin's backups, exports or debug log would
-        // otherwise be readable by anyone who guesses the URL, with no
-        // .htaccess to stop it (this proxy answers before any such rule, and
-        // .htaccess is excluded from remote storage anyway).
+        // Persistence does not imply public access; routing covers private
+        // backups, exports and logs as well as downloadable assets.
         if (!$this->isPublicPath($absolutePath)) {
             $this->debug('decline=not-public path=' . $absolutePath);
             $this->reportBlocked($absolutePath);
@@ -150,11 +121,7 @@ class Plugin
         $contents = @file_get_contents($absolutePath);
         if ($contents === false) {
             $this->debug('decline=read-failed path=' . $absolutePath);
-            // Remote-routed path with no object behind it. Send no-cache
-            // headers before falling through to WordPress's 404 handler:
-            // platform header rules keyed on asset extensions (e.g.
-            // vercel.json's max-age on *.png) would otherwise let browsers
-            // and edges cache the 404 long after the file is uploaded.
+            // Prevent asset cache rules from retaining this 404 after upload.
             nocache_headers();
             return; // Fall through to WordPress's 404 handler.
         }
@@ -165,24 +132,15 @@ class Plugin
         status_header(200);
         header('Content-Type: ' . $mime);
         header('Content-Length: ' . strlen($contents));
-        // s-maxage lets the platform edge cache absorb repeat views so an
-        // S3-only file doesn't cost a function invocation per request.
-        // Value is configurable via WP_STREAM_CACHE_CONTROL.
+        // Edge caching avoids a function invocation for every asset request.
         header('Cache-Control: ' . ($this->config ?? new Config())->cacheControl());
         echo $contents;
         exit;
     }
 
     /**
-     * Whether a stored path may be handed back over HTTP.
-     *
-     * Configured with WP_STREAM_PUBLIC_PATHS (default: uploads and cache — the
-     * trees a conventional web server already exposes). Directories outside it
-     * can be opted in per site:
-     *
-     *     add_filter('wp_alt_streamwrapper_is_public_path', function ($public, $path) {
-     *         return $public || str_contains($path, '/wp-content/my-public-dir/');
-     *     }, 10, 2);
+     * Whether a stored path may be served. Uploads are public by default;
+     * configured asset paths additionally require an allowed extension.
      */
     private function isPublicPath(string $absolutePath): bool
     {
@@ -221,29 +179,8 @@ class Plugin
     }
 
     /**
-     * Say why a stored file was not served, in the two places an admin might look.
-     *
-     * A blocked request is otherwise indistinguishable from a plain 404: the
-     * response says nothing, the wrapper logs nothing, and a site whose assets
-     * stopped resolving gives no clue that a serving policy is the reason.
-     *
-     * Everything an unauthenticated request can reach here is attacker-triggered,
-     * so the order of these three steps is the whole design:
-     *
-     *  1. Take a cooldown that spans requests, before doing anything that costs
-     *     something. Whatever volume a scanner sends, this path does at most one
-     *     report, one storage request and one log line per cooldown window.
-     *  2. Only then check whether the object is actually there. A request for a
-     *     path nobody ever wrote is an ordinary 404 and says nothing about
-     *     policy — reporting it would log a claim that isn't true and could put
-     *     an attacker's invented path in front of an admin as if it were real.
-     *  3. Report. The notice covers asset filenames only, the case that visibly
-     *     breaks a site.
-     *
-     * The cost of the cooldown is that a probe can consume the window and delay
-     * a real report by a few minutes. That is why the window is minutes rather
-     * than an hour: long enough to bound the amplification, short enough that a
-     * genuinely broken asset still surfaces promptly.
+     * Report an existing object blocked by serving policy. Take the cooldown
+     * before querying storage so unauthenticated probes cannot amplify work.
      */
     private function reportBlocked(string $absolutePath): void
     {
@@ -282,15 +219,7 @@ class Plugin
         }
     }
 
-    /**
-     * Tell an admin that an asset request was refused, so a site rendering
-     * without its CSS points at the cause instead of looking like a 404.
-     * Self-clearing: the transient expires an hour after the last occurrence.
-     *
-     * reportBlocked() confirms the object exists before setting the transient, so
-     * this names a file that is really in storage rather than any path a visitor
-     * asked for.
-     */
+    /** Show an admin notice for a confirmed stored asset blocked by policy. */
     public function renderBlockedNotice(): void
     {
         if (!current_user_can('manage_options')) {
@@ -322,17 +251,8 @@ class Plugin
     }
 
     /**
-     * Write the uploaded/sideloaded file to the real filesystem so GD can
-     * access it for thumbnail generation.  Returns a non-null value to signal
-     * that we handled the move, suppressing WordPress's own move_uploaded_file().
-     *
-     * @param mixed  $default  null (pass-through sentinel)
-     * @param array  $fileInfo Uploaded file info array (tmp_name, name, …)
-     * @param string $destPath Final destination path inside wp-content/uploads
-     * @param string $mimeType Detected MIME type of the file — WordPress passes
-     *                         this, not the action name, so which of
-     *                         wp_handle_upload / wp_handle_sideload is running
-     *                         has to be worked out from the file itself.
+     * Move an upload to local disk for image generation and persist it remotely.
+     * A non-null return tells WordPress the move was handled.
      */
     public function moveUploadedFile(mixed $default, array $fileInfo, string $destPath, string $mimeType): mixed
     {
@@ -342,10 +262,7 @@ class Plugin
 
         stream_wrapper_restore('file');
         wp_mkdir_p(dirname($destPath));
-        // move_uploaded_file() only accepts a path PHP recorded in $_FILES, so a
-        // sideload (import, "add from URL", any plugin-fetched file) has to move
-        // by rename. Both run against the real filesystem, with the wrapper
-        // restored, because neither goes through PHP streams.
+        // Sideloads are not PHP uploads, so they must use rename().
         $moved = is_uploaded_file($fileInfo['tmp_name'])
             ? (bool) @move_uploaded_file($fileInfo['tmp_name'], $destPath)
             : (bool) @rename($fileInfo['tmp_name'], $destPath);
@@ -356,19 +273,11 @@ class Plugin
             return $default;
         }
 
-        // Push to remote storage immediately.  GD's imagecreatefrom*()
-        // functions use PHP stream wrappers, so the file must be in MinIO/S3
-        // before wp_generate_attachment_metadata() calls GD.
-        // preCacheLocalFile first so file_exists() returns true even if the
-        // push is delayed or fails.
+        // Make file_exists() succeed while the local original awaits cleanup.
         StreamWrapper::preCacheLocalFile($destPath);
-        // Push to remote storage but keep the local copy so GD can read the
-        // original for thumbnail generation.  pushAfterGeneration handles
-        // the final cleanup of the original and all generated size variants.
+        // Keep the local copy for GD; pushAfterGeneration() removes it.
         if (!StreamWrapper::pushLocalFile($destPath, deleteLocal: false)) {
-            // The file is on a disk that disappears with this invocation.
-            // Record it so failUploadIfNotPersisted() can stop WordPress from
-            // committing attachment metadata for a file that is already gone.
+            // Prevent metadata for a file that will disappear with this request.
             $this->failedPushes[$destPath] = true;
         }
 
@@ -377,15 +286,8 @@ class Plugin
     }
 
     /**
-     * Report an upload whose file never reached remote storage as a failure.
-     *
-     * WordPress hands the array from this filter to media_handle_upload() and
-     * friends, which check for an 'error' key — the same shape core's own
-     * wp_handle_upload_error() returns. Without this the attachment row is
-     * created and the file it points at vanishes with the container.
-     *
-     * @param array  $upload  {file, url, type} on success
-     * @param string $context 'upload' or 'sideload'
+     * Return WordPress's upload-error shape when remote persistence failed, so
+     * it does not create attachment metadata for an ephemeral file.
      */
     public function failUploadIfNotPersisted(array $upload, string $context): array
     {
@@ -407,27 +309,8 @@ class Plugin
     }
 
     /**
-     * After WordPress has finished generating all intermediate image sizes on
-     * the local filesystem, push the original file and every size variant to
-     * remote storage, then delete the local copies.
-     *
-     * A size that did not reach storage is removed from the metadata: this
-     * filter runs after wp_handle_upload has returned, so the upload can no
-     * longer be failed, and advertising a size with no object behind it puts a
-     * broken image in every srcset that references it. Dropping the entry makes
-     * WordPress fall back to a size that is actually there.
-     *
-     * The original file is kept in the metadata whatever happens to it. On the
-     * upload path it is already in storage — moveUploadedFile() pushed it and
-     * failed the upload if that did not work — so a failure here means the
-     * stored copy is stale, not missing, and the attachment URLs still resolve.
-     * On the regeneration path ('update') the original was never this request's
-     * to push. Dropping 'file' would break the attachment outright, so the
-     * failure is reported and the metadata left intact.
-     *
-     * @param array  $metadata     Attachment metadata (sizes, width, height, …)
-     * @param int    $attachmentId Attachment post ID
-     * @param string $context      'create' for new uploads, 'update' for regeneration
+     * Persist generated image sizes and remove metadata for any missing variant.
+     * Keep original-file metadata intact because removing it breaks the attachment.
      */
     public function pushAfterGeneration(array $metadata, int $attachmentId, string $context = 'create'): array
     {
@@ -470,14 +353,8 @@ class Plugin
     }
 
     /**
-     * Whether a file this request generated is missing from remote storage.
-     *
-     * "No local copy" is the ordinary outcome for a thumbnail GD wrote straight
-     * through the wrapper — nothing is left on disk to push because the bytes
-     * already went to storage. It is also what a *failed* wrapper write leaves
-     * behind: the buffer is discarded on close either way, and fclose() cannot
-     * report the failure, so the two are indistinguishable from the file alone.
-     * StreamWrapper::writeFailed() separates them without another HEAD request.
+     * Distinguish a direct wrapper write from a failed one when neither leaves a
+     * local copy; fclose() itself cannot report the remote failure.
      */
     private function notPersisted(string $absolutePath, string $pushStatus): bool
     {

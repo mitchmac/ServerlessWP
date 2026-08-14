@@ -30,11 +30,8 @@ exports.preRequest = async function(event) {
         workingPath: '/tmp/' + workingFileName,
         db: null,
         dataVersion: null,
-        // The blob version this request's working copy came from. Bound here,
-        // per request, because the shared etag file moves under concurrent
-        // requests: reading it again at write time would let a request whose
-        // copy predates another's committed write pass its ifMatch and
-        // silently revert that write.
+        // Bind the source ETag to this request; the shared cache may advance
+        // before this working copy is written back.
         etag: null,
         // Set when the read established the blob doesn't exist. Only then may
         // postRequest write without ifMatch.
@@ -44,22 +41,15 @@ exports.preRequest = async function(event) {
     };
     event[CONTEXT_KEY] = ctx;
 
-    // Tell PHP (wp-config.php) which DB file to open for this request.
-    // Strip any inbound variant first so a client can't point WP at the
-    // cache file or another request's working file. wp-config.php also
-    // passes the value through basename() defensively.
+    // Replace any client-supplied DB header with this request's working file.
     if (!event.headers) event.headers = {};
     for (const k of Object.keys(event.headers)) {
         const name = k.toLowerCase();
         if (name === 'x-serverlesswp-sqlite-file') {
             delete event.headers[k];
         }
-        // Vercel hands functions their OIDC token as a request header, not an
-        // environment variable - VERCEL_OIDC_TOKEN only exists in builds and
-        // in local development. The SDK looks for the header in Vercel's
-        // request context, which isn't set up for a function built in AWS
-        // handler mode (NODEJS_AWS_HANDLER_NAME in vercel.json), so take the
-        // token off the event and pass it to the SDK explicitly.
+        // AWS handler mode lacks the request context the Blob SDK normally uses,
+        // so pass Vercel's per-request OIDC token explicitly.
         // https://vercel.com/docs/oidc#in-vercel-functions
         else if (name === 'x-vercel-oidc-token') {
             ctx.oidcToken = event.headers[k];
@@ -74,9 +64,7 @@ exports.preRequest = async function(event) {
         ctx.oidcToken = process.env['VERCEL_OIDC_TOKEN'] || null;
     }
 
-    // A store reached over OIDC needs the request's token. The SDK's own error
-    // for this is a generic "No blob credentials found", which says nothing
-    // about which of the two ways in is missing.
+    // Report which supported credential sources are missing.
     if (_config.storeId && !ctx.oidcToken && !_config.token) {
         console.error('No Vercel Blob credentials: no x-vercel-oidc-token header on the request '
             + '(OIDC federation is per project, under Settings > Security) and no '
@@ -86,11 +74,8 @@ exports.preRequest = async function(event) {
 
     const cachedEtag = await getEtag();
 
-    // useCache: false reads from origin instead of the CDN cache. Reads have to
-    // be consistent here: a cached read can serve the previous version of the
-    // blob for up to 60 seconds after a write, which both hands WordPress a
-    // stale database and hands us a stale ETag - so the next conditional write
-    // fails its ifMatch and the request 500s.
+    // Read from origin: a cached body and ETag could make the next conditional
+    // database write fail or start WordPress from stale state.
     // https://vercel.com/docs/vercel-blob/private-storage#consistent-reads
     const options = { access: 'private', useCache: false };
     applyAuth(options, ctx);
@@ -175,10 +160,8 @@ exports.postRequest = async function(event, response) {
         const readOnly = process.env['SERVERLESSWP_READ_ONLY_MODE'];
         const readOnlyActive = readOnly && !['false', '0', 'no'].includes(readOnly.toLowerCase());
         if (!readOnlyActive && ctx.dataVersion !== versionNow && workingExists) {
-            // The blob exists but we don't know which version the working
-            // copy came from (e.g. a download without an ETag). Writing
-            // anyway would be unconditional and could overwrite another
-            // instance's committed changes - fail and let the retry re-fetch.
+            // Never overwrite an existing blob without the ETag this copy came
+            // from; retrying will fetch a safe base.
             if (!ctx.etag && !ctx.blobMissing) {
                 console.log('Refusing to save database without a bound ETag.');
                 return persistenceError(true);
@@ -189,9 +172,7 @@ exports.postRequest = async function(event, response) {
                 ctx.db = null;
 
                 const sqliteContent = await fs.readFile(ctx.workingPath);
-                // The version this request started from, captured in
-                // preRequest - never the shared etag file, which a concurrent
-                // request may have advanced since.
+                // Use the request's source ETag, not the shared cache's.
                 const currentEtag = ctx.etag;
 
                 const putOptions = {
@@ -209,10 +190,8 @@ exports.postRequest = async function(event, response) {
 
                 const putResponse = await put(_config.pathname, sqliteContent, putOptions);
 
-                // Refresh the local cache before writing the ETag so etag.txt
-                // never describes content newer than CACHE_FILE. If the copy
-                // fails, the old ETag stays on disk and the next request's
-                // ifNoneMatch will miss, triggering a clean re-fetch.
+                // Update content before its ETag so the pair cannot describe
+                // different blob versions.
                 const tmp = CACHE_FILE + '.' + randomUUID() + '.tmp';
                 await fs.copyFile(ctx.workingPath, tmp);
                 await fs.rename(tmp, CACHE_FILE);
@@ -253,12 +232,8 @@ exports.postRequest = async function(event, response) {
     }
 }
 
-// Fail the request when the blob can't be read. A blob that doesn't exist yet
-// is a new site and returns null instead, so this is only reached when the read
-// itself failed. Letting the request through would hand WordPress an empty
-// database, and postRequest would then save that over the real one.
-// _forceResponse stops the plugin chain, otherwise a later plugin returning
-// nothing would drop this response and WordPress would run anyway.
+// Fail closed: continuing after a read error could replace the real database
+// with an empty one. _forceResponse prevents later plugins dropping the error.
 function readError() {
     return {
         statusCode: 500,
@@ -295,12 +270,8 @@ function applyAuth(options, ctx) {
     }
 }
 
-// Downloads carry a weak validator (`W/"abc"`) while put and head report the
-// strong form (`"abc"`), and x-if-match is compared against the strong one. So
-// an ETag taken from a download can't be used for a conditional write as-is:
-// the store sees a mismatch even though it's the same database. Any instance
-// that did a full download - every cold start - could never write again.
-// Canonicalize on the way in and out so both sources agree.
+// Downloads may return weak ETags while conditional writes require the strong
+// form, so normalize every ETag at the boundary.
 function normalizeEtag(etag) {
     return typeof etag === 'string' ? etag.replace(/^W\//, '') : etag;
 }

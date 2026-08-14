@@ -12,14 +12,7 @@ class UrlRewriter
 
     public function register(): void
     {
-        // URL rewriting to point directly at the storage backend is intentionally
-        // not the default.  Files in targeted paths are served transparently by the
-        // template_redirect handler in Plugin::serveRemoteFile(), so WordPress
-        // attachment URLs remain normal /wp-content/... URLs.
-        //
-        // If a CDN base URL is configured (WP_STREAM_CDN_BASE_URL), we rewrite
-        // attachment upload URLs to point directly at the CDN as a performance
-        // optimisation — skipping the PHP passthrough for every image request.
+        // Keep normal WordPress URLs unless a CDN is explicitly configured.
         $base = $this->config->cdnBaseUrl();
         if ($base) {
             add_filter('upload_dir', [$this, 'rewriteUploadDir']);
