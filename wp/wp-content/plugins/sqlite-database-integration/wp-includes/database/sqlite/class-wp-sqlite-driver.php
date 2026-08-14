@@ -3,24 +3,29 @@
 /*
  * The SQLite driver uses PDO. Enable PDO function calls:
  * phpcs:disable WordPress.DB.RestrictedClasses.mysql__PDO
+ *
+ * PDO uses camel case naming, enable non-snake case:
+ * phpcs:disable WordPress.NamingConventions.ValidFunctionName.MethodNameInvalid
  */
 
 /**
- * For back compatibility with dependencies that use their own loader scripts
+ * For backward compatibility with dependencies that use their own loader scripts
  * (e.g., WP CLI SQLite Command), ensure the PDO-based classes are loaded.
  */
 require_once __DIR__ . '/class-wp-mysql-on-sqlite.php';
-require_once __DIR__ . '/class-wp-pdo-proxy-statement.php';
+require_once __DIR__ . '/class-wp-mysql-on-sqlite-statement.php';
 
 /**
  * Deprecated: A proxy of the WP_MySQL_On_SQLite class preserving the legacy API.
  *
  * This class temporarily preserves the legacy constructor and result API while
  * consumers transition to the PDO-based WP_MySQL_On_SQLite API.
+ *
+ * @deprecated 3.0.0 Use WP_MySQL_On_SQLite instead.
  */
 class WP_SQLite_Driver {
 	/**
-	 * The SQLite engine version.
+	 * The emulated MySQL client library version.
 	 *
 	 * This is a mysqli-like property that is needed to avoid a PHP warning in
 	 * the WordPress health info. The "WP_Debug_Data::get_wp_database()" method
@@ -43,6 +48,13 @@ class WP_SQLite_Driver {
 	private $mysql_on_sqlite_driver;
 
 	/**
+	 * Statement returned for the last emulated query.
+	 *
+	 * @var WP_MySQL_On_SQLite_Statement|null
+	 */
+	private $last_statement;
+
+	/**
 	 * Results of the last emulated query.
 	 *
 	 * @var mixed
@@ -54,30 +66,30 @@ class WP_SQLite_Driver {
 	 *
 	 * Set up an SQLite connection and the MySQL-on-SQLite driver.
 	 *
-	 * @param WP_SQLite_Connection $connection A SQLite database connection.
-	 * @param string               $database   The database name.
+	 * @param WP_SQLite_Connection $connection    A SQLite database connection.
+	 * @param string               $database      The database name.
+	 * @param int                  $mysql_version The emulated MySQL version as an integer.
 	 *
-	 * @throws WP_SQLite_Driver_Exception When the driver initialization fails.
+	 * @throws WP_MySQL_On_SQLite_Exception When the driver initialization fails.
 	 */
 	public function __construct(
 		WP_SQLite_Connection $connection,
 		string $database,
-		int $mysql_version = 80038
+		int $mysql_version = WP_MySQL_On_SQLite::DEFAULT_MYSQL_VERSION
 	) {
 		$this->mysql_on_sqlite_driver = new WP_MySQL_On_SQLite(
-			sprintf( 'mysql-on-sqlite:dbname=%s', $database ),
+			sprintf( 'mysql-on-sqlite:dbname=%s', str_replace( ';', ';;', $database ) ),
 			null,
 			null,
 			array(
-				'mysql_version' => $mysql_version,
-				'pdo'           => $connection->get_pdo(),
-				'journal_mode'  => $connection->query( 'PRAGMA journal_mode' )->fetchColumn(),
+				'mysql_version'       => $mysql_version,
+				'sqlite_pdo'          => $connection->get_pdo(),
+				'sqlite_journal_mode' => $connection->query( 'PRAGMA journal_mode' )->fetchColumn(),
 			)
 		);
-		$this->main_db_name           = $database;
 		$this->client_info            = $this->mysql_on_sqlite_driver->client_info;
 
-		$connection->get_pdo()->setAttribute( PDO::ATTR_STRINGIFY_FETCHES, true );
+		$this->mysql_on_sqlite_driver->setAttribute( PDO::ATTR_STRINGIFY_FETCHES, true );
 	}
 
 	/**
@@ -145,7 +157,11 @@ class WP_SQLite_Driver {
 	 * @return int|string
 	 */
 	public function get_insert_id() {
-		return $this->mysql_on_sqlite_driver->get_insert_id();
+		$last_insert_id = $this->mysql_on_sqlite_driver->lastInsertId();
+		if ( is_numeric( $last_insert_id ) ) {
+			$last_insert_id = (int) $last_insert_id;
+		}
+		return $last_insert_id;
 	}
 
 	/**
@@ -155,10 +171,12 @@ class WP_SQLite_Driver {
 	 *
 	 * @return mixed Return value, depending on the query type.
 	 *
-	 * @throws WP_SQLite_Driver_Exception When the query execution fails.
+	 * @throws WP_MySQL_On_SQLite_Exception When the query execution fails.
 	 */
 	public function query( string $query, $fetch_mode = PDO::FETCH_OBJ, ...$fetch_mode_args ) {
-		$stmt = $this->mysql_on_sqlite_driver->query( $query, $fetch_mode, ...$fetch_mode_args );
+		$this->last_statement = null;
+		$stmt                 = $this->mysql_on_sqlite_driver->query( $query, $fetch_mode, ...$fetch_mode_args );
+		$this->last_statement = $stmt;
 
 		if ( $stmt->columnCount() > 0 ) {
 			$this->last_result = $stmt->fetchAll( $fetch_mode );
@@ -202,7 +220,7 @@ class WP_SQLite_Driver {
 	 * @return int
 	 */
 	public function get_last_column_count(): int {
-		return $this->mysql_on_sqlite_driver->get_last_column_count();
+		return null === $this->last_statement ? 0 : $this->last_statement->columnCount();
 	}
 
 	/**
@@ -211,7 +229,16 @@ class WP_SQLite_Driver {
 	 * @return array
 	 */
 	public function get_last_column_meta(): array {
-		return $this->mysql_on_sqlite_driver->get_last_column_meta();
+		if ( null === $this->last_statement ) {
+			return array();
+		}
+
+		$column_meta  = array();
+		$column_count = $this->last_statement->columnCount();
+		for ( $i = 0; $i < $column_count; $i++ ) {
+			$column_meta[] = $this->last_statement->getColumnMeta( $i );
+		}
+		return $column_meta;
 	}
 
 	/**
@@ -229,12 +256,12 @@ class WP_SQLite_Driver {
 	/**
 	 * Begin a new transaction or nested transaction.
 	 */
-	public function beginTransaction(): void { // phpcs:ignore WordPress.NamingConventions.ValidFunctionName.MethodNameInvalid
+	public function beginTransaction(): void {
 		$this->mysql_on_sqlite_driver->beginTransaction();
 	}
 
 	/**
-	 * A temporary alias for back compatibility.
+	 * A temporary alias for backward compatibility.
 	 *
 	 * @see self::beginTransaction()
 	 */
@@ -254,27 +281,5 @@ class WP_SQLite_Driver {
 	 */
 	public function rollback(): void {
 		$this->mysql_on_sqlite_driver->rollback();
-	}
-
-	/**
-	 * Proxy also the private property "$main_db_name", as it is used in tests.
-	 */
-	public function __set( string $name, $value ): void {
-		if ( 'main_db_name' === $name ) {
-			$closure = function ( string $value ) {
-				$this->main_db_name = $value;
-			};
-			$closure->call( $this->mysql_on_sqlite_driver, $value );
-		}
-	}
-
-	/**
-	 * Proxy also this private method, as it is used in tests.
-	 */
-	private function quote_mysql_utf8_string_literal( string $utf8_literal ): string {
-		$closure = function ( string $utf8_literal ) {
-			return $this->quote_mysql_utf8_string_literal( $utf8_literal );
-		};
-		return $closure->call( $this->mysql_on_sqlite_driver, $utf8_literal );
 	}
 }

@@ -8,6 +8,7 @@
  * PDO uses camel case naming, enable non-snake case:
  *   phpcs:disable WordPress.NamingConventions.ValidFunctionName.MethodNameInvalid
  *   phpcs:disable WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase
+ *   phpcs:disable WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase
  *
  * PDO uses $class as a variable name, enable it:
  *   phpcs:disable Universal.NamingConventions.NoReservedKeywordParameterNames.classFound
@@ -26,7 +27,12 @@
  * we conditionally define traits with different APIs based on the PHP version.
  */
 if ( PHP_VERSION_ID < 80000 ) {
-	trait WP_PDO_Proxy_Statement_PHP_Compat {
+	/**
+	 * PHP compatibility methods for WP_MySQL_On_SQLite_Statement.
+	 *
+	 * @access private
+	 */
+	trait WP_MySQL_On_SQLite_Statement_PHP_Compat {
 		/**
 		 * Set the default fetch mode for this statement.
 		 *
@@ -59,9 +65,26 @@ if ( PHP_VERSION_ID < 80000 ) {
 			}
 			return $this->fetchAllRows( $mode, $class_name, $constructor_args );
 		}
+
+		/**
+		 * Get metadata for a column in a result set.
+		 *
+		 * @param  int         $column The index of the column (0-indexed).
+		 * @return array|false         The column metadata as an associative array,
+		 *                             or false if the column does not exist.
+		 */
+		#[ReturnTypeWillChange]
+		public function getColumnMeta( $column ) {
+			return $this->getColumnMetadata( $column );
+		}
 	}
 } else {
-	trait WP_PDO_Proxy_Statement_PHP_Compat {
+	/**
+	 * PHP compatibility methods for WP_MySQL_On_SQLite_Statement.
+	 *
+	 * @access private
+	 */
+	trait WP_MySQL_On_SQLite_Statement_PHP_Compat {
 		/**
 		 * Set the default fetch mode for this statement.
 		 *
@@ -84,14 +107,29 @@ if ( PHP_VERSION_ID < 80000 ) {
 		public function fetchAll( $mode = PDO::FETCH_DEFAULT, ...$args ): array {
 			return $this->fetchAllRows( $mode, ...$args );
 		}
+
+		/**
+		 * Get metadata for a column in a result set.
+		 *
+		 * @param  int         $column The index of the column (0-indexed).
+		 * @return array|false         The column metadata as an associative array,
+		 *                             or false if the column does not exist.
+		 */
+		#[ReturnTypeWillChange]
+		public function getColumnMeta( int $column ) {
+			if ( $column < 0 ) {
+				throw new ValueError( 'PDOStatement::getColumnMeta(): Argument #1 ($column) must be greater than or equal to 0' );
+			}
+			return $this->getColumnMetadata( $column );
+		}
 	}
 }
 
 /**
- * PDOStatement implementation that operates on in-memory data.
+ * PDOStatement implementation for MySQL-on-SQLite query results.
  *
- * This class implements a complete PDOStatement interface on top of PHP arrays.
- * It is used for result sets that are composed or transformed in the PHP layer.
+ * Delegates operations to the underlying SQLite statement while adapting
+ * MySQL-specific behavior such as affected row counts.
  *
  * PDO supports the following fetch modes:
  *   - PDO::FETCH_DEFAULT:  current default fetch mode (available from PHP 8.0)
@@ -103,13 +141,13 @@ if ( PHP_VERSION_ID < 80000 ) {
  *   - PDO::FETCH_KEY_PAIR: key-value pair
  *   - PDO::FETCH_OBJ:      object (stdClass)
  *   - PDO::FETCH_CLASS:    object (custom class) [1-2 extra args]
- *   - PDO::FETCH_INTO:     update an exisisting object, can't be used with fetchAll() [1 extra arg]
+ *   - PDO::FETCH_INTO:     update an existing object, can't be used with fetchAll() [1 extra arg]
  *   - PDO::FETCH_LAZY:     lazy fetch via PDORow, can't be used with fetchAll()
  *   - PDO::FETCH_BOUND:    bind values to PHP variables, can't be used with fetchAll()
  *   - PDO::FETCH_FUNC:     custom function, only works with fetchAll(), can't be default [1 extra arg]
  */
-class WP_PDO_Proxy_Statement extends PDOStatement {
-	use WP_PDO_Proxy_Statement_PHP_Compat;
+class WP_MySQL_On_SQLite_Statement extends PDOStatement implements IteratorAggregate {
+	use WP_MySQL_On_SQLite_Statement_PHP_Compat;
 
 	/**
 	 * The original PDO statement.
@@ -117,6 +155,20 @@ class WP_PDO_Proxy_Statement extends PDOStatement {
 	 * @var PDOStatement
 	 */
 	private $statement;
+
+	/**
+	 * Resolve MySQL-compatible metadata by column index.
+	 *
+	 * @var callable
+	 */
+	private $column_meta_resolver;
+
+	/**
+	 * Resolved MySQL-compatible metadata, keyed by column index.
+	 *
+	 * @var array<int, array|false>
+	 */
+	private $resolved_column_meta = array();
 
 	/**
 	 * The number of affected rows.
@@ -128,15 +180,25 @@ class WP_PDO_Proxy_Statement extends PDOStatement {
 	/**
 	 * Constructor.
 	 *
-	 * @param PDOStatement $statement     The original PDO statement.
-	 * @param int          $affected_rows The number of affected rows.
+	 * @param PDOStatement $statement            The original PDO statement.
+	 * @param string       $query                The original MySQL query.
+	 * @param callable     $column_meta_resolver Resolves metadata by column index.
+	 * @param int|null     $affected_rows        The number of affected rows.
 	 */
 	public function __construct(
 		PDOStatement $statement,
+		string $query,
+		callable $column_meta_resolver,
 		?int $affected_rows = null
 	) {
-		$this->statement     = $statement;
-		$this->affected_rows = $affected_rows;
+		$this->statement = $statement;
+
+		// Userland can only initialize PDOStatement::$queryString on PHP 8.1+.
+		if ( PHP_VERSION_ID >= 80100 ) {
+			$this->queryString = $query;
+		}
+		$this->column_meta_resolver = $column_meta_resolver;
+		$this->affected_rows        = $affected_rows;
 	}
 
 	/**
@@ -146,7 +208,10 @@ class WP_PDO_Proxy_Statement extends PDOStatement {
 	 * @return bool         True on success, false on failure.
 	 */
 	public function execute( $params = null ): bool {
-		return $this->statement->execute( $params );
+		// The wrapped SQLite statement represents the result of MySQL emulation.
+		// Re-executing it would not repeat the original MySQL operation.
+		// TODO: Implement statement execution together with the prepare() flow.
+		throw new RuntimeException( 'Not implemented' );
 	}
 
 	/**
@@ -212,24 +277,13 @@ class WP_PDO_Proxy_Statement extends PDOStatement {
 	}
 
 	/**
-	 * Get metadata for a column in a result set.
-	 *
-	 * @param  int         $column The index of the column (0-indexed).
-	 * @return array|false         The column metadata as an associative array,
-	 *                             or false if the column does not exist.
-	 */
-	public function getColumnMeta( $column ): array {
-		throw new RuntimeException( 'Not implemented' );
-	}
-
-	/**
 	 * Fetch the SQLSTATE associated with the last statement operation.
 	 *
 	 * @return string|null The SQLSTATE error code (as defined by the ANSI SQL standard),
 	 *                     or null if there is no error.
 	 */
 	public function errorCode(): ?string {
-		throw new RuntimeException( 'Not implemented' );
+		return $this->statement->errorCode();
 	}
 
 	/**
@@ -241,7 +295,11 @@ class WP_PDO_Proxy_Statement extends PDOStatement {
 	 *                 2: Driver-specific error message.
 	 */
 	public function errorInfo(): array {
-		throw new RuntimeException( 'Not implemented' );
+		// Normalize successful results. PDO SQLite may retain stale driver-specific fields on PHP < 8.0.
+		if ( '00000' === $this->statement->errorCode() ) {
+			return array( '00000', null, null );
+		}
+		return $this->statement->errorInfo();
 	}
 
 	/**
@@ -272,7 +330,7 @@ class WP_PDO_Proxy_Statement extends PDOStatement {
 	 * @return Iterator The iterator for the result set.
 	 */
 	public function getIterator(): Iterator {
-		throw new RuntimeException( 'Not implemented' );
+		yield from $this->statement;
 	}
 
 	/**
@@ -285,12 +343,12 @@ class WP_PDO_Proxy_Statement extends PDOStatement {
 	}
 
 	/**
-	 * Closes the cursor, enabling the statement to be executed again.
+	 * Close the cursor and release the associated resources.
 	 *
 	 * @return bool True on success, false on failure.
 	 */
 	public function closeCursor(): bool {
-		throw new RuntimeException( 'Not implemented' );
+		return $this->statement->closeCursor();
 	}
 
 	/**
@@ -303,8 +361,8 @@ class WP_PDO_Proxy_Statement extends PDOStatement {
 	 * @param  mixed      $driverOptions Optional parameters for the driver.
 	 * @return bool                      True on success, false on failure.
 	 */
-	public function bindColumn( $column, &$var, $type = null, $maxLength = null, $driverOptions = null ): bool {
-		throw new RuntimeException( 'Not implemented' );
+	public function bindColumn( $column, &$var, $type = PDO::PARAM_STR, $maxLength = 0, $driverOptions = null ): bool {
+		return $this->statement->bindColumn( $column, $var, $type, $maxLength, $driverOptions );
 	}
 
 	/**
@@ -336,7 +394,7 @@ class WP_PDO_Proxy_Statement extends PDOStatement {
 	/**
 	 * Dump information about the statement.
 	 *
-	 * Dupms the SQL query and parameters information.
+	 * Dumps the SQL query and parameter information.
 	 *
 	 * @return bool|null Returns null, or false on failure.
 	 */
@@ -345,9 +403,26 @@ class WP_PDO_Proxy_Statement extends PDOStatement {
 	}
 
 	/**
+	 * Get metadata for a column in a result set.
+	 *
+	 * This is used internally by the "WP_MySQL_On_SQLite_Statement_PHP_Compat" trait,
+	 * that is defined conditionally based on the current PHP version.
+	 *
+	 * @param  int         $column The index of the column (0-indexed).
+	 * @return array|false         The column metadata as an associative array,
+	 *                             or false if the column does not exist.
+	 */
+	private function getColumnMetadata( $column ) {
+		if ( ! array_key_exists( $column, $this->resolved_column_meta ) ) {
+			$this->resolved_column_meta[ $column ] = ( $this->column_meta_resolver )( $column );
+		}
+		return $this->resolved_column_meta[ $column ];
+	}
+
+	/**
 	 * Fetch all remaining rows from the result set.
 	 *
-	 * This is used internally by the "WP_PDO_Proxy_Statement_PHP_Compat" trait,
+	 * This is used internally by the "WP_MySQL_On_SQLite_Statement_PHP_Compat" trait,
 	 * that is defined conditionally based on the current PHP version.
 	 *
 	 * @param  int   $mode The fetch mode to use.
@@ -361,7 +436,7 @@ class WP_PDO_Proxy_Statement extends PDOStatement {
 	/**
 	 * Set the default fetch mode for this statement.
 	 *
-	 * This is used internally by the "WP_PDO_Proxy_Statement_PHP_Compat" trait,
+	 * This is used internally by the "WP_MySQL_On_SQLite_Statement_PHP_Compat" trait,
 	 * that is defined conditionally based on the current PHP version.
 	 *
 	 * @param  int   $mode   The fetch mode to set as the default.

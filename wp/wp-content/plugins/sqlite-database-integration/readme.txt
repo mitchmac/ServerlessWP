@@ -4,88 +4,154 @@ Contributors:      wordpressdotorg, aristath, janjakes, zieladam, berislav.grgic
 Requires at least: 6.4
 Tested up to:      7.0
 Requires PHP:      7.2
-Stable tag:        3.0.0-rc.7
+Stable tag:        3.0.0
 License:           GPLv2 or later
 License URI:       https://www.gnu.org/licenses/gpl-2.0.html
-Tags:              performance, database
+Tags:              sqlite, database
 
-SQLite integration plugin by the WordPress Team.
+Run WordPress on SQLite instead of MySQL or MariaDB.
 
 == Description ==
 
+**Run WordPress on SQLite.**
+
 The SQLite plugin is a community, feature plugin. The intent is to allow testing an SQLite integration with WordPress and gather feedback, with the goal of eventually landing it in WordPress core.
+
+The plugin replaces the default MySQL database layer with an SQLite-backed implementation. WordPress continues to use its standard `wpdb` API while the plugin translates and emulates MySQL queries for SQLite.
+
+= What the plugin provides =
+
+* **No database server.** Your site's data is stored in a local SQLite database.
+* **Guided setup.** The installation screen checks for the required PHP extension, write access, and conflicting database drop-ins before enabling SQLite.
+* **Purpose-built compatibility.** A MySQL parser and emulation layer adapt MySQL syntax and behavior for SQLite.
+* **Useful diagnostics.** SQLite details appear in Site Health, and Query Monitor is supported.
+
+**Important:** Enabling SQLite creates a separate, empty database; it does not migrate an existing site. If you enable it on a site that uses MySQL or MariaDB, WordPress will ask you to set up the site again. Disabling the plugin reconnects WordPress to the previous database with its data unchanged. Changes made while using SQLite are not transferred.
+
+The plugin requires the PDO SQLite PHP extension and SQLite 3.37.0 or newer.
 
 == Frequently Asked Questions ==
 
 = What is the purpose of this plugin? =
 
-The primary purpose of the SQLite plugin is to allow testing the use of an SQLite database, with the goal to eventually land in WordPress core.
+The primary purpose of the plugin is to test WordPress with SQLite and gather feedback, with the goal of eventually including the integration in WordPress core.
 
-You can read the original proposal on the [Make blog](https://make.wordpress.org/core/2022/09/12/lets-make-wordpress-officially-support-sqlite/), as well as the [call for testing](https://make.wordpress.org/core/2022/12/20/help-us-test-the-sqlite-implementation/) for more context and useful information.
+Read the original proposal on the [Make WordPress Core blog](https://make.wordpress.org/core/2022/09/12/lets-make-wordpress-officially-support-sqlite/) and the [call for testing](https://make.wordpress.org/core/2022/12/20/help-us-test-the-sqlite-implementation/) for more context.
 
 = Can I use this plugin on my production site? =
 
-Per the primary purpose of the plugin (see above), it can mostly be considered a beta testing plugin. To a degree, it should be okay to use it in production. However, as with every plugin, you are doing so at your own risk.
+Yes, but keep reliable backups and make sure SQLite is a good fit for your site's traffic. SQLite supports concurrent reads but allows only one writer at a time, so MySQL or MariaDB may be a better fit for sites with heavy concurrent write traffic. Test your workload, themes, and plugins before switching.
+
+= Will this plugin migrate my existing site to SQLite? =
+
+No. Enabling SQLite starts a fresh WordPress installation in a separate database. Your existing MySQL or MariaDB database remains unchanged, but its content is not copied to SQLite.
+
+Disabling the plugin reconnects WordPress to the previous database. Content created while using SQLite is not transferred back.
+
+= What does the plugin require? =
+
+In addition to the WordPress and PHP versions listed above, the plugin requires the PDO SQLite PHP extension and SQLite 3.37.0 or newer. The setup screen also needs write access to the `wp-content` directory and will detect conflicting database drop-ins.
 
 = Where can I submit my plugin feedback? =
 
-Feedback is encouraged and much appreciated, especially since this plugin is a future WordPress core feature. If you need help with troubleshooting or have a question, suggestions, or requests, you can [submit them as an issue in the SQLite GitHub repository](https://github.com/wordpress/sqlite-database-integration/issues/new).
+Feedback helps improve the integration. For troubleshooting, questions, suggestions, or feature requests, [open an issue in the SQLite GitHub repository](https://github.com/wordpress/sqlite-database-integration/issues/new).
 
 = How can I contribute to the plugin? =
 
-Contributions are always welcome! Learn more about how to get involved in the [Core Performance Team Handbook](https://make.wordpress.org/performance/handbook/get-involved/).
+Contributions are welcome through the [SQLite Database Integration repository on GitHub](https://github.com/WordPress/sqlite-database-integration).
 
 = Does this plugin change how WordPress queries are executed? =
 
-The plugin replaces the default MySQL-based database layer with an
-SQLite-backed implementation. Core WordPress code continues to use
-the wpdb API, while queries are internally adapted to be compatible
-with SQLite syntax and behavior.
+Yes. The plugin replaces the default MySQL-based database layer with an SQLite-backed implementation. WordPress continues to use the `wpdb` API, while queries are internally adapted to SQLite syntax and behavior.
 
 == Changelog ==
 
-= 3.0.0-rc.7 =
+= 3.0.0 =
 
-* Preserve configured SQLite journal mode in driver wrapper ([#447](https://github.com/WordPress/sqlite-database-integration/pull/447))
-* Release 3.0.0-rc.6 ([#444](https://github.com/WordPress/sqlite-database-integration/pull/444))
+**SQLite Database Integration 3 is here! 🎉**
 
-= 3.0.0-rc.6 =
+This release introduces an **all-new SQLite database driver for WordPress**, rebuilt from the ground up. Its purpose-built MySQL lexer, parser, and emulation layer deliver broader compatibility, more accurate behavior, and a stronger foundation for future improvements.
 
-* Don't take a write lock for SET statements (fixes "database is locked" on connect) ([#443](https://github.com/WordPress/sqlite-database-integration/pull/443))
-* Add REVERSE() to user defined functions ([#434](https://github.com/WordPress/sqlite-database-integration/pull/434))
-* LALR(1) parser from official MySQL grammar ([#429](https://github.com/WordPress/sqlite-database-integration/pull/429))
+The 3.0 release spans nearly two years of work, featuring [160 pull requests](https://github.com/WordPress/sqlite-database-integration/milestone/3?closed=1) and 1,075 commits from 15 contributors.
 
-= 3.0.0-rc.5 =
+**What's new**
 
-* Default SQLite connections to WAL ([#405](https://github.com/WordPress/sqlite-database-integration/pull/405))
+The new driver advances SQLite support for WordPress, plugins, database tools, and other MySQL-based applications. These improvements include:
 
-= 3.0.0-rc.4 =
+* **New SQL engine:** The pure-PHP lexer and parser provide extensive coverage of the official MySQL grammar.
+* **Broad query support:** Complex joins, subqueries, CTEs, unions, and other advanced queries are now supported.
+* **Schema emulation:** WordPress and database tools can query emulated MySQL `INFORMATION_SCHEMA` tables.
+* **Schema introspection:** `SHOW` and `DESCRIBE` statements provide accurate MySQL-like metadata.
+* **Improved data handling:** Types, casts, defaults, auto-increment, values, and escaping better match MySQL.
+* **Refined MySQL semantics:** Better emulation of SQL modes, variables, functions, transactions, and errors.
+* **Better concurrency:** Write-ahead logging and fewer locks reduce blocking between readers and writers.
+* **PDO API:** The new driver implements the PDO MySQL API, supporting many MySQL-based tools and applications.
+* **Extensive testing:** Test suites cover parsing, translation, metadata, concurrency, PDO, and end-to-end workflows.
 
-* Normalize BIT column default literals ([#439](https://github.com/WordPress/sqlite-database-integration/pull/439))
-* Optimize MySQL lexer (~2× speedup) ([#424](https://github.com/WordPress/sqlite-database-integration/pull/424))
-* Fix `RAND()` function behavior ([#363](https://github.com/WordPress/sqlite-database-integration/pull/363))
-* CI: Disable Xdebug, use Rust release builds, consolidate unit-test matrix ([#425](https://github.com/WordPress/sqlite-database-integration/pull/425))
-* GitHub Actions workflow updates ([#404](https://github.com/WordPress/sqlite-database-integration/pull/404))
-* Add native Rust-based MySQL parser extension ([#381](https://github.com/WordPress/sqlite-database-integration/pull/381), [#384](https://github.com/WordPress/sqlite-database-integration/pull/384), [#386](https://github.com/WordPress/sqlite-database-integration/pull/386), [#389](https://github.com/WordPress/sqlite-database-integration/pull/389), [#390](https://github.com/WordPress/sqlite-database-integration/pull/390), [#394](https://github.com/WordPress/sqlite-database-integration/pull/394), [#398](https://github.com/WordPress/sqlite-database-integration/pull/398))
-* Ship native parser as WASM  ([#395](https://github.com/WordPress/sqlite-database-integration/pull/395), [#396](https://github.com/WordPress/sqlite-database-integration/pull/396), [#397](https://github.com/WordPress/sqlite-database-integration/pull/397), [#399](https://github.com/WordPress/sqlite-database-integration/pull/399), [#400](https://github.com/WordPress/sqlite-database-integration/pull/400), [#401](https://github.com/WordPress/sqlite-database-integration/pull/401))
-* Add SQLite plugin landing page ([#407](https://github.com/WordPress/sqlite-database-integration/pull/407), [#412](https://github.com/WordPress/sqlite-database-integration/pull/412))
-* Check Playground web runtime compatibility ([#419](https://github.com/WordPress/sqlite-database-integration/pull/419))
+For more information about the new driver and its architecture, read the [driver announcement](https://make.wordpress.org/playground/2025/06/13/introducing-a-new-sqlite-driver-for-wordpress/).
 
-= 3.0.0-rc.3 =
+**Modular design**
 
-* Lexer: Fix possible OOB read in quoted strings ([#374](https://github.com/WordPress/sqlite-database-integration/pull/374))
-* Add support for `NO_AUTO_VALUE_ON_ZERO` SQL mode ([#366](https://github.com/WordPress/sqlite-database-integration/pull/366))
+The project was redesigned as a set of focused packages, separating the core driver from its WordPress integration:
 
-= 3.0.0-rc.2 =
+* [SQLite Database Integration](https://github.com/WordPress/sqlite-database-integration/tree/v3.0.0/packages/plugin-sqlite-database-integration): The **WordPress plugin** powered by MySQL on SQLite.
+* [MySQL on SQLite](https://github.com/WordPress/sqlite-database-integration/tree/v3.0.0/packages/mysql-on-sqlite): A standalone **PDO MySQL drop-in** for running MySQL-based PHP applications on SQLite.
+* [MySQL proxy](https://github.com/WordPress/sqlite-database-integration/tree/v3.0.0/packages/mysql-proxy) (experimental): A **MySQL wire protocol bridge** to PDO-compatible drivers for clients outside PHP.
 
-* Support MySQL `BINARY` operator ([#369](https://github.com/WordPress/sqlite-database-integration/pull/369))
-* Add support for `AUTO_INCREMENT` value management ([#367](https://github.com/WordPress/sqlite-database-integration/pull/367))
-* Add support for `DELETE` with `LIMIT` and `ORDER BY` ([#365](https://github.com/WordPress/sqlite-database-integration/pull/365))
+This architecture opens the driver to new integrations, applications, and development tools beyond WordPress.
 
-= 3.0.0-rc.1 =
+**Upgrading to 3.0**
 
-* Improve concurrent database access ([#361](https://github.com/WordPress/sqlite-database-integration/pull/361))
-* Remove legacy SQLite driver ([#358](https://github.com/WordPress/sqlite-database-integration/pull/358))
+Upgrading an existing SQLite site is straightforward:
+
+1. **Back up** your SQLite database.
+2. **Update the plugin** to version 3.0.
+
+On first connection, the new driver automatically initializes its metadata without changing your tables or content.
+
+If you used the new driver preview, you can now delete the `WP_SQLITE_AST_DRIVER` flag.
+
+**Breaking changes**
+
+Most WordPress sites need no changes. Review the following if you use a custom setup:
+
+* **New driver:**
+    * The new driver is always used. The legacy driver was removed.
+    * The `WP_SQLITE_AST_DRIVER` feature flag was removed.
+* **Updated SQLite version requirements:**
+    * SQLite `3.37.0` or newer is required.
+    * The `WP_SQLITE_UNSAFE_ENABLE_UNSUPPORTED_VERSIONS` opt-in enables limited SQLite `3.27.0`–`3.36.x` support.
+* **`DB_NAME` is required:**
+    * It must be defined and non-empty.
+    * It is used dynamically, independently of the SQLite file name and stored metadata.
+* **SQLite defaults have changed:**
+    * Journal mode now defaults to [`WAL`](https://sqlite.org/wal.html). Account for `-wal` and `-shm` sidecar files.
+    * Synchronous mode now defaults to [`NORMAL`](https://sqlite.org/pragma.html#pragma_synchronous) in `WAL` mode.
+* **Updated configuration constants:**
+    * `DATABASE_ENGINE` was removed. Use `DB_ENGINE`.
+    * `DATABASE_TYPE` is deprecated. Use `DB_ENGINE`.
+    * `FQDBDIR` is deprecated. Use `DB_DIR`.
+    * `FQDB` is deprecated. Use `DB_DIR` and `DB_FILE`.
+* **Updated driver classes:**
+    * `WP_SQLite_Driver` is deprecated. Use `WP_MySQL_On_SQLite`.
+    * `WP_PDO_MySQL_On_SQLite` was replaced by `WP_MySQL_On_SQLite`.
+    * `WP_SQLite_Driver_Exception` was replaced by `WP_MySQL_On_SQLite_Exception`.
+    * `WP_PDO_Proxy_Statement` was replaced by `WP_MySQL_On_SQLite_Statement`.
+* **Sunsetting `$GLOBALS['@pdo']`:**
+    * Injecting a PDO connection through `$GLOBALS['@pdo']` is no longer supported.
+    * Reading `$GLOBALS['@pdo']` is deprecated. Use `$wpdb->get_driver()->get_sqlite_pdo()`.
+* **Renamed driver constructor options:**
+    * `pdo` → `sqlite_pdo`.
+    * `journal_mode` → `sqlite_journal_mode`.
+    * `synchronous` → `sqlite_synchronous`.
+
+**Thank you**
+
+Thank you to everyone who helped build, test, review, and improve the new driver. Your work made this possible.
+
+**3.0 milestone:** [160 pull requests](https://github.com/WordPress/sqlite-database-integration/milestone/3?closed=1)
+
+**Changes since 2.2.23:** [`v2.2.23...v3.0.0`](https://github.com/WordPress/sqlite-database-integration/compare/v2.2.23...v3.0.0)
 
 = 2.2.23 =
 
@@ -103,3 +169,9 @@ with SQLite syntax and behavior.
 * Monorepo setup + release automation ([#334](https://github.com/WordPress/sqlite-database-integration/pull/334))
 * Rework release workflow ([#350](https://github.com/WordPress/sqlite-database-integration/pull/350))
 * Fix incorrect PHP polyfill implementations ([#338](https://github.com/WordPress/sqlite-database-integration/pull/338))
+
+== Upgrade Notice ==
+
+= 3.0.0 =
+
+Major release with an all-new SQLite driver. Requires SQLite 3.37.0 or newer. Back up your SQLite database before updating.
