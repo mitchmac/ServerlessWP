@@ -9,25 +9,12 @@ use WpAltStreamWrapper\PathRouter;
 use WpAltStreamWrapper\StatCache;
 use WpAltStreamWrapper\StreamWrapper;
 
-/**
- * StreamWrapper integration-style unit tests.
- *
- * These tests register the stream wrapper with a MockAdapter and exercise it through
- * actual PHP file functions (fopen, file_get_contents, etc.) so that the wrapper's
- * interception logic is tested end-to-end without a real storage backend.
- *
- * The "wp-content" root used here is /tmp/wp-streamwrapper-test, which is a path
- * that does not exist on the real filesystem — ensuring all operations inside
- * /tmp/wp-streamwrapper-test/uploads/ go through the mock adapter.
- */
 class StreamWrapperTest extends TestCase
 {
     private MockAdapter $adapter;
     private PathRouter $router;
-
     private const WP_CONTENT = '/tmp/wp-streamwrapper-test/wp-content';
     private const UPLOADS     = self::WP_CONTENT . '/uploads';
-
     protected function setUp(): void
     {
         StatCache::flush();
@@ -45,8 +32,6 @@ class StreamWrapperTest extends TestCase
         StreamWrapper::unregister();
         StatCache::flush();
     }
-
-    // -------- write / read round-trip --------
 
     public function testWriteAndReadBack(): void
     {
@@ -95,8 +80,6 @@ class StreamWrapperTest extends TestCase
         $this->assertSame('line1\nline2\n', $this->adapter->getContent('uploads/log.txt'));
     }
 
-    // -------- stat / file_exists --------
-
     public function testFileExistsForStoredFile(): void
     {
         $this->adapter->seed('uploads/exists.txt', 'data');
@@ -117,8 +100,6 @@ class StreamWrapperTest extends TestCase
         $this->assertSame('file', $cached['type']);
     }
 
-    // -------- unlink --------
-
     public function testUnlink(): void
     {
         $this->adapter->seed('uploads/delete-me.txt', 'bye');
@@ -129,8 +110,6 @@ class StreamWrapperTest extends TestCase
         $this->assertFalse($this->adapter->exists('uploads/delete-me.txt'));
     }
 
-    // -------- rename --------
-
     public function testRenameRemoteToRemote(): void
     {
         $this->adapter->seed('uploads/old.txt', 'content');
@@ -140,8 +119,6 @@ class StreamWrapperTest extends TestCase
         $this->assertFalse($this->adapter->exists('uploads/old.txt'));
         $this->assertSame('content', $this->adapter->getContent('uploads/new.txt'));
     }
-
-    // -------- mkdir / rmdir --------
 
     public function testMkdirSetsStatCacheDirectory(): void
     {
@@ -156,8 +133,6 @@ class StreamWrapperTest extends TestCase
         $this->adapter->seed('uploads/2024/photo.jpg', 'jpg data');
         $this->adapter->seed('uploads/2024/thumb.jpg', 'thumb data');
 
-        // Native rmdir() fails on a non-empty directory rather than deleting
-        // descendants the caller never named.
         $this->assertFalse(@rmdir(self::UPLOADS . '/2024'));
         $this->assertTrue($this->adapter->exists('uploads/2024/photo.jpg'));
         $this->assertTrue($this->adapter->exists('uploads/2024/thumb.jpg'));
@@ -165,8 +140,8 @@ class StreamWrapperTest extends TestCase
 
     public function testRmdirRefusesDirectoryContainingOnlyASubdirectory(): void
     {
-        $this->adapter->seed('uploads/2024/', '');    // empty-dir marker
-        $this->adapter->seed('uploads/2024/01/', ''); // empty child directory
+        $this->adapter->seed('uploads/2024/', '');
+        $this->adapter->seed('uploads/2024/01/', '');
 
         $this->assertFalse(@rmdir(self::UPLOADS . '/2024'));
         $this->assertTrue($this->adapter->exists('uploads/2024/'));
@@ -191,8 +166,6 @@ class StreamWrapperTest extends TestCase
         $this->assertTrue($this->adapter->exists('uploads/2024/'));
     }
 
-    // -------- opendir / readdir --------
-
     public function testOpendirListsImmediateChildren(): void
     {
         $this->adapter->seed('uploads/2024/a.jpg', 'a');
@@ -208,22 +181,16 @@ class StreamWrapperTest extends TestCase
 
         $this->assertContains('a.jpg', $entries);
         $this->assertContains('b.jpg', $entries);
-        $this->assertContains('sub', $entries);    // directory, not c.jpg
+        $this->assertContains('sub', $entries);
         $this->assertNotContains('c.jpg', $entries);
         $this->assertContains('.', $entries);
         $this->assertContains('..', $entries);
     }
 
-    // -------- exclusion patterns --------
-
     public function testSqliteFileIsNotIntercepted(): void
     {
-        // SQLite files in uploads should pass through to real FS, not mock adapter.
-        // We just verify the router does not route them — adapter gets nothing.
         $this->assertFalse($this->router->isRemote(self::UPLOADS . '/database.sqlite'));
     }
-
-    // -------- c mode --------
 
     public function testCModePreservesExistingContent(): void
     {
@@ -233,12 +200,9 @@ class StreamWrapperTest extends TestCase
         fwrite($fh, 'UPDATED');
         fclose($fh);
 
-        // 'c' positions at start and writes over — result is 'UPDATEDl' (original tail preserved)
-        // but since we only write 7 bytes over 8, result should be 'UPDATEDl'.
-        // Actually fwrite replaces from position 0 up to len(data), rest is preserved.
         $stored = $this->adapter->getContent('uploads/existing.txt');
         $this->assertStringStartsWith('UPDATED', $stored);
-        // The original byte at position 7 ('l') should still be there.
+
         $this->assertSame('UPDATEDl', $stored);
     }
 
@@ -250,8 +214,6 @@ class StreamWrapperTest extends TestCase
 
         $this->assertSame('hello', $this->adapter->getContent('uploads/new-c-mode.txt'));
     }
-
-    // -------- stream_lock --------
 
     public function testStreamLockDelegatedForPassthroughFiles(): void
     {
@@ -268,14 +230,6 @@ class StreamWrapperTest extends TestCase
         $this->assertTrue($result, 'flock() should work on passthrough file handles.');
     }
 
-    /**
-     * A deliberate lie, kept because the alternative is worse: WP_Filesystem and
-     * caching plugins treat a false return as a hard failure and abort, so
-     * reporting the truth would break writes that work fine. Nothing excludes
-     * anything here — data safety under concurrency comes from the conditional
-     * writes below, not from this. A real advisory lock would cost 2-3 extra
-     * round trips per acquire; see NEXT-STEPS.md §4a.
-     */
     public function testStreamLockReportsSuccessForRemoteFiles(): void
     {
         $this->adapter->seed('uploads/remote.txt', 'data');
@@ -288,11 +242,6 @@ class StreamWrapperTest extends TestCase
 
     public function testWritingLocalFileWithLockExDoesNotFatal(): void
     {
-        // PHP calls stream_lock(0) when closing a stream that holds no lock.
-        // flock() raises a ValueError on anything but LOCK_SH/LOCK_EX/LOCK_UN,
-        // so forwarding it turned any locked write to a passthrough path into
-        // a fatal error — which took down every request on a SQLite site,
-        // because the SQLite plugin writes /tmp/.htaccess with LOCK_EX.
         $realPath = sys_get_temp_dir() . '/wp-streamwrapper-lockex-' . getmypid() . '.txt';
 
         $bytes = file_put_contents($realPath, 'DENY FROM ALL', LOCK_EX);
@@ -303,8 +252,6 @@ class StreamWrapperTest extends TestCase
         unlink($realPath);
     }
 
-    // -------- stream_close warning on put failure --------
-
     public function testStreamCloseEmitsWarningOnPutFailure(): void
     {
         $this->adapter->failOnNextPut();
@@ -314,7 +261,7 @@ class StreamWrapperTest extends TestCase
             if ($errno === E_USER_WARNING) {
                 $warned = true;
             }
-            return true; // suppress so PHPUnit's failOnWarning does not fire
+            return true;
         });
 
         $fh = fopen(self::UPLOADS . '/fail.txt', 'w');
@@ -325,8 +272,6 @@ class StreamWrapperTest extends TestCase
 
         $this->assertTrue($warned, 'stream_close() must emit E_USER_WARNING when put() fails.');
     }
-
-    // -------- pushLocalFile --------
 
     public function testPushLocalFileUploadsAndRemovesLocalCopy(): void
     {
@@ -365,38 +310,28 @@ class StreamWrapperTest extends TestCase
         $this->assertFalse($result);
     }
 
-    // -------- rmdir root protection --------
-
     public function testRmdirOnRootTargetIsRefused(): void
     {
         $this->adapter->seed('uploads/photo.jpg', 'data');
 
-        // Attempting to rmdir the 'uploads' root key should be refused.
         $result = @rmdir(self::UPLOADS);
         $this->assertFalse($result);
 
-        // File should still exist.
         $this->assertTrue($this->adapter->exists('uploads/photo.jpg'));
     }
 
     public function testRmdirOnEmptySubdirectorySucceeds(): void
     {
-        // The root guard applies to target roots only; a subdirectory below one
-        // is removable on the same terms as any other empty directory.
         $this->adapter->seed('uploads/2024/', '');
 
         $this->assertTrue(rmdir(self::UPLOADS . '/2024'));
         $this->assertFalse($this->adapter->exists('uploads/2024/'));
     }
 
-    // -------- concurrent writes --------
-
     public function testWholeFileWriteIsUnconditional(): void
     {
         $this->adapter->seed('uploads/style.css', 'old');
 
-        // A replacement write (w mode) has nothing to preserve, so requiring an
-        // ETag match would only break in-place rewrites like regenerated CSS.
         file_put_contents(self::UPLOADS . '/style.css', 'new');
 
         $this->assertSame('new', $this->adapter->getContent('uploads/style.css'));
@@ -406,8 +341,6 @@ class StreamWrapperTest extends TestCase
 
     public function testWholeFileWriteToANewKeyIsAlsoUnconditional(): void
     {
-        // w means "the content is now this", so it does not matter whether the
-        // key existed. Conditioning it would break in-place rewrites.
         file_put_contents(self::UPLOADS . '/fresh.css', 'body{}');
 
         $this->assertSame([false], array_column($this->adapter->putLog(), 'requireAbsent'));
@@ -433,12 +366,10 @@ class StreamWrapperTest extends TestCase
         $fh = fopen(self::UPLOADS . '/counter.txt', 'r+');
         fwrite($fh, 'b');
 
-        // Another invocation commits while this handle holds a stale buffer.
         $this->adapter->seed('uploads/counter.txt', 'zzzz');
 
         @fclose($fh);
 
-        // The write is dropped rather than resurrecting 'aaaa' over 'zzzz'.
         $this->assertSame('zzzz', $this->adapter->getContent('uploads/counter.txt'));
     }
 
@@ -449,12 +380,10 @@ class StreamWrapperTest extends TestCase
         $fh = fopen(self::UPLOADS . '/log.txt', 'a');
         fwrite($fh, 'mine\n');
 
-        // Another invocation appends its own line first.
         $this->adapter->seed('uploads/log.txt', 'first\ntheirs\n');
 
         fclose($fh);
 
-        // Both lines survive: neither writer's bytes are lost.
         $this->assertSame('first\ntheirs\nmine\n', $this->adapter->getContent('uploads/log.txt'));
     }
 
@@ -467,13 +396,9 @@ class StreamWrapperTest extends TestCase
         fwrite($fh, 'mine');
         @fclose($fh);
 
-        // Every attempt lost, so nothing this handle wrote was committed — but
-        // the version that did win is intact.
         $this->assertStringNotContainsString('mine', (string) $this->adapter->getContent('uploads/log.txt'));
-        $this->assertCount(4, $this->adapter->putLog()); // first attempt + 3 replays
+        $this->assertCount(4, $this->adapter->putLog());
     }
-
-    // -------- conditional creation --------
 
     public function testAppendToAMissingKeyRequiresTheKeyToStillBeFree(): void
     {
@@ -492,13 +417,10 @@ class StreamWrapperTest extends TestCase
         $fh = fopen($path, 'a');
         fwrite($fh, 'mine\n');
 
-        // Another invocation creates and writes the same key in between.
         $this->adapter->seed('uploads/race-log.txt', 'theirs\n');
 
         fclose($fh);
 
-        // Neither line is lost: the create condition fails, and the append is
-        // replayed on top of what landed.
         $this->assertSame('theirs\nmine\n', $this->adapter->getContent('uploads/race-log.txt'));
     }
 
@@ -506,8 +428,6 @@ class StreamWrapperTest extends TestCase
     {
         $path = self::UPLOADS . '/exclusive.txt';
 
-        // fopen(..., 'x') checks absence to answer immediately, but that answer
-        // is stale by the time the write happens.
         $fh = fopen($path, 'x');
         fwrite($fh, 'mine');
 
@@ -530,8 +450,6 @@ class StreamWrapperTest extends TestCase
 
         @fclose($fh);
 
-        // c is an in-place edit, so there is nothing to merge — the write is
-        // dropped rather than replacing the other writer's object.
         $this->assertSame('theirs', $this->adapter->getContent('uploads/c-mode-race.txt'));
     }
 
@@ -540,23 +458,17 @@ class StreamWrapperTest extends TestCase
         $this->adapter->seed('uploads/log.txt', 'existing data');
         $this->adapter->failOnNextFetch();
 
-        // A failed read is not an empty file. Treating it as one would append to
-        // nothing and replace 'existing data' with just the new bytes.
         $fh = @fopen(self::UPLOADS . '/log.txt', 'a');
 
         $this->assertFalse($fh);
         $this->assertSame('existing data', $this->adapter->getContent('uploads/log.txt'));
     }
 
-    // -------- failed writes are recorded --------
-
     public function testFailedWriteIsRecorded(): void
     {
         $path = self::UPLOADS . '/never-lands.css';
         $this->adapter->failOnNextPut();
 
-        // file_put_contents() reports the full byte count: the write is buffered
-        // and only fails in stream_close(), which cannot report anything.
         $written = @file_put_contents($path, 'body{}');
 
         $this->assertSame(6, $written);
@@ -605,27 +517,17 @@ class StreamWrapperTest extends TestCase
 
     public function testWriteFailedIsFalseForPathsNeverWritten(): void
     {
-        // One-directional: no record means nothing failed, not that the object
-        // exists.
         $this->assertFalse(StreamWrapper::writeFailed(self::UPLOADS . '/untouched.txt'));
     }
 
-    // -------- path traversal --------
-
     public function testPathTraversalEscapingUploadsGoesToPassthrough(): void
     {
-        // /tmp/wp-streamwrapper-test/wp-content/uploads/../../etc/passwd
-        // resolves to /tmp/wp-streamwrapper-test/etc/passwd — not in uploads.
-        // The router should NOT treat it as remote.
         $resolved = self::UPLOADS . '/../../etc/passwd';
         $this->assertFalse($this->router->isRemote($resolved));
     }
 
-    // -------- passthrough (non-targeted paths) --------
-
     public function testPassthroughReadRealFile(): void
     {
-        // Write a real file to /tmp and read it back through the wrapper.
         $realPath = sys_get_temp_dir() . '/wp-streamwrapper-passthrough-' . getmypid() . '.txt';
         file_put_contents($realPath, 'real content');
 
@@ -645,8 +547,6 @@ class StreamWrapperTest extends TestCase
         unlink($realPath);
     }
 
-    // -------- x mode --------
-
     public function testXModeFailsWhenRemoteFileExists(): void
     {
         $this->adapter->seed('uploads/taken.txt', 'here first');
@@ -665,8 +565,6 @@ class StreamWrapperTest extends TestCase
         $this->assertSame('', $this->adapter->getContent('uploads/exclusive.txt'));
     }
 
-    // -------- w mode truncation --------
-
     public function testWModeWithoutWriteTruncatesExistingObject(): void
     {
         $this->adapter->seed('uploads/truncate-me.txt', 'old content');
@@ -676,8 +574,6 @@ class StreamWrapperTest extends TestCase
 
         $this->assertSame('', $this->adapter->getContent('uploads/truncate-me.txt'));
     }
-
-    // -------- touch / chmod (stream_metadata) --------
 
     public function testTouchCreatesMissingRemoteFile(): void
     {
@@ -702,12 +598,8 @@ class StreamWrapperTest extends TestCase
         $this->assertTrue(chmod(self::UPLOADS . '/perms.txt', 0644));
     }
 
-    // -------- directory existence across invocations --------
-
     public function testIsDirTrueForPrefixWithChildren(): void
     {
-        // Simulates a later invocation: objects exist in storage but the
-        // StatCache (fresh per process) knows nothing about the directory.
         $this->adapter->seed('uploads/2026/08/photo.jpg', 'jpg');
         StatCache::flush();
 
@@ -734,7 +626,7 @@ class StreamWrapperTest extends TestCase
 
         $this->assertContains('uploads/2027/', $this->adapter->keys());
 
-        StatCache::flush(); // next invocation
+        StatCache::flush();
         $this->assertTrue(is_dir(self::UPLOADS . '/2027'));
     }
 
@@ -747,8 +639,6 @@ class StreamWrapperTest extends TestCase
         $this->assertFalse($this->adapter->exists('uploads/gone-soon/'));
         $this->assertFalse(is_dir(self::UPLOADS . '/gone-soon'));
     }
-
-    // -------- cross-boundary operations (harvested from the mu-plugin suite) --------
 
     public function testRenameLocalToRemote(): void
     {
@@ -801,8 +691,6 @@ class StreamWrapperTest extends TestCase
 
         unlink($codePath);
     }
-
-    // -------- helpers --------
 
     private function createRealFile(string $path, string $content): void
     {

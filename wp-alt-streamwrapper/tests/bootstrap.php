@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/../vendor/autoload.php';
 
-// Generate a small valid JPEG fixture used by E2E tests.
 $fixtureDir = __DIR__ . '/Fixtures';
 if (!is_dir($fixtureDir)) {
     mkdir($fixtureDir, 0755, true);

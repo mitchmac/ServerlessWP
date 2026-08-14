@@ -13,12 +13,9 @@ class ImageResizeTest extends E2ETestCase
 
         $this->assertArrayHasKey('id', $attachment);
 
-        // WordPress generates multiple sizes on upload.
-        // All variants should end up in MinIO, not on the local filesystem.
         $keys    = $this->listStorageKeys('uploads');
         $related = array_filter($keys, fn($k) => str_contains($k, 'e2e-resize-test'));
 
-        // Expect at least the original + one size variant.
         $this->assertGreaterThanOrEqual(
             2,
             count($related),
@@ -40,7 +37,6 @@ class ImageResizeTest extends E2ETestCase
                 continue;
             }
 
-            // Each size URL should be reachable (HTTP 200).
             $ch = curl_init($sizeUrl);
             curl_setopt_array($ch, [
                 CURLOPT_NOBODY         => true,

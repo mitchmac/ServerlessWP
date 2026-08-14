@@ -8,77 +8,29 @@ use WpAltStreamWrapper\Adapters\Precondition;
 use WpAltStreamWrapper\Adapters\PreconditionFailedException;
 use WpAltStreamWrapper\Adapters\StorageAdapterInterface;
 
-/**
- * Overrides file:// to route configured wp-content paths to remote storage and
- * pass all other paths to the native filesystem.
- */
+// Routes configured file:// paths to object storage.
 class StreamWrapper
 {
-    /** Required by PHP — stream context resource set automatically. */
+    // Set by PHP's stream-wrapper API.
     public $context;
-
-    // -------- Static state (shared across all instances) --------
-
     private static ?StorageAdapterInterface $adapter = null;
     private static ?PathRouter $router = null;
-
-    /**
-     * Request-local failures that fclose() cannot report. This distinguishes a
-     * successful direct write from a failed write when neither has a local copy.
-     *
-     * @var array<string, true>
-     */
     private static array $failedWrites = [];
-
-    // -------- Per-handle state --------
-
-    /** Whether the current open path is a remote (adapter-backed) target. */
     private bool $isRemote = false;
-
-    /** Storage key for the open remote file. */
     private string $storageKey = '';
-
-    /** php://temp handle used as a buffer for remote reads and writes. */
     private mixed $buffer = null;
-
-    /** Native file handle used for passthrough (non-targeted) paths. */
     private mixed $realHandle = null;
-
-    /** True if data was written to the buffer and must be uploaded on close. */
     private bool $isDirty = false;
-
-    /** ETag downloaded by this handle for a conditional write on close. */
     private ?string $openEtag = null;
-
-    /** True for modes that download first and then write back (r+, a, a+, c, c+). */
     private bool $isReadModifyWrite = false;
-
-    /** True when no object existed at open, so the write on close creates it. */
     private bool $absentAtOpen = false;
-
-    /** True for modes whose write may be conditioned on the object not existing yet. */
     private bool $canConditionOnAbsence = false;
-
-    /** True for append modes, the only ones whose write can be replayed after a conflict. */
     private bool $isAppend = false;
-
-    /** Length of the downloaded content in append mode; bytes past it are this handle's. */
     private int $appendBaseLength = 0;
-
-    /** Re-read-and-reapply attempts before an append write is abandoned. */
     private const CONFLICT_RETRIES = 3;
-
-    // -------- Per-opendir state --------
-
-    /** Buffered directory entries for remote opendir. */
     private array $dirEntries = [];
     private int $dirIndex = 0;
-
-    /** Native dir handle for passthrough opendir. */
     private mixed $realDirHandle = null;
-
-    // -------- Registration --------
-
     public static function register(StorageAdapterInterface $adapter, PathRouter $router): void
     {
         self::$adapter      = $adapter;
@@ -91,24 +43,15 @@ class StreamWrapper
         stream_wrapper_register('file', static::class);
     }
 
-    /** pushLocalFileStatus() outcomes. */
     public const PUSH_OK = 'pushed';
     public const PUSH_NOT_REMOTE = 'not-remote';
     public const PUSH_NO_LOCAL_COPY = 'no-local-copy';
     public const PUSH_FAILED = 'failed';
-
-    /** Push a local upload that bypassed stream wrappers to remote storage. */
     public static function pushLocalFile(string $absolutePath, bool $deleteLocal = true): bool
     {
         return self::pushLocalFileStatus($absolutePath, $deleteLocal) === self::PUSH_OK;
     }
 
-    /**
-     * Push a local file and distinguish failure from a direct wrapper write that
-     * left no local copy.
-     *
-     * @return self::PUSH_* one of the outcome constants above
-     */
     public static function pushLocalFileStatus(string $absolutePath, bool $deleteLocal = true): string
     {
         if (self::$adapter === null || self::$router === null) {
@@ -120,7 +63,7 @@ class StreamWrapper
 
         $key = self::$router->toStorageKey($absolutePath);
 
-        // Read from the real filesystem — our wrapper is active so we must bypass it.
+        // Bypass this wrapper.
         stream_wrapper_restore('file');
         $contents = @file_get_contents($absolutePath);
         stream_wrapper_unregister('file');
@@ -152,7 +95,6 @@ class StreamWrapper
         return self::PUSH_OK;
     }
 
-    /** Remove an unsuccessful upload from local disk and the stat cache. */
     public static function discardLocalFile(string $absolutePath): void
     {
         if (self::$router === null || !self::$router->isRemote($absolutePath)) {
@@ -185,9 +127,6 @@ class StreamWrapper
         return self::$router !== null && self::$router->isRemote($path);
     }
 
-    /**
-     * Check storage directly, avoiding url_stat()'s additional directory probes.
-     */
     public static function existsInStorage(string $absolutePath): bool
     {
         if (self::$adapter === null || self::$router === null) {
@@ -213,7 +152,6 @@ class StreamWrapper
         return true;
     }
 
-    /** Whether this request recorded a failed remote write for the path. */
     public static function writeFailed(string $absolutePath): bool
     {
         if (self::$router === null || !self::$router->isRemote($absolutePath)) {
@@ -222,7 +160,6 @@ class StreamWrapper
         return isset(self::$failedWrites[self::$router->toStorageKey($absolutePath)]);
     }
 
-    /** Cache a local upload so WordPress sees it before it reaches storage. */
     public static function preCacheLocalFile(string $absolutePath): void
     {
         if (self::$router === null || !self::$router->isRemote($absolutePath)) {
@@ -245,9 +182,6 @@ class StreamWrapper
         }
     }
 
-
-    // -------- stream_open / stream_* --------
-
     public function stream_open(string $path, string $mode, int $options, ?string &$opened_path): bool
     {
         $resolved = $this->normalize($path);
@@ -267,7 +201,6 @@ class StreamWrapper
 
         $baseMode = $this->parseBaseMode($mode);
 
-        // x/x+ require that the file does not already exist.
         if ($baseMode === 'x' || $baseMode === 'x+') {
             if (self::$adapter->exists($this->storageKey)) {
                 fclose($this->buffer);
@@ -277,19 +210,16 @@ class StreamWrapper
                 }
                 return false;
             }
-            $this->isDirty = true; // create the (possibly empty) object on close
-            // Recheck absence conditionally when the buffered write closes.
+            $this->isDirty = true;
+
             $this->absentAtOpen          = true;
             $this->canConditionOnAbsence = true;
         }
 
-        // w/w+ truncate: mark dirty so closing without writing still creates/empties the object.
         if ($baseMode === 'w' || $baseMode === 'w+') {
             $this->isDirty = true;
         }
 
-        // Modes below read the object before writing it back, so the write on
-        // close is conditional on the version they read.
         $this->isReadModifyWrite = in_array($baseMode, ['r+', 'a', 'a+', 'c', 'c+'], true);
 
         if ($baseMode === 'r' || $baseMode === 'r+') {
@@ -305,12 +235,10 @@ class StreamWrapper
             fwrite($this->buffer, $existing);
             rewind($this->buffer);
             if ($baseMode === 'r+') {
-                $this->isDirty = false; // will be set true on first write
+                $this->isDirty = false;
             }
         }
 
-        // These modes create missing objects, but a failed read leaves unknown
-        // contents that must not be overwritten.
         if (in_array($baseMode, ['a', 'a+', 'c', 'c+'], true)) {
             $existing = $this->download();
 
@@ -327,8 +255,6 @@ class StreamWrapper
                 return false;
             }
 
-            // Absent at open means the write creates the object, so it can be
-            // conditioned on the key still being free.
             $this->canConditionOnAbsence = $this->absentAtOpen;
 
             if ($existing !== null) {
@@ -340,8 +266,6 @@ class StreamWrapper
                 $this->appendBaseLength = $existing === null ? 0 : strlen($existing);
                 fseek($this->buffer, 0, SEEK_END);
             } else {
-                // c/c+: write without truncation, positioned at the start
-                // (unlike w, which truncates).
                 rewind($this->buffer);
             }
         }
@@ -349,10 +273,6 @@ class StreamWrapper
         return true;
     }
 
-    /**
-     * Fetch contents and their ETag. $absentAtOpen distinguishes a missing object
-     * from a failed read when null is returned.
-     */
     private function download(): ?string
     {
         $result = self::$adapter->fetch($this->storageKey);
@@ -406,11 +326,6 @@ class StreamWrapper
         }
     }
 
-    /**
-     * Upload the buffer conditionally when this handle read or created the key.
-     * Only w/w+ replace unconditionally. Since fclose() cannot report failure,
-     * conflicts are recorded and warned instead of overwriting newer data.
-     */
     private function commit(string $contents): void
     {
         try {
@@ -425,9 +340,9 @@ class StreamWrapper
             );
             return;
         } catch (PreconditionFailedException) {
-            // Fall through to the conflict handling below.
         }
 
+        // Appends can be replayed safely; other writes cannot.
         if (!$this->isAppend) {
             $this->recordFailedWrite();
             trigger_error(
@@ -443,9 +358,6 @@ class StreamWrapper
             return;
         }
 
-        // Appends are the one case that can be replayed: the bytes this handle
-        // added are known, and adding them to the version that won produces the
-        // same result as if the two writes had been ordered.
         $replayed = $this->replayAppend(substr($contents, $this->appendBaseLength));
         if ($replayed === false) {
             $this->recordFailedWrite();
@@ -465,10 +377,6 @@ class StreamWrapper
         self::$failedWrites[$this->storageKey] = true;
     }
 
-    /**
-     * Match the version read, require a newly created key to remain absent, or
-     * return null for an intentional w/w+ replacement.
-     */
     private function writeCondition(): ?Precondition
     {
         if ($this->isReadModifyWrite && $this->openEtag !== null) {
@@ -482,14 +390,11 @@ class StreamWrapper
         return null;
     }
 
-    /** @return string|false the committed contents, or false if every attempt lost */
     private function replayAppend(string $appended): string|false
     {
         for ($attempt = 0; $attempt < self::CONFLICT_RETRIES; $attempt++) {
             $current = self::$adapter->fetch($this->storageKey);
             if ($current['status'] !== StorageAdapterInterface::FETCH_FOUND) {
-                // Gone again, or unreadable. Either way there is no known base
-                // to append to, and guessing would risk replacing content.
                 return false;
             }
 
@@ -502,7 +407,7 @@ class StreamWrapper
                     ? $merged
                     : false;
             } catch (PreconditionFailedException) {
-                continue; // lost again — re-read and re-append
+                continue;
             }
         }
 
@@ -511,7 +416,6 @@ class StreamWrapper
 
     private function cacheWritten(string $contents): void
     {
-        // A later successful write clears an earlier failure for the same key.
         unset(self::$failedWrites[$this->storageKey]);
 
         StatCache::set($this->storageKey, [
@@ -526,10 +430,8 @@ class StreamWrapper
         if ($this->realHandle !== null) {
             return fflush($this->realHandle);
         }
-        // Remote writes are fully buffered and uploaded atomically on stream_close().
-        // PHP calls stream_flush() internally as part of fclose(), so we must NOT
-        // upload here — doing so would consume the adapter call before stream_close()
-        // gets to perform its own upload and warning logic.
+
+        // Remote writes upload once, from stream_close().
         return true;
     }
 
@@ -596,14 +498,13 @@ class StreamWrapper
     public function stream_lock(int $operation): bool
     {
         if ($this->realHandle !== null) {
-            // PHP may call this with 0 on close; flock() rejects that value.
             $base = $operation & ~LOCK_NB;
             if (!in_array($base, [LOCK_SH, LOCK_EX, LOCK_UN], true)) {
                 return true;
             }
             return flock($this->realHandle, $operation);
         }
-        // Object storage has no advisory locks; report success for compatibility.
+
         return true;
     }
 
@@ -616,8 +517,6 @@ class StreamWrapper
     {
         return false;
     }
-
-    // -------- URL operations (called on a fresh instance without stream_open) --------
 
     public function url_stat(string $path, int $flags): array|false
     {
@@ -645,17 +544,12 @@ class StreamWrapper
             return StatCache::buildStatArray($stat);
         }
 
-        // Not an object — it may still be a directory: either an empty-dir
-        // marker ('key/') or a prefix with children from a previous invocation.
-        // Object storage has no real directories, so is_dir()/wp_mkdir_p()
-        // would otherwise break across requests.
         if (self::$adapter->exists($key . '/') || self::$adapter->listPrefix($key) !== []) {
             $entry = ['type' => 'dir', 'size' => 0, 'mtime' => time()];
             StatCache::set($key, $entry);
             return StatCache::buildStatArray($entry);
         }
 
-        // Mark as missing to avoid repeated adapter calls in the same request.
         StatCache::set($key, ['type' => 'missing', 'size' => 0, 'mtime' => 0]);
         return false;
     }
@@ -696,7 +590,6 @@ class StreamWrapper
             return $result;
         }
 
-        // Cross-boundary: one side is remote, the other is local.
         if ($fromRemote) {
             $fromKey  = self::$router->toStorageKey($fromResolved);
             $contents = self::$adapter->get($fromKey);
@@ -712,7 +605,6 @@ class StreamWrapper
             return true;
         }
 
-        // $toRemote
         $contents = $this->withRealFs(fn() => file_get_contents($fromResolved));
         if ($contents === false) {
             return false;
@@ -748,9 +640,6 @@ class StreamWrapper
             }
         }
 
-        // Persist a zero-byte 'key/' marker so the directory still exists for
-        // the next invocation even if no file is ever written into it. Parents
-        // become implicit directories via the url_stat() prefix check.
         return self::$adapter->put(rtrim($key, '/') . '/', '');
     }
 
@@ -764,8 +653,6 @@ class StreamWrapper
 
         $key = self::$router->toStorageKey($resolved);
 
-        // Refuse to delete an entire top-level target (e.g. 'uploads', 'cache').
-        // A key with no slash means it is the root of a configured target path.
         if (!str_contains($key, '/')) {
             trigger_error(
                 "wp-alt-streamwrapper: refusing rmdir on root storage target '{$key}'",
@@ -776,8 +663,6 @@ class StreamWrapper
 
         $marker = rtrim($key, '/') . '/';
 
-        // Match native rmdir(): never delete unnamed descendants. In object
-        // storage, empty means no keys except the directory marker.
         $children = array_filter(
             self::$adapter->listPrefix($key),
             fn(string $childKey) => $childKey !== $marker,
@@ -803,11 +688,6 @@ class StreamWrapper
         return true;
     }
 
-    /**
-     * touch()/chmod()/chown()/chgrp(). Without this method every one of those
-     * calls on a remote path returns false; WordPress uses touch() in
-     * WP_Filesystem_Direct and during upgrades.
-     */
     public function stream_metadata(string $path, int $option, mixed $value): bool
     {
         $resolved = $this->normalize($path);
@@ -839,11 +719,8 @@ class StreamWrapper
             return $result;
         }
 
-        // Ownership/permissions are meaningless on object storage; report success.
         return true;
     }
-
-    // -------- Directory iteration --------
 
     public function dir_opendir(string $path, int $options): bool
     {
@@ -861,7 +738,6 @@ class StreamWrapper
         $key     = self::$router->toStorageKey($resolved);
         $allKeys = self::$adapter->listPrefix($key);
 
-        // Collect immediate children only (one path segment deep).
         $prefixWithSlash = rtrim($key, '/') . '/';
         $seen            = [];
         foreach ($allKeys as $k) {
@@ -911,12 +787,6 @@ class StreamWrapper
         return true;
     }
 
-    // -------- Passthrough helpers --------
-
-    /**
-     * Open a passthrough handle to the real filesystem.
-     * The real file:// wrapper is temporarily restored for the duration of fopen().
-     */
     private function openPassthrough(string $resolved, string $mode, int $options, ?string &$opened_path): bool
     {
         $this->isRemote = false;
@@ -938,12 +808,9 @@ class StreamWrapper
         return true;
     }
 
-    /**
-     * Temporarily restore the native file:// wrapper, run $fn, then re-register ours.
-     * Safe because PHP is single-threaded per request.
-     */
     private function withRealFs(callable $fn): mixed
     {
+        // Run against native file://.
         stream_wrapper_restore('file');
         try {
             return $fn();
@@ -961,13 +828,9 @@ class StreamWrapper
         return $this->resolveDots($path);
     }
 
-    /**
-     * Resolve . and .. components without touching the filesystem.
-     * Prevents paths like /wp-content/uploads/../../../etc/passwd from
-     * matching the uploads prefix and being routed as remote.
-     */
     private function resolveDots(string $path): string
     {
+        // Normalize traversal before routing.
         $parts    = explode('/', $path);
         $resolved = [];
         foreach ($parts as $part) {
@@ -983,13 +846,8 @@ class StreamWrapper
         return '/' . implode('/', $resolved);
     }
 
-    /**
-     * Extract the base mode character from a mode string like 'r+b', 'wb', 'a+'.
-     * Returns one of: r, r+, w, w+, a, a+, x, x+, c, c+
-     */
     private function parseBaseMode(string $mode): string
     {
-        // Strip binary/text flags
         $stripped = str_replace(['b', 't'], '', $mode);
         return $stripped;
     }

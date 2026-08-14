@@ -11,7 +11,6 @@ services:
       WORDPRESS_DB_NAME: wordpress
       WORDPRESS_DB_USER: wp
       WORDPRESS_DB_PASSWORD: wp
-      # Stream wrapper configuration
       WP_STREAM_PROVIDER: s3
       WP_STREAM_S3_BUCKET: wp-uploads
       WP_STREAM_S3_REGION: us-east-1
@@ -60,8 +59,6 @@ services:
       PORT: "7000"
       STORE_ID: teststore
       ACCESS: public
-      # No CDN-staleness simulation: the adapter always reads with cache=0,
-      # so cached reads are never exercised here.
       BLOB_CACHE_STALE_MS: "0"
     volumes:
       - ./blob-emulator:/emulator:ro

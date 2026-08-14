@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
-# Run inside the wordpress container to install WordPress for the E2E suite.
-# Usage: docker compose exec wordpress bash /var/www/html/wp-content/mu-plugins/wp-alt-streamwrapper/tests/E2E/setup/install.sh
+# Install WordPress inside the E2E container.
 
 set -euo pipefail
 
@@ -28,8 +27,6 @@ fi
 echo "Installing Basic Auth plugin for REST API testing..."
 $WP plugin install https://github.com/WP-API/Basic-Auth/archive/refs/heads/master.zip --activate
 
-# No activation step: the plugin ships as a must-use plugin, so it loads
-# automatically. See build-plugin.sh.
 
 echo "Installing the public-path filter fixture..."
 cp "$(dirname "${BASH_SOURCE[0]}")/public-path-filter.php" \

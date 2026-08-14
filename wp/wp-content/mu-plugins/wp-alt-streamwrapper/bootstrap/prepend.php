@@ -1,16 +1,11 @@
 <?php
 
-/**
- * auto_prepend_file bootstrap. Runs before WordPress and must not depend on its
- * database, functions or constants.
- */
-
+// Runs before WordPress.
 declare(strict_types=1);
 
-// Load classes via Composer autoloader. __DIR__ is {plugin}/bootstrap.
 $autoload = __DIR__ . '/../vendor/autoload.php';
 if (!file_exists($autoload)) {
-    // Plugin not installed — skip silently rather than crashing the entire site.
+
     return;
 }
 require_once $autoload;
@@ -26,14 +21,10 @@ $config   = new Config();
 $provider = $config->provider();
 
 if ($provider === '') {
-    // No provider configured — run without stream wrapper interception.
+
     return;
 }
 
-// Determine the wp-content directory.
-// Priority: WP_STREAM_WP_CONTENT_DIR env var, then this file's own location —
-// it lives at {wp-content}/mu-plugins/wp-alt-streamwrapper/bootstrap/prepend.php,
-// so wp-content is three levels up.
 $resolved = Bootstrap::resolveWpContentDir(
     $config->wpContentDir(),
     dirname(__DIR__, 3),

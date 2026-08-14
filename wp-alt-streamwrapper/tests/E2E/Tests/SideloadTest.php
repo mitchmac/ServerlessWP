@@ -4,20 +4,10 @@ declare(strict_types=1);
 
 namespace WpAltStreamWrapper\Tests\E2E\Tests;
 
-/**
- * wp_handle_sideload() — imports, "add from URL", plugin-fetched media.
- *
- * These arrive at pre_move_uploaded_file with a tmp_name PHP never recorded in
- * $_FILES, so move_uploaded_file() cannot move them and the handler has to fall
- * back to rename(). REST uploads (every other test here) are real HTTP uploads
- * and never take that branch.
- */
 class SideloadTest extends E2ETestCase
 {
     private const HELPER = '/wp-content/mu-plugins/wp-alt-streamwrapper/tests/E2E/setup/sideload.php';
-
     private string $storageKey = '';
-
     protected function tearDown(): void
     {
         if ($this->storageKey !== '') {
@@ -39,8 +29,6 @@ class SideloadTest extends E2ETestCase
         $this->assertArrayNotHasKey('error', $result, 'wp_handle_sideload() reported an error: ' . $body);
         $this->assertNotEmpty($result['file'] ?? '', 'No destination path in the sideload result.');
 
-        // The destination must be a normal uploads path, and the bytes must be
-        // in object storage rather than only on the container's disk.
         $this->assertStringContainsString('/wp-content/uploads/', $result['file']);
 
         $relative         = substr($result['file'], strpos($result['file'], '/wp-content/') + strlen('/wp-content/'));

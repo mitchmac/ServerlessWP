@@ -10,10 +10,8 @@ use WpAltStreamWrapper\Config;
 class ConfigTest extends TestCase
 {
     private array $originalEnv = [];
-
     protected function setUp(): void
     {
-        // Snapshot env vars we may mutate.
         foreach ($this->envKeys() as $k) {
             $this->originalEnv[$k] = getenv($k);
         }
@@ -23,7 +21,7 @@ class ConfigTest extends TestCase
     {
         foreach ($this->originalEnv as $k => $v) {
             if ($v === false) {
-                putenv($k); // unset
+                putenv($k);
             } else {
                 putenv("{$k}={$v}");
             }
@@ -53,9 +51,6 @@ class ConfigTest extends TestCase
 
     public function testDefaultPublicPathsAreUploadsOnly(): void
     {
-        // Serving is narrower than routing on purpose. Cache directories hold
-        // rendered HTML that may not be public, so they are opt-in even though
-        // routing covers them.
         $this->unsetEnv('WP_STREAM_PUBLIC_PATHS');
         $config = new Config();
         $this->assertSame(['wp-content/uploads'], $config->publicPaths());
@@ -77,8 +72,6 @@ class ConfigTest extends TestCase
 
     public function testDefaultPublicAssetPathsIsCache(): void
     {
-        // Bundled CSS/JS under wp-content/cache must resolve without an opt-in;
-        // the extension gate is what keeps cached HTML in the same tree private.
         $this->unsetEnv('WP_STREAM_PUBLIC_ASSET_PATHS');
         $config = new Config();
         $this->assertSame(['wp-content/cache'], $config->publicAssetPaths());
@@ -96,8 +89,6 @@ class ConfigTest extends TestCase
 
     public function testAssetExtensionsExcludeContentTypes(): void
     {
-        // A page cache writes .html/.json into the same directories as bundled
-        // assets, so those extensions must never be on this list.
         foreach (['css', 'js', 'svg', 'woff2'] as $asset) {
             $this->assertContains($asset, Config::PUBLIC_ASSET_EXTENSIONS);
         }
@@ -129,8 +120,7 @@ class ConfigTest extends TestCase
         $this->assertContains('*.db', $patterns);
         $this->assertContains('*.php', $patterns);
         $this->assertContains('.htaccess', $patterns);
-        // Routing debug.log would make every logged line an append: a GET plus a
-        // conditional PUT of an object that only grows.
+
         $this->assertContains('*.log', $patterns);
     }
 
@@ -183,8 +173,6 @@ class ConfigTest extends TestCase
         $this->assertSame('https://cdn.example.com', $config->cdnBaseUrl());
     }
 
-    // -------- ServerlessWP env fallbacks --------
-
     public function testS3SettingsFallBackToSqliteS3Vars(): void
     {
         $this->unsetEnv('WP_STREAM_S3_BUCKET');
@@ -225,8 +213,6 @@ class ConfigTest extends TestCase
         $this->assertSame('offload-bucket', $config->s3Bucket());
     }
 
-    // -------- path style / ACL --------
-
     public function testForcePathStyleDefaultsToFalse(): void
     {
         $this->unsetEnv('WP_STREAM_S3_FORCE_PATH_STYLE');
@@ -253,8 +239,6 @@ class ConfigTest extends TestCase
         $this->assertSame('public-read', (new Config())->s3Acl());
     }
 
-    // -------- proxy cache control --------
-
     public function testCacheControlDefault(): void
     {
         $this->unsetEnv('WP_STREAM_CACHE_CONTROL');
@@ -266,8 +250,6 @@ class ConfigTest extends TestCase
         putenv('WP_STREAM_CACHE_CONTROL=public, max-age=31536000, immutable');
         $this->assertSame('public, max-age=31536000, immutable', (new Config())->cacheControl());
     }
-
-    // -------- helpers --------
 
     private function unsetEnv(string $key): void
     {

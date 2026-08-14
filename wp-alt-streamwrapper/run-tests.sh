@@ -1,12 +1,5 @@
 #!/usr/bin/env bash
-# Run unit and/or E2E tests.
-#
-# Usage:
-#   ./run-tests.sh           # unit tests only
-#   ./run-tests.sh unit      # unit tests only
-#   ./run-tests.sh e2e       # PHP E2E tests (starts/stops Docker Compose)
-#   ./run-tests.sh browser   # Playwright browser tests (requires E2E env running)
-#   ./run-tests.sh all       # unit → e2e → browser
+# Usage: ./run-tests.sh [unit|e2e|browser|all]
 
 set -euo pipefail
 
@@ -14,7 +7,7 @@ SUITE="${1:-unit}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PHP_IMAGE="php:8.3-cli"
 
-# Always tear down the compose stack on exit (handles Ctrl-C, kill, or error).
+# Tear down on every exit.
 trap 'docker compose -f "${SCRIPT_DIR}/tests/E2E/docker-compose.yml" down -v 2>/dev/null || true' EXIT
 
 run_unit() {

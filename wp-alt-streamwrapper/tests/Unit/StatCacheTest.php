@@ -72,19 +72,15 @@ class StatCacheTest extends TestCase
         $this->assertNull(StatCache::get('cache/b.html'));
     }
 
-    // -------- buildStatArray --------
-
     public function testBuildStatArrayForFile(): void
     {
         $stat = StatCache::buildStatArray(['size' => 2048, 'mtime' => 1700000000, 'type' => 'file']);
 
-        // Both numeric and named keys must exist.
         $this->assertSame(2048, $stat[7]);
         $this->assertSame(2048, $stat['size']);
         $this->assertSame(1700000000, $stat[9]);
         $this->assertSame(1700000000, $stat['mtime']);
 
-        // File mode: regular file with 0644 permissions = 0100644
         $this->assertSame(0100644, $stat[2]);
         $this->assertSame(0100644, $stat['mode']);
     }
@@ -93,7 +89,6 @@ class StatCacheTest extends TestCase
     {
         $stat = StatCache::buildStatArray(['size' => 0, 'mtime' => 1700000000, 'type' => 'dir']);
 
-        // Directory mode: 0040755
         $this->assertSame(0040755, $stat[2]);
         $this->assertSame(0040755, $stat['mode']);
     }
@@ -101,16 +96,14 @@ class StatCacheTest extends TestCase
     public function testBuildStatArrayHas26Elements(): void
     {
         $stat = StatCache::buildStatArray(['size' => 0, 'mtime' => 0, 'type' => 'file']);
-        // 13 numeric + 13 named
+
         $this->assertCount(26, $stat);
     }
-
-    // -------- missing entry TTL --------
 
     public function testMissingEntryIsReturnedBeforeExpiry(): void
     {
         StatCache::set('uploads/gone.jpg', ['type' => 'missing', 'size' => 0, 'mtime' => 0]);
-        // Should still be in cache immediately after setting.
+
         $entry = StatCache::get('uploads/gone.jpg');
         $this->assertNotNull($entry);
         $this->assertSame('missing', $entry['type']);
@@ -118,10 +111,8 @@ class StatCacheTest extends TestCase
 
     public function testMissingEntryIsEvictedAfterExpiry(): void
     {
-        // Inject a missing entry with an already-expired timestamp.
         StatCache::set('uploads/gone.jpg', ['type' => 'missing', 'size' => 0, 'mtime' => 0]);
 
-        // Reach into the cache and backdate the expiry to force expiration.
         $reflection = new \ReflectionClass(StatCache::class);
         $prop       = $reflection->getProperty('cache');
         $prop->setAccessible(true);

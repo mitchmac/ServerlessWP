@@ -8,27 +8,14 @@ use WpAltStreamWrapper\Adapters\Precondition;
 use WpAltStreamWrapper\Adapters\PreconditionFailedException;
 use WpAltStreamWrapper\Adapters\StorageAdapterInterface;
 
-/**
- * In-memory adapter used by unit tests.
- */
 class MockAdapter implements StorageAdapterInterface
 {
-    /** @var array<string, string> key => contents */
     private array $files = [];
-
     private bool $failNextPut = false;
-
     private bool $failNextFetch = false;
-
-    /** @var array<string, true> keys whose delete() must fail */
     private array $undeletable = [];
-
-    /** @var array<string, true> keys mutated on every put() to force conflicts */
     private array $churn = [];
-
-    /** Every put() this adapter has seen, as ['key' => ..., 'ifMatch' => ...]. */
     private array $putLog = [];
-
     public function get(string $key): string|false
     {
         $result = $this->fetch($key);
@@ -62,8 +49,6 @@ class MockAdapter implements StorageAdapterInterface
         ];
 
         if (isset($this->churn[$key])) {
-            // Stand in for a writer that commits between every read and write,
-            // so no conditional put can ever match.
             $this->files[$key] = 'churn-' . count($this->putLog);
         }
 
@@ -83,31 +68,26 @@ class MockAdapter implements StorageAdapterInterface
         return true;
     }
 
-    /** Test helper: make the next put() call return false. */
     public function failOnNextPut(): void
     {
         $this->failNextPut = true;
     }
 
-    /** Test helper: make the next fetch() report a transport error, not absence. */
     public function failOnNextFetch(): void
     {
         $this->failNextFetch = true;
     }
 
-    /** Test helper: make this key change on every put(), so no ifMatch ever matches. */
     public function changeOnEveryPut(string $key): void
     {
         $this->churn[$key] = true;
     }
 
-    /** Test helper: make delete() fail for this key, as a storage error would. */
     public function failOnDelete(string $key): void
     {
         $this->undeletable[$key] = true;
     }
 
-    /** Test helper: the ifMatch value passed with each put(), in order. */
     public function putLog(): array
     {
         return $this->putLog;
@@ -164,19 +144,16 @@ class MockAdapter implements StorageAdapterInterface
         return true;
     }
 
-    /** Test helper: get raw stored content by key. */
     public function getContent(string $key): string|false
     {
         return $this->get($key);
     }
 
-    /** Test helper: seed content before a test. */
     public function seed(string $key, string $contents): void
     {
         $this->files[$key] = $contents;
     }
 
-    /** Test helper: list all stored keys. */
     public function keys(): array
     {
         return array_keys($this->files);

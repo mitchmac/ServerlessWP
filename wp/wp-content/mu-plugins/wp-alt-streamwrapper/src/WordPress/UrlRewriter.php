@@ -12,7 +12,6 @@ class UrlRewriter
 
     public function register(): void
     {
-        // Keep normal WordPress URLs unless a CDN is explicitly configured.
         $base = $this->config->cdnBaseUrl();
         if ($base) {
             add_filter('upload_dir', [$this, 'rewriteUploadDir']);

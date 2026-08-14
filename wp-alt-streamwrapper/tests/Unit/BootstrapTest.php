@@ -10,7 +10,6 @@ use WpAltStreamWrapper\Bootstrap;
 class BootstrapTest extends TestCase
 {
     private string $root;
-
     protected function setUp(): void
     {
         $this->root = sys_get_temp_dir() . '/wasw-bootstrap-' . bin2hex(random_bytes(6));
@@ -37,8 +36,6 @@ class BootstrapTest extends TestCase
 
     public function testConfiguredDirectoryTakesPrecedenceOverDocumentRootCheck(): void
     {
-        // An explicit setting outside the document root is the whole point of
-        // the /tmp layout, so it must not warn.
         $configured = $this->root . '/readonly/wp-content';
 
         $result = Bootstrap::resolveWpContentDir($configured, $this->root . '/docroot/wp-content', $this->root . '/docroot');
@@ -85,8 +82,6 @@ class BootstrapTest extends TestCase
 
     public function testInferredDirectoryOutsideDocumentRootWarnsButStillRegisters(): void
     {
-        // The serverless case: the bootstrap is loaded from the read-only
-        // bundle while WordPress serves from a writable copy.
         $inferred = $this->root . '/readonly/wp-content';
 
         $result = Bootstrap::resolveWpContentDir(null, $inferred, $this->root . '/docroot');

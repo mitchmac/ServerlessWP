@@ -1,26 +1,3 @@
-// Minimal Vercel Blob mock for e2e tests.
-// Copied from the ServerlessWP repo (test/vercel-blob-emulator/server.js),
-// which built it against real @vercel/blob SDK traffic. Keep in sync when
-// the upstream copy changes.
-//
-// Local divergence: this copy percent-decodes pathnames (decodePath below).
-// Upstream stores one sqlite file whose name has no characters needing
-// encoding, so it compares raw URL paths; wp-content keys routinely contain
-// spaces and ampersands, which arrive percent-encoded and must be decoded to
-// match the stored key. Worth pushing back upstream.
-// Implements the endpoints the plugin relies on:
-//   PUT  /?pathname=<name>   upload (honors x-if-match, x-allow-overwrite)
-//   GET  /?url=<url>         head metadata
-//   GET  /<pathname>         download (honors If-None-Match and cache=0)
-//   POST /delete             delete (honors x-if-match for single URL)
-//
-// ETags use SHA-1 of the body, wrapped in double quotes (RFC 7232).
-//
-// Downloads go through a simulated CDN cache, because that's what they do on
-// Vercel: blobs are cached for up to a month and an overwrite takes up to 60
-// seconds to propagate, so a plain get() can return the previous version.
-// Passing `useCache: false` (which the SDK turns into `?cache=0`) reads from
-// origin instead. See https://vercel.com/docs/vercel-blob#caching
 
 const http = require('node:http');
 const crypto = require('node:crypto');
@@ -30,28 +7,16 @@ const PORT = parseInt(process.env.PORT || '7000', 10);
 const STORE_ID = process.env.STORE_ID || 'test';
 const ACCESS = process.env.ACCESS || 'private';
 const BASE_HOST = `${STORE_ID}.${ACCESS}.blob.vercel-storage.com`;
-// How long a cached download keeps being served after an overwrite. 0 disables
-// the simulated cache entirely.
 const CACHE_STALE_MS = parseInt(process.env.BLOB_CACHE_STALE_MS || '60000', 10);
-// Downloads carry a weak ETag (`W/"..."`) while the API reports the strong one,
-// which is what Vercel Blob does. A client that reuses a download's ETag for a
-// conditional write verbatim gets rejected. Set BLOB_WEAK_DOWNLOAD_ETAG=0 to
-// serve strong ETags everywhere instead.
 const WEAK_DOWNLOAD_ETAG = process.env.BLOB_WEAK_DOWNLOAD_ETAG !== '0';
-// Never answer a download with 304, so every read is a full download and the
-// client ends up holding a download-sourced ETag. That's what a cold serverless
-// instance does on its first request, and a warm single-container test never
-// reaches it otherwise.
 const NO_CONDITIONAL_READS = process.env.BLOB_NO_CONDITIONAL_READS === '1';
 
-// Weak comparison per RFC 7232: `W/"x"` and `"x"` are the same entity.
 function etagsWeaklyEqual(a, b) {
     const strip = (v) => (v || '').replace(/^W\//, '');
     return !!a && strip(a) === strip(b);
 }
 
 const store = new Map();
-// pathname -> { entry, expiresAt }: what the CDN would still be serving.
 const cdnCache = new Map();
 
 function computeEtag(buffer) {
@@ -88,15 +53,11 @@ function readBody(req) {
     });
 }
 
-// Percent-decode a URL path into the pathname a blob is stored under. Keys can
-// contain spaces and other characters that must be encoded on the wire (a
-// WordPress upload named "my file.jpg" travels as my%20file.jpg), and the real
-// service decodes them before looking the blob up.
 function decodePath(path) {
     try {
         return decodeURIComponent(path);
     } catch {
-        return path; // malformed escape sequence: match on the raw form
+        return path;
     }
 }
 
@@ -183,8 +144,6 @@ const server = http.createServer(async (req, res) => {
             if (!bypassCache && CACHE_STALE_MS > 0) {
                 const cached = cdnCache.get(pathname);
                 if (cached && cached.expiresAt > Date.now()) {
-                    // Still within the propagation window: serve what the CDN
-                    // has, even if the blob was overwritten since.
                     entry = cached.entry;
                     cacheState = 'HIT';
                 } else if (entry) {
