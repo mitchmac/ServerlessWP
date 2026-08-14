@@ -34,29 +34,15 @@ class Config
         $this->provider        = $this->read('WP_STREAM_PROVIDER', '');
         $this->targetPaths     = $this->read('WP_STREAM_TARGET_PATHS', 'wp-content');
 
-        // Which stored paths the proxy will hand back over HTTP. Narrower than
-        // the routed set on purpose: routing decides what persists, this decides
-        // what the public can download. Uploads by default — the one tree whose
-        // entire purpose is to be fetched by URL.
+        // Public serving is deliberately narrower than persistence routing.
         $this->publicPaths     = $this->read('WP_STREAM_PUBLIC_PATHS', 'wp-content/uploads');
 
-        // Paths served only when the filename has a web-asset extension.
-        //
-        // wp-content/cache holds two unrelated kinds of file. Asset bundlers
-        // (Autoptimize and friends) put CSS and JS there that the browser must
-        // fetch or the site renders unstyled. Page caches put rendered HTML
-        // there, including pages only some users are meant to see. The extension
-        // is what separates them, and gating on it means the bundler case works
-        // untouched while the HTML stays unreachable — neither outcome depending
-        // on an admin knowing to set a variable.
+        // Cache directories mix public assets with private rendered pages, so
+        // only filenames with web-asset extensions are served from them.
         $this->publicAssetPaths = $this->read('WP_STREAM_PUBLIC_ASSET_PATHS', 'wp-content/cache');
         $this->excludePaths    = $this->read('WP_STREAM_EXCLUDE_PATHS', 'wp-content/plugins,wp-content/themes,wp-content/mu-plugins,wp-content/languages,wp-content/upgrade');
-        // *.log stays local: WordPress points error_log at
-        // WP_CONTENT_DIR/debug.log when WP_DEBUG_LOG is set, and routing that
-        // would turn every logged line into an append — a GET plus a conditional
-        // PUT of an object that only grows. The same lines already reach the
-        // platform's function logs via stderr, so persisting them is not worth a
-        // pair of storage requests per line.
+        // Logs stay local; remote appends would rewrite the growing object for
+        // every line while the same output already reaches function logs.
         $this->excludePatterns = $this->read('WP_STREAM_EXCLUDE_PATTERNS', '*.sqlite,*.db,*.php,*.log,.htaccess');
         $this->wpContentDir    = $this->readNullable('WP_STREAM_WP_CONTENT_DIR');
 
@@ -72,11 +58,7 @@ class Config
         $this->s3ForcePathStyle = $this->truthy($this->readFirst(['WP_STREAM_S3_FORCE_PATH_STYLE', 'SQLITE_S3_FORCE_PATH_STYLE']));
         $this->s3Acl            = $this->readNullable('WP_STREAM_S3_ACL');
 
-        // Cache-Control for files served by the template_redirect proxy.
-        // Deliberately moderate: uploads are usually immutable but replacement
-        // plugins overwrite in place, and generated CSS/cache files change
-        // under the same URL. Browsers revalidate hourly; the edge keeps a
-        // copy for a day. Raise it via env if your media never changes.
+        // Moderate defaults allow in-place replacement of uploads and assets.
         $this->cacheControl = $this->read('WP_STREAM_CACHE_CONTROL', 'public, max-age=3600, s-maxage=86400');
 
         $this->vercelToken        = $this->readNullable('WP_STREAM_VERCEL_TOKEN');
@@ -143,13 +125,7 @@ class Config
         return array_filter(array_map('trim', explode(',', $this->targetPaths)));
     }
 
-    /**
-     * Extensions treated as web assets under publicAssetPaths().
-     *
-     * Deliberately excludes anything that can carry page content or data —
-     * html, htm, json, xml, txt, log, sql, php — because that is what a page
-     * cache writes into the same directories as bundled CSS and JS.
-     */
+    /** Extensions safe to serve from directories that may also hold page data. */
     public const PUBLIC_ASSET_EXTENSIONS = [
         'css', 'js', 'mjs',
         'svg', 'png', 'jpg', 'jpeg', 'gif', 'webp', 'avif', 'ico', 'bmp',

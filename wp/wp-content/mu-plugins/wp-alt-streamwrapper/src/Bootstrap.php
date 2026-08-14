@@ -11,20 +11,10 @@ namespace WpAltStreamWrapper;
 final class Bootstrap
 {
     /**
-     * Work out which wp-content directory PathRouter should match runtime paths
-     * against, and report anything that looks wrong about the answer.
+     * Resolve the runtime wp-content directory and warn when routing would
+     * silently target the wrong tree.
      *
-     * Getting this wrong is silent: PathRouter compares absolute paths against
-     * this prefix, so a directory that WordPress never actually uses routes
-     * nothing to storage. Every write then lands on local disk and disappears
-     * with the function, without an error anywhere. Hence the checks.
-     *
-     * @param ?string $configured   WP_STREAM_WP_CONTENT_DIR, or null if unset
-     * @param string  $inferred     directory derived from the bootstrap file's own location
-     * @param ?string $documentRoot the server's document root, when known
-     *
-     * @return array{dir: ?string, warning: ?string} `dir` is null when the wrapper
-     *         must not be registered at all.
+     * @return array{dir: ?string, warning: ?string}
      */
     public static function resolveWpContentDir(?string $configured, string $inferred, ?string $documentRoot = null): array
     {

@@ -5,19 +5,8 @@ declare(strict_types=1);
 namespace WpAltStreamWrapper\Adapters;
 
 /**
- * A condition a write must satisfy, or it fails with
- * PreconditionFailedException instead of overwriting someone else's object.
- *
- * Two forms, and they are mutually exclusive — hence a value object rather than
- * two optional put() arguments that could contradict each other:
- *
- *  - matches($etag): the object must still be the version the caller read.
- *  - absent():       the object must not exist yet.
- *
- * Providers express the second one differently: S3 takes `If-None-Match: *`,
- * while Vercel Blob has no put-side equivalent and instead rejects a write to an
- * existing key when `x-allow-overwrite` is absent. Both end up in the same
- * exception.
+ * Mutually exclusive conditions for matching an object version or requiring
+ * an absent key. Failed conditions throw PreconditionFailedException.
  */
 final class Precondition
 {

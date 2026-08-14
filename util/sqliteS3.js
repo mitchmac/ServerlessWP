@@ -48,11 +48,8 @@ exports.preRequest = async function(event) {
         workingPath: '/tmp/' + workingFileName,
         db: null,
         dataVersion: null,
-        // The S3 object version this request's working copy came from. Bound
-        // here, per request, because the shared etag file moves under
-        // concurrent requests: reading it again at write time would let a
-        // request whose copy predates another's committed write pass its
-        // IfMatch and silently revert that write.
+        // Bind the source ETag to this request; the shared cache may advance
+        // before this working copy is written back.
         etag: null,
         // Set when the read established the object doesn't exist. Only then
         // may postRequest write without IfMatch.
@@ -60,10 +57,7 @@ exports.preRequest = async function(event) {
     };
     event[CONTEXT_KEY] = ctx;
 
-    // Tell PHP (wp-config.php) which DB file to open for this request.
-    // Strip any inbound variant first so a client can't point WP at the
-    // cache file or another request's working file. wp-config.php also
-    // passes the value through basename() defensively.
+    // Replace any client-supplied DB header with this request's working file.
     if (!event.headers) event.headers = {};
     for (const k of Object.keys(event.headers)) {
         if (k.toLowerCase() === 'x-serverlesswp-sqlite-file') {
@@ -122,13 +116,11 @@ exports.preRequest = async function(event) {
             return;
         }
         else if (err.name === 'NoSuchKey' || err.$metadata?.httpStatusCode === 404) {
-            // Handle case where the file doesn't exist on S3
             console.log('Database file not found on server');
             ctx.blobMissing = true;
             return;
         }
         else {
-            // Handle other errors
             console.error('Error fetching database:', err);
             return readError();
         }
@@ -168,11 +160,8 @@ exports.postRequest = async function(event, response) {
         // See if the db has been mutated, if so, send the changes to s3
         const readOnly = process.env['SERVERLESSWP_READ_ONLY_MODE'] && !['false', '0', 'no'].includes(process.env['SERVERLESSWP_READ_ONLY_MODE'].toLowerCase());
         if (!readOnly && ctx.dataVersion !== versionNow && workingExists) {
-            // The object exists but we don't know which version the working
-            // copy came from (e.g. the read failed over to the auth flow).
-            // Writing anyway would be unconditional and could overwrite
-            // another instance's committed changes - fail and let the retry
-            // re-fetch.
+            // Never overwrite an existing object without the ETag this copy
+            // came from; retrying will fetch a safe base.
             if (!ctx.etag && !ctx.blobMissing) {
                 console.log('Refusing to save database without a bound ETag.');
                 return persistenceError(true);
@@ -183,9 +172,7 @@ exports.postRequest = async function(event, response) {
                 ctx.db = null;
 
                 const sqliteContent = await fs.readFile(ctx.workingPath);
-                // The version this request started from, captured in
-                // preRequest - never the shared etag file, which a concurrent
-                // request may have advanced since.
+                // Use the request's source ETag, not the shared cache's.
                 let currentEtag = ctx.etag;
 
                 let putCommandParams = {
@@ -207,10 +194,8 @@ exports.postRequest = async function(event, response) {
 
                 const putResponse = await client.send(command);
 
-                // Refresh the local cache before writing the ETag so etag.txt
-                // never describes content newer than CACHE_FILE. If the copy
-                // fails, the old ETag stays on disk and the next request's
-                // IfNoneMatch will miss, triggering a clean re-fetch from S3.
+                // Update content before its ETag so the pair cannot describe
+                // different object versions.
                 const tmp = CACHE_FILE + '.' + randomUUID() + '.tmp';
                 await fs.copyFile(ctx.workingPath, tmp);
                 await fs.rename(tmp, CACHE_FILE);
@@ -250,12 +235,8 @@ exports.postRequest = async function(event, response) {
     }
 }
 
-// Fail the request when the database can't be read. A missing key is a new site
-// and returns above, so this is only reached when the read itself failed.
-// Letting the request through would hand WordPress an empty database, and
-// postRequest would then save that over the real one. _forceResponse stops the
-// plugin chain, otherwise a later plugin returning nothing would drop this
-// response and WordPress would run anyway.
+// Fail closed: continuing after a read error could replace the real database
+// with an empty one. _forceResponse prevents later plugins dropping the error.
 function readError() {
     return {
         statusCode: 500,

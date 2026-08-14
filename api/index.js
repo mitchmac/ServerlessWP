@@ -14,26 +14,16 @@ const sqlitePluginPath = wpContentPath + '/plugins/sqlite-database-integration';
 // Which database this deployment uses. See util/storage.js.
 const database = storage.resolve();
 
-// wp-alt-streamwrapper routes wp-content writes to object storage. Its stream
-// wrapper has to be registered before any WordPress code runs, which means
-// auto_prepend_file.
-//
-// The prepend is loaded from the read-only bundle, never the /tmp copy: it
-// executes on every request, and /tmp/wp/wp-content is exactly the tree the
-// wrapper makes writable, so sourcing it from there would turn any write into
-// code execution. /var/task is read-only, so it can't.
+// Register the wrapper before WordPress through auto_prepend_file. Load it from
+// read-only /var/task: executing the remotely writable /tmp copy would allow
+// stored content to become code.
 const streamWrapperPrepend = '/var/task/wp/wp-content/mu-plugins/wp-alt-streamwrapper/bootstrap/prepend.php';
 
-// The router runs on every request, so it comes from the read-only bundle too.
-// It enforces the local uploads deny policy in every storage mode. When the
-// stream wrapper is active it also routes local misses through WordPress so
-// files that live only in object storage can be served.
+// The bundled router enforces upload policy and sends remote-file misses to WP.
 const requestRouter = '/var/task/wp/router.php';
 
-// The prepend infers wp-content from its own location, which resolves to the
-// read-only bundle. WordPress runs from /tmp/wp, so tell it explicitly —
-// otherwise the router matches nothing and every write silently lands on the
-// ephemeral disk.
+// WordPress runs from /tmp, not beside the bundled prepend; give the wrapper
+// the runtime path or it will route nothing.
 const streamWrapperActive = !!process.env['WP_STREAM_PROVIDER']
     && fs.existsSync(streamWrapperPrepend);
 

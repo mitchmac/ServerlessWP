@@ -9,14 +9,8 @@ use WpAltStreamWrapper\Adapters\PreconditionFailedException;
 use WpAltStreamWrapper\Adapters\StorageAdapterInterface;
 
 /**
- * Custom stream wrapper that overrides the built-in file:// protocol.
- *
- * Targeted paths (under configured wp-content subdirectories) are transparently
- * routed to the configured remote storage adapter. All other paths pass through
- * to the native filesystem.
- *
- * Registration via StreamWrapper::register(); the static adapter/router are
- * shared across all instances (required by PHP's stream_wrapper_register API).
+ * Overrides file:// to route configured wp-content paths to remote storage and
+ * pass all other paths to the native filesystem.
  */
 class StreamWrapper
 {
@@ -29,13 +23,8 @@ class StreamWrapper
     private static ?PathRouter $router = null;
 
     /**
-     * Storage keys whose remote write failed during this request.
-     *
-     * fclose() cannot report failure, so a caller that used file_put_contents()
-     * sees the full byte count for a write that never landed. This is the only
-     * record that it didn't — and the only way to tell a file GD wrote straight
-     * to storage (no local copy, present remotely) from one whose upload failed
-     * (no local copy, absent remotely), which otherwise look identical.
+     * Request-local failures that fclose() cannot report. This distinguishes a
+     * successful direct write from a failed write when neither has a local copy.
      *
      * @var array<string, true>
      */
@@ -58,12 +47,7 @@ class StreamWrapper
     /** True if data was written to the buffer and must be uploaded on close. */
     private bool $isDirty = false;
 
-    /**
-     * ETag of the version this handle downloaded at open, or null when the mode
-     * did not download (w/x) or the provider sent none. Non-null means the write
-     * on close can be made conditional at no extra cost — the ETag arrived on
-     * the response that carried the body.
-     */
+    /** ETag downloaded by this handle for a conditional write on close. */
     private ?string $openEtag = null;
 
     /** True for modes that download first and then write back (r+, a, a+, c, c+). */
@@ -113,25 +97,15 @@ class StreamWrapper
     public const PUSH_NO_LOCAL_COPY = 'no-local-copy';
     public const PUSH_FAILED = 'failed';
 
-    /**
-     * Push a file that was placed on the local filesystem by move_uploaded_file()
-     * (which bypasses PHP stream wrappers) up to remote storage, then delete
-     * the local copy.
-     *
-     * Called from the WordPress wp_handle_upload / wp_handle_sideload filters.
-     */
+    /** Push a local upload that bypassed stream wrappers to remote storage. */
     public static function pushLocalFile(string $absolutePath, bool $deleteLocal = true): bool
     {
         return self::pushLocalFileStatus($absolutePath, $deleteLocal) === self::PUSH_OK;
     }
 
     /**
-     * pushLocalFile() with the reason it did not push.
-     *
-     * Callers that must react to a failure need to tell "the storage write
-     * failed" apart from "there was no local file to push", which is the normal
-     * case for anything GD wrote through the wrapper — that content is already
-     * in remote storage.
+     * Push a local file and distinguish failure from a direct wrapper write that
+     * left no local copy.
      *
      * @return self::PUSH_* one of the outcome constants above
      */
@@ -178,12 +152,7 @@ class StreamWrapper
         return self::PUSH_OK;
     }
 
-    /**
-     * Drop a local copy and the stat-cache entry that says it exists, after a
-     * push failed and the upload is being reported as failed. Without this,
-     * file_exists() keeps answering true for a file that only lives on a disk
-     * the next invocation will not have.
-     */
+    /** Remove an unsuccessful upload from local disk and the stat cache. */
     public static function discardLocalFile(string $absolutePath): void
     {
         if (self::$router === null || !self::$router->isRemote($absolutePath)) {
@@ -217,12 +186,7 @@ class StreamWrapper
     }
 
     /**
-     * Whether an object exists in storage for this path, in one request at most.
-     *
-     * Deliberately not file_exists(): url_stat() falls back to directory probing
-     * on a miss — an empty-dir marker HEAD plus a prefix listing — which is
-     * three storage requests where a caller asking "is this file really there"
-     * needs one.
+     * Check storage directly, avoiding url_stat()'s additional directory probes.
      */
     public static function existsInStorage(string $absolutePath): bool
     {
@@ -249,13 +213,7 @@ class StreamWrapper
         return true;
     }
 
-    /**
-     * Whether a remote write for this path failed earlier in this request.
-     *
-     * Request-scoped and one-directional: false means "nothing failed here",
-     * not "the object exists" — a file never written at all has no record.
-     * Callers that need presence must ask the adapter.
-     */
+    /** Whether this request recorded a failed remote write for the path. */
     public static function writeFailed(string $absolutePath): bool
     {
         if (self::$router === null || !self::$router->isRemote($absolutePath)) {
@@ -264,13 +222,7 @@ class StreamWrapper
         return isset(self::$failedWrites[self::$router->toStorageKey($absolutePath)]);
     }
 
-    /**
-     * Record a file that was just written to the real local filesystem so that
-     * url_stat() / file_exists() return true before the file is pushed to MinIO.
-     *
-     * Without this, wp_generate_attachment_metadata()'s file_exists() check fails
-     * (file is on disk but not in MinIO yet) and WordPress skips thumbnail generation.
-     */
+    /** Cache a local upload so WordPress sees it before it reaches storage. */
     public static function preCacheLocalFile(string $absolutePath): void
     {
         if (self::$router === null || !self::$router->isRemote($absolutePath)) {
@@ -326,9 +278,7 @@ class StreamWrapper
                 return false;
             }
             $this->isDirty = true; // create the (possibly empty) object on close
-            // fopen() has to answer now, so absence is checked here — but that
-            // answer is stale by the time the write happens, which is what the
-            // create condition on close closes.
+            // Recheck absence conditionally when the buffered write closes.
             $this->absentAtOpen          = true;
             $this->canConditionOnAbsence = true;
         }
@@ -359,10 +309,8 @@ class StreamWrapper
             }
         }
 
-        // a/a+ and c/c+ tolerate a missing object — they create it. A failed
-        // read is a different matter: the current contents are unknown, so
-        // carrying on would write this handle's bytes over content still there.
-        // Fail the open instead and let the caller retry.
+        // These modes create missing objects, but a failed read leaves unknown
+        // contents that must not be overwritten.
         if (in_array($baseMode, ['a', 'a+', 'c', 'c+'], true)) {
             $existing = $this->download();
 
@@ -402,12 +350,8 @@ class StreamWrapper
     }
 
     /**
-     * Fetch the open file's current contents, remembering the ETag of the
-     * version read so stream_close() can write back conditionally.
-     *
-     * Returns null when there is nothing to read, with $absentAtOpen telling the
-     * two reasons apart: the object does not exist (fine, the write creates it)
-     * versus the read failed (not fine, the contents are unknown).
+     * Fetch contents and their ETag. $absentAtOpen distinguishes a missing object
+     * from a failed read when null is returned.
      */
     private function download(): ?string
     {
@@ -463,17 +407,9 @@ class StreamWrapper
     }
 
     /**
-     * Upload the buffer to remote storage.
-     *
-     * Writes that downloaded the object first are conditional on the ETag from
-     * that download, so a concurrent invocation's changes are never silently
-     * overwritten. Modes that replace the whole object (w, x) write
-     * unconditionally — there is nothing to preserve, and requiring a match
-     * would break in-place rewrites like regenerated thumbnails or CSS.
-     *
-     * fclose() cannot report failure to the caller, so a lost write can only
-     * warn. Losing the write is still better than clobbering: the version that
-     * survives is a version somebody wrote, not a stale buffer.
+     * Upload the buffer conditionally when this handle read or created the key.
+     * Only w/w+ replace unconditionally. Since fclose() cannot report failure,
+     * conflicts are recorded and warned instead of overwriting newer data.
      */
     private function commit(string $contents): void
     {
@@ -530,17 +466,8 @@ class StreamWrapper
     }
 
     /**
-     * The condition this handle's write must satisfy, or null for an
-     * unconditional replacement.
-     *
-     * Read-modify-write on an existing object conditions on the version read.
-     * A write that creates the object conditions on the key still being free,
-     * which closes the window between the open deciding the file was absent and
-     * the close acting on it — `fopen(..., 'x')` being the clearest case, since
-     * its whole contract is "only if it does not exist".
-     *
-     * w and w+ get neither: replacing the object is the point, and a condition
-     * would break every in-place rewrite (thumbnails, regenerated CSS).
+     * Match the version read, require a newly created key to remain absent, or
+     * return null for an intentional w/w+ replacement.
      */
     private function writeCondition(): ?Precondition
     {
@@ -669,20 +596,14 @@ class StreamWrapper
     public function stream_lock(int $operation): bool
     {
         if ($this->realHandle !== null) {
-            // PHP calls this with 0 when a stream is closed while holding no
-            // lock, and flock() raises a ValueError on anything that isn't
-            // LOCK_SH/LOCK_EX/LOCK_UN. Passing it straight through turns an
-            // ordinary file_put_contents(..., LOCK_EX) on a local path into a
-            // fatal error for the whole request.
+            // PHP may call this with 0 on close; flock() rejects that value.
             $base = $operation & ~LOCK_NB;
             if (!in_array($base, [LOCK_SH, LOCK_EX, LOCK_UN], true)) {
                 return true;
             }
             return flock($this->realHandle, $operation);
         }
-        // No advisory locks on remote storage. Report success so callers that
-        // treat a false return as a hard failure (WP_Filesystem, caching
-        // plugins) proceed instead of aborting.
+        // Object storage has no advisory locks; report success for compatibility.
         return true;
     }
 
@@ -855,12 +776,8 @@ class StreamWrapper
 
         $marker = rtrim($key, '/') . '/';
 
-        // Native rmdir() fails on a non-empty directory and callers depend on
-        // that: code that deletes a tree walks it and removes each entry first,
-        // and code that does not expects the directory to survive. Deleting
-        // descendants here would erase files the caller never named. Object
-        // storage has no real directories, so "empty" means no keys under the
-        // prefix other than the empty-dir marker itself.
+        // Match native rmdir(): never delete unnamed descendants. In object
+        // storage, empty means no keys except the directory marker.
         $children = array_filter(
             self::$adapter->listPrefix($key),
             fn(string $childKey) => $childKey !== $marker,

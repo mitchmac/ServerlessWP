@@ -1,13 +1,8 @@
 <?php
 
 /**
- * auto_prepend_file bootstrap for wp-alt-streamwrapper.
- *
- * This file runs before any WordPress code via PHP's auto_prepend_file directive.
- * It must NOT depend on WordPress, the database, or any WP constants.
- *
- * Set in php.ini or a .ini scan file:
- *   auto_prepend_file = /path/to/wp-content/mu-plugins/wp-alt-streamwrapper/bootstrap/prepend.php
+ * auto_prepend_file bootstrap. Runs before WordPress and must not depend on its
+ * database, functions or constants.
  */
 
 declare(strict_types=1);

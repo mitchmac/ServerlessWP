@@ -15,17 +15,8 @@ interface StorageAdapterInterface
     public function get(string $key): string|false;
 
     /**
-     * Download an object, reporting absence separately from failure.
-     *
-     * The three outcomes have to be distinguishable or a caller cannot write
-     * safely: "not there" means a create, while "the request failed" means the
-     * current contents are unknown, and treating the second as the first turns a
-     * transient error into a truncation.
-     *
-     * On FETCH_FOUND, 'etag' is the version read — it arrives on the same
-     * response as the body, so conditioning a later write on it costs no extra
-     * round trip. It is null if the provider sent none, and the caller must then
-     * treat the write as unconditional.
+     * Download an object, distinguishing absence from a failed read so callers
+     * cannot mistake unknown contents for a safe create.
      *
      * @return array{status: self::FETCH_*, contents: ?string, etag: ?string}
      */
