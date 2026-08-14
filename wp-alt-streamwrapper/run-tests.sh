@@ -77,7 +77,7 @@ run_browser() {
         -w /app \
         -e WP_URL=http://wordpress \
         mcr.microsoft.com/playwright:v1.44.0-jammy \
-        bash -c "npm install --silent && npx playwright test --reporter=list"
+        bash -c "npm ci --silent && npx playwright test --reporter=list"
 
     echo "==> Stopping E2E environment"
     docker compose -f "${SCRIPT_DIR}/tests/E2E/docker-compose.yml" down -v

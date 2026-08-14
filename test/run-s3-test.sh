@@ -3,9 +3,9 @@ set -euo pipefail
 
 # Unit tests for the sqliteS3 plugin — fast, no Docker. Run first so failures
 # don't waste time on container builds. Requires root deps installed
-# (npm install at the repo root).
+# (npm ci at the repo root).
 echo "Running sqliteS3 unit tests..."
-(cd .. && npm install --silent >/dev/null)
+(cd .. && npm ci --silent >/dev/null)
 node --test sqliteS3.concurrency.test.js
 
 ./build-test.sh
@@ -81,7 +81,7 @@ content_type=${static_check#* }
 [[ "$content_type" == *"text/css"* ]] || { echo "Static file content-type FAILED: expected text/css, got $content_type"; exit 1; }
 echo "Static file test passed."
 
-npm install
+npm ci
 npx playwright install chromium
 ldconfig -p | grep -q libnspr4 || sudo env PATH="$PATH" node_modules/.bin/playwright install-deps chromium
 SCREENSHOTS=${SCREENSHOTS:-} npx playwright test e2e.spec.js e2e-s3-offload.spec.js "$@"

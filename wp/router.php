@@ -1,8 +1,7 @@
 <?php
 
 /**
- * Router script for PHP's built-in server, used when the wp-content stream
- * wrapper is enabled. See api/index.js.
+ * Router script for PHP's built-in server. See api/index.js.
  *
  * Without it, `php -S` handles any URI with a file extension itself and
  * returns 404 for a missing file without running PHP at all — so a file that
@@ -18,6 +17,24 @@ $root = rtrim((string) ($_SERVER['DOCUMENT_ROOT'] ?? __DIR__), '/');
 
 $isTraversal = str_contains($path, '..') || str_contains($path, "\0");
 
+// Uploads are public by design, but executable code and common database/log
+// artifacts are not legitimate web assets. PHP's built-in server does not
+// honor the .htaccess rules plugins may place here, so enforce this narrow
+// equivalent before either the local static server or WordPress can serve it.
+$isUpload = preg_match('#^/wp-content/uploads(?:/|$)#i', $path) === 1;
+$hasSensitiveUploadExtension = preg_match('/\.(?:php|sql|sqlite3?|db|log|env|ini)\z/i', $path) === 1;
+$hasPhpDirectoryIndex = $isUpload
+    && is_dir($root . $path)
+    && is_file(rtrim($root . $path, '/') . '/index.php');
+
+if (!$isTraversal && $isUpload && ($hasSensitiveUploadExtension || $hasPhpDirectoryIndex)) {
+    http_response_code(404);
+    header('Content-Type: text/plain; charset=UTF-8');
+    header('Cache-Control: no-store');
+    echo 'Not Found';
+    return true;
+}
+
 // Anything that exists locally — a file, or a directory with its index — is
 // the built-in server's job; returning false hands the request back to it,
 // and auto_prepend_file applies to the script it then executes. `/` included:
@@ -26,9 +43,8 @@ if (!$isTraversal && ($path === '/' || is_file($root . $path) || is_dir($root . 
     return false;
 }
 
-// A local miss (or a traversal attempt): WordPress decides — it serves the
-// file from object storage via the stream wrapper plugin's template_redirect
-// handler, or renders its 404.
+// A local miss (or a traversal attempt): WordPress decides. With the stream
+// wrapper active it may serve a remote object; otherwise it renders its 404.
 //
 // php -S does NOT apply auto_prepend_file to the router script's own
 // execution — only to scripts it executes directly after the router returns

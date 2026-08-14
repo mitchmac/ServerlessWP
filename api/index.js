@@ -24,12 +24,11 @@ const database = storage.resolve();
 // code execution. /var/task is read-only, so it can't.
 const streamWrapperPrepend = '/var/task/wp/wp-content/mu-plugins/wp-alt-streamwrapper/bootstrap/prepend.php';
 
-// Same reasoning for the router script: it runs on every request, so it comes
-// from the read-only bundle too. Without it `php -S` answers any URI with a
-// file extension itself, 404ing files that live only in object storage before
-// WordPress can serve them. Only passed when the wrapper is active, so request
-// routing is unchanged for every other deployment.
-const streamWrapperRouter = '/var/task/wp/router.php';
+// The router runs on every request, so it comes from the read-only bundle too.
+// It enforces the local uploads deny policy in every storage mode. When the
+// stream wrapper is active it also routes local misses through WordPress so
+// files that live only in object storage can be served.
+const requestRouter = '/var/task/wp/router.php';
 
 // The prepend infers wp-content from its own location, which resolves to the
 // read-only bundle. WordPress runs from /tmp/wp, so tell it explicitly —
@@ -78,11 +77,11 @@ exports.handler = async function (event, context, callback) {
     }
 
     const options = { docRoot: pathToWP, event: event };
+    if (fs.existsSync(requestRouter)) {
+        options.routerScript = requestRouter;
+    }
     if (streamWrapperActive) {
         options.autoPrependFile = streamWrapperPrepend;
-        if (fs.existsSync(streamWrapperRouter)) {
-            options.routerScript = streamWrapperRouter;
-        }
     }
 
     const response = await serverlesswp(options);

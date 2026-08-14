@@ -1,7 +1,7 @@
 FROM public.ecr.aws/lambda/nodejs:22
 
-COPY package.json ${LAMBDA_TASK_ROOT}/
-RUN npm install --omit=optional --omit=dev
+COPY package.json package-lock.json ${LAMBDA_TASK_ROOT}/
+RUN npm ci --omit=optional --omit=dev
 
 # Optionally replace the published serverlesswp package with a local build, so
 # unreleased changes to it can be tested before publishing. Set

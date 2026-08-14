@@ -196,7 +196,10 @@ exports.postRequest = async function(event, response) {
 
                 const putOptions = {
                     access: 'private',
-                    allowOverwrite: true,
+                    // Vercel Blob's create-only behavior is selected by
+                    // disabling overwrite. Existing objects still use ifMatch
+                    // below for optimistic concurrency control.
+                    allowOverwrite: !ctx.blobMissing,
                     addRandomSuffix: false,
                 };
                 applyAuth(putOptions, ctx);
@@ -222,8 +225,15 @@ exports.postRequest = async function(event, response) {
                 console.error('Error saving database to Vercel Blob:', err);
                 const errResponse = persistenceError();
                 if (err instanceof BlobPreconditionFailedError) {
-                    errResponse.retry = true;
-                    console.log('Retrying database save to Vercel Blob because of a conflicting update.');
+                    if (ctx.blobMissing) {
+                        // Do not automatically replay an installation request.
+                        // The next request will fetch the database that won.
+                        console.log('Database creation was rejected because another request created it first.');
+                    }
+                    else {
+                        errResponse.retry = true;
+                        console.log('Retrying database save to Vercel Blob because of a conflicting update.');
+                    }
                 }
                 return errResponse;
             }
