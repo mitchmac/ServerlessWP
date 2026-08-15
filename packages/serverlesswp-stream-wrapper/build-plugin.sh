@@ -38,6 +38,9 @@ else
     exit 1
 fi
 
+# Exclude dependency-maintainer instructions from the deployable bundle.
+find "$PAYLOAD/vendor" -type f -name CLAUDE.md -delete
+
 echo "==> Assembling plugin"
 cp "$SOURCE_DIR/serverlesswp-stream-wrapper.php" "$PAYLOAD/"
 cp -R "$SOURCE_DIR/bootstrap" "$PAYLOAD/bootstrap"
