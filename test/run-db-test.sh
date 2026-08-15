@@ -75,7 +75,7 @@ docker exec serverlesswp-test sh -c "printf '%s' '<?php echo \"INDEX-EXECUTED\";
 index_status=$(curl -sk -o /dev/null -w '%{http_code}' "https://localhost:3000/wp-content/uploads/serverlesswp-policy-probe/php-index/")
 [[ "$index_status" == "404" ]] || { echo "Sensitive upload PHP index FAILED: expected 404, got $index_status"; exit 1; }
 docker exec serverlesswp-test sh -c "printf '%s' 'public-upload' > '${policy_dir}/public.txt'"
-public_response=$(curl -sk -H 'x-streamwrapper-fallthrough: 1' -w $'\n%{http_code}' \
+public_response=$(curl -sk -H 'x-serverlesswp-stream-wrapper-fallthrough: 1' -w $'\n%{http_code}' \
     "https://localhost:3000/wp-content/uploads/serverlesswp-policy-probe/public.txt")
 public_status=${public_response##*$'\n'}
 public_body=${public_response%$'\n'*}

@@ -20,8 +20,8 @@ if (getenv('SERVERLESSWP_TESTING') !== '1') {
 
 require_once __DIR__ . '/wp-load.php';
 
-$muPlugin = WP_CONTENT_DIR . '/mu-plugins/wp-alt-streamwrapper.php';
-$payload  = WP_CONTENT_DIR . '/mu-plugins/wp-alt-streamwrapper/wp-alt-streamwrapper.php';
+$muPlugin = WP_CONTENT_DIR . '/mu-plugins/serverlesswp-stream-wrapper.php';
+$payload  = WP_CONTENT_DIR . '/mu-plugins/serverlesswp-stream-wrapper/serverlesswp-stream-wrapper.php';
 
 // Replays serveRemoteFile()'s path computation under a real WordPress load, so
 // a failure to serve can be attributed to a specific condition rather than
@@ -31,7 +31,7 @@ if (isset($_GET['path'])) {
     $contentUrlPath = rtrim((string) parse_url(content_url(), PHP_URL_PATH), '/');
     $matches        = $contentUrlPath !== '' && str_starts_with($requestPath, $contentUrlPath . '/');
     $absolutePath   = $matches ? WP_CONTENT_DIR . substr($requestPath, strlen($contentUrlPath)) : null;
-    $wrapper        = 'WpAltStreamWrapper\\StreamWrapper';
+    $wrapper        = 'ServerlessWpStreamWrapper\\StreamWrapper';
     $registered     = class_exists($wrapper) && $wrapper::isRegistered();
 
     header('Content-Type: application/json');
@@ -58,9 +58,9 @@ echo json_encode([
     'content_url_path'    => parse_url(content_url(), PHP_URL_PATH),
     'loader_exists'       => file_exists($muPlugin),
     'payload_exists'      => file_exists($payload),
-    'plugin_class_loaded' => class_exists('WpAltStreamWrapper\\WordPress\\Plugin'),
-    'wrapper_registered'  => class_exists('WpAltStreamWrapper\\StreamWrapper')
-        && WpAltStreamWrapper\StreamWrapper::isRegistered(),
+    'plugin_class_loaded' => class_exists('ServerlessWpStreamWrapper\\WordPress\\Plugin'),
+    'wrapper_registered'  => class_exists('ServerlessWpStreamWrapper\\StreamWrapper')
+        && ServerlessWpStreamWrapper\StreamWrapper::isRegistered(),
     // has_action() with one argument is true when anything at all is hooked,
     // and core hooks template_redirect several times. Name the callbacks.
     'serve_hook'          => has_action('template_redirect'),
