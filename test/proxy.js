@@ -46,7 +46,7 @@ const STATIC_MIME = {
 // runs one invocation at a time, so every static miss that reaches it competes
 // with real requests — serving core assets locally is what keeps that queue
 // short, and no other spec should pay for this.
-const FALLTHROUGH_HEADER = 'x-streamwrapper-fallthrough';
+const FALLTHROUGH_HEADER = 'x-serverlesswp-stream-wrapper-fallthrough';
 
 function canFallThrough(urlPath, req) {
     return req.headers[FALLTHROUGH_HEADER] === '1' && urlPath.startsWith('/wp-content/');

@@ -27,7 +27,7 @@ if (getenv('SERVERLESSWP_TESTING') !== '1') {
     exit('Not allowed.');
 }
 
-$wrapperClass = 'WpAltStreamWrapper\\StreamWrapper';
+$wrapperClass = 'ServerlessWpStreamWrapper\\StreamWrapper';
 
 // If the prepend never ran, its Composer autoloader was never registered and
 // the class cannot be found — the silent-failure mode this exists to catch.

@@ -8,7 +8,7 @@
  * the real serverless path: api/index.js -> serverlesswp autoPrependFile ->
  * bootstrap/prepend.php -> S3.
  *
- * Driven by test/run-streamwrapper-test.sh.
+ * Driven by test/run-stream-wrapper-test.sh.
  */
 
 const { test, expect } = require('@playwright/test');
@@ -20,7 +20,7 @@ const PROBE = '/stream-wrapper-probe.php';
 // when a wp-content file is missing from the local wp/ directory, the way a
 // Vercel rewrite with a missing destination does. Scoped to this file so the
 // single-threaded Lambda RIE isn't asked to serve core assets for other specs.
-test.use({ extraHTTPHeaders: { 'x-streamwrapper-fallthrough': '1' } });
+test.use({ extraHTTPHeaders: { 'x-serverlesswp-stream-wrapper-fallthrough': '1' } });
 
 // Minimal dependency-free PNG generator. 800x600 makes WordPress produce
 // thumbnail, medium and medium_large variants.

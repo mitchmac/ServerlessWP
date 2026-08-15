@@ -14,7 +14,7 @@ const sqlitePluginPath = wpContentPath + '/plugins/sqlite-database-integration';
 const database = storage.resolve();
 
 // Load executable bootstrap only from the read-only bundle.
-const streamWrapperPrepend = '/var/task/wp/wp-content/mu-plugins/wp-alt-streamwrapper/bootstrap/prepend.php';
+const streamWrapperPrepend = '/var/task/wp/wp-content/mu-plugins/serverlesswp-stream-wrapper/bootstrap/prepend.php';
 
 const requestRouter = '/var/task/wp/router.php';
 

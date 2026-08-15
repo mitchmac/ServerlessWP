@@ -1,0 +1,66 @@
+name: Stream Wrapper Tests
+on:
+  push:
+    paths:
+      - 'packages/serverlesswp-stream-wrapper/**'
+      - 'wp/wp-content/mu-plugins/serverlesswp-stream-wrapper**'
+      - '.github/workflows/serverlesswp-stream-wrapper.yml'
+  pull_request:
+    paths:
+      - 'packages/serverlesswp-stream-wrapper/**'
+      - 'wp/wp-content/mu-plugins/serverlesswp-stream-wrapper**'
+      - '.github/workflows/serverlesswp-stream-wrapper.yml'
+jobs:
+  unit:
+    name: unit tests
+    runs-on: ubuntu-latest
+    if: github.repository_owner == 'mitchmac'
+    defaults:
+      run:
+        working-directory: ./packages/serverlesswp-stream-wrapper
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+
+      - name: Install dependencies
+        run: composer install --no-interaction --prefer-dist
+
+      - name: Run unit tests
+        run: vendor/bin/phpunit --testsuite unit
+
+  deployable-copy:
+    name: deployable copy is current
+    runs-on: ubuntu-latest
+    if: github.repository_owner == 'mitchmac'
+    defaults:
+      run:
+        working-directory: ./packages/serverlesswp-stream-wrapper
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Compare wp/wp-content/mu-plugins against the source
+        run: ./build-plugin.sh --check
+
+  e2e:
+    name: e2e tests
+    runs-on: ubuntu-latest
+    if: github.repository_owner == 'mitchmac'
+    needs: unit
+    defaults:
+      run:
+        working-directory: ./packages/serverlesswp-stream-wrapper
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Install dependencies
+        run: docker run --rm -v "$PWD:/app" -w /app composer:2 install --no-interaction --prefer-dist
+
+      - name: Run E2E tests
+        run: ./run-tests.sh e2e
