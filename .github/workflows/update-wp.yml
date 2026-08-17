@@ -1,25 +1,101 @@
+# Opens a pull request when a new WordPress release comes out.
+#
+# This runs in every copy of the repository, not just upstream: a site deployed
+# from here is a repository nobody logs into, and DISALLOW_FILE_MODS means
+# wp-admin will never offer the update either. The pull request is how a site
+# owner finds out and how they review the change before it deploys.
+#
+# Two things have to be switched on by hand in a copy, and neither can be set
+# from this file -- see "Keeping WordPress updated" in the readme:
+#   - Settings > Actions > General > "Allow GitHub Actions to create and
+#     approve pull requests"
+#   - a scheduled workflow is disabled automatically after 60 days without a
+#     push, which is the normal state of a site repository
 name: Update WordPress
 on:
   schedule:
-  - cron: "0 0 * * *"
+  # 21:10 UTC. Core release parties start at 15:00 or 17:00 UTC depending on
+  # the cycle and the package ships an hour or two in, so this picks up a
+  # release the same day rather than the next one. Cron here is always UTC, so
+  # the time does not shift with daylight saving. The odd minute is deliberate:
+  # GitHub queues everything scheduled on the hour together and drops runs when
+  # that queue is full.
+  - cron: "10 21 * * *"
+  # A release that slips past the evening run, or an evening run GitHub drops,
+  # is picked up twelve hours later instead of twenty-four.
+  - cron: "10 9 * * *"
   workflow_dispatch:
+
+# Repositories created after February 2023 give GITHUB_TOKEN read-only access
+# by default. The deploy buttons create a brand new repository, so this applies
+# to every copy, and without it the branch push fails in all of them.
+permissions:
+  contents: write
+  pull-requests: write
+
 jobs:
   update:
     name: Update WordPress
     runs-on: ubuntu-latest
-    if: github.repository_owner == 'mitchmac'
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
-      - run: ./upgrade-wp.sh
-        working-directory: ./util
-      - name: Create Pull Request
-        uses: peter-evans/create-pull-request@v5
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
         with:
-          commit-message: Automated WordPress version update
-          title: WordPress version update
-          body: 'This is an automated update of the bundled WordPress files'
-          committer: "Mitch MacKenzie <mitchmac@gmail.com>"
-          assignees: mitchmac
+          node-version: 22.x
+
+      - name: Update WordPress
+        id: update
+        run: node util/wp-update --report "${{ runner.temp }}/wp-update.md"
+
+      # The report explains what was left untouched and why, so it is the pull
+      # request body rather than something only visible in the run log.
+      - name: Create Pull Request
+        if: steps.update.outputs.updated == 'true'
+        uses: peter-evans/create-pull-request@v7
+        with:
+          commit-message: "WordPress ${{ steps.update.outputs.to }}"
+          title: "Update WordPress to ${{ steps.update.outputs.to }}"
+          body-path: ${{ runner.temp }}/wp-update.md
           delete-branch: true
           branch: 'wordpress-version-update'
+
+  # A separate job on its own branch, so a plugin update is never mixed into a
+  # core one. Either can be merged, closed or left sitting without affecting
+  # the other, and a plugin that breaks a site is one revert rather than two.
+  plugins:
+    name: Update plugins
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+
+      - name: Update plugins
+        id: update
+        run: node util/wp-update --plugins --report "${{ runner.temp }}/plugin-update.md"
+
+      - name: Create Pull Request
+        if: steps.update.outputs.updated == 'true'
+        uses: peter-evans/create-pull-request@v7
+        with:
+          commit-message: "Update bundled plugins"
+          title: "Update ${{ steps.update.outputs.plugins }} bundled plugin(s)"
+          body-path: ${{ runner.temp }}/plugin-update.md
+          delete-branch: true
+          branch: 'plugin-version-update'
+
+      # Themes can only be reported on: wordpress.org publishes no checksums
+      # for them, so an untouched theme can't be told from an edited one. With
+      # nothing to commit there is no pull request to carry the findings, so
+      # they go to the run summary. Never fails the job.
+      - name: Report on themes
+        if: always()
+        continue-on-error: true
+        run: node util/wp-update --themes
