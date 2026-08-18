@@ -159,6 +159,62 @@ class ConfigTest extends TestCase
         $this->assertSame('store123', $config->vercelStoreId());
     }
 
+    public function testVercelConfigUsesConnectedPublicStoreAndRequestOidcToken(): void
+    {
+        $this->unsetEnv('WP_STREAM_VERCEL_TOKEN');
+        $this->unsetEnv('WP_STREAM_VERCEL_STORE_ID');
+        $this->unsetEnv('BLOB_READ_WRITE_TOKEN');
+        $this->unsetEnv('VERCEL_OIDC_TOKEN');
+        $this->unsetEnv('SQLITE_BLOB_STORE_ID');
+        putenv('BLOB_STORE_ID=store_uploads');
+
+        $config = new Config('request.oidc.token');
+
+        $this->assertSame('request.oidc.token', $config->vercelToken());
+        $this->assertSame('store_uploads', $config->vercelStoreId());
+    }
+
+    public function testVercelConfigFallsBackToSharedSqliteStore(): void
+    {
+        $this->unsetEnv('WP_STREAM_VERCEL_STORE_ID');
+        $this->unsetEnv('BLOB_STORE_ID');
+        putenv('SQLITE_BLOB_STORE_ID=store_database');
+
+        $this->assertSame('store_database', (new Config('request.oidc.token'))->vercelStoreId());
+    }
+
+    public function testVercelConfigPrefersExplicitThenPublicStore(): void
+    {
+        putenv('WP_STREAM_VERCEL_STORE_ID=store_explicit');
+        putenv('BLOB_STORE_ID=store_uploads');
+        putenv('SQLITE_BLOB_STORE_ID=store_database');
+        $this->assertSame('store_explicit', (new Config('request.oidc.token'))->vercelStoreId());
+
+        $this->unsetEnv('WP_STREAM_VERCEL_STORE_ID');
+        $this->assertSame('store_uploads', (new Config('request.oidc.token'))->vercelStoreId());
+    }
+
+    public function testVercelTokenPrecedencePreservesStaticCredentials(): void
+    {
+        putenv('WP_STREAM_VERCEL_TOKEN=explicit-token');
+        putenv('BLOB_READ_WRITE_TOKEN=connected-token');
+        putenv('VERCEL_OIDC_TOKEN=environment.oidc.token');
+        $this->assertSame('explicit-token', (new Config('request.oidc.token'))->vercelToken());
+
+        $this->unsetEnv('WP_STREAM_VERCEL_TOKEN');
+        $this->assertSame('connected-token', (new Config('request.oidc.token'))->vercelToken());
+    }
+
+    public function testRequestOidcTokenPrecedesEnvironmentFallback(): void
+    {
+        $this->unsetEnv('WP_STREAM_VERCEL_TOKEN');
+        $this->unsetEnv('BLOB_READ_WRITE_TOKEN');
+        putenv('VERCEL_OIDC_TOKEN=environment.oidc.token');
+
+        $this->assertSame('request.oidc.token', (new Config('request.oidc.token'))->vercelToken());
+        $this->assertSame('environment.oidc.token', (new Config())->vercelToken());
+    }
+
     public function testNullableReturnsNullWhenUnset(): void
     {
         $this->unsetEnv('WP_STREAM_S3_BUCKET');
@@ -273,6 +329,10 @@ class ConfigTest extends TestCase
             'WP_STREAM_S3_SECRET',
             'WP_STREAM_VERCEL_TOKEN',
             'WP_STREAM_VERCEL_STORE_ID',
+            'BLOB_READ_WRITE_TOKEN',
+            'BLOB_STORE_ID',
+            'SQLITE_BLOB_STORE_ID',
+            'VERCEL_OIDC_TOKEN',
             'WP_STREAM_CDN_BASE_URL',
             'WP_STREAM_S3_FORCE_PATH_STYLE',
             'WP_STREAM_S3_ACL',

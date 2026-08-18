@@ -17,12 +17,23 @@ use ServerlessWpStreamWrapper\Config;
 use ServerlessWpStreamWrapper\PathRouter;
 use ServerlessWpStreamWrapper\StreamWrapper;
 
-$config   = new Config();
+// Do not expose the project credential to WordPress or third-party plugins.
+$requestOidcToken = Bootstrap::consumeVercelOidcToken($_SERVER);
+
+$config   = new Config($requestOidcToken);
 $provider = $config->provider();
 
 if ($provider === '') {
 
     return;
+}
+
+if ($provider === 'vercel-blob') {
+    $warning = Bootstrap::validateVercelBlob($config->vercelToken(), $config->vercelStoreId());
+    if ($warning !== null) {
+        trigger_error('serverlesswp-stream-wrapper: ' . $warning, E_USER_WARNING);
+        return;
+    }
 }
 
 $resolved = Bootstrap::resolveWpContentDir(

@@ -71,8 +71,8 @@ The adapter speaks the same wire protocol as the official `@vercel/blob` JS SDK 
 
 | Variable | Description |
 |---|---|
-| `WP_STREAM_VERCEL_TOKEN` | Blob read/write token |
-| `WP_STREAM_VERCEL_STORE_ID` | Store ID (used to construct deterministic blob URLs) |
+| `WP_STREAM_VERCEL_TOKEN` | Optional explicit Blob read/write or OIDC token. Falls back to `BLOB_READ_WRITE_TOKEN`, the request's `x-vercel-oidc-token`, then `VERCEL_OIDC_TOKEN`. |
+| `WP_STREAM_VERCEL_STORE_ID` | Optional explicit store ID. Falls back to `BLOB_STORE_ID`, then `SQLITE_BLOB_STORE_ID` for a store shared with the SQLite database. |
 | `WP_STREAM_VERCEL_ACCESS` | Store access mode, `public` (default) or `private`; shapes the download host |
 | `WP_STREAM_VERCEL_API_BASE` | Override the Blob API base URL (tests/emulator) |
 | `WP_STREAM_VERCEL_DOWNLOAD_BASE` | Override the blob download base URL (tests/emulator) |
