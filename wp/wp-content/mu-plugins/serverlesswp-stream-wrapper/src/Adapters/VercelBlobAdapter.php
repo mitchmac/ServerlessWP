@@ -66,6 +66,14 @@ class VercelBlobAdapter implements StorageAdapterInterface
         ]);
     }
 
+    private function apiHeaders(array $headers = []): array
+    {
+        return array_merge([
+            'Authorization'          => "Bearer {$this->token}",
+            'x-vercel-blob-store-id' => $this->storeId,
+        ], $headers);
+    }
+
     private function strongEtag(?string $etag): ?string
     {
         if ($etag === null || $etag === '') {
@@ -82,11 +90,9 @@ class VercelBlobAdapter implements StorageAdapterInterface
             '&',
             PHP_QUERY_RFC3986,
         );
-        $headers = [
-            'Authorization'          => "Bearer {$this->token}",
-            'x-vercel-blob-store-id' => $this->storeId,
-            'x-content-type'         => $this->detectMimeType($key),
-        ];
+        $headers = $this->apiHeaders([
+            'x-content-type' => $this->detectMimeType($key),
+        ]);
 
         // Omitting this header means create-only.
         if (!$condition?->requireAbsent) {
@@ -116,10 +122,9 @@ class VercelBlobAdapter implements StorageAdapterInterface
 
     public function delete(string $key): bool
     {
-        $response = $this->request('POST', $this->apiBase . '/delete', [
-            'Authorization' => "Bearer {$this->token}",
-            'Content-Type'  => 'application/json',
-        ], json_encode(['urls' => [$this->blobUrl($key)]]));
+        $response = $this->request('POST', $this->apiBase . '/delete', $this->apiHeaders([
+            'Content-Type' => 'application/json',
+        ]), json_encode(['urls' => [$this->blobUrl($key)]]));
         return $response['status'] === 200;
     }
 
@@ -136,9 +141,7 @@ class VercelBlobAdapter implements StorageAdapterInterface
             '&',
             PHP_QUERY_RFC3986,
         );
-        $response = $this->request('GET', $url, [
-            'Authorization' => "Bearer {$this->token}",
-        ]);
+        $response = $this->request('GET', $url, $this->apiHeaders());
 
         if ($response['status'] !== 200) {
             return false;
@@ -175,9 +178,7 @@ class VercelBlobAdapter implements StorageAdapterInterface
             '&',
             PHP_QUERY_RFC3986,
         );
-        $response = $this->request('GET', $url, [
-            'Authorization' => "Bearer {$this->token}",
-        ]);
+        $response = $this->request('GET', $url, $this->apiHeaders());
 
         if ($response['status'] !== 200 || $response['body'] === '') {
             return [];

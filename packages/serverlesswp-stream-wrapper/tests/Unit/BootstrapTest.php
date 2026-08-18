@@ -34,6 +34,42 @@ class BootstrapTest extends TestCase
         $this->assertNull($result['warning']);
     }
 
+    public function testVercelBlobCredentialsAreAccepted(): void
+    {
+        $this->assertNull(Bootstrap::validateVercelBlob('oidc.token', 'store_abc123'));
+    }
+
+    public function testVercelOidcTokenIsConsumedBeforeWordPressRuns(): void
+    {
+        $server = [
+            'HTTP_X_VERCEL_OIDC_TOKEN' => 'request.oidc.token',
+            'DOCUMENT_ROOT'            => '/tmp/wp',
+        ];
+
+        $token = Bootstrap::consumeVercelOidcToken($server);
+
+        $this->assertSame('request.oidc.token', $token);
+        $this->assertArrayNotHasKey('HTTP_X_VERCEL_OIDC_TOKEN', $server);
+        $this->assertSame('/tmp/wp', $server['DOCUMENT_ROOT']);
+    }
+
+    public function testVercelBlobMissingCredentialsRefuseRegistration(): void
+    {
+        $warning = Bootstrap::validateVercelBlob(null, null);
+
+        $this->assertStringContainsString('OIDC or read-write token', (string) $warning);
+        $this->assertStringContainsString('Blob store id', (string) $warning);
+        $this->assertStringContainsString('Not registering', (string) $warning);
+    }
+
+    public function testVercelBlobMissingStoreRefusesRegistration(): void
+    {
+        $warning = Bootstrap::validateVercelBlob('oidc.token', null);
+
+        $this->assertStringNotContainsString('OIDC or read-write token', (string) $warning);
+        $this->assertStringContainsString('Blob store id', (string) $warning);
+    }
+
     public function testConfiguredDirectoryTakesPrecedenceOverDocumentRootCheck(): void
     {
         $configured = $this->root . '/readonly/wp-content';

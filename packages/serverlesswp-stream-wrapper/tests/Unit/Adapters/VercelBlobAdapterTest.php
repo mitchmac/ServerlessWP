@@ -210,6 +210,8 @@ class VercelBlobAdapterTest extends TestCase
         $lastRequest = $this->adapter->lastRequest();
         $this->assertSame('POST', $lastRequest['method']);
         $this->assertSame('https://blob.vercel-storage.com/delete', $lastRequest['url']);
+        $this->assertSame('Bearer tok_test', $lastRequest['headers']['Authorization']);
+        $this->assertSame('store_abc123', $lastRequest['headers']['x-vercel-blob-store-id']);
         $this->assertSame(
             ['urls' => ['https://store_abc123.public.blob.vercel-storage.com/uploads/old.jpg']],
             json_decode($lastRequest['body'], true),
@@ -242,6 +244,10 @@ class VercelBlobAdapterTest extends TestCase
         $url = $this->adapter->lastRequest()['url'];
         $this->assertStringStartsWith('https://blob.vercel-storage.com/?url=', $url);
         $this->assertStringContainsString(rawurlencode('uploads/photo.jpg'), $url);
+        $this->assertSame(
+            'store_abc123',
+            $this->adapter->lastRequest()['headers']['x-vercel-blob-store-id'],
+        );
     }
 
     public function testListPrefixReturnsPathnames(): void
@@ -255,6 +261,10 @@ class VercelBlobAdapterTest extends TestCase
 
         $keys = $this->adapter->listPrefix('uploads/2024');
         $this->assertSame(['uploads/2024/a.jpg', 'uploads/2024/b.jpg'], $keys);
+        $this->assertSame(
+            'store_abc123',
+            $this->adapter->lastRequest()['headers']['x-vercel-blob-store-id'],
+        );
     }
 
     public function testListPrefixReturnsEmptyOnError(): void

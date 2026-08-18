@@ -28,7 +28,7 @@ class Config
     private ?string $vercelApiBase;
     private ?string $vercelDownloadBase;
     private ?string $cdnBaseUrl;
-    public function __construct()
+    public function __construct(?string $requestOidcToken = null)
     {
         $this->provider        = $this->read('WP_STREAM_PROVIDER', '');
         $this->targetPaths     = $this->read('WP_STREAM_TARGET_PATHS', 'wp-content');
@@ -52,8 +52,20 @@ class Config
 
         $this->cacheControl = $this->read('WP_STREAM_CACHE_CONTROL', 'public, max-age=3600, s-maxage=86400');
 
-        $this->vercelToken        = $this->readNullable('WP_STREAM_VERCEL_TOKEN');
-        $this->vercelStoreId      = $this->readNullable('WP_STREAM_VERCEL_STORE_ID');
+        $this->vercelToken = $this->readFirst([
+            'WP_STREAM_VERCEL_TOKEN',
+            'BLOB_READ_WRITE_TOKEN',
+        ]);
+        if ($this->vercelToken === null && $requestOidcToken !== null && $requestOidcToken !== '') {
+            $this->vercelToken = $requestOidcToken;
+        }
+        $this->vercelToken ??= $this->readFirst(['VERCEL_OIDC_TOKEN']);
+
+        $this->vercelStoreId = $this->readFirst([
+            'WP_STREAM_VERCEL_STORE_ID',
+            'BLOB_STORE_ID',
+            'SQLITE_BLOB_STORE_ID',
+        ]);
         $this->vercelAccess       = $this->read('WP_STREAM_VERCEL_ACCESS', 'public');
         $this->vercelApiBase      = $this->readNullable('WP_STREAM_VERCEL_API_BASE');
         $this->vercelDownloadBase = $this->readNullable('WP_STREAM_VERCEL_DOWNLOAD_BASE');

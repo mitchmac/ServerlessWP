@@ -23,9 +23,9 @@ Stay up-to-date at the ServerlessWP repository: [github.com/mitchmac/serverlessw
 
 ## Quick Deploy
 
-**The easiest way to run WordPress with ServerlessWP is entirely on Vercel.** This button creates a private [Vercel Blob](https://vercel.com/docs/vercel-blob) store during setup, and WordPress runs on a SQLite database kept in it. No database to host, no credentials to copy, no other accounts to sign up for — and each git branch gets its own database.
+**The easiest way to run WordPress with ServerlessWP is entirely on Vercel.** This button creates two [Vercel Blob](https://vercel.com/docs/vercel-blob) stores during setup: a private store for the SQLite database and a public store for files written through the included stream wrapper. No database to host, no credentials to copy, no other accounts to sign up for — and each git branch gets its own database.
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fmitchmac%2Fserverlesswp&project-name=serverlesswp&repository-name=serverlesswp&stores=%5B%7B%22type%22%3A%22blob%22%2C%22access%22%3A%22private%22%2C%22envVarPrefix%22%3A%22SQLITE%22%7D%5D)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fmitchmac%2Fserverlesswp&project-name=serverlesswp&repository-name=serverlesswp&stores=%5B%7B%22type%22%3A%22blob%22%2C%22access%22%3A%22private%22%2C%22envVarPrefix%22%3A%22SQLITE%22%7D%2C%7B%22type%22%3A%22blob%22%2C%22access%22%3A%22public%22%7D%5D&env=WP_STREAM_PROVIDER%2CWP_STREAM_VERCEL_ACCESS&envDefaults=%7B%22WP_STREAM_PROVIDER%22%3A%22vercel-blob%22%2C%22WP_STREAM_VERCEL_ACCESS%22%3A%22public%22%7D)
 
 More on [how SQLite + Vercel Blob works](#sqlite--vercel-blob) and [when to use MySQL instead](#mysql-database-option).
 
@@ -57,13 +57,15 @@ One of the links above will get you started. You'll just need a GitHub account.
 ### 2. Setup a database.
 **Vercel Blob or S3 are recommended because it's the quickest to get running and the least to maintain: nothing to provision, nothing running 24/7, and on Vercel no credentials to copy at all.** MySQL is equally supported and stays the better choice for the sites called out above — see [MySQL](#mysql-database-option).
 
-If you used the Vercel button above, you're already done: the Blob store it created is your database. Skip to step 3.
+If you used the Vercel button above, you're already done: its private Blob store holds the database and its public Blob store persists files written through the stream wrapper. Skip to step 3.
 
 Otherwise, pick your database below — [SQLite + object storage](#sqlite--object-storage) or [MySQL](#mysql-database-option) — then come back for uploads.
 
 Whichever you choose, you set it up with environment variables. See [here for Vercel](https://vercel.com/docs/concepts/projects/environment-variables) and [here for Netlify](https://docs.netlify.com/environment-variables/overview/) for how to manage them. **Remember to redeploy** your project if you change environment variables after the initial deploy.
 
 ### 3. File and media uploads with S3 (optional, can be done later) 
+The Vercel button already persists uploads in its public Blob store through the included stream wrapper, so no S3 setup is needed for that deployment path.
+
 File and media uploads can be enabled using the included WP Offload Media Lite for Amazon S3 plugin. S3 setup details can be found [here](https://deliciousbrains.com/wp-offload-media/doc/amazon-s3-quick-start-guide/). The wp-config.php file is setup to use the following environment variables for use by the plugin:
 - S3_KEY_ID
 - S3_ACCESS_KEY
@@ -150,7 +152,7 @@ The most explicitly configured option wins, so adding a Blob store for media won
 - You can modify the incoming request through the ```event``` object in api/index.js. You can also modify the WordPress ```response``` object there. ServerlessWP has a basic plugin system to do this. Checkout out ```/api/index.js``` for hints.
 
 ## Getting help
-Need help getting ServerlessWP installed? [Start a discussion](https://github.com/mitchmac/ServerlessWP/discussions) or [send me a chat](https://serverlesswp.com/chat).
+Need help getting ServerlessWP installed? [Start a discussion](https://github.com/mitchmac/ServerlessWP/discussions).
 
 ## Contributing
 - Using ServerlessWP and [reporting any problems you experience](https://github.com/mitchmac/ServerlessWP/issues) is a great way to help.

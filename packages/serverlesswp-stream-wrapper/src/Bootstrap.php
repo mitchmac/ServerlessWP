@@ -6,6 +6,32 @@ namespace ServerlessWpStreamWrapper;
 
 final class Bootstrap
 {
+    public static function consumeVercelOidcToken(array &$server): ?string
+    {
+        $token = $server['HTTP_X_VERCEL_OIDC_TOKEN'] ?? null;
+        unset($server['HTTP_X_VERCEL_OIDC_TOKEN']);
+
+        return is_string($token) && $token !== '' ? $token : null;
+    }
+
+    public static function validateVercelBlob(?string $token, ?string $storeId): ?string
+    {
+        $missing = [];
+        if ($token === null || $token === '') {
+            $missing[] = 'an OIDC or read-write token';
+        }
+        if ($storeId === null || $storeId === '') {
+            $missing[] = 'a Blob store id';
+        }
+
+        if ($missing === []) {
+            return null;
+        }
+
+        return 'Vercel Blob requires ' . implode(' and ', $missing)
+            . '. Not registering the stream wrapper.';
+    }
+
     public static function resolveWpContentDir(?string $configured, string $inferred, ?string $documentRoot = null): array
     {
         if ($configured !== null && $configured !== '') {
