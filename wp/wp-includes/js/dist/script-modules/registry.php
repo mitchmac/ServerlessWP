@@ -73,19 +73,24 @@ return array(
 		'asset' => 'boot/index.min.asset.php',
 	),
 	array(
-		'id' => '@wordpress/boot',
-		'path' => 'boot/index',
-		'asset' => 'boot/index.min.asset.php',
-	),
-	array(
 		'id' => '@wordpress/connectors',
 		'path' => 'connectors/index',
 		'asset' => 'connectors/index.min.asset.php',
 	),
 	array(
+		'id' => '@wordpress/content-types',
+		'path' => 'content-types/index',
+		'asset' => 'content-types/index.min.asset.php',
+	),
+	array(
 		'id' => '@wordpress/core-abilities',
 		'path' => 'core-abilities/index',
 		'asset' => 'core-abilities/index.min.asset.php',
+	),
+	array(
+		'id' => '@wordpress/dashboard-init',
+		'path' => 'dashboard-init/index',
+		'asset' => 'dashboard-init/index.min.asset.php',
 	),
 	array(
 		'id' => '@wordpress/edit-site-init',
@@ -128,9 +133,15 @@ return array(
 		'asset' => 'route/index.min.asset.php',
 	),
 	array(
-		'id' => '@wordpress/route',
-		'path' => 'route/index',
-		'asset' => 'route/index.min.asset.php',
+		'id' => '@wordpress/video-conversion/loader',
+		'path' => 'video-conversion/loader',
+		'asset' => 'video-conversion/loader.min.asset.php',
+	),
+	array(
+		'id' => '@wordpress/video-conversion/worker',
+		'path' => 'video-conversion/worker',
+		'asset' => 'video-conversion/worker.min.asset.php',
+		'min_only' => true,
 	),
 	array(
 		'id' => '@wordpress/vips/loader',

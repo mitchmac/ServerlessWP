@@ -201,7 +201,7 @@ class WP_Scripts extends WP_Dependencies {
 	 * @param string $handle  The script's registered handle.
 	 * @param bool   $display Optional. Whether to print the extra script
 	 *                        instead of just returning it. Default true.
-	 * @return bool|string|void Void if no data exists, extra scripts if `$display` is true,
+	 * @return bool|string|null Null if no data exists, extra scripts if `$display` is true,
 	 *                          true otherwise.
 	 */
 	public function print_scripts_l10n( $handle, $display = true ) {
@@ -217,13 +217,13 @@ class WP_Scripts extends WP_Dependencies {
 	 * @param string $handle  The script's registered handle.
 	 * @param bool   $display Optional. Whether to print the extra script
 	 *                        instead of just returning it. Default true.
-	 * @return bool|string|void Void if no data exists, extra scripts if `$display` is true,
+	 * @return bool|string|null Null if no data exists, extra scripts if `$display` is true,
 	 *                          true otherwise.
 	 */
 	public function print_extra_script( $handle, $display = true ) {
 		$output = $this->get_data( $handle, 'data' );
 		if ( ! $output ) {
-			return;
+			return null;
 		}
 
 		/*
@@ -850,12 +850,7 @@ JS;
 			return false;
 		}
 
-		foreach ( (array) $this->default_dirs as $test ) {
-			if ( str_starts_with( $src, $test ) ) {
-				return true;
-			}
-		}
-		return false;
+		return array_any( (array) $this->default_dirs, fn( $test ) => str_starts_with( $src, $test ) );
 	}
 
 	/**
