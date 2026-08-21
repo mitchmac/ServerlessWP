@@ -876,9 +876,5 @@ function _wp_translate_php_url_constant_to_key( $constant ) {
 		PHP_URL_FRAGMENT => 'fragment',
 	);
 
-	if ( isset( $translation[ $constant ] ) ) {
-		return $translation[ $constant ];
-	} else {
-		return false;
-	}
+	return $translation[ $constant ] ?? false;
 }
