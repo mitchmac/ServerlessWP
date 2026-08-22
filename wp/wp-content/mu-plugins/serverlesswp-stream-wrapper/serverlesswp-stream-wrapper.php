@@ -15,7 +15,7 @@ if (!defined('ABSPATH')) {
 }
 
 // Skip the SDK when storage is disabled.
-$provider = defined('WP_STREAM_PROVIDER') ? (string) constant('WP_STREAM_PROVIDER') : (string) getenv('WP_STREAM_PROVIDER');
+$provider = defined('SERVERLESSWP_STREAM_PROVIDER') ? (string) constant('SERVERLESSWP_STREAM_PROVIDER') : (string) getenv('SERVERLESSWP_STREAM_PROVIDER');
 if ($provider === '') {
     return;
 }

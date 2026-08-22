@@ -38,7 +38,7 @@ final class Bootstrap
             if (!is_dir($configured)) {
                 return [
                     'dir'     => null,
-                    'warning' => "WP_STREAM_WP_CONTENT_DIR is set to '{$configured}', which is not a directory. "
+                    'warning' => "SERVERLESSWP_STREAM_WP_CONTENT_DIR is set to '{$configured}', which is not a directory. "
                         . 'Not registering the stream wrapper.',
                 ];
             }
@@ -50,7 +50,7 @@ final class Bootstrap
             return [
                 'dir'     => null,
                 'warning' => "wp-content inferred from the bootstrap file's location as '{$inferred}', "
-                    . 'which is not a directory. Set WP_STREAM_WP_CONTENT_DIR. '
+                    . 'which is not a directory. Set SERVERLESSWP_STREAM_WP_CONTENT_DIR. '
                     . 'Not registering the stream wrapper.',
             ];
         }
@@ -60,7 +60,7 @@ final class Bootstrap
                 'dir'     => $inferred,
                 'warning' => "wp-content inferred as '{$inferred}', which is outside the document root "
                     . "'{$documentRoot}'. If WordPress runs from a different copy of the tree, set "
-                    . 'WP_STREAM_WP_CONTENT_DIR to the path it actually uses or no files will be routed to storage.',
+                    . 'SERVERLESSWP_STREAM_WP_CONTENT_DIR to the path it actually uses or no files will be routed to storage.',
             ];
         }
 

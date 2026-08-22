@@ -43,8 +43,8 @@ run_e2e() {
         -v "${SCRIPT_DIR}:/app" \
         -w /app \
         -e WP_URL=http://wordpress \
-        -e WP_STREAM_S3_BUCKET=wp-uploads \
-        -e WP_STREAM_S3_ENDPOINT=http://minio:9000 \
+        -e SERVERLESSWP_STREAM_S3_BUCKET=wp-uploads \
+        -e SERVERLESSWP_STREAM_S3_ENDPOINT=http://minio:9000 \
         "${PHP_IMAGE}" \
         php vendor/bin/phpunit --testsuite e2e
 

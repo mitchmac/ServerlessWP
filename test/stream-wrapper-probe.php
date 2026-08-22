@@ -33,7 +33,7 @@ $wrapperClass = 'ServerlessWpStreamWrapper\\StreamWrapper';
 // the class cannot be found — the silent-failure mode this exists to catch.
 $prependRan = class_exists($wrapperClass);
 
-$wpContent  = rtrim((string) (getenv('WP_STREAM_WP_CONTENT_DIR') ?: __DIR__ . '/wp-content'), '/');
+$wpContent  = rtrim((string) (getenv('SERVERLESSWP_STREAM_WP_CONTENT_DIR') ?: __DIR__ . '/wp-content'), '/');
 $uploadsDir = $wpContent . '/uploads';
 $action     = (string) ($_GET['action'] ?? '');
 $host       = $_SERVER['HTTP_HOST'] ?? 'localhost';
@@ -175,7 +175,7 @@ if ($action === 'write') {
 jsonOut([
     'prepend_ran'    => $prependRan,
     'registered'     => $prependRan && $wrapperClass::isRegistered(),
-    'wp_content_dir' => getenv('WP_STREAM_WP_CONTENT_DIR') ?: null,
-    'provider'       => getenv('WP_STREAM_PROVIDER') ?: null,
+    'wp_content_dir' => getenv('SERVERLESSWP_STREAM_WP_CONTENT_DIR') ?: null,
+    'provider'       => getenv('SERVERLESSWP_STREAM_PROVIDER') ?: null,
     'uploads_remote' => $prependRan && $wrapperClass::isRemotePath($uploadsDir . '/x.txt'),
 ]);

@@ -30,30 +30,30 @@ class Config
     private ?string $cdnBaseUrl;
     public function __construct(?string $requestOidcToken = null)
     {
-        $this->provider        = $this->read('WP_STREAM_PROVIDER', '');
-        $this->targetPaths     = $this->read('WP_STREAM_TARGET_PATHS', 'wp-content');
+        $this->provider        = $this->read('SERVERLESSWP_STREAM_PROVIDER', '');
+        $this->targetPaths     = $this->read('SERVERLESSWP_STREAM_TARGET_PATHS', 'wp-content');
 
-        $this->publicPaths     = $this->read('WP_STREAM_PUBLIC_PATHS', 'wp-content/uploads');
+        $this->publicPaths     = $this->read('SERVERLESSWP_STREAM_PUBLIC_PATHS', 'wp-content/uploads');
 
-        $this->publicAssetPaths = $this->read('WP_STREAM_PUBLIC_ASSET_PATHS', 'wp-content/cache');
-        $this->excludePaths    = $this->read('WP_STREAM_EXCLUDE_PATHS', 'wp-content/plugins,wp-content/themes,wp-content/mu-plugins,wp-content/languages,wp-content/upgrade');
+        $this->publicAssetPaths = $this->read('SERVERLESSWP_STREAM_PUBLIC_ASSET_PATHS', 'wp-content/cache');
+        $this->excludePaths    = $this->read('SERVERLESSWP_STREAM_EXCLUDE_PATHS', 'wp-content/plugins,wp-content/themes,wp-content/mu-plugins,wp-content/languages,wp-content/upgrade');
 
-        $this->excludePatterns = $this->read('WP_STREAM_EXCLUDE_PATTERNS', '*.sqlite,*.db,*.php,*.log,.htaccess');
-        $this->wpContentDir    = $this->readNullable('WP_STREAM_WP_CONTENT_DIR');
+        $this->excludePatterns = $this->read('SERVERLESSWP_STREAM_EXCLUDE_PATTERNS', '*.sqlite,*.db,*.php,*.log,.htaccess');
+        $this->wpContentDir    = $this->readNullable('SERVERLESSWP_STREAM_WP_CONTENT_DIR');
 
-        $this->s3Bucket         = $this->readFirst(['WP_STREAM_S3_BUCKET', 'SQLITE_S3_BUCKET', 'S3_OFFLOAD_BUCKET']);
-        $this->s3Region         = $this->readFirst(['WP_STREAM_S3_REGION', 'SQLITE_S3_REGION']) ?? 'us-east-1';
-        $this->s3Prefix         = $this->read('WP_STREAM_S3_PREFIX', '');
-        $this->s3Endpoint       = $this->readFirst(['WP_STREAM_S3_ENDPOINT', 'SQLITE_S3_ENDPOINT']);
-        $this->s3Key            = $this->readFirst(['WP_STREAM_S3_KEY', 'SQLITE_S3_API_KEY', 'S3_KEY_ID']);
-        $this->s3Secret         = $this->readFirst(['WP_STREAM_S3_SECRET', 'SQLITE_S3_API_SECRET', 'S3_ACCESS_KEY']);
-        $this->s3ForcePathStyle = $this->truthy($this->readFirst(['WP_STREAM_S3_FORCE_PATH_STYLE', 'SQLITE_S3_FORCE_PATH_STYLE']));
-        $this->s3Acl            = $this->readNullable('WP_STREAM_S3_ACL');
+        $this->s3Bucket         = $this->readFirst(['SERVERLESSWP_STREAM_S3_BUCKET', 'SQLITE_S3_BUCKET', 'S3_OFFLOAD_BUCKET']);
+        $this->s3Region         = $this->readFirst(['SERVERLESSWP_STREAM_S3_REGION', 'SQLITE_S3_REGION']) ?? 'us-east-1';
+        $this->s3Prefix         = $this->read('SERVERLESSWP_STREAM_S3_PREFIX', '');
+        $this->s3Endpoint       = $this->readFirst(['SERVERLESSWP_STREAM_S3_ENDPOINT', 'SQLITE_S3_ENDPOINT']);
+        $this->s3Key            = $this->readFirst(['SERVERLESSWP_STREAM_S3_KEY', 'SQLITE_S3_API_KEY', 'S3_KEY_ID']);
+        $this->s3Secret         = $this->readFirst(['SERVERLESSWP_STREAM_S3_SECRET', 'SQLITE_S3_API_SECRET', 'S3_ACCESS_KEY']);
+        $this->s3ForcePathStyle = $this->truthy($this->readFirst(['SERVERLESSWP_STREAM_S3_FORCE_PATH_STYLE', 'SQLITE_S3_FORCE_PATH_STYLE']));
+        $this->s3Acl            = $this->readNullable('SERVERLESSWP_STREAM_S3_ACL');
 
-        $this->cacheControl = $this->read('WP_STREAM_CACHE_CONTROL', 'public, max-age=3600, s-maxage=86400');
+        $this->cacheControl = $this->read('SERVERLESSWP_STREAM_CACHE_CONTROL', 'public, max-age=3600, s-maxage=86400');
 
         $this->vercelToken = $this->readFirst([
-            'WP_STREAM_VERCEL_TOKEN',
+            'SERVERLESSWP_STREAM_VERCEL_TOKEN',
             'BLOB_READ_WRITE_TOKEN',
         ]);
         if ($this->vercelToken === null && $requestOidcToken !== null && $requestOidcToken !== '') {
@@ -62,14 +62,14 @@ class Config
         $this->vercelToken ??= $this->readFirst(['VERCEL_OIDC_TOKEN']);
 
         $this->vercelStoreId = $this->readFirst([
-            'WP_STREAM_VERCEL_STORE_ID',
+            'SERVERLESSWP_STREAM_VERCEL_STORE_ID',
             'BLOB_STORE_ID',
             'SQLITE_BLOB_STORE_ID',
         ]);
-        $this->vercelAccess       = $this->read('WP_STREAM_VERCEL_ACCESS', 'public');
-        $this->vercelApiBase      = $this->readNullable('WP_STREAM_VERCEL_API_BASE');
-        $this->vercelDownloadBase = $this->readNullable('WP_STREAM_VERCEL_DOWNLOAD_BASE');
-        $this->cdnBaseUrl      = $this->readNullable('WP_STREAM_CDN_BASE_URL');
+        $this->vercelAccess       = $this->read('SERVERLESSWP_STREAM_VERCEL_ACCESS', 'public');
+        $this->vercelApiBase      = $this->readNullable('SERVERLESSWP_STREAM_VERCEL_API_BASE');
+        $this->vercelDownloadBase = $this->readNullable('SERVERLESSWP_STREAM_VERCEL_DOWNLOAD_BASE');
+        $this->cdnBaseUrl      = $this->readNullable('SERVERLESSWP_STREAM_CDN_BASE_URL');
     }
 
     private function read(string $name, string $default): string

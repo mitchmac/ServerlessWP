@@ -50,8 +50,8 @@ class Plugin
 
     private function debug(string $value): void
     {
-        if (getenv('WP_STREAM_DEBUG') !== false && !headers_sent()) {
-            header('X-Wp-Stream-Debug: ' . $value, false);
+        if (getenv('SERVERLESSWP_STREAM_DEBUG') !== false && !headers_sent()) {
+            header('X-Serverlesswp-Stream-Debug: ' . $value, false);
         }
     }
 
@@ -163,8 +163,8 @@ class Plugin
 
         error_log(sprintf(
             'serverlesswp-stream-wrapper: refused to serve %s — the object exists in storage but is '
-            . 'outside the serving policy (WP_STREAM_PUBLIC_PATHS=%s, '
-            . 'WP_STREAM_PUBLIC_ASSET_PATHS=%s). Add its directory to one of those if it is '
+            . 'outside the serving policy (SERVERLESSWP_STREAM_PUBLIC_PATHS=%s, '
+            . 'SERVERLESSWP_STREAM_PUBLIC_ASSET_PATHS=%s). Add its directory to one of those if it is '
             . 'meant to be downloadable.',
             $absolutePath,
             implode(',', $config->publicPaths()),
@@ -202,8 +202,8 @@ class Plugin
             ),
             esc_html($path),
             esc_html__(
-                'If it is meant to be public, add its directory to WP_STREAM_PUBLIC_ASSET_PATHS '
-                . '(served only for CSS, JS, images and fonts) or WP_STREAM_PUBLIC_PATHS (served '
+                'If it is meant to be public, add its directory to SERVERLESSWP_STREAM_PUBLIC_ASSET_PATHS '
+                . '(served only for CSS, JS, images and fonts) or SERVERLESSWP_STREAM_PUBLIC_PATHS (served '
                 . 'whatever the file type).',
                 'serverlesswp-stream-wrapper',
             ),

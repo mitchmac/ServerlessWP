@@ -95,12 +95,12 @@ async function roundTrip(config, headers = {}) {
 test.beforeEach(async () => {
     await cleanupTmp();
     delete process.env.VERCEL_OIDC_TOKEN;
-    delete process.env.WP_STREAM_PROVIDER;
+    delete process.env.SERVERLESSWP_STREAM_PROVIDER;
 });
 
 test.afterEach(() => {
     delete process.env.VERCEL_OIDC_TOKEN;
-    delete process.env.WP_STREAM_PROVIDER;
+    delete process.env.SERVERLESSWP_STREAM_PROVIDER;
 });
 
 test('the request header credential reaches both the read and the write', async () => {
@@ -129,7 +129,7 @@ test('the header is matched whatever its casing, and WordPress never sees it', a
 });
 
 test('the header is retained for the PHP prepend when the Vercel stream wrapper is active', async () => {
-    process.env.WP_STREAM_PROVIDER = 'vercel-blob';
+    process.env.SERVERLESSWP_STREAM_PROVIDER = 'vercel-blob';
 
     const { calls, event } = await roundTrip(
         { pathname: 'wp-sqlite-test.sqlite', storeId: 'store_database' },

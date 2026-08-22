@@ -11,12 +11,12 @@ services:
       WORDPRESS_DB_NAME: wordpress
       WORDPRESS_DB_USER: wp
       WORDPRESS_DB_PASSWORD: wp
-      WP_STREAM_PROVIDER: s3
-      WP_STREAM_S3_BUCKET: wp-uploads
-      WP_STREAM_S3_REGION: us-east-1
-      WP_STREAM_S3_ENDPOINT: http://minio:9000
-      WP_STREAM_S3_KEY: minioadmin
-      WP_STREAM_S3_SECRET: minioadmin
+      SERVERLESSWP_STREAM_PROVIDER: s3
+      SERVERLESSWP_STREAM_S3_BUCKET: wp-uploads
+      SERVERLESSWP_STREAM_S3_REGION: us-east-1
+      SERVERLESSWP_STREAM_S3_ENDPOINT: http://minio:9000
+      SERVERLESSWP_STREAM_S3_KEY: minioadmin
+      SERVERLESSWP_STREAM_S3_SECRET: minioadmin
     volumes:
       - ../..:/var/www/html/wp-content/mu-plugins/serverlesswp-stream-wrapper:ro
       - ../../bootstrap/mu-loader.php:/var/www/html/wp-content/mu-plugins/serverlesswp-stream-wrapper.php:ro

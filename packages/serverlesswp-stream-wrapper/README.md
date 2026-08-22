@@ -40,30 +40,30 @@ All configuration is via environment variables (or PHP constants of the same nam
 
 | Variable | Required | Description |
 |---|---|---|
-| `WP_STREAM_PROVIDER` | yes | `s3` or `vercel-blob` |
-| `WP_STREAM_WP_CONTENT_DIR` | no | Absolute path to `wp-content`. Defaults to the path inferred from the plugin's own location. |
-| `WP_STREAM_TARGET_PATHS` | no | Comma-separated paths relative to the WordPress root to route remotely. Default: `wp-content` |
-| `WP_STREAM_PUBLIC_PATHS` | no | Comma-separated paths relative to the WordPress root that the built-in proxy will serve over HTTP, whatever the file type. Default: `wp-content/uploads`. Deliberately narrower than `WP_STREAM_TARGET_PATHS` — see [What gets served](#what-gets-served). |
-| `WP_STREAM_PUBLIC_ASSET_PATHS` | no | Paths served only when the filename is a web asset (css, js, mjs, svg, png, jpg, jpeg, gif, webp, avif, ico, bmp, woff, woff2, ttf, otf, eot). Default: `wp-content/cache`. |
-| `WP_STREAM_EXCLUDE_PATHS` | no | Comma-separated path prefixes relative to the WordPress root forced to local storage, even when inside a target path. Default: `wp-content/plugins,wp-content/themes,wp-content/mu-plugins,wp-content/languages,wp-content/upgrade` |
-| `WP_STREAM_EXCLUDE_PATTERNS` | no | Comma-separated glob patterns matched against the filename to force local storage. Default: `*.sqlite,*.db,*.php,*.log,.htaccess` |
-| `WP_STREAM_CDN_BASE_URL` | no | Public base URL for rewriting media URLs (e.g. a CloudFront domain). Derived from bucket/store if not set. |
-| `WP_STREAM_CACHE_CONTROL` | no | `Cache-Control` header for files served by the built-in proxy. Default: `public, max-age=3600, s-maxage=86400` — browsers revalidate hourly, the edge keeps a copy for a day. Raise it (e.g. `public, max-age=31536000, immutable`) only if your media is never replaced in place. Misses always send `no-cache` so 404s aren't cached. |
+| `SERVERLESSWP_STREAM_PROVIDER` | yes | `s3` or `vercel-blob` |
+| `SERVERLESSWP_STREAM_WP_CONTENT_DIR` | no | Absolute path to `wp-content`. Defaults to the path inferred from the plugin's own location. |
+| `SERVERLESSWP_STREAM_TARGET_PATHS` | no | Comma-separated paths relative to the WordPress root to route remotely. Default: `wp-content` |
+| `SERVERLESSWP_STREAM_PUBLIC_PATHS` | no | Comma-separated paths relative to the WordPress root that the built-in proxy will serve over HTTP, whatever the file type. Default: `wp-content/uploads`. Deliberately narrower than `SERVERLESSWP_STREAM_TARGET_PATHS` — see [What gets served](#what-gets-served). |
+| `SERVERLESSWP_STREAM_PUBLIC_ASSET_PATHS` | no | Paths served only when the filename is a web asset (css, js, mjs, svg, png, jpg, jpeg, gif, webp, avif, ico, bmp, woff, woff2, ttf, otf, eot). Default: `wp-content/cache`. |
+| `SERVERLESSWP_STREAM_EXCLUDE_PATHS` | no | Comma-separated path prefixes relative to the WordPress root forced to local storage, even when inside a target path. Default: `wp-content/plugins,wp-content/themes,wp-content/mu-plugins,wp-content/languages,wp-content/upgrade` |
+| `SERVERLESSWP_STREAM_EXCLUDE_PATTERNS` | no | Comma-separated glob patterns matched against the filename to force local storage. Default: `*.sqlite,*.db,*.php,*.log,.htaccess` |
+| `SERVERLESSWP_STREAM_CDN_BASE_URL` | no | Public base URL for rewriting media URLs (e.g. a CloudFront domain). Derived from bucket/store if not set. |
+| `SERVERLESSWP_STREAM_CACHE_CONTROL` | no | `Cache-Control` header for files served by the built-in proxy. Default: `public, max-age=3600, s-maxage=86400` — browsers revalidate hourly, the edge keeps a copy for a day. Raise it (e.g. `public, max-age=31536000, immutable`) only if your media is never replaced in place. Misses always send `no-cache` so 404s aren't cached. |
 
 ### S3
 
 | Variable | Description |
 |---|---|
-| `WP_STREAM_S3_BUCKET` | Bucket name (fallback: `SQLITE_S3_BUCKET`, `S3_OFFLOAD_BUCKET`) |
-| `WP_STREAM_S3_REGION` | Region (fallback: `SQLITE_S3_REGION`; default: `us-east-1`) |
-| `WP_STREAM_S3_PREFIX` | Key prefix within the bucket (optional) |
-| `WP_STREAM_S3_ENDPOINT` | Custom endpoint URL — use for MinIO/R2 or other S3-compatible stores (fallback: `SQLITE_S3_ENDPOINT`) |
-| `WP_STREAM_S3_KEY` | Access key ID (fallback: `SQLITE_S3_API_KEY`, `S3_KEY_ID`). Omit to use the IAM role (recommended on Lambda). |
-| `WP_STREAM_S3_SECRET` | Secret access key (fallback: `SQLITE_S3_API_SECRET`, `S3_ACCESS_KEY`). Omit to use the IAM role. |
-| `WP_STREAM_S3_FORCE_PATH_STYLE` | Force path-style addressing even without a custom endpoint (fallback: `SQLITE_S3_FORCE_PATH_STYLE`) |
-| `WP_STREAM_S3_ACL` | Canned ACL applied to writes, e.g. `public-read` (default: bucket default) |
+| `SERVERLESSWP_STREAM_S3_BUCKET` | Bucket name (fallback: `SQLITE_S3_BUCKET`, `S3_OFFLOAD_BUCKET`) |
+| `SERVERLESSWP_STREAM_S3_REGION` | Region (fallback: `SQLITE_S3_REGION`; default: `us-east-1`) |
+| `SERVERLESSWP_STREAM_S3_PREFIX` | Key prefix within the bucket (optional) |
+| `SERVERLESSWP_STREAM_S3_ENDPOINT` | Custom endpoint URL — use for MinIO/R2 or other S3-compatible stores (fallback: `SQLITE_S3_ENDPOINT`) |
+| `SERVERLESSWP_STREAM_S3_KEY` | Access key ID (fallback: `SQLITE_S3_API_KEY`, `S3_KEY_ID`). Omit to use the IAM role (recommended on Lambda). |
+| `SERVERLESSWP_STREAM_S3_SECRET` | Secret access key (fallback: `SQLITE_S3_API_SECRET`, `S3_ACCESS_KEY`). Omit to use the IAM role. |
+| `SERVERLESSWP_STREAM_S3_FORCE_PATH_STYLE` | Force path-style addressing even without a custom endpoint (fallback: `SQLITE_S3_FORCE_PATH_STYLE`) |
+| `SERVERLESSWP_STREAM_S3_ACL` | Canned ACL applied to writes, e.g. `public-read` (default: bucket default) |
 
-The `SQLITE_S3_*` / `S3_*` fallbacks match the variables [ServerlessWP](https://serverlesswp.com) users already configure, so a typical SQLite+S3 site only needs `WP_STREAM_PROVIDER=s3`.
+The `SQLITE_S3_*` / `S3_*` fallbacks match the variables [ServerlessWP](https://serverlesswp.com) users already configure, so a typical SQLite+S3 site only needs `SERVERLESSWP_STREAM_PROVIDER=s3`.
 
 ### Vercel Blob
 
@@ -71,19 +71,19 @@ The adapter speaks the same wire protocol as the official `@vercel/blob` JS SDK 
 
 | Variable | Description |
 |---|---|
-| `WP_STREAM_VERCEL_TOKEN` | Optional explicit Blob read/write or OIDC token. Falls back to `BLOB_READ_WRITE_TOKEN`, the request's `x-vercel-oidc-token`, then `VERCEL_OIDC_TOKEN`. |
-| `WP_STREAM_VERCEL_STORE_ID` | Optional explicit store ID. Falls back to `BLOB_STORE_ID`, then `SQLITE_BLOB_STORE_ID` for a store shared with the SQLite database. |
-| `WP_STREAM_VERCEL_ACCESS` | Store access mode, `public` (default) or `private`; shapes the download host |
-| `WP_STREAM_VERCEL_API_BASE` | Override the Blob API base URL (tests/emulator) |
-| `WP_STREAM_VERCEL_DOWNLOAD_BASE` | Override the blob download base URL (tests/emulator) |
+| `SERVERLESSWP_STREAM_VERCEL_TOKEN` | Optional explicit Blob read/write or OIDC token. Falls back to `BLOB_READ_WRITE_TOKEN`, the request's `x-vercel-oidc-token`, then `VERCEL_OIDC_TOKEN`. |
+| `SERVERLESSWP_STREAM_VERCEL_STORE_ID` | Optional explicit store ID. Falls back to `BLOB_STORE_ID`, then `SQLITE_BLOB_STORE_ID` for a store shared with the SQLite database. |
+| `SERVERLESSWP_STREAM_VERCEL_ACCESS` | Store access mode, `public` (default) or `private`; shapes the download host |
+| `SERVERLESSWP_STREAM_VERCEL_API_BASE` | Override the Blob API base URL (tests/emulator) |
+| `SERVERLESSWP_STREAM_VERCEL_DOWNLOAD_BASE` | Override the blob download base URL (tests/emulator) |
 
 ## What gets served
 
-Routing and serving are two different policies. `WP_STREAM_TARGET_PATHS` decides what
+Routing and serving are two different policies. `SERVERLESSWP_STREAM_TARGET_PATHS` decides what
 persists to object storage — all of `wp-content` by default, because any plugin may write
 anywhere under it. Serving is narrower, and has two tiers:
-`WP_STREAM_PUBLIC_PATHS` (default `wp-content/uploads`) is served whatever the file type, and
-`WP_STREAM_PUBLIC_ASSET_PATHS` (default `wp-content/cache`) is served only for web-asset
+`SERVERLESSWP_STREAM_PUBLIC_PATHS` (default `wp-content/uploads`) is served whatever the file type, and
+`SERVERLESSWP_STREAM_PUBLIC_ASSET_PATHS` (default `wp-content/cache`) is served only for web-asset
 filenames.
 
 The difference matters because there is no web server in front of these files. On serverless
@@ -93,7 +93,7 @@ policy, a plugin's backups, exports or debug log would persist *and* be download
 anyone who guesses the URL.
 
 A file that is stored but not public 404s. To publish a directory outside the default, name
-it in `WP_STREAM_PUBLIC_PATHS` or use the filter below.
+it in `SERVERLESSWP_STREAM_PUBLIC_PATHS` or use the filter below.
 
 ### wp-content/cache: gated by extension, not by opt-in
 
@@ -101,7 +101,7 @@ it in `WP_STREAM_PUBLIC_PATHS` or use the filter below.
 friends) write CSS and JS the browser must fetch or the site renders unstyled. Page caches
 write rendered HTML, which can be a page only some users are meant to see.
 
-`WP_STREAM_PUBLIC_ASSET_PATHS` covers that directory for asset filenames only, so
+`SERVERLESSWP_STREAM_PUBLIC_ASSET_PATHS` covers that directory for asset filenames only, so
 `cache/autoptimize/css/x.css` is served and `cache/supercache/index.html` is not. Neither
 outcome depends on an admin knowing to set a variable — an opt-in nobody discovers is the same
 as broken, because a 404 on a CSS file names no cause.
@@ -122,7 +122,7 @@ The trade-off is that a probe can occupy the window and delay a real report by a
 The extension list is deliberately tight: no `html`, `htm`, `json`, `xml`, `txt`, `log`,
 `sql`, or `php`. One hole to be aware of: a plugin that caches *protected* media as `.jpg`
 under an asset path is served like any other image. If that applies to your site, narrow
-`WP_STREAM_PUBLIC_ASSET_PATHS` to the bundler's own subdirectory
+`SERVERLESSWP_STREAM_PUBLIC_ASSET_PATHS` to the bundler's own subdirectory
 (e.g. `wp-content/cache/autoptimize`) or close it with the filter below.
 
 ## Hooks

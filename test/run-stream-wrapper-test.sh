@@ -51,14 +51,14 @@ mc anonymous set download "stream-minio/${BUCKET}"
 
 # SQLite on the same MinIO keeps WordPress bootable; the stream wrapper reads
 # the same credentials through the SQLITE_S3_* fallbacks in src/Config.php, so
-# WP_STREAM_PROVIDER is the only stream-wrapper variable that has to be set.
+# SERVERLESSWP_STREAM_PROVIDER is the only stream-wrapper variable that has to be set.
 docker run \
     -e SQLITE_S3_BUCKET="${BUCKET}" \
     -e SQLITE_S3_API_KEY=minioadmin -e SQLITE_S3_API_SECRET=minioadmin \
     -e SQLITE_S3_REGION=us-east-1 -e SQLITE_S3_ENDPOINT=http://minio:9000 \
     -e SQLITE_S3_FORCE_PATH_STYLE=1 \
-    -e WP_STREAM_PROVIDER=s3 \
-    -e WP_STREAM_DEBUG=1 \
+    -e SERVERLESSWP_STREAM_PROVIDER=s3 \
+    -e SERVERLESSWP_STREAM_DEBUG=1 \
     -e VERCEL=1 -e VERCEL_GIT_COMMIT_REF=stream_wrapper_test \
     -e SERVERLESSWP_TESTING=1 \
     -p 9000:8080 \

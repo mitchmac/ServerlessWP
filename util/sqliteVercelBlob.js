@@ -47,7 +47,7 @@ exports.preRequest = async function(event) {
             ctx.oidcToken = event.headers[k];
             // The PHP prepend consumes and removes this header when its Blob
             // stream wrapper needs the same fresh per-request credential.
-            if (process.env['WP_STREAM_PROVIDER'] !== 'vercel-blob') {
+            if (process.env['SERVERLESSWP_STREAM_PROVIDER'] !== 'vercel-blob') {
                 delete event.headers[k];
             }
         }

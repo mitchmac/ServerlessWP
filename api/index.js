@@ -18,16 +18,16 @@ const streamWrapperPrepend = '/var/task/wp/wp-content/mu-plugins/serverlesswp-st
 
 const requestRouter = '/var/task/wp/router.php';
 
-const streamWrapperActive = !!process.env['WP_STREAM_PROVIDER']
+const streamWrapperActive = !!process.env['SERVERLESSWP_STREAM_PROVIDER']
     && fs.existsSync(streamWrapperPrepend);
 
-if (streamWrapperActive && !process.env['WP_STREAM_WP_CONTENT_DIR']) {
-    process.env['WP_STREAM_WP_CONTENT_DIR'] = wpContentPath;
+if (streamWrapperActive && !process.env['SERVERLESSWP_STREAM_WP_CONTENT_DIR']) {
+    process.env['SERVERLESSWP_STREAM_WP_CONTENT_DIR'] = wpContentPath;
 }
 
 // Refuse to fall back to ephemeral writes.
 if (streamWrapperActive && typeof serverlesswp.buildPhpArgs !== 'function') {
-    console.log('WP_STREAM_PROVIDER is set but the installed serverlesswp package does not support autoPrependFile. Upgrade it, or wp-content writes will not reach object storage.');
+    console.log('SERVERLESSWP_STREAM_PROVIDER is set but the installed serverlesswp package does not support autoPrependFile. Upgrade it, or wp-content writes will not reach object storage.');
 }
 
 const readOnlyActive = !!process.env['SERVERLESSWP_READ_ONLY_MODE']

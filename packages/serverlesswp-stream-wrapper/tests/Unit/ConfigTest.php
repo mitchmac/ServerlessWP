@@ -30,56 +30,56 @@ class ConfigTest extends TestCase
 
     public function testDefaultProvider(): void
     {
-        $this->unsetEnv('WP_STREAM_PROVIDER');
+        $this->unsetEnv('SERVERLESSWP_STREAM_PROVIDER');
         $config = new Config();
         $this->assertSame('', $config->provider());
     }
 
     public function testEnvVarProvider(): void
     {
-        putenv('WP_STREAM_PROVIDER=s3');
+        putenv('SERVERLESSWP_STREAM_PROVIDER=s3');
         $config = new Config();
         $this->assertSame('s3', $config->provider());
     }
 
     public function testDefaultTargetPaths(): void
     {
-        $this->unsetEnv('WP_STREAM_TARGET_PATHS');
+        $this->unsetEnv('SERVERLESSWP_STREAM_TARGET_PATHS');
         $config = new Config();
         $this->assertSame(['wp-content'], $config->targetPaths());
     }
 
     public function testDefaultPublicPathsAreUploadsOnly(): void
     {
-        $this->unsetEnv('WP_STREAM_PUBLIC_PATHS');
+        $this->unsetEnv('SERVERLESSWP_STREAM_PUBLIC_PATHS');
         $config = new Config();
         $this->assertSame(['wp-content/uploads'], $config->publicPaths());
     }
 
     public function testCustomPublicPaths(): void
     {
-        putenv('WP_STREAM_PUBLIC_PATHS=wp-content/uploads,wp-content/cache');
+        putenv('SERVERLESSWP_STREAM_PUBLIC_PATHS=wp-content/uploads,wp-content/cache');
         $config = new Config();
         $this->assertSame(['wp-content/uploads', 'wp-content/cache'], $config->publicPaths());
     }
 
     public function testEmptyPublicPathsServesNothing(): void
     {
-        putenv('WP_STREAM_PUBLIC_PATHS=');
+        putenv('SERVERLESSWP_STREAM_PUBLIC_PATHS=');
         $config = new Config();
         $this->assertSame([], $config->publicPaths());
     }
 
     public function testDefaultPublicAssetPathsIsCache(): void
     {
-        $this->unsetEnv('WP_STREAM_PUBLIC_ASSET_PATHS');
+        $this->unsetEnv('SERVERLESSWP_STREAM_PUBLIC_ASSET_PATHS');
         $config = new Config();
         $this->assertSame(['wp-content/cache'], $config->publicAssetPaths());
     }
 
     public function testCustomPublicAssetPaths(): void
     {
-        putenv('WP_STREAM_PUBLIC_ASSET_PATHS=wp-content/cache/autoptimize,wp-content/bundles');
+        putenv('SERVERLESSWP_STREAM_PUBLIC_ASSET_PATHS=wp-content/cache/autoptimize,wp-content/bundles');
         $config = new Config();
         $this->assertSame(
             ['wp-content/cache/autoptimize', 'wp-content/bundles'],
@@ -99,21 +99,21 @@ class ConfigTest extends TestCase
 
     public function testCustomTargetPaths(): void
     {
-        putenv('WP_STREAM_TARGET_PATHS=wp-content/uploads,wp-content/custom');
+        putenv('SERVERLESSWP_STREAM_TARGET_PATHS=wp-content/uploads,wp-content/custom');
         $config = new Config();
         $this->assertSame(['wp-content/uploads', 'wp-content/custom'], $config->targetPaths());
     }
 
     public function testTargetPathsTrimsWhitespace(): void
     {
-        putenv('WP_STREAM_TARGET_PATHS= wp-content/uploads , wp-content/cache ');
+        putenv('SERVERLESSWP_STREAM_TARGET_PATHS= wp-content/uploads , wp-content/cache ');
         $config = new Config();
         $this->assertSame(['wp-content/uploads', 'wp-content/cache'], $config->targetPaths());
     }
 
     public function testDefaultExcludePatterns(): void
     {
-        $this->unsetEnv('WP_STREAM_EXCLUDE_PATTERNS');
+        $this->unsetEnv('SERVERLESSWP_STREAM_EXCLUDE_PATTERNS');
         $config   = new Config();
         $patterns = $config->excludePatterns();
         $this->assertContains('*.sqlite', $patterns);
@@ -126,12 +126,12 @@ class ConfigTest extends TestCase
 
     public function testS3Config(): void
     {
-        putenv('WP_STREAM_S3_BUCKET=my-bucket');
-        putenv('WP_STREAM_S3_REGION=eu-west-1');
-        putenv('WP_STREAM_S3_PREFIX=wp/files');
-        putenv('WP_STREAM_S3_ENDPOINT=http://localhost:9000');
-        putenv('WP_STREAM_S3_KEY=AKID');
-        putenv('WP_STREAM_S3_SECRET=secret');
+        putenv('SERVERLESSWP_STREAM_S3_BUCKET=my-bucket');
+        putenv('SERVERLESSWP_STREAM_S3_REGION=eu-west-1');
+        putenv('SERVERLESSWP_STREAM_S3_PREFIX=wp/files');
+        putenv('SERVERLESSWP_STREAM_S3_ENDPOINT=http://localhost:9000');
+        putenv('SERVERLESSWP_STREAM_S3_KEY=AKID');
+        putenv('SERVERLESSWP_STREAM_S3_SECRET=secret');
 
         $config = new Config();
         $this->assertSame('my-bucket', $config->s3Bucket());
@@ -144,15 +144,15 @@ class ConfigTest extends TestCase
 
     public function testS3PrefixStripsTrailingSlash(): void
     {
-        putenv('WP_STREAM_S3_PREFIX=my/prefix/');
+        putenv('SERVERLESSWP_STREAM_S3_PREFIX=my/prefix/');
         $config = new Config();
         $this->assertSame('my/prefix', $config->s3Prefix());
     }
 
     public function testVercelConfig(): void
     {
-        putenv('WP_STREAM_VERCEL_TOKEN=tok_abc');
-        putenv('WP_STREAM_VERCEL_STORE_ID=store123');
+        putenv('SERVERLESSWP_STREAM_VERCEL_TOKEN=tok_abc');
+        putenv('SERVERLESSWP_STREAM_VERCEL_STORE_ID=store123');
 
         $config = new Config();
         $this->assertSame('tok_abc', $config->vercelToken());
@@ -161,8 +161,8 @@ class ConfigTest extends TestCase
 
     public function testVercelConfigUsesConnectedPublicStoreAndRequestOidcToken(): void
     {
-        $this->unsetEnv('WP_STREAM_VERCEL_TOKEN');
-        $this->unsetEnv('WP_STREAM_VERCEL_STORE_ID');
+        $this->unsetEnv('SERVERLESSWP_STREAM_VERCEL_TOKEN');
+        $this->unsetEnv('SERVERLESSWP_STREAM_VERCEL_STORE_ID');
         $this->unsetEnv('BLOB_READ_WRITE_TOKEN');
         $this->unsetEnv('VERCEL_OIDC_TOKEN');
         $this->unsetEnv('SQLITE_BLOB_STORE_ID');
@@ -176,7 +176,7 @@ class ConfigTest extends TestCase
 
     public function testVercelConfigFallsBackToSharedSqliteStore(): void
     {
-        $this->unsetEnv('WP_STREAM_VERCEL_STORE_ID');
+        $this->unsetEnv('SERVERLESSWP_STREAM_VERCEL_STORE_ID');
         $this->unsetEnv('BLOB_STORE_ID');
         putenv('SQLITE_BLOB_STORE_ID=store_database');
 
@@ -185,29 +185,29 @@ class ConfigTest extends TestCase
 
     public function testVercelConfigPrefersExplicitThenPublicStore(): void
     {
-        putenv('WP_STREAM_VERCEL_STORE_ID=store_explicit');
+        putenv('SERVERLESSWP_STREAM_VERCEL_STORE_ID=store_explicit');
         putenv('BLOB_STORE_ID=store_uploads');
         putenv('SQLITE_BLOB_STORE_ID=store_database');
         $this->assertSame('store_explicit', (new Config('request.oidc.token'))->vercelStoreId());
 
-        $this->unsetEnv('WP_STREAM_VERCEL_STORE_ID');
+        $this->unsetEnv('SERVERLESSWP_STREAM_VERCEL_STORE_ID');
         $this->assertSame('store_uploads', (new Config('request.oidc.token'))->vercelStoreId());
     }
 
     public function testVercelTokenPrecedencePreservesStaticCredentials(): void
     {
-        putenv('WP_STREAM_VERCEL_TOKEN=explicit-token');
+        putenv('SERVERLESSWP_STREAM_VERCEL_TOKEN=explicit-token');
         putenv('BLOB_READ_WRITE_TOKEN=connected-token');
         putenv('VERCEL_OIDC_TOKEN=environment.oidc.token');
         $this->assertSame('explicit-token', (new Config('request.oidc.token'))->vercelToken());
 
-        $this->unsetEnv('WP_STREAM_VERCEL_TOKEN');
+        $this->unsetEnv('SERVERLESSWP_STREAM_VERCEL_TOKEN');
         $this->assertSame('connected-token', (new Config('request.oidc.token'))->vercelToken());
     }
 
     public function testRequestOidcTokenPrecedesEnvironmentFallback(): void
     {
-        $this->unsetEnv('WP_STREAM_VERCEL_TOKEN');
+        $this->unsetEnv('SERVERLESSWP_STREAM_VERCEL_TOKEN');
         $this->unsetEnv('BLOB_READ_WRITE_TOKEN');
         putenv('VERCEL_OIDC_TOKEN=environment.oidc.token');
 
@@ -217,25 +217,25 @@ class ConfigTest extends TestCase
 
     public function testNullableReturnsNullWhenUnset(): void
     {
-        $this->unsetEnv('WP_STREAM_S3_BUCKET');
+        $this->unsetEnv('SERVERLESSWP_STREAM_S3_BUCKET');
         $config = new Config();
         $this->assertNull($config->s3Bucket());
     }
 
     public function testCdnBaseUrlStripsTrailingSlash(): void
     {
-        putenv('WP_STREAM_CDN_BASE_URL=https://cdn.example.com/');
+        putenv('SERVERLESSWP_STREAM_CDN_BASE_URL=https://cdn.example.com/');
         $config = new Config();
         $this->assertSame('https://cdn.example.com', $config->cdnBaseUrl());
     }
 
     public function testS3SettingsFallBackToSqliteS3Vars(): void
     {
-        $this->unsetEnv('WP_STREAM_S3_BUCKET');
-        $this->unsetEnv('WP_STREAM_S3_KEY');
-        $this->unsetEnv('WP_STREAM_S3_SECRET');
-        $this->unsetEnv('WP_STREAM_S3_REGION');
-        $this->unsetEnv('WP_STREAM_S3_ENDPOINT');
+        $this->unsetEnv('SERVERLESSWP_STREAM_S3_BUCKET');
+        $this->unsetEnv('SERVERLESSWP_STREAM_S3_KEY');
+        $this->unsetEnv('SERVERLESSWP_STREAM_S3_SECRET');
+        $this->unsetEnv('SERVERLESSWP_STREAM_S3_REGION');
+        $this->unsetEnv('SERVERLESSWP_STREAM_S3_ENDPOINT');
         putenv('SQLITE_S3_BUCKET=slswp-bucket');
         putenv('SQLITE_S3_API_KEY=slswp-key');
         putenv('SQLITE_S3_API_SECRET=slswp-secret');
@@ -252,7 +252,7 @@ class ConfigTest extends TestCase
 
     public function testWpStreamVarsTakePrecedenceOverFallbacks(): void
     {
-        putenv('WP_STREAM_S3_BUCKET=primary-bucket');
+        putenv('SERVERLESSWP_STREAM_S3_BUCKET=primary-bucket');
         putenv('SQLITE_S3_BUCKET=fallback-bucket');
 
         $config = new Config();
@@ -261,7 +261,7 @@ class ConfigTest extends TestCase
 
     public function testS3OffloadBucketIsLastFallback(): void
     {
-        $this->unsetEnv('WP_STREAM_S3_BUCKET');
+        $this->unsetEnv('SERVERLESSWP_STREAM_S3_BUCKET');
         $this->unsetEnv('SQLITE_S3_BUCKET');
         putenv('S3_OFFLOAD_BUCKET=offload-bucket');
 
@@ -271,7 +271,7 @@ class ConfigTest extends TestCase
 
     public function testForcePathStyleDefaultsToFalse(): void
     {
-        $this->unsetEnv('WP_STREAM_S3_FORCE_PATH_STYLE');
+        $this->unsetEnv('SERVERLESSWP_STREAM_S3_FORCE_PATH_STYLE');
         $this->unsetEnv('SQLITE_S3_FORCE_PATH_STYLE');
         $config = new Config();
         $this->assertFalse($config->s3ForcePathStyle());
@@ -279,31 +279,31 @@ class ConfigTest extends TestCase
 
     public function testForcePathStyleTruthyValues(): void
     {
-        putenv('WP_STREAM_S3_FORCE_PATH_STYLE=1');
+        putenv('SERVERLESSWP_STREAM_S3_FORCE_PATH_STYLE=1');
         $this->assertTrue((new Config())->s3ForcePathStyle());
 
-        putenv('WP_STREAM_S3_FORCE_PATH_STYLE=false');
+        putenv('SERVERLESSWP_STREAM_S3_FORCE_PATH_STYLE=false');
         $this->assertFalse((new Config())->s3ForcePathStyle());
     }
 
     public function testS3Acl(): void
     {
-        $this->unsetEnv('WP_STREAM_S3_ACL');
+        $this->unsetEnv('SERVERLESSWP_STREAM_S3_ACL');
         $this->assertNull((new Config())->s3Acl());
 
-        putenv('WP_STREAM_S3_ACL=public-read');
+        putenv('SERVERLESSWP_STREAM_S3_ACL=public-read');
         $this->assertSame('public-read', (new Config())->s3Acl());
     }
 
     public function testCacheControlDefault(): void
     {
-        $this->unsetEnv('WP_STREAM_CACHE_CONTROL');
+        $this->unsetEnv('SERVERLESSWP_STREAM_CACHE_CONTROL');
         $this->assertSame('public, max-age=3600, s-maxage=86400', (new Config())->cacheControl());
     }
 
     public function testCacheControlOverride(): void
     {
-        putenv('WP_STREAM_CACHE_CONTROL=public, max-age=31536000, immutable');
+        putenv('SERVERLESSWP_STREAM_CACHE_CONTROL=public, max-age=31536000, immutable');
         $this->assertSame('public, max-age=31536000, immutable', (new Config())->cacheControl());
     }
 
@@ -315,28 +315,28 @@ class ConfigTest extends TestCase
     private function envKeys(): array
     {
         return [
-            'WP_STREAM_PROVIDER',
-            'WP_STREAM_TARGET_PATHS',
-            'WP_STREAM_PUBLIC_PATHS',
-            'WP_STREAM_PUBLIC_ASSET_PATHS',
-            'WP_STREAM_EXCLUDE_PATTERNS',
-            'WP_STREAM_WP_CONTENT_DIR',
-            'WP_STREAM_S3_BUCKET',
-            'WP_STREAM_S3_REGION',
-            'WP_STREAM_S3_PREFIX',
-            'WP_STREAM_S3_ENDPOINT',
-            'WP_STREAM_S3_KEY',
-            'WP_STREAM_S3_SECRET',
-            'WP_STREAM_VERCEL_TOKEN',
-            'WP_STREAM_VERCEL_STORE_ID',
+            'SERVERLESSWP_STREAM_PROVIDER',
+            'SERVERLESSWP_STREAM_TARGET_PATHS',
+            'SERVERLESSWP_STREAM_PUBLIC_PATHS',
+            'SERVERLESSWP_STREAM_PUBLIC_ASSET_PATHS',
+            'SERVERLESSWP_STREAM_EXCLUDE_PATTERNS',
+            'SERVERLESSWP_STREAM_WP_CONTENT_DIR',
+            'SERVERLESSWP_STREAM_S3_BUCKET',
+            'SERVERLESSWP_STREAM_S3_REGION',
+            'SERVERLESSWP_STREAM_S3_PREFIX',
+            'SERVERLESSWP_STREAM_S3_ENDPOINT',
+            'SERVERLESSWP_STREAM_S3_KEY',
+            'SERVERLESSWP_STREAM_S3_SECRET',
+            'SERVERLESSWP_STREAM_VERCEL_TOKEN',
+            'SERVERLESSWP_STREAM_VERCEL_STORE_ID',
             'BLOB_READ_WRITE_TOKEN',
             'BLOB_STORE_ID',
             'SQLITE_BLOB_STORE_ID',
             'VERCEL_OIDC_TOKEN',
-            'WP_STREAM_CDN_BASE_URL',
-            'WP_STREAM_S3_FORCE_PATH_STYLE',
-            'WP_STREAM_S3_ACL',
-            'WP_STREAM_CACHE_CONTROL',
+            'SERVERLESSWP_STREAM_CDN_BASE_URL',
+            'SERVERLESSWP_STREAM_S3_FORCE_PATH_STYLE',
+            'SERVERLESSWP_STREAM_S3_ACL',
+            'SERVERLESSWP_STREAM_CACHE_CONTROL',
             'SQLITE_S3_BUCKET',
             'SQLITE_S3_API_KEY',
             'SQLITE_S3_API_SECRET',

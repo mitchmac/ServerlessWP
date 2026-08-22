@@ -150,7 +150,7 @@ test.describe('serving from object storage', () => {
         const firstHop = await request.get(created.url, { maxRedirects: 0 });
         const hop = `first-hop status=${firstHop.status()} `
             + `location=${firstHop.headers()['location'] ?? '-'} `
-            + `debug=${firstHop.headers()['x-wp-stream-debug'] ?? 'absent'}`;
+            + `debug=${firstHop.headers()['x-serverlesswp-stream-debug'] ?? 'absent'}`;
 
         const response = await request.get(created.url);
         const detail = `${hop} wp-view=${JSON.stringify(conditions)} status=${response.status()} `

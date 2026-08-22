@@ -18,9 +18,9 @@ abstract class E2ETestCase extends TestCase
         $this->wpUrl = getenv('WP_URL') ?: 'http://wordpress';
 
         $this->storage = new S3Adapter(
-            bucket:   getenv('WP_STREAM_S3_BUCKET') ?: 'wp-uploads',
+            bucket:   getenv('SERVERLESSWP_STREAM_S3_BUCKET') ?: 'wp-uploads',
             region:   'us-east-1',
-            endpoint: getenv('WP_STREAM_S3_ENDPOINT') ?: 'http://minio:9000',
+            endpoint: getenv('SERVERLESSWP_STREAM_S3_ENDPOINT') ?: 'http://minio:9000',
             key:      'minioadmin',
             secret:   'minioadmin',
         );

@@ -85,7 +85,7 @@ class BootstrapTest extends TestCase
         $result = Bootstrap::resolveWpContentDir($this->root . '/nope', $this->root . '/docroot/wp-content');
 
         $this->assertNull($result['dir']);
-        $this->assertStringContainsString('WP_STREAM_WP_CONTENT_DIR', (string) $result['warning']);
+        $this->assertStringContainsString('SERVERLESSWP_STREAM_WP_CONTENT_DIR', (string) $result['warning']);
     }
 
     public function testEmptyConfiguredValueFallsBackToInference(): void
