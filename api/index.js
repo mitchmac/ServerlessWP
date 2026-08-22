@@ -1,3 +1,4 @@
+const fs = require('fs');
 const serverlesswp = require('serverlesswp');
 
 const { validate } = require('../util/install.js');
@@ -10,23 +11,35 @@ const pathToWP = '/tmp/wp';
 const wpContentPath = pathToWP + '/wp-content';
 const sqlitePluginPath = wpContentPath + '/plugins/sqlite-database-integration';
 
-// Which database this deployment uses. See util/storage.js.
 const database = storage.resolve();
+
+// Load executable bootstrap only from the read-only bundle.
+const streamWrapperPrepend = '/var/task/wp/wp-content/mu-plugins/serverlesswp-stream-wrapper/bootstrap/prepend.php';
+
+const requestRouter = '/var/task/wp/router.php';
+
+const streamWrapperActive = !!process.env['SERVERLESSWP_STREAM_PROVIDER']
+    && fs.existsSync(streamWrapperPrepend);
+
+if (streamWrapperActive && !process.env['SERVERLESSWP_STREAM_WP_CONTENT_DIR']) {
+    process.env['SERVERLESSWP_STREAM_WP_CONTENT_DIR'] = wpContentPath;
+}
+
+// Refuse to fall back to ephemeral writes.
+if (streamWrapperActive && typeof serverlesswp.buildPhpArgs !== 'function') {
+    console.log('SERVERLESSWP_STREAM_PROVIDER is set but the installed serverlesswp package does not support autoPrependFile. Upgrade it, or wp-content writes will not reach object storage.');
+}
 
 const readOnlyActive = !!process.env['SERVERLESSWP_READ_ONLY_MODE']
     && !['false', '0', 'no'].includes(process.env['SERVERLESSWP_READ_ONLY_MODE'].toLowerCase());
 
 let initDone = false;
 
-// Move the /wp directory to /tmp/wp so that it is writeable.
 setup();
 
-// This is where all requests to WordPress are routed through.
-// See vercel.json, netlify.toml, or serverless.yml for the redirection rules.
 exports.handler = async function (event, context, callback) {
     if (!initDone) {
-        // Register readOnly first so blocked mutations short-circuit before the
-        // sqlite plugin tries to hit storage.
+        // Block mutations before opening SQLite.
         if (readOnlyActive) {
             serverlesswp.registerPlugin(readOnly);
         }
@@ -41,7 +54,15 @@ exports.handler = async function (event, context, callback) {
         initDone = true;
     }
 
-    const response = await serverlesswp({ docRoot: pathToWP, event: event });
+    const options = { docRoot: pathToWP, event: event };
+    if (fs.existsSync(requestRouter)) {
+        options.routerScript = requestRouter;
+    }
+    if (streamWrapperActive) {
+        options.autoPrependFile = streamWrapperPrepend;
+    }
+
+    const response = await serverlesswp(options);
     const checkInstall = validate(response);
     return checkInstall || response;
 };

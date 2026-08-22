@@ -1,4 +1,4 @@
-<p align="center"><img src="https://serverlesswp.com/wp-content/serverlesswp.png"></p>
+# ServerlessWP
 
 WordPress hosting is silly.
 
@@ -150,7 +150,7 @@ The most explicitly configured option wins, so adding a Blob store for media won
 - You can modify the incoming request through the ```event``` object in api/index.js. You can also modify the WordPress ```response``` object there. ServerlessWP has a basic plugin system to do this. Checkout out ```/api/index.js``` for hints.
 
 ## Getting help
-Need help getting ServerlessWP installed? [Start a discussion](https://github.com/mitchmac/ServerlessWP/discussions) or [send me a chat](https://serverlesswp.com/chat).
+Need help getting ServerlessWP installed? [Start a discussion](https://github.com/mitchmac/ServerlessWP/discussions).
 
 ## Contributing
 - Using ServerlessWP and [reporting any problems you experience](https://github.com/mitchmac/ServerlessWP/issues) is a great way to help.

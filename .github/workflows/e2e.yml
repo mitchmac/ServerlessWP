@@ -26,12 +26,12 @@ jobs:
       # Runs before the Docker suites for fast feedback. Needs the root
       # dependencies, not the ones in test/.
       - name: Install root dependencies
-        run: npm install
+        run: npm ci
 
       - name: sqlite unit tests
         # Serial: the test files share the plugin's hardcoded /tmp cache and
         # etag paths, and node --test runs files in parallel processes.
-        run: node --test --test-concurrency=1 storage.test.js sqliteS3.concurrency.test.js sqliteVercelBlob.etag.test.js sqliteVercelBlob.auth.test.js sqliteVercelBlob.concurrency.test.js
+        run: node --test --test-concurrency=1 storage.test.js router-policy.test.js sqliteS3.concurrency.test.js sqliteVercelBlob.etag.test.js sqliteVercelBlob.auth.test.js sqliteVercelBlob.concurrency.test.js
         working-directory: ./test
 
       - run: ./run-db-test.sh
