@@ -76,6 +76,11 @@ const server = http.createServer(async (req, res) => {
     try {
         if (method === 'PUT' && url.pathname === '/' && url.searchParams.has('pathname')) {
             const pathname = url.searchParams.get('pathname');
+            // Real Vercel Blob rejects pathnames ending in a slash, so a
+            // trailing-slash "directory marker" upload cannot succeed here.
+            if (pathname === '' || pathname.endsWith('/')) {
+                return jsonError(res, 400, 'bad_request', 'pathname cannot end with a slash');
+            }
             const body = await readBody(req);
             const current = store.get(pathname);
             const ifMatch = req.headers['x-if-match'];

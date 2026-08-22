@@ -83,6 +83,15 @@ class VercelBlobEmulatorTest extends TestCase
         $this->assertFalse($this->adapter->get($from));
     }
 
+    public function testTrailingSlashPathnameIsRejected(): void
+    {
+        // Vercel Blob refuses a PUT to a pathname ending in '/', so the wrapper
+        // must never lean on trailing-slash "directory marker" blobs. This is
+        // the constraint behind the media-upload "Unable to create directory"
+        // failure; keep it pinned so a marker-based mkdir cannot creep back in.
+        $this->assertFalse($this->adapter->put('uploads/e2e/dir-' . getmypid() . '/', ''));
+    }
+
     public function testKeysWithSpecialCharacters(): void
     {
         $key = 'uploads/e2e/my file & more-' . getmypid() . '.txt';
