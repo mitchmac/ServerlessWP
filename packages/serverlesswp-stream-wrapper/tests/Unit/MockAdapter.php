@@ -13,6 +13,7 @@ class MockAdapter implements StorageAdapterInterface
     private array $files = [];
     private bool $failNextPut = false;
     private bool $failNextFetch = false;
+    private bool $rejectTrailingSlashKeys = false;
     private array $undeletable = [];
     private array $churn = [];
     private array $putLog = [];
@@ -48,6 +49,12 @@ class MockAdapter implements StorageAdapterInterface
             'requireAbsent' => (bool) $condition?->requireAbsent,
         ];
 
+        // Vercel Blob rejects any pathname ending in '/'. Model that so tests
+        // catch a regression to writing trailing-slash "directory marker" blobs.
+        if ($this->rejectTrailingSlashKeys && str_ends_with($key, '/')) {
+            return false;
+        }
+
         if (isset($this->churn[$key])) {
             $this->files[$key] = 'churn-' . count($this->putLog);
         }
@@ -76,6 +83,12 @@ class MockAdapter implements StorageAdapterInterface
     public function failOnNextFetch(): void
     {
         $this->failNextFetch = true;
+    }
+
+    /** Model a backend (Vercel Blob) that refuses pathnames ending in '/'. */
+    public function rejectTrailingSlashKeys(): void
+    {
+        $this->rejectTrailingSlashKeys = true;
     }
 
     public function changeOnEveryPut(string $key): void

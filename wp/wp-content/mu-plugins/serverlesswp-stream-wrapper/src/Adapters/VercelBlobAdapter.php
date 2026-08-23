@@ -8,18 +8,30 @@ namespace ServerlessWpStreamWrapper\Adapters;
 class VercelBlobAdapter implements StorageAdapterInterface
 {
     private const DEFAULT_API_BASE = 'https://blob.vercel-storage.com';
+
+    // The API changes its behaviour and response shape per version; @vercel/blob
+    // sends this on every request and so must we.
+    private const API_VERSION = '12';
     private string $apiBase;
     private string $downloadBase;
+    private string $storeId;
     public function __construct(
         private readonly string $token,
-        private readonly string $storeId,
+        string $storeId,
         private readonly string $access = 'public',
         ?string $apiBase = null,
         ?string $downloadBase = null,
     ) {
+        // Vercel hands the store id out in both 'store_<id>' and '<id>' form —
+        // BLOB_STORE_ID and the dashboard show the prefixed one. The API header
+        // and the download host want the bare id, so a prefixed value would make
+        // every request 404 with "store_not_found".
+        $this->storeId      = str_starts_with($storeId, 'store_')
+            ? substr($storeId, strlen('store_'))
+            : $storeId;
         $this->apiBase      = rtrim($apiBase ?: self::DEFAULT_API_BASE, '/');
         $this->downloadBase = rtrim(
-            $downloadBase ?: "https://{$storeId}.{$access}.blob.vercel-storage.com",
+            $downloadBase ?: "https://{$this->storeId}.{$access}.blob.vercel-storage.com",
             '/',
         );
     }
@@ -71,6 +83,7 @@ class VercelBlobAdapter implements StorageAdapterInterface
         return array_merge([
             'Authorization'          => "Bearer {$this->token}",
             'x-vercel-blob-store-id' => $this->storeId,
+            'x-api-version'          => self::API_VERSION,
         ], $headers);
     }
 
@@ -92,6 +105,12 @@ class VercelBlobAdapter implements StorageAdapterInterface
         );
         $headers = $this->apiHeaders([
             'x-content-type' => $this->detectMimeType($key),
+            // Both are required by the API on a write: without the access header
+            // the store rejects the upload, and without an explicit '0' the
+            // server is free to append a random suffix to the pathname, which
+            // would store the blob under a key the wrapper can never read back.
+            'x-vercel-blob-access' => $this->access,
+            'x-add-random-suffix'  => '0',
         ]);
 
         // Omitting this header means create-only.
@@ -117,7 +136,35 @@ class VercelBlobAdapter implements StorageAdapterInterface
             );
         }
 
-        return $response['status'] === 200;
+        if ($response['status'] !== 200) {
+            $this->reportApiError('upload', $key, $response);
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Writes carry the reason a file did not persist; the caller only sees a
+     * bool, so surface the API's own error code in the platform log.
+     */
+    private function reportApiError(string $operation, string $key, array $response): void
+    {
+        $error   = json_decode($response['body'], true)['error'] ?? [];
+        $code    = is_array($error) ? (string) ($error['code'] ?? '') : '';
+        $message = is_array($error) ? (string) ($error['message'] ?? '') : '';
+
+        trigger_error(
+            sprintf(
+                "serverlesswp-stream-wrapper: Vercel Blob %s of '%s' failed: HTTP %d%s%s",
+                $operation,
+                $key,
+                $response['status'],
+                $code !== '' ? " {$code}" : '',
+                $message !== '' ? " — {$message}" : '',
+            ),
+            E_USER_WARNING,
+        );
     }
 
     public function delete(string $key): bool

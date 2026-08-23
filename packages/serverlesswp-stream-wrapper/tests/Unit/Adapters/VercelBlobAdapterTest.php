@@ -43,14 +43,14 @@ class VercelBlobAdapterTest extends TestCase
 
         $url = $this->adapter->lastRequest()['url'];
         $this->assertSame(
-            'https://store_abc123.public.blob.vercel-storage.com/uploads/photo.jpg?cache=0',
+            'https://abc123.public.blob.vercel-storage.com/uploads/photo.jpg?cache=0',
             $url,
         );
     }
 
     public function testPutReturnsTrueOnSuccess(): void
     {
-        $this->adapter->enqueue(200, '{"url":"https://store_abc123.public.blob.vercel-storage.com/uploads/photo.jpg"}');
+        $this->adapter->enqueue(200, '{"url":"https://abc123.public.blob.vercel-storage.com/uploads/photo.jpg"}');
 
         $result = $this->adapter->put('uploads/photo.jpg', 'binary content');
         $this->assertTrue($result);
@@ -84,7 +84,7 @@ class VercelBlobAdapterTest extends TestCase
 
         $headers = $this->adapter->lastRequest()['headers'];
         $this->assertSame('1', $headers['x-allow-overwrite']);
-        $this->assertSame('store_abc123', $headers['x-vercel-blob-store-id']);
+        $this->assertSame('abc123', $headers['x-vercel-blob-store-id']);
         $this->assertSame('image/jpeg', $headers['x-content-type']);
     }
 
@@ -184,14 +184,14 @@ class VercelBlobAdapterTest extends TestCase
     {
         $this->adapter->enqueue(400, '{}');
 
-        $this->assertFalse($this->adapter->put('uploads/photo.jpg', 'data'));
+        $this->assertFalse(@$this->adapter->put('uploads/photo.jpg', 'data'));
     }
 
     public function testUnconditionalPutDoesNotThrowOnPreconditionFailure(): void
     {
         $this->adapter->enqueue(412, '{}');
 
-        $this->assertFalse($this->adapter->put('uploads/log.txt', 'data'));
+        $this->assertFalse(@$this->adapter->put('uploads/log.txt', 'data'));
     }
 
     public function testDeleteReturnsTrueOnSuccess(): void
@@ -211,9 +211,9 @@ class VercelBlobAdapterTest extends TestCase
         $this->assertSame('POST', $lastRequest['method']);
         $this->assertSame('https://blob.vercel-storage.com/delete', $lastRequest['url']);
         $this->assertSame('Bearer tok_test', $lastRequest['headers']['Authorization']);
-        $this->assertSame('store_abc123', $lastRequest['headers']['x-vercel-blob-store-id']);
+        $this->assertSame('abc123', $lastRequest['headers']['x-vercel-blob-store-id']);
         $this->assertSame(
-            ['urls' => ['https://store_abc123.public.blob.vercel-storage.com/uploads/old.jpg']],
+            ['urls' => ['https://abc123.public.blob.vercel-storage.com/uploads/old.jpg']],
             json_decode($lastRequest['body'], true),
         );
     }
@@ -245,7 +245,7 @@ class VercelBlobAdapterTest extends TestCase
         $this->assertStringStartsWith('https://blob.vercel-storage.com/?url=', $url);
         $this->assertStringContainsString(rawurlencode('uploads/photo.jpg'), $url);
         $this->assertSame(
-            'store_abc123',
+            'abc123',
             $this->adapter->lastRequest()['headers']['x-vercel-blob-store-id'],
         );
     }
@@ -262,7 +262,7 @@ class VercelBlobAdapterTest extends TestCase
         $keys = $this->adapter->listPrefix('uploads/2024');
         $this->assertSame(['uploads/2024/a.jpg', 'uploads/2024/b.jpg'], $keys);
         $this->assertSame(
-            'store_abc123',
+            'abc123',
             $this->adapter->lastRequest()['headers']['x-vercel-blob-store-id'],
         );
     }
@@ -292,7 +292,7 @@ class VercelBlobAdapterTest extends TestCase
 
         $url = $this->adapter->lastRequest()['url'];
         $this->assertStringContainsString(
-            'store_abc123.public.blob.vercel-storage.com/uploads/2024/01/photo.jpg',
+            'abc123.public.blob.vercel-storage.com/uploads/2024/01/photo.jpg',
             $url,
         );
     }
@@ -327,9 +327,84 @@ class VercelBlobAdapterTest extends TestCase
         $adapter->enqueue(200, 'data');
         $adapter->get('uploads/photo.jpg');
         $this->assertStringContainsString(
-            'store_abc123.private.blob.vercel-storage.com/uploads/photo.jpg',
+            'abc123.private.blob.vercel-storage.com/uploads/photo.jpg',
             $adapter->lastRequest()['url'],
         );
+    }
+
+    public function testStoreIdPrefixIsStrippedForTheWire(): void
+    {
+        // BLOB_STORE_ID is handed out as 'store_<id>'; the API header and the
+        // download host take the bare id, and a prefixed one 404s as
+        // "store_not_found" on every request.
+        $this->adapter->enqueue(200, '{}');
+        $this->adapter->put('uploads/photo.jpg', 'data');
+
+        $this->assertSame('abc123', $this->adapter->lastRequest()['headers']['x-vercel-blob-store-id']);
+    }
+
+    public function testBareStoreIdIsUsedAsGiven(): void
+    {
+        $adapter = new TestableVercelBlobAdapter(token: 'tok_test', storeId: 'abc123');
+
+        $adapter->enqueue(200, '{}');
+        $adapter->put('uploads/photo.jpg', 'data');
+        $this->assertSame('abc123', $adapter->lastRequest()['headers']['x-vercel-blob-store-id']);
+
+        $adapter->enqueue(200, 'data');
+        $adapter->get('uploads/photo.jpg');
+        $this->assertStringStartsWith(
+            'https://abc123.public.blob.vercel-storage.com/',
+            $adapter->lastRequest()['url'],
+        );
+    }
+
+    public function testEveryApiRequestSendsTheApiVersion(): void
+    {
+        // The API keys its behaviour and response shape off this header.
+        $this->adapter->enqueue(200, '{}');
+        $this->adapter->put('uploads/photo.jpg', 'data');
+        $this->assertSame('12', $this->adapter->lastRequest()['headers']['x-api-version']);
+
+        $this->adapter->enqueue(200, '{}');
+        $this->adapter->stat('uploads/photo.jpg');
+        $this->assertSame('12', $this->adapter->lastRequest()['headers']['x-api-version']);
+
+        $this->adapter->enqueue(200, '{}');
+        $this->adapter->delete('uploads/photo.jpg');
+        $this->assertSame('12', $this->adapter->lastRequest()['headers']['x-api-version']);
+    }
+
+    public function testPutDeclaresAccessAndPinsThePathname(): void
+    {
+        $this->adapter->enqueue(200, '{}');
+        $this->adapter->put('uploads/photo.jpg', 'data');
+
+        $headers = $this->adapter->lastRequest()['headers'];
+        $this->assertSame('public', $headers['x-vercel-blob-access']);
+        // A random suffix would store the blob under a key nothing can read back.
+        $this->assertSame('0', $headers['x-add-random-suffix']);
+    }
+
+    public function testPutReportsTheApiErrorCode(): void
+    {
+        $this->adapter->enqueue(404, '{"error":{"code":"store_not_found","message":"Store not found"}}');
+
+        $reported = null;
+        set_error_handler(function (int $errno, string $message) use (&$reported): bool {
+            $reported = $message;
+            return true;
+        });
+        try {
+            $this->assertFalse($this->adapter->put('uploads/photo.jpg', 'data'));
+        } finally {
+            restore_error_handler();
+        }
+
+        $this->assertNotNull($reported);
+        $this->assertStringContainsString('store_not_found', $reported);
+        $this->assertStringContainsString('uploads/photo.jpg', $reported);
+        $this->assertStringContainsString('404', $reported);
     }
 
     public function testRenameGetsThenPutsThenDeletes(): void

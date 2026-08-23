@@ -640,7 +640,14 @@ class StreamWrapper
             }
         }
 
-        return self::$adapter->put(rtrim($key, '/') . '/', '');
+        // Object storage has no real directories: a directory exists precisely
+        // when a key underneath it exists, which listPrefix() and the StatCache
+        // above already express. Persisting a trailing-slash "marker" blob is an
+        // S3-ism that some backends (Vercel Blob) reject outright — a PUT to a
+        // pathname ending in '/' fails there, which turned WordPress's
+        // wp_mkdir_p() into "Unable to create directory ...". Since the marker
+        // is not needed for correctness, treat mkdir as a metadata-only success.
+        return true;
     }
 
     public function rmdir(string $path, int $options): bool

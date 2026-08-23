@@ -1,14 +1,14 @@
 {
   "routes": [
     {
-      "src": "^/((?:wp-admin|wp-content|wp-includes)/.+)\\.(css|js|svg|png|gif|jpg|jpeg|webp|woff|woff2|ico|otf)$",
+      "src": "^/((?:wp-admin|wp-includes|wp-content/(?:plugins|themes|mu-plugins))/.+)\\.(css|js|svg|png|gif|jpg|jpeg|webp|woff|woff2|ico|otf)$",
       "headers": {
         "Cache-Control": "max-age=864000, s-maxage=864000"
       },
       "continue": true
     },
     {
-      "src": "^/((?:wp-admin|wp-content|wp-includes)/.+)\\.(css|js|svg|png|gif|jpg|jpeg|webp|woff|woff2|ico|otf)$",
+      "src": "^/((?:wp-admin|wp-includes|wp-content/(?:plugins|themes|mu-plugins))/.+)\\.(css|js|svg|png|gif|jpg|jpeg|webp|woff|woff2|ico|otf)$",
       "dest": "/wp/$1.$2"
     },
     {

@@ -122,10 +122,40 @@ class StreamWrapperTest extends TestCase
 
     public function testMkdirSetsStatCacheDirectory(): void
     {
-        mkdir(self::UPLOADS . '/2024', 0755, true);
+        $this->assertTrue(mkdir(self::UPLOADS . '/2024', 0755, true));
         $stat = StatCache::get('uploads/2024');
         $this->assertNotNull($stat);
         $this->assertSame('dir', $stat['type']);
+    }
+
+    public function testMkdirDoesNotPersistTrailingSlashMarker(): void
+    {
+        // Directories are implicit in object storage, so mkdir must not write a
+        // trailing-slash "marker" blob — Vercel Blob rejects such a PUT, which
+        // is what surfaced as "Unable to create directory ..." on upload.
+        mkdir(self::UPLOADS . '/2024/08', 0755, true);
+
+        foreach ($this->adapter->putLog() as $entry) {
+            $this->assertStringEndsNotWith('/', $entry['key'], 'mkdir must not PUT a trailing-slash key.');
+        }
+        $this->assertSame([], $this->adapter->keys(), 'mkdir must not create any blob.');
+    }
+
+    public function testMkdirSucceedsWhenBackendRejectsTrailingSlashKeys(): void
+    {
+        // Reproduces the Vercel Blob upload failure: wp_mkdir_p() calls
+        // mkdir(..., recursive) before writing an attachment. If mkdir returns
+        // false, WordPress aborts with "Unable to create directory ...".
+        $this->adapter->rejectTrailingSlashKeys();
+
+        $this->assertTrue(
+            mkdir(self::UPLOADS . '/2026/08', 0755, true),
+            'mkdir must succeed even when the backend refuses trailing-slash keys.',
+        );
+
+        // And the directory is usable: writing a file underneath it works.
+        file_put_contents(self::UPLOADS . '/2026/08/photo.jpg', 'jpg');
+        $this->assertSame('jpg', $this->adapter->getContent('uploads/2026/08/photo.jpg'));
     }
 
     public function testRmdirRefusesNonEmptyDirectory(): void
@@ -150,16 +180,17 @@ class StreamWrapperTest extends TestCase
     public function testRmdirRemovesEmptyDirectory(): void
     {
         mkdir(self::UPLOADS . '/2024', 0755, true);
-        $this->assertTrue($this->adapter->exists('uploads/2024/'));
 
         $this->assertTrue(rmdir(self::UPLOADS . '/2024'));
-        $this->assertFalse($this->adapter->exists('uploads/2024/'));
         $this->assertNull(StatCache::get('uploads/2024'));
     }
 
     public function testRmdirReportsFailureWhenMarkerDeleteFails(): void
     {
-        mkdir(self::UPLOADS . '/2024', 0755, true);
+        // A legacy trailing-slash marker (as an existing S3 store may hold) that
+        // cannot be deleted must make rmdir report failure rather than claim the
+        // directory is gone.
+        $this->adapter->seed('uploads/2024/', '');
         $this->adapter->failOnDelete('uploads/2024/');
 
         $this->assertFalse(@rmdir(self::UPLOADS . '/2024'));
@@ -620,11 +651,15 @@ class StreamWrapperTest extends TestCase
         $this->assertFalse(is_dir(self::UPLOADS . '/nope'));
     }
 
-    public function testMkdirPersistsAcrossStatCacheFlush(): void
+    public function testDirectoryVisibleAcrossStatCacheFlushOnceItHasContent(): void
     {
+        // Object storage has no standalone empty directories: a directory is
+        // observable across requests (a StatCache flush) precisely because a key
+        // lives under it. This is the real persistence mechanism, and it works
+        // on every backend — including Vercel Blob, which cannot store the
+        // trailing-slash marker the old design relied on.
         mkdir(self::UPLOADS . '/2027', 0755, true);
-
-        $this->assertContains('uploads/2027/', $this->adapter->keys());
+        file_put_contents(self::UPLOADS . '/2027/photo.jpg', 'jpg');
 
         StatCache::flush();
         $this->assertTrue(is_dir(self::UPLOADS . '/2027'));
