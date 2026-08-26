@@ -9,4 +9,4 @@ if ( defined( 'SQLITE_DRIVER_VERSION' ) ) {
  *
  * This constant needs to be updated on plugin release!
  */
-define( 'SQLITE_DRIVER_VERSION', '3.0.0' );
+define( 'SQLITE_DRIVER_VERSION', '3.0.1' );
