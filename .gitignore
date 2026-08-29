@@ -1,6 +1,12 @@
 node_modules/
-package-lock.json
 .serverless
 test/auth.json
 test/screenshots/
 test/test-results/
+# Bundled upstream theme build metadata is not used by this project.
+wp/wp-content/themes/twentytwentyfive/package-lock.json
+# Tarball packed by build-test.sh when SERVERLESSWP_LOCAL is set.
+test/local-pkg/*.tgz
+# Claude Code project memory and instructions.
+memory/
+CLAUDE.md

@@ -1,14 +1,12 @@
 <?php
 /**
  * Plugin Name: SQLite integration (Drop-in)
- * Version: 1.0.0
+ * Version: 1.8.0
  * Author: WordPress Performance Team
  * Author URI: https://make.wordpress.org/performance/
  *
  * This file is auto-generated and copied from the sqlite plugin.
  * Please don't edit this file directly.
- *
- * @package wp-sqlite-integration
  */
 
 define( 'SQLITE_DB_DROPIN_VERSION', '1.8.0' );
@@ -24,10 +22,15 @@ if ( ! $sqlite_plugin_implementation_folder_path || ! file_exists( $sqlite_plugi
 	return;
 }
 
-// Constant for backward compatibility.
+/**
+ * Legacy database type marker.
+ *
+ * @deprecated 3.0.0 Use DB_ENGINE instead.
+ */
 if ( ! defined( 'DATABASE_TYPE' ) ) {
 	define( 'DATABASE_TYPE', 'sqlite' );
 }
+
 // Define SQLite constant.
 if ( ! defined( 'DB_ENGINE' ) ) {
 	define( 'DB_ENGINE', 'sqlite' );
@@ -36,7 +39,7 @@ if ( ! defined( 'DB_ENGINE' ) ) {
 // Require the implementation from the plugin.
 require_once $sqlite_plugin_implementation_folder_path . '/wp-includes/sqlite/db.php';
 
-// Activate the performance-lab plugin if it is not already activated.
+// Activate the SQLite Database Integration plugin if it is not already activated.
 add_action(
 	'admin_footer',
 	function() {

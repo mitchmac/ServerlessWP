@@ -85,7 +85,7 @@ content_type=${static_check#* }
 [[ "$content_type" == *"text/css"* ]] || { echo "Static file content-type FAILED: expected text/css, got $content_type"; exit 1; }
 echo "Static file test passed."
 
-npm install
+npm ci
 npx playwright install chromium
 ldconfig -p | grep -q libnspr4 || sudo env PATH="$PATH" node_modules/.bin/playwright install-deps chromium
 SCREENSHOTS=${SCREENSHOTS:-} npx playwright test e2e.spec.js "$@"

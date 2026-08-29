@@ -5,8 +5,6 @@
  * Implementation follows the Symfony polyfill-php80 package.
  *
  * @see https://github.com/symfony/polyfill-php80
- *
- * @package wp-sqlite-integration
  */
 
 if ( ! function_exists( 'str_starts_with' ) ) {

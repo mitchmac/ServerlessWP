@@ -58,6 +58,7 @@ function makeMockBlobStore({ initialBody = null, etagOnDownload = true } = {}) {
         etag: '"etag-1"',
         getCalls: 0,
         putCalls: 0,
+        putOptions: [],
     };
     const api = {
         async get(pathname, options = {}) {
@@ -81,7 +82,11 @@ function makeMockBlobStore({ initialBody = null, etagOnDownload = true } = {}) {
         },
         async put(pathname, body, options = {}) {
             state.putCalls++;
+            state.putOptions.push(options);
             if (options.ifMatch && options.ifMatch !== state.etag) {
+                throw new BlobPreconditionFailedError();
+            }
+            if (options.allowOverwrite === false && state.body != null) {
                 throw new BlobPreconditionFailedError();
             }
             state.body = Buffer.from(body);
@@ -169,6 +174,28 @@ test('a missing blob is a new site and still gets saved', async () => {
     const result = await sqliteVercelBlob.postRequest(event, {});
     assert.strictEqual(result, undefined, 'the request succeeds');
     assert.strictEqual(state.putCalls, 1, 'the new database was saved');
+    assert.strictEqual(state.putOptions[0].allowOverwrite, false, 'the first save is create-only');
+});
+
+test('concurrent first creates preserve the blob that wins', async () => {
+    const { api, state } = makeMockBlobStore({ initialBody: null });
+    sqliteVercelBlob._setBlobForTests(api);
+    sqliteVercelBlob.config({ pathname: 'wp-sqlite-test.sqlite' });
+
+    const a = {}, b = {};
+    await sqliteVercelBlob.preRequest(a);
+    await sqliteVercelBlob.preRequest(b);
+    await fs.writeFile(a[CTX_KEY].workingPath, await buildDbBytes('winner'));
+    await fs.writeFile(b[CTX_KEY].workingPath, await buildDbBytes('loser'));
+
+    assert.strictEqual(await sqliteVercelBlob.postRequest(a, {}), undefined);
+    const winningBody = Buffer.from(state.body);
+    const result = await sqliteVercelBlob.postRequest(b, {});
+
+    assert.strictEqual(result.statusCode, 500, 'the losing create fails closed');
+    assert.strictEqual(result.retry, undefined, 'an installation request is not replayed automatically');
+    assert.deepStrictEqual(state.body, winningBody, 'the winner is not overwritten');
+    assert.deepStrictEqual(state.putOptions.map(options => options.allowOverwrite), [false, false]);
 });
 
 test('an unknown starting version refuses to write instead of clobbering', async () => {
@@ -191,4 +218,40 @@ test('an unknown starting version refuses to write instead of clobbering', async
     assert.strictEqual(result.statusCode, 500);
     assert.strictEqual(result.retry, true);
     assert.strictEqual(state.putCalls, 0, 'nothing was written to the store');
+});
+
+test('a data_version failure returns an error instead of the WordPress success response', async () => {
+    const { api, state } = makeMockBlobStore({ initialBody: await buildDbBytes('seed') });
+    sqliteVercelBlob._setBlobForTests(api);
+    sqliteVercelBlob.config({ pathname: 'wp-sqlite-test.sqlite' });
+
+    const event = {};
+    await sqliteVercelBlob.preRequest(event);
+    const ctx = event[CTX_KEY];
+    await insertRow(ctx.workingPath, 'not-persisted');
+
+    await new Promise((resolve, reject) => {
+        ctx.db.close((err) => err ? reject(err) : resolve());
+    });
+
+    const result = await sqliteVercelBlob.postRequest(event, { statusCode: 200, body: 'saved' });
+    assert.strictEqual(result.statusCode, 500);
+    assert.strictEqual(result.headers['cache-control'], 'no-store');
+    assert.match(result.body, /check your function logs for more information/i);
+    assert.strictEqual(state.putCalls, 0, 'the uncertain database is not uploaded');
+});
+
+test('a missing working file returns an error instead of the WordPress success response', async () => {
+    const { api, state } = makeMockBlobStore({ initialBody: await buildDbBytes('seed') });
+    sqliteVercelBlob._setBlobForTests(api);
+    sqliteVercelBlob.config({ pathname: 'wp-sqlite-test.sqlite' });
+
+    const event = {};
+    await sqliteVercelBlob.preRequest(event);
+    await fs.unlink(event[CTX_KEY].workingPath);
+
+    const result = await sqliteVercelBlob.postRequest(event, { statusCode: 200, body: 'saved' });
+    assert.strictEqual(result.statusCode, 500);
+    assert.match(result.body, /check your function logs for more information/i);
+    assert.strictEqual(state.putCalls, 0, 'nothing is uploaded when the working file disappeared');
 });

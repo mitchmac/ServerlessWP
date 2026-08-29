@@ -16,7 +16,7 @@ exports.name = 'ServerlessWP sqlite s3';
 exports.config = function(config) {
     _config = config;
     if (config.S3Client) {
-        // Cloudflare workaround for https://www.cloudflarestatus.com/incidents/t5nrjmpxc1cj
+        // Cloudflare R2 rejects optional SDK checksums.
         if (config.S3Client.endpoint && config.S3Client.endpoint.includes('cloudflarestorage.com')) {
             config.S3Client.requestChecksumCalculation = "WHEN_REQUIRED";
             config.S3Client.responseChecksumValidation = "WHEN_REQUIRED";
@@ -25,8 +25,6 @@ exports.config = function(config) {
     }
 }
 
-// Test-only: inject a mock S3 client without going through the real
-// S3Client constructor.
 exports._setClientForTests = function(mockClient, config) {
     client = mockClient;
     _config = config;
@@ -48,22 +46,11 @@ exports.preRequest = async function(event) {
         workingPath: '/tmp/' + workingFileName,
         db: null,
         dataVersion: null,
-        // The S3 object version this request's working copy came from. Bound
-        // here, per request, because the shared etag file moves under
-        // concurrent requests: reading it again at write time would let a
-        // request whose copy predates another's committed write pass its
-        // IfMatch and silently revert that write.
         etag: null,
-        // Set when the read established the object doesn't exist. Only then
-        // may postRequest write without IfMatch.
         blobMissing: false,
     };
     event[CONTEXT_KEY] = ctx;
 
-    // Tell PHP (wp-config.php) which DB file to open for this request.
-    // Strip any inbound variant first so a client can't point WP at the
-    // cache file or another request's working file. wp-config.php also
-    // passes the value through basename() defensively.
     if (!event.headers) event.headers = {};
     for (const k of Object.keys(event.headers)) {
         if (k.toLowerCase() === 'x-serverlesswp-sqlite-file') {
@@ -79,8 +66,7 @@ exports.preRequest = async function(event) {
         Key: _config.file
     }
 
-    // Only send IfNoneMatch if we actually have the cache file locally.
-    // Otherwise a 304 leaves us with no file to copy.
+    // A 304 is usable only when its body is cached.
     if (cachedEtag && await exists(CACHE_FILE)) {
         getCommandParams.IfNoneMatch = cachedEtag;
     }
@@ -91,8 +77,6 @@ exports.preRequest = async function(event) {
         const response = await client.send(get);
 
         if (response) {
-            // Write to a tmp path then atomically rename into place.
-            // Existing open fds against the old inode keep working.
             const tmp = CACHE_FILE + '.' + randomUUID() + '.tmp';
             await fs.writeFile(tmp, response.Body);
             await fs.rename(tmp, CACHE_FILE);
@@ -100,15 +84,12 @@ exports.preRequest = async function(event) {
             ctx.etag = response.ETag;
         }
         else {
-            // @TODO: if it doesn't exist, behave like it's a new site?
             console.log('db file not found');
             ctx.blobMissing = true;
         }
     }
     catch (err) {
         if (err.$metadata && err.$metadata.httpStatusCode === 304) {
-            // Cache is up to date; fall through to copy below. The 304 was
-            // earned by IfNoneMatch, so cachedEtag is the version we hold.
             ctx.etag = cachedEtag;
         }
         else if (err.$metadata?.httpStatusCode === 403) {
@@ -122,21 +103,16 @@ exports.preRequest = async function(event) {
             return;
         }
         else if (err.name === 'NoSuchKey' || err.$metadata?.httpStatusCode === 404) {
-            // Handle case where the file doesn't exist on S3
             console.log('Database file not found on server');
             ctx.blobMissing = true;
             return;
         }
         else {
-            // Handle other errors
             console.error('Error fetching database:', err);
             return readError();
         }
     }
 
-    // If we have a cache file (from this request or a previous one), copy it
-    // to a per-invocation working file and open SQLite against that copy.
-    // This isolates concurrent requests on the same warm instance.
     if (await exists(CACHE_FILE)) {
         await fs.copyFile(CACHE_FILE, ctx.workingPath);
         ctx.db = new sqlite3.Database(ctx.workingPath);
@@ -151,35 +127,23 @@ exports.postRequest = async function(event, response) {
     }
 
     try {
-        // If db wasn't initialized but the working file somehow exists, treat
-        // it as a new database (e.g. fresh install path).
         const workingExists = await exists(ctx.workingPath);
+        if (!workingExists) {
+            console.error('Database persistence failed: the per-request SQLite working file is missing.');
+            return persistenceError();
+        }
         if (!ctx.db) {
-            if (workingExists) {
-                ctx.db = new sqlite3.Database(ctx.workingPath);
-                ctx.dataVersion = null;
-            } else {
-                return;
-            }
+            ctx.db = new sqlite3.Database(ctx.workingPath);
+            ctx.dataVersion = null;
         }
 
         let versionNow = await getDataVersion(ctx.db);
 
-        // See if the db has been mutated, if so, send the changes to s3
         const readOnly = process.env['SERVERLESSWP_READ_ONLY_MODE'] && !['false', '0', 'no'].includes(process.env['SERVERLESSWP_READ_ONLY_MODE'].toLowerCase());
         if (!readOnly && ctx.dataVersion !== versionNow && workingExists) {
-            // The object exists but we don't know which version the working
-            // copy came from (e.g. the read failed over to the auth flow).
-            // Writing anyway would be unconditional and could overwrite
-            // another instance's committed changes - fail and let the retry
-            // re-fetch.
             if (!ctx.etag && !ctx.blobMissing) {
                 console.log('Refusing to save database without a bound ETag.');
-                return {
-                    statusCode: 500,
-                    body: 'Database error. This can happen when simultaneous database updates happen. Re-try your request.',
-                    retry: true,
-                };
+                return persistenceError(true);
             }
 
             try {
@@ -187,9 +151,7 @@ exports.postRequest = async function(event, response) {
                 ctx.db = null;
 
                 const sqliteContent = await fs.readFile(ctx.workingPath);
-                // The version this request started from, captured in
-                // preRequest - never the shared etag file, which a concurrent
-                // request may have advanced since.
+                // Bind the write to this request's source version.
                 let currentEtag = ctx.etag;
 
                 let putCommandParams = {
@@ -201,14 +163,13 @@ exports.postRequest = async function(event, response) {
                 if (currentEtag) {
                     putCommandParams.IfMatch = currentEtag;
                 }
+                else if (ctx.blobMissing) {
+                    putCommandParams.IfNoneMatch = '*';
+                }
                 const command = new PutObjectCommand(putCommandParams);
 
                 const putResponse = await client.send(command);
 
-                // Refresh the local cache before writing the ETag so etag.txt
-                // never describes content newer than CACHE_FILE. If the copy
-                // fails, the old ETag stays on disk and the next request's
-                // IfNoneMatch will miss, triggering a clean re-fetch from S3.
                 const tmp = CACHE_FILE + '.' + randomUUID() + '.tmp';
                 await fs.copyFile(ctx.workingPath, tmp);
                 await fs.rename(tmp, CACHE_FILE);
@@ -217,37 +178,36 @@ exports.postRequest = async function(event, response) {
             }
             catch (err) {
                 console.log(err);
-                let errResponse = {
-                    statusCode: 500,
-                    body: 'Database error. This can happen when simultaneous database updates happen. Re-try your request.'
-                }
-                if (err.$metadata && err.$metadata.httpStatusCode === 412) {
-                   errResponse.retry = true;
-                   console.log('Retrying database save to s3 because of a conflicting update.');
+                let errResponse = persistenceError();
+                const statusCode = err.$metadata?.httpStatusCode;
+                if (statusCode === 412 || (ctx.blobMissing && statusCode === 409)) {
+                    if (ctx.blobMissing) {
+                        console.log('Database creation was rejected because another request created it first.');
+                    }
+                    else {
+                        errResponse.retry = true;
+                        console.log('Retrying database save to s3 because of a conflicting update.');
+                    }
                 }
                 return errResponse;
             }
         }
     }
     catch (err) {
-        console.log(err);
+        console.error('Unexpected database persistence error:', err);
+        return persistenceError();
     }
     finally {
         if (ctx.db) {
-            try { await dbClose(ctx.db); } catch (e) { /* swallow */ }
+            try { await dbClose(ctx.db); } catch (e) { }
             ctx.db = null;
         }
-        try { await fs.unlink(ctx.workingPath); } catch (e) { /* file may not exist */ }
+        try { await fs.unlink(ctx.workingPath); } catch (e) { }
         delete event[CONTEXT_KEY];
     }
 }
 
-// Fail the request when the database can't be read. A missing key is a new site
-// and returns above, so this is only reached when the read itself failed.
-// Letting the request through would hand WordPress an empty database, and
-// postRequest would then save that over the real one. _forceResponse stops the
-// plugin chain, otherwise a later plugin returning nothing would drop this
-// response and WordPress would run anyway.
+// Never continue with an unknown database state.
 function readError() {
     return {
         statusCode: 500,
@@ -255,6 +215,18 @@ function readError() {
         body: 'Database error. The database could not be read. Re-try your request.',
         _forceResponse: true,
     };
+}
+
+function persistenceError(retry = false) {
+    const response = {
+        statusCode: 500,
+        headers: { 'content-type': 'text/plain', 'cache-control': 'no-store' },
+        body: 'Database persistence failed. Your changes may not have been saved. If this is your site, check your function logs for more information.',
+    };
+    if (retry) {
+        response.retry = true;
+    }
+    return response;
 }
 
 async function getEtag() {
@@ -311,12 +283,13 @@ async function exists(path) {
       await fs.access(path);
       return true;
     } catch (error) {
-      return false;
+      if (error?.code === 'ENOENT') {
+        return false;
+      }
+      throw error;
     }
 }
 
-// Put the sqlite db class in place if not already there.
-// Paths should reference where they've been setup in /tmp
 exports.prepPlugin = async function (wpContentPath, sqlitePluginPath) {
     if (!init) {
         try {

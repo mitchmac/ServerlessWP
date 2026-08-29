@@ -1374,6 +1374,32 @@ class WP_REST_Server {
 			'routes'          => $this->get_data_for_routes( $this->get_routes(), $request['context'] ),
 		);
 
+		// Add media processing settings for users who can upload files.
+		if ( wp_is_client_side_media_processing_enabled() && current_user_can( 'upload_files' ) ) {
+			// Image sizes keyed by name for client-side media processing.
+			$available['image_sizes'] = array();
+			foreach ( wp_get_registered_image_subsizes() as $name => $size ) {
+				$available['image_sizes'][ $name ] = $size;
+			}
+
+			/** This filter is documented in wp-admin/includes/image.php */
+			$available['image_size_threshold'] = (int) apply_filters( 'big_image_size_threshold', 2560, array( 0, 0 ), '', 0 );
+
+			/** This filter is documented in wp-includes/class-wp-image-editor-imagick.php */
+			$available['image_strip_meta'] = (bool) apply_filters( 'image_strip_meta', true );
+
+			/*
+			 * On the server, this filter receives the decoded image's actual bit depth.
+			 * The client path never decodes the image on the server, so the filter is
+			 * applied with 16 (the maximum depth the client encoder can produce) as
+			 * both the value and the current depth. The client caps its output bit
+			 * depth at the filtered value, so a plugin lowering it (e.g. to 8) takes
+			 * effect on client-generated images too.
+			 */
+			/** This filter is documented in wp-includes/class-wp-image-editor-imagick.php */
+			$available['image_max_bit_depth'] = (int) apply_filters( 'image_max_bit_depth', 16, 16 );
+		}
+
 		$response = new WP_REST_Response( $available );
 
 		$fields = $request['_fields'] ?? '';
@@ -1627,7 +1653,7 @@ class WP_REST_Server {
 			}
 		}
 
-		$allowed_schema_keywords = array_flip( rest_get_allowed_schema_keywords() );
+		$allowed_schema_keywords = array_flip( wp_get_json_schema_allowed_keywords( 'rest-api' ) );
 
 		$route = preg_replace( '#\(\?P<(\w+?)>.*?\)#', '{$1}', $route );
 
@@ -1974,7 +2000,7 @@ class WP_REST_Server {
 			} elseif ( 'REDIRECT_HTTP_AUTHORIZATION' === $key && empty( $server['HTTP_AUTHORIZATION'] ) ) {
 				/*
 				 * In some server configurations, the authorization header is passed in this alternate location.
-				 * Since it would not be passed in in both places we do not check for both headers and resolve.
+				 * Since it would not be passed in both places we do not check for both headers and resolve.
 				 */
 				$headers['AUTHORIZATION'] = $value;
 			} elseif ( isset( $additional[ $key ] ) ) {

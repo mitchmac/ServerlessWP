@@ -13,6 +13,8 @@
  *
  * Adding a public method here is enough to plumb a new public method
  * through to the native parser; the using class does not need touching.
+ *
+ * @access private
  */
 trait WP_MySQL_Native_Parser_Impl {
 	/**

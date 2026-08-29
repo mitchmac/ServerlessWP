@@ -7,6 +7,8 @@
  * In a parse tree, a token represent a leaf, that is, a node without children.
  * It is a simple generic container for a token ID and value, that can be used
  * as a base class and extended for specific use cases.
+ *
+ * @access private
  */
 class WP_Parser_Token {
 	/**

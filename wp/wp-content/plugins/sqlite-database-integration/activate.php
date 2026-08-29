@@ -1,23 +1,23 @@
 <?php
 /**
  * Handle the SQLite activation.
- *
- * @since 1.0.0
- * @package wp-sqlite-integration
  */
 
 /**
  * Redirect to the plugin's admin screen on activation.
  *
- * @since 1.0.0
- *
  * @param string $plugin The plugin basename.
  */
 function sqlite_plugin_activation_redirect( $plugin ) {
-	if ( plugin_basename( SQLITE_MAIN_FILE ) === $plugin ) {
-		if ( wp_safe_redirect( admin_url( 'options-general.php?page=sqlite-integration' ) ) ) {
-			exit;
-		}
+	if (
+		plugin_basename( SQLITE_MAIN_FILE ) !== $plugin
+		|| ! current_user_can( sqlite_plugin_get_manage_capability() )
+	) {
+		return;
+	}
+
+	if ( wp_safe_redirect( sqlite_plugin_get_admin_page_url() ) ) {
+		exit;
 	}
 }
 add_action( 'activated_plugin', 'sqlite_plugin_activation_redirect' );
@@ -25,36 +25,32 @@ add_action( 'activated_plugin', 'sqlite_plugin_activation_redirect' );
 /**
  * Check the URL to ensure we're on the plugin page,
  * the user has clicked the button to install SQLite,
- * and the nonce is valid.
+ * the user has permission to manage the database drop-in, and the nonce is valid.
  * If the above conditions are met, run the sqlite_plugin_copy_db_file() function,
  * and redirect to the install screen.
- *
- * @since 1.0.0
  */
 function sqlite_activation() {
-	global $current_screen;
-	if ( isset( $current_screen->base ) && 'settings_page_sqlite-integration' === $current_screen->base ) {
+	if (
+		! isset( $_GET['page'], $_GET['confirm-install'] )
+		|| 'sqlite-integration' !== $_GET['page']
+	) {
 		return;
 	}
-	if ( isset( $_GET['confirm-install'] ) && wp_verify_nonce( $_GET['_wpnonce'], 'sqlite-install' ) ) {
 
-		// Handle upgrading from the performance-lab plugin.
-		if ( isset( $_GET['upgrade-from-pl'] ) ) {
-			global $wp_filesystem;
-			require_once ABSPATH . '/wp-admin/includes/file.php';
-			// Delete the previous db.php file.
-			$wp_filesystem->delete( WP_CONTENT_DIR . '/db.php' );
-			// Deactivate the performance-lab SQLite module.
-			$pl_option_name = defined( 'PERFLAB_MODULES_SETTING' ) ? PERFLAB_MODULES_SETTING : 'perflab_modules_settings';
-			$pl_option      = get_option( $pl_option_name, array() );
-			unset( $pl_option['database/sqlite'] );
-			update_option( $pl_option_name, $pl_option );
-		}
-		sqlite_plugin_copy_db_file();
-		// WordPress will automatically redirect to the install screen here.
-		wp_redirect( admin_url() );
-		exit;
+	if ( ! current_user_can( sqlite_plugin_get_manage_capability() ) ) {
+		wp_die(
+			esc_html__( 'Sorry, you are not allowed to install the SQLite database drop-in.', 'sqlite-database-integration' ),
+			403
+		);
 	}
+
+	check_admin_referer( 'sqlite-install' );
+
+	sqlite_plugin_copy_db_file();
+
+	// WordPress will automatically redirect to the install screen here.
+	wp_redirect( admin_url() );
+	exit;
 }
 add_action( 'admin_init', 'sqlite_activation' );
 
@@ -75,7 +71,7 @@ add_filter(
  * When the plugin gets merged in wp-core, this is not to be ported.
  */
 function sqlite_plugin_copy_db_file() {
-	// Bail early if the PDO SQLite extension is not loaded.
+	// Bail early if the pdo_sqlite extension is not loaded.
 	if ( ! extension_loaded( 'pdo_sqlite' ) ) {
 		return;
 	}

@@ -8,6 +8,8 @@
  * representation, and precomputes a lookup table for quick branch selection.
  *
  * @TODO: Add more details about the grammar implementation.
+ *
+ * @access private
  */
 class WP_Parser_Grammar {
 	/**

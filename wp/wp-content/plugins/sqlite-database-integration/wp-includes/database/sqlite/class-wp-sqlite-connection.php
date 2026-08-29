@@ -12,6 +12,8 @@
  * It requires PDO with the SQLite driver, and currently, it is only a simple
  * wrapper that leaks some of the PDO APIs (returns PDOStatement values, etc.).
  * In the future, we may abstract it away from PDO and support SQLite3 as well.
+ *
+ * @access private
  */
 class WP_SQLite_Connection {
 	/**
@@ -57,9 +59,9 @@ class WP_SQLite_Connection {
 	/**
 	 * A query logger callback.
 	 *
-	 * @var callable(string, array): void
+	 * @var (callable(string, array): void)|null
 	 */
-	private $query_logger;
+	private $query_logger = null;
 
 	/**
 	 * Constructor.
@@ -79,6 +81,7 @@ class WP_SQLite_Connection {
 	 *     @type string|null     $journal_mode Optional. SQLite journal mode. Defaults to WAL.
 	 *     @type string|int|null $synchronous  Optional. SQLite synchronous setting. Defaults to
 	 *                                         NORMAL when the effective journal mode is WAL.
+	 *     @type array           $pdo_options  Optional. PDO constructor options.
 	 * }
 	 *
 	 * @throws InvalidArgumentException When some connection options are invalid.
@@ -90,10 +93,15 @@ class WP_SQLite_Connection {
 			$this->pdo = $options['pdo'];
 		} else {
 			if ( ! isset( $options['path'] ) || ! is_string( $options['path'] ) ) {
-				throw new InvalidArgumentException( 'Option "path" is required when "connection" is not provided.' );
+				throw new InvalidArgumentException( 'Option "path" is required when "pdo" is not provided.' );
 			}
-			$pdo_class = PHP_VERSION_ID >= 80400 ? PDO\SQLite::class : PDO::class;
-			$this->pdo = new $pdo_class( 'sqlite:' . $options['path'] );
+			$pdo_class   = PHP_VERSION_ID >= 80400 ? Pdo\Sqlite::class : PDO::class;
+			$pdo_options = $options['pdo_options'] ?? array();
+
+			// Internal driver operations require exceptions regardless of the
+			// caller-visible WP_MySQL_On_SQLite::ATTR_ERRMODE setting.
+			$pdo_options[ PDO::ATTR_ERRMODE ] = PDO::ERRMODE_EXCEPTION;
+			$this->pdo                        = new $pdo_class( 'sqlite:' . $options['path'], null, null, $pdo_options );
 		}
 
 		// Throw exceptions on error.
@@ -140,7 +148,7 @@ class WP_SQLite_Connection {
 		 *
 		 *   The synchronous=NORMAL setting provides the best balance between
 		 *   performance and safety for most applications running in WAL mode.
-		 *   You lose durability across power lose with synchronous NORMAL in WAL
+		 *   You lose durability across power loss with synchronous NORMAL in WAL
 		 *   mode, but that is not important for most applications. Transactions
 		 *   are still atomic, consistent, and isolated, which are the most
 		 *   important characteristics in most use cases.
@@ -274,11 +282,11 @@ class WP_SQLite_Connection {
 	}
 
 	/**
-	 * Set a logger for the queries.
+	 * Set or clear a logger for SQLite queries.
 	 *
-	 * @param callable(string, array): void $logger A query logger callback.
+	 * @param (callable(string, array): void)|null $logger A query logger callback, or null to clear it.
 	 */
-	public function set_query_logger( callable $logger ): void {
+	public function set_query_logger( ?callable $logger ): void {
 		$this->query_logger = $logger;
 	}
 }

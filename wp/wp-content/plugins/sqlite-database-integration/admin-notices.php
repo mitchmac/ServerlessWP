@@ -1,9 +1,6 @@
 <?php
 /**
  * Functions to add admin notices if necessary.
- *
- * @since 1.0.0
- * @package wp-sqlite-integration
  */
 
 /**
@@ -12,6 +9,9 @@
  * When the plugin gets merged in wp-core, this is not to be ported.
  */
 function sqlite_plugin_admin_notice() {
+	if ( ! current_user_can( sqlite_plugin_get_manage_capability() ) ) {
+		return;
+	}
 
 	// Don't print notices in the plugin's admin screen.
 	global $current_screen;
@@ -19,11 +19,11 @@ function sqlite_plugin_admin_notice() {
 		return;
 	}
 
-	// If PDO SQLite is not loaded, bail early.
+	// Bail early if the pdo_sqlite extension is not loaded.
 	if ( ! extension_loaded( 'pdo_sqlite' ) ) {
 		printf(
 			'<div class="notice notice-error"><p>%s</p></div>',
-			esc_html__( 'The SQLite Integration plugin is active, but the PDO SQLite extension is missing from your server. Please make sure that PDO SQLite is enabled in your PHP installation.', 'sqlite-database-integration' )
+			esc_html__( 'The SQLite Integration plugin is active, but the pdo_sqlite extension is missing from your server. Please make sure that pdo_sqlite is enabled in your PHP installation.', 'sqlite-database-integration' )
 		);
 		return;
 	}
@@ -66,11 +66,8 @@ function sqlite_plugin_admin_notice() {
 			/* translators: 1: db.php drop-in path, 2: Admin URL to deactivate the module */
 			__( 'The SQLite Integration plugin is active, but the %1$s file is missing. Please <a href="%2$s">deactivate the plugin</a> and re-activate it to try again.', 'sqlite-database-integration' ),
 			'<code>' . esc_html( basename( WP_CONTENT_DIR ) ) . '/db.php</code>',
-			esc_url( admin_url( 'plugins.php' ) )
+			esc_url( self_admin_url( 'plugins.php' ) )
 		)
 	);
 }
-add_action( 'admin_notices', 'sqlite_plugin_admin_notice' ); // Add the admin notices.
-
-// Remove the PL-plugin admin notices for SQLite.
-remove_action( 'admin_notices', 'perflab_sqlite_plugin_admin_notice' );
+add_action( is_multisite() ? 'network_admin_notices' : 'admin_notices', 'sqlite_plugin_admin_notice' ); // Add the admin notices.

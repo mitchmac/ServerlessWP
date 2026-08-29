@@ -9,6 +9,8 @@
  * The configurator ensures that tables required for emulating MySQL behaviors
  * are created and populated with necessary data. It is also able to partially
  * repair and update these tables and metadata in case of database corruption.
+ *
+ * @access private
  */
 class WP_SQLite_Configurator {
 	/**

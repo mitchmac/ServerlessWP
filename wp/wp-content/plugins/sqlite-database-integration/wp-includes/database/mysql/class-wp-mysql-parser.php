@@ -1,5 +1,10 @@
 <?php
 
+/**
+ * MySQL parser used by the SQLite driver.
+ *
+ * @access private
+ */
 class WP_MySQL_Parser extends WP_Parser {
 	/**
 	 * The current query AST.

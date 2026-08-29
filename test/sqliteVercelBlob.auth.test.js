@@ -95,10 +95,12 @@ async function roundTrip(config, headers = {}) {
 test.beforeEach(async () => {
     await cleanupTmp();
     delete process.env.VERCEL_OIDC_TOKEN;
+    delete process.env.SERVERLESSWP_STREAM_PROVIDER;
 });
 
 test.afterEach(() => {
     delete process.env.VERCEL_OIDC_TOKEN;
+    delete process.env.SERVERLESSWP_STREAM_PROVIDER;
 });
 
 test('the request header credential reaches both the read and the write', async () => {
@@ -124,6 +126,19 @@ test('the header is matched whatever its casing, and WordPress never sees it', a
 
     const names = Object.keys(event.headers).map(k => k.toLowerCase());
     assert.ok(!names.includes('x-vercel-oidc-token'), 'the store credential is stripped');
+});
+
+test('the header is retained for the PHP prepend when the Vercel stream wrapper is active', async () => {
+    process.env.SERVERLESSWP_STREAM_PROVIDER = 'vercel-blob';
+
+    const { calls, event } = await roundTrip(
+        { pathname: 'wp-sqlite-test.sqlite', storeId: 'store_database' },
+        { 'X-Vercel-OIDC-Token': 'shared.oidc.token' }
+    );
+
+    assert.strictEqual(calls.get[0].oidcToken, 'shared.oidc.token');
+    assert.strictEqual(calls.put[0].oidcToken, 'shared.oidc.token');
+    assert.strictEqual(event.headers['X-Vercel-OIDC-Token'], 'shared.oidc.token');
 });
 
 test('the environment supplies the credential in local development', async () => {

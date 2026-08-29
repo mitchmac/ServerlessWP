@@ -6,14 +6,16 @@
  */
 
 /**
- * SQLite information schema recconstructor for MySQL.
+ * SQLite information schema reconstructor for MySQL.
  *
  * This class checks and reconstructs the MySQL INFORMATION_SCHEMA data in SQLite
  * when it becomes out of sync with the actual SQLite database schema.
  *
- * Currently, it reconstructs schema infromation for missing tables, and removes
+ * Currently, it reconstructs schema information for missing tables, and removes
  * stale data for tables that no longer exist. When used with WordPress, it uses
  * the "wp_get_db_schema()" function to reconstruct WordPress table information.
+ *
+ * @access private
  */
 class WP_SQLite_Information_Schema_Reconstructor {
 	/**
@@ -62,40 +64,41 @@ class WP_SQLite_Information_Schema_Reconstructor {
 		$sqlite_tables             = $this->get_sqlite_table_names();
 		$information_schema_tables = $this->get_information_schema_table_names();
 
+		$tables_missing_from_information_schema = array_diff( $sqlite_tables, $information_schema_tables );
+		$tables_missing_from_sqlite             = array_diff( $information_schema_tables, $sqlite_tables );
+
 		// In WordPress, use "wp_get_db_schema()" to reconstruct WordPress tables.
-		$wp_tables = $this->get_wp_create_table_statements();
+		$wp_tables = count( $tables_missing_from_information_schema ) > 0
+			? $this->get_wp_create_table_statements()
+			: array();
 
 		// Reconstruct information schema records for tables that don't have them.
-		foreach ( $sqlite_tables as $table ) {
-			if ( ! in_array( $table, $information_schema_tables, true ) ) {
-				if ( isset( $wp_tables[ $table ] ) ) {
-					// WordPress core table (as returned by "wp_get_db_schema()").
-					$ast = $wp_tables[ $table ];
-				} else {
-					// Other table (a WordPress plugin or unrelated to WordPress).
-					$sql = $this->generate_create_table_statement( $table );
-					$ast = $this->driver->create_parser( $sql )->parse();
-					if ( null === $ast ) {
-						throw new WP_SQLite_Driver_Exception( $this->driver, 'Failed to parse the MySQL query.' );
-					}
+		foreach ( $tables_missing_from_information_schema as $table ) {
+			if ( isset( $wp_tables[ $table ] ) ) {
+				// WordPress core table (as returned by "wp_get_db_schema()").
+				$ast = $wp_tables[ $table ];
+			} else {
+				// Other table (a WordPress plugin or unrelated to WordPress).
+				$sql = $this->generate_create_table_statement( $table );
+				$ast = $this->driver->create_parser( $sql )->parse();
+				if ( null === $ast ) {
+					throw new WP_MySQL_On_SQLite_Exception( $this->driver, 'Failed to parse the MySQL query.' );
 				}
-
-				/*
-				 * First, let's make sure we clean up all related data. This fixes
-				 * partial data corruption, such as when a table record is missing,
-				 * but some related column, index, or constraint records are stored.
-				 */
-				$this->record_drop_table( $table );
-
-				$this->schema_builder->record_create_table( $ast );
 			}
+
+			/*
+			 * First, let's make sure we clean up all related data. This fixes
+			 * partial data corruption, such as when a table record is missing,
+			 * but some related column, index, or constraint records are stored.
+			 */
+			$this->record_drop_table( $table );
+
+			$this->schema_builder->record_create_table( $ast );
 		}
 
 		// Remove information schema records for tables that don't exist.
-		foreach ( $information_schema_tables as $table ) {
-			if ( ! in_array( $table, $sqlite_tables, true ) ) {
-				$this->record_drop_table( $table );
-			}
+		foreach ( $tables_missing_from_sqlite as $table ) {
+			$this->record_drop_table( $table );
 		}
 	}
 
@@ -111,7 +114,7 @@ class WP_SQLite_Information_Schema_Reconstructor {
 		$sql = sprintf( 'DROP TABLE %s', $this->connection->quote_identifier( $table_name ) ); // TODO: mysql quote
 		$ast = $this->driver->create_parser( $sql )->parse();
 		if ( null === $ast ) {
-			throw new WP_SQLite_Driver_Exception( $this->driver, 'Failed to parse the MySQL query.' );
+			throw new WP_MySQL_On_SQLite_Exception( $this->driver, 'Failed to parse the MySQL query.' );
 		}
 		$this->schema_builder->record_drop_table(
 			$ast->get_first_descendant_node( 'dropStatement' )
@@ -200,31 +203,46 @@ class WP_SQLite_Information_Schema_Reconstructor {
 		 * the "$table_prefix" global so we can get correct table names.
 		 */
 		global $table_prefix;
-		$wpdb->set_prefix( $table_prefix );
+		$set_prefix_result = $wpdb->set_prefix( $table_prefix );
+		if ( $set_prefix_result instanceof WP_Error ) {
+			throw new Exception( $set_prefix_result->get_error_message() );
+		}
 
 		// Get schema for global tables.
 		$schema = wp_get_db_schema( 'global' );
 
-		// For multisite installs, add schema definitions for all sites.
+		// For multisite installs, get all blog IDs.
+		$blog_ids = array();
 		if ( is_multisite() ) {
 			/*
 			 * We need to use a database query over the "get_sites()" function,
-			 * as WPDB may not yet initialized. Moreover, we need to get the IDs
+			 * as WPDB may not yet be initialized. Moreover, we need to get the IDs
 			 * of all existing blogs, independent of any filters and actions that
 			 * could possibly alter the results of a "get_sites()" call.
 			 */
-			$blog_ids = $this->driver->execute_sqlite_query(
-				sprintf(
-					'SELECT blog_id FROM %s',
-					$this->connection->quote_identifier( $wpdb->blogs )
-				)
-			)->fetchAll( PDO::FETCH_COLUMN );
+			try {
+				$blog_ids = $this->driver->execute_sqlite_query(
+					sprintf(
+						'SELECT blog_id FROM %s',
+						$this->connection->quote_identifier( $wpdb->blogs )
+					)
+				)->fetchAll( PDO::FETCH_COLUMN );
+			} catch ( PDOException $e ) {
+				if ( ! str_contains( $e->getMessage(), 'no such table' ) ) {
+					throw $e;
+				}
+			}
+		}
+
+		// Get schema for blog tables.
+		if ( 0 === count( $blog_ids ) ) {
+			// Single site or no blog IDs: Add schema for the main site.
+			$schema .= wp_get_db_schema( 'blog' );
+		} else {
+			// Multisite: Add schema definitions for all sites.
 			foreach ( $blog_ids as $blog_id ) {
 				$schema .= wp_get_db_schema( 'blog', (int) $blog_id );
 			}
-		} else {
-			// For single site installs, add schema for the main site.
-			$schema .= wp_get_db_schema( 'blog' );
 		}
 
 		// Parse the schema.
@@ -233,7 +251,7 @@ class WP_SQLite_Information_Schema_Reconstructor {
 		while ( $parser->next_query() ) {
 			$ast = $parser->get_query_ast();
 			if ( null === $ast ) {
-				throw new WP_SQLite_Driver_Exception( $this->driver, 'Failed to parse the MySQL query.' );
+				throw new WP_MySQL_On_SQLite_Exception( $this->driver, 'Failed to parse the MySQL query.' );
 			}
 
 			$create_node = $ast->get_first_descendant_node( 'createStatement' );
@@ -572,9 +590,11 @@ class WP_SQLite_Information_Schema_Reconstructor {
 		}
 
 		// HEX literals (numeric). E.g.: 0x1a2f, 0X1A2F
-		$value = filter_var( $no_underscore_default_value, FILTER_VALIDATE_INT, FILTER_FLAG_ALLOW_HEX );
-		if ( false !== $value ) {
-			return $value;
+		if ( 1 === preg_match( '/^0[xX][0-9a-fA-F]+$/D', $no_underscore_default_value ) ) {
+			// Convert to signed 64-bit decimal text in SQLite to avoid PHP integer size limits.
+			return (string) $this->connection->query(
+				'SELECT CAST(' . $no_underscore_default_value . ' AS TEXT)'
+			)->fetchColumn();
 		}
 
 		// BLOB literals (string). E.g.: x'1a2f', X'1A2F'
@@ -766,7 +786,7 @@ class WP_SQLite_Information_Schema_Reconstructor {
 	 * See WP_MySQL_On_SQLite::quote_mysql_utf8_string_literal().
 	 *
 	 * TODO: This is a copy of WP_MySQL_On_SQLite::quote_mysql_utf8_string_literal().
-	 *       We may consider extracing it to reusable MySQL helpers.
+	 *       We may consider extracting it to reusable MySQL helpers.
 	 *
 	 * @param  string $utf8_literal The UTF-8 string literal to escape.
 	 * @return string               The escaped string literal.

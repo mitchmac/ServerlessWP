@@ -38,6 +38,8 @@ function makeMockS3({ initialBody, initialEtag = 'etag-1' }) {
         etag: initialEtag,
         getCalls: 0,
         putCalls: 0,
+        putInputs: [],
+        objectExists: initialBody != null,
         // Force the next N PUTs to fail with 412.
         forcePutPreconditionFailures: 0,
         // Force GETs to fail, e.g. { name: 'NoSuchKey' } or { httpStatusCode: 500 }.
@@ -53,6 +55,9 @@ function makeMockS3({ initialBody, initialEtag = 'etag-1' }) {
                     const err = new Error(state.forceGetError.name || 'S3 error');
                     if (state.forceGetError.name) {
                         err.name = state.forceGetError.name;
+                        if (err.name === 'NoSuchKey') {
+                            state.objectExists = false;
+                        }
                     }
                     if (state.forceGetError.httpStatusCode) {
                         err.$metadata = { httpStatusCode: state.forceGetError.httpStatusCode };
@@ -69,6 +74,7 @@ function makeMockS3({ initialBody, initialEtag = 'etag-1' }) {
             if (name === 'PutObjectCommand') {
                 state.putCalls++;
                 const input = command.input;
+                state.putInputs.push(input);
                 if (state.forcePutPreconditionFailures > 0) {
                     state.forcePutPreconditionFailures--;
                     const err = new Error('Precondition Failed');
@@ -80,7 +86,13 @@ function makeMockS3({ initialBody, initialEtag = 'etag-1' }) {
                     err.$metadata = { httpStatusCode: 412 };
                     throw err;
                 }
+                if (input.IfNoneMatch === '*' && state.objectExists) {
+                    const err = new Error('Precondition Failed');
+                    err.$metadata = { httpStatusCode: 412 };
+                    throw err;
+                }
                 state.body = input.Body;
+                state.objectExists = true;
                 state.etag = 'etag-' + (state.putCalls + 1);
                 return { ETag: state.etag };
             }
@@ -275,7 +287,30 @@ test('a missing database is a new site and still gets saved', async () => {
     const result = await sqliteS3.postRequest(event, {});
     assert.strictEqual(result, undefined, 'the request succeeds');
     assert.strictEqual(state.putCalls, 1, 'the new database was saved');
+    assert.strictEqual(state.putInputs[0].IfNoneMatch, '*', 'the first save is create-only');
     assert.deepStrictEqual(state.body, await fs.readFile(CACHE_FILE), 'local cache matches what was saved');
+});
+
+test('concurrent first creates preserve the database that wins', async () => {
+    const { client, state } = makeMockS3({ initialBody: await buildDbBytes('unused') });
+    state.forceGetError = { name: 'NoSuchKey' };
+    sqliteS3._setClientForTests(client, { bucket: 'b', file: 'f' });
+
+    const a = {}, b = {};
+    await sqliteS3.preRequest(a);
+    await sqliteS3.preRequest(b);
+    const ctxKey = Symbol.for('serverlesswp.sqliteS3.context');
+    await fs.writeFile(a[ctxKey].workingPath, await buildDbBytes('winner'));
+    await fs.writeFile(b[ctxKey].workingPath, await buildDbBytes('loser'));
+
+    assert.strictEqual(await sqliteS3.postRequest(a, {}), undefined);
+    const winningBody = Buffer.from(state.body);
+    const result = await sqliteS3.postRequest(b, {});
+
+    assert.strictEqual(result.statusCode, 500, 'the losing create fails closed');
+    assert.strictEqual(result.retry, undefined, 'an installation request is not replayed automatically');
+    assert.deepStrictEqual(state.body, winningBody, 'the winner is not overwritten');
+    assert.deepStrictEqual(state.putInputs.map(input => input.IfNoneMatch), ['*', '*']);
 });
 
 test('module state is not shared between concurrent requests', async () => {
@@ -383,6 +418,45 @@ test('client-supplied X-Serverlesswp-Sqlite-File header is stripped', async () =
     assert.notStrictEqual(value, 'etag.txt');
 
     await sqliteS3.postRequest(event, {});
+});
+
+test('a data_version failure returns an error instead of the WordPress success response', async () => {
+    const body = await buildDbBytes('seed');
+    const { client, state } = makeMockS3({ initialBody: body });
+    sqliteS3._setClientForTests(client, { bucket: 'b', file: 'f' });
+
+    const event = {};
+    await sqliteS3.preRequest(event);
+    const ctx = event[Symbol.for('serverlesswp.sqliteS3.context')];
+    await insertRow(ctx.workingPath, 'not-persisted');
+
+    // A closed handle makes PRAGMA data_version fail, standing in for any
+    // unexpected SQLite error at the change-detection boundary.
+    await new Promise((resolve, reject) => {
+        ctx.db.close((err) => err ? reject(err) : resolve());
+    });
+
+    const result = await sqliteS3.postRequest(event, { statusCode: 200, body: 'saved' });
+    assert.strictEqual(result.statusCode, 500);
+    assert.strictEqual(result.headers['cache-control'], 'no-store');
+    assert.match(result.body, /check your function logs for more information/i);
+    assert.strictEqual(state.putCalls, 0, 'the uncertain database is not uploaded');
+});
+
+test('a missing working file returns an error instead of the WordPress success response', async () => {
+    const body = await buildDbBytes('seed');
+    const { client, state } = makeMockS3({ initialBody: body });
+    sqliteS3._setClientForTests(client, { bucket: 'b', file: 'f' });
+
+    const event = {};
+    await sqliteS3.preRequest(event);
+    const ctx = event[Symbol.for('serverlesswp.sqliteS3.context')];
+    await fs.unlink(ctx.workingPath);
+
+    const result = await sqliteS3.postRequest(event, { statusCode: 200, body: 'saved' });
+    assert.strictEqual(result.statusCode, 500);
+    assert.match(result.body, /check your function logs for more information/i);
+    assert.strictEqual(state.putCalls, 0, 'nothing is uploaded when the working file disappeared');
 });
 
 // The sqliteS3 module imports the real @aws-sdk PutObjectCommand /

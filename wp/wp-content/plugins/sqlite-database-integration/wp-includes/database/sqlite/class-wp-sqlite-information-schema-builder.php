@@ -6,6 +6,8 @@
  * This class builds and maintains MySQL INFORMATION_SCHEMA tables in SQLite.
  * It consumes the AST of MySQL DDL queries and records the schema information
  * in SQLite tables that emulate the MySQL INFORMATION_SCHEMA.
+ *
+ * @access private
  */
 class WP_SQLite_Information_Schema_Builder {
 	/**
@@ -1505,7 +1507,7 @@ class WP_SQLite_Information_Schema_Builder {
 	private function extract_column_data( string $table_name, string $column_name, WP_Parser_Node $node, int $position ): array {
 		list ( $data_type, $column_type ) = $this->get_column_data_types( $node );
 
-		$default  = $this->get_column_default( $node, $data_type );
+		$default  = $this->get_column_default( $node, $data_type, $column_name );
 		$nullable = $this->get_column_nullable( $node );
 		$key      = $this->get_column_key( $node );
 		$extra    = $this->get_column_extra( $node );
@@ -2041,11 +2043,12 @@ class WP_SQLite_Information_Schema_Builder {
 	/**
 	 * Extract column default value from the "columnDefinition" or "fieldDefinition" AST node.
 	 *
-	 * @param  WP_Parser_Node $node      The "columnDefinition" or "fieldDefinition" AST node.
-	 * @param  string         $data_type The column data type as stored in information schema.
-	 * @return string|null               The column default as stored in information schema.
+	 * @param  WP_Parser_Node $node        The "columnDefinition" or "fieldDefinition" AST node.
+	 * @param  string         $data_type   The column data type as stored in information schema.
+	 * @param  string         $column_name The column name.
+	 * @return string|null                 The column default as stored in information schema.
 	 */
-	private function get_column_default( WP_Parser_Node $node, string $data_type ): ?string {
+	private function get_column_default( WP_Parser_Node $node, string $data_type, string $column_name ): ?string {
 		$default_attr = null;
 		foreach ( $node->get_descendant_nodes( 'columnAttribute' ) as $attr ) {
 			if ( $attr->has_child_token( WP_MySQL_Lexer::DEFAULT_SYMBOL ) ) {
@@ -2079,7 +2082,7 @@ class WP_SQLite_Information_Schema_Builder {
 				// A signed number, such as "-5", has no "literal" child node.
 				return $this->get_value( $signed_literal );
 			}
-			return $this->get_literal_default( $literal, $data_type );
+			return $this->get_literal_default( $literal, $data_type, $column_name );
 		}
 
 		// DEFAULT (expression) - MySQL 8.0.13+ supports exprWithParentheses
@@ -2094,11 +2097,12 @@ class WP_SQLite_Information_Schema_Builder {
 	/**
 	 * Extract and normalize a literal default value.
 	 *
-	 * @param  WP_Parser_Node $literal   The "literal" AST node.
-	 * @param  string         $data_type The column data type as stored in information schema.
-	 * @return string|null               The default value as stored in information schema.
+	 * @param  WP_Parser_Node $literal     The "literal" AST node.
+	 * @param  string         $data_type   The column data type as stored in information schema.
+	 * @param  string         $column_name The column name.
+	 * @return string|null                 The default value as stored in information schema.
 	 */
-	private function get_literal_default( WP_Parser_Node $literal, string $data_type ): ?string {
+	private function get_literal_default( WP_Parser_Node $literal, string $data_type, string $column_name ): ?string {
 		// DEFAULT NULL
 		if ( $literal->has_child_node( 'nullLiteral' ) ) {
 			return null;
@@ -2114,7 +2118,15 @@ class WP_SQLite_Information_Schema_Builder {
 		$default = $this->get_value( $literal );
 
 		if ( 'bit' === $data_type ) {
-			return $this->get_bit_default( $default ) ?? $default;
+			/*
+			 * @TODO: Validate and normalize defaults from their AST and the full
+			 * column definition before storing them in the information schema.
+			 */
+			$bit_default = $this->get_bit_default( $default );
+			if ( null === $bit_default ) {
+				throw WP_SQLite_Information_Schema_Exception::invalid_default_value( $column_name );
+			}
+			return $bit_default;
 		}
 
 		/*
@@ -2140,15 +2152,26 @@ class WP_SQLite_Information_Schema_Builder {
 	private function get_bit_default( string $default_value ): ?string {
 		$value = strtolower( $default_value );
 
+		// An empty string coerces to zero.
+		if ( '' === $value ) {
+			return "b'0'";
+		}
+
 		// Bit literal, e.g. b'101' or 0b101.
-		if ( str_starts_with( $value, "b'" ) || str_starts_with( $value, '0b' ) ) {
-			$bits = ltrim( rtrim( substr( $value, 2 ), "'" ), '0' );
+		if (
+			preg_match( "/\Ab'([01]*)'\z/", $value, $matches )
+			|| preg_match( '/\A0b([01]+)\z/', $value, $matches )
+		) {
+			$bits = ltrim( $matches[1], '0' );
 			return "b'" . ( '' === $bits ? '0' : $bits ) . "'";
 		}
 
 		// Hex literal, e.g. x'05' or 0x05.
-		if ( str_starts_with( $value, "x'" ) || str_starts_with( $value, '0x' ) ) {
-			return "b'" . decbin( hexdec( rtrim( substr( $value, 2 ), "'" ) ) ) . "'";
+		if (
+			preg_match( "/\Ax'([0-9a-f]*)'\z/", $value, $matches )
+			|| preg_match( '/\A0x([0-9a-f]+)\z/', $value, $matches )
+		) {
+			return "b'" . decbin( hexdec( $matches[1] ) ) . "'";
 		}
 
 		// Decimal, e.g. 5, or a numeric string literal such as '0'.
