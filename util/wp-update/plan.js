@@ -1,32 +1,25 @@
 // Decides what an update does to each file, with no I/O so the rules can be
-// tested directly. This code deletes files in other people's repositories, so
-// the bias everywhere is to leave a file alone and report it.
-//
-// The plan works on paths, never on directories: nothing here removes a tree,
-// so a theme or plugin the owner added inside wp-content survives by never
-// being named. A file is only touched when wordpress.org's checksum for the
-// version currently on disk proves the copy still holds what WordPress shipped.
+// tested directly. This deletes files in other people's repos, so the bias is
+// always to leave a file alone and report it. Works on paths, never trees, so
+// anything the owner added under wp-content survives by never being named; a
+// file is only touched when wordpress.org's checksum for the on-disk version
+// proves the copy still holds what WordPress shipped.
 
-// Ignored paths are dropped before any of this: git will not carry them into a
-// pull request, so writing them would produce changes nobody can review and a
-// report that repeats itself on every run.
+// Ignored paths are dropped first: git won't carry them into a PR, so writing
+// them would make invisible changes and a report that repeats every run.
 exports.plan = function ({ oldSums, newSums, disk, ignored = new Set() }) {
     const result = {
         // Copy from the release into the working copy.
         writes: [],
         // Remove: WordPress dropped the file and the copy still has it verbatim.
         deletes: [],
-        // Left alone and reported, one entry each: { path, kind }. These are
-        // the parts of the update that did not happen.
+        // Left alone and reported, { path, kind } each: the update that didn't happen.
         conflicts: [],
-        // Core files that differ from what WordPress ships but that this
-        // release doesn't touch, so nothing was skipped on their account.
-        // Reported anyway: a local edit to a core file is worth knowing about
-        // whether or not this particular update ran into it.
+        // Core files edited locally that this release doesn't touch. Nothing was
+        // skipped on their account, but worth reporting anyway.
         localEdits: [],
-        // Files this release ships that the copy doesn't have. Reported as a
-        // count only -- deleting bundled plugins and themes is normal here, and
-        // naming all 48 of them on every run would bury the real findings.
+        // Files this release ships that the copy lacks. Count only -- dropping
+        // bundled plugins and themes is normal and naming all 48 would bury the rest.
         absent: [],
         unchanged: 0,
     };
@@ -43,9 +36,8 @@ exports.plan = function ({ oldSums, newSums, disk, ignored = new Set() }) {
         const onDisk = disk[filePath];
 
         if (after && !before) {
-            // A path this release adds. With no previous checksum there's no
-            // way to prove an existing file was ever ours, so an occupied path
-            // is always the owner's.
+            // A path this release adds. Without a previous checksum an existing
+            // file can't be proven ours, so an occupied path is the owner's.
             if (onDisk === undefined) {
                 result.writes.push(filePath);
             } else if (onDisk === after) {
@@ -60,9 +52,7 @@ exports.plan = function ({ oldSums, newSums, disk, ignored = new Set() }) {
             if (onDisk === after) {
                 result.unchanged++;
             } else if (onDisk === undefined) {
-                // Absent files are only worth counting when this release
-                // changes them; deleting bundled plugins and themes is normal
-                // and the rest of them are nobody's business.
+                // Absent files only count when this release changes them.
                 before === after ? result.unchanged++ : result.absent.push(filePath);
             } else if (onDisk === before) {
                 result.writes.push(filePath);
@@ -93,9 +83,8 @@ const CONFLICT_TEXT = {
     'modified-removed': 'changed locally, so it was kept even though WordPress dropped it',
 };
 
-// The pull request body. Conflicts come first: they are the part of the update
-// that did not happen, and the only part needing a decision. Local edits are
-// kept in their own section so the count of what was skipped stays honest.
+// The pull request body. Conflicts come first: the part that didn't happen and
+// the only part needing a decision. Local edits get their own section.
 exports.report = function (from, to, plan) {
     const lines = [`Updates the bundled WordPress files from ${from} to ${to}.`, ''];
 

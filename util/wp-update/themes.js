@@ -1,15 +1,9 @@
-// Reports on themes. This file never writes anything.
-//
-// wordpress.org publishes no theme-checksums endpoint -- the plugin equivalent
-// answers 404 for every theme -- so there is no way to prove a theme on disk is
-// still the release it claims to be. Without that proof nothing here writes,
-// deletes or downloads anything. A theme update is the owner's to make.
-//
-// Themes bundled with WordPress are a separate matter: their files are in the
-// core checksums, so the core update already covers them. Reporting those as
-// outdated would be wrong as well as noisy, and which themes those are comes
-// from the same place as everything else -- wordpress.org, for the exact
-// WordPress version on disk.
+// Reports on themes and never writes anything. wordpress.org publishes no
+// theme-checksums, so a theme on disk can't be proven to be the release it
+// claims; without that proof a theme update is the owner's to make. Themes that
+// ship with WordPress are covered by the core update (their files are in the
+// core checksums), so reporting them as outdated would be wrong -- which ones
+// those are comes from .org, for the exact WordPress version on disk.
 
 const fs = require('fs');
 const path = require('path');
@@ -53,8 +47,8 @@ exports.discover = function (themesRoot) {
     return found;
 };
 
-// The theme directories a WordPress release ships, read out of its own file
-// list rather than a list of names kept here.
+// The theme directories a WordPress release ships, read from its own file list
+// rather than a hardcoded set of names.
 exports.bundledSlugs = function (checksums) {
     const slugs = new Set();
 

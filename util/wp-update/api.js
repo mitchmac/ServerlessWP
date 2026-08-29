@@ -1,11 +1,8 @@
-// Everything the core update knows about WordPress comes from
-// wordpress.org. The checksums endpoint returns every file a release ships --
-// 3,945 paths for 7.0.2, bundled themes included -- and that list is byte-exact
-// against the release zip. So it is the manifest: a path wordpress.org lists is
-// WordPress's, and a path it doesn't list belongs to whoever cloned this repo.
-//
-// wp-config.php is absent from it (only wp-config-sample.php ships), so the
-// file most worth protecting is out of scope without special-casing.
+// Every checksum comes from wordpress.org. Its checksums endpoint lists exactly
+// the files a release ships, so it doubles as the manifest: a path it lists is
+// WordPress's, a path it doesn't belongs to whoever cloned this repo.
+// wp-config.php isn't listed (only wp-config-sample.php ships), so it's out of
+// scope without any special-casing.
 
 const fs = require('fs');
 const path = require('path');
@@ -43,9 +40,8 @@ function unzip(zipPath, into) {
     }
 }
 
-// The one version stable-check marks 'latest'. It lists all 800+ releases with
-// a status each, so anything but exactly one 'latest' means the shape changed
-// and we should stop rather than guess.
+// The one version stable-check marks 'latest'. Anything but exactly one means
+// the response shape changed, so stop rather than guess.
 exports.latestVersion = async function () {
     const versions = await getJson(STABLE_CHECK);
     const latest = Object.keys(versions).filter((version) => versions[version] === 'latest');
@@ -69,9 +65,8 @@ exports.checksums = async function (version, locale = 'en_US') {
     return body.checksums;
 };
 
-// Downloads and unpacks a release, returning the path to its wordpress/
-// directory. Extraction shells out to unzip, which ubuntu-latest has and Node
-// has no equivalent of.
+// Downloads and unpacks a release, returning its wordpress/ directory. Shells
+// out to unzip (on ubuntu-latest; Node has no equivalent).
 exports.downloadRelease = async function (version, workDir) {
     const zipPath = path.join(workDir, `wordpress-${version}.zip`);
     const url = `${RELEASE}wordpress-${version}.zip`;
@@ -88,9 +83,8 @@ exports.downloadRelease = async function (version, workDir) {
     return root;
 };
 
-// Tells a wordpress.org plugin from a custom or premium one: the latter answer
-// 200 with {"error":"Plugin not found."} rather than a status code. Returns
-// null for anything not published there.
+// Latest published info for a wordpress.org plugin, or null for anything not
+// carried there (which answers 200 with an error body, not a status code).
 exports.pluginInfo = async function (slug) {
     const url = `${PLUGIN_INFO}?action=plugin_information&request[slug]=${encodeURIComponent(slug)}`;
     const response = await fetch(url);
@@ -110,14 +104,11 @@ exports.pluginInfo = async function (slug) {
     return body;
 };
 
-// Per-file md5 for one published plugin release, keyed by path relative to the
-// plugin directory. Null when wordpress.org has never published that version,
-// which is the signal that a bundled plugin came from somewhere else.
-//
-// A value is a string, or an array of them when a release was re-tagged and
-// more than one build is accepted -- three of tidb-compatibility 1.0.2's four
-// files are like that. Callers resolve arrays against what is on disk; see
-// acceptedHashes in plugins.js.
+// Per-file md5 for one published plugin release, keyed by path within the
+// plugin. Null when wordpress.org never published that version -- the signal
+// that a bundled plugin came from elsewhere. A value is a string, or an array
+// when a re-tagged release accepts more than one build; see acceptedHashes in
+// plugins.js.
 exports.pluginChecksums = async function (slug, version) {
     const url = `${PLUGIN_CHECKSUMS}${encodeURIComponent(slug)}/${encodeURIComponent(version)}.json`;
     const response = await fetch(url);
@@ -144,13 +135,9 @@ exports.pluginChecksums = async function (slug, version) {
     return sums;
 };
 
-// The published release of a theme, or null if wordpress.org doesn't carry it.
-// Unlike the plugin endpoint this answers 404 for an unknown slug rather than
-// 200 with an error body.
-//
-// There is no theme equivalent of pluginChecksums: theme-checksums answers 404
-// for every theme, bundled or not. That absence is why themes are only ever
-// reported and never written.
+// The published release of a theme, or null if wordpress.org doesn't carry it
+// (404 for an unknown slug, unlike the plugin endpoint). There's no theme
+// equivalent of pluginChecksums, which is why themes are only reported on.
 exports.themeInfo = async function (slug) {
     const url = `${THEME_INFO}?action=theme_information&request[slug]=${encodeURIComponent(slug)}`;
     const response = await fetch(url);

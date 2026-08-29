@@ -1,0 +1,23 @@
+# Boots WordPress in a container and runs the version-agnostic smoke tests
+# against it. Unlike the e2e suite this has no owner guard, so it runs in every
+# copy of the repository, and it skips Playwright -- the smoke checks assert only
+# what WordPress keeps stable across releases, so they stay green through an
+# update that would break the e2e selectors.
+name: Smoke tests
+on: [push, pull_request]
+
+jobs:
+  smoke:
+    name: Smoke tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+
+      - run: ./run-smoke-test.sh
+        working-directory: ./test

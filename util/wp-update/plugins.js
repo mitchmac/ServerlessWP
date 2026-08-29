@@ -1,15 +1,10 @@
-// Updates bundled plugins that came from wordpress.org.
-//
-// The rule is stricter than it is for core, because a half-updated plugin is
-// worse than one left alone: a plugin is only touched when wordpress.org can
-// prove, file by file, that what's on disk is exactly the release it claims to
-// be. Anything else -- a plugin that isn't on .org, a build .org has never
-// published, a single edited file -- is reported and skipped whole.
-//
-// That is what protects sqlite-database-integration, which is bundled from its
-// GitHub repository at a version wordpress.org doesn't carry. It needs no
-// entry on any exclusion list: .org publishes no checksums for the installed
-// build, so nothing here can prove anything about it and it is left alone.
+// Updates bundled plugins that came from wordpress.org. Stricter than core,
+// because a half-updated plugin is worse than an untouched one: a plugin is only
+// touched when .org can prove, file by file, that what's on disk is exactly the
+// release it claims. Anything else -- not on .org, an unpublished build, a
+// single edited file -- is reported and skipped whole. That's what protects
+// sqlite-database-integration (bundled from GitHub) with no exclusion entry:
+// .org has no checksums for it, so nothing here can prove anything about it.
 
 const fs = require('fs');
 const path = require('path');
@@ -21,10 +16,9 @@ const github = require('./github.js');
 const planner = require('./plan.js');
 const versions = require('./versions.js');
 
-// WordPress reads plugin headers from the first 8KB of a file, and so does
-// this. The main file is rarely named after the plugin -- WP Offload Media
-// lives in wordpress-s3.php, SQLite Database Integration in load.php -- so
-// every top-level PHP file is checked for the header rather than guessed at.
+// WordPress reads plugin headers from a file's first 8KB, and so does this. The
+// main file is rarely named after the plugin (WP Offload Media is in
+// wordpress-s3.php), so every top-level PHP file is checked rather than guessed.
 const HEADER_BYTES = 8192;
 
 exports.readHeader = function (pluginDir) {
@@ -54,8 +48,8 @@ exports.readHeader = function (pluginDir) {
 
 exports.compareVersions = versions.compareVersions;
 
-// Every directory under wp-content/plugins holding a plugin header. The slug
-// is the directory name, which is what wordpress.org keys plugins by.
+// Every directory under wp-content/plugins holding a plugin header. The slug is
+// the directory name, which is how wordpress.org keys plugins.
 exports.discover = function (pluginsRoot) {
     let entries;
     try {
@@ -76,14 +70,10 @@ exports.discover = function (pluginsRoot) {
     return found;
 };
 
-// Flattens the multi-hash entries wordpress.org publishes for re-tagged
-// releases down to the one hash that matters here.
-//
-// plan.js compares one checksum per path, so an array has to collapse before
-// it gets there. A file matching any accepted build is the official file, so
-// resolving to the hash already on disk is what tells the plan it is untouched.
-// With no match, the first accepted hash stands in and the file reads as
-// locally modified -- which is what it is.
+// Collapses the multi-hash entries .org publishes for re-tagged releases to one
+// hash, since plan.js compares one per path. Matching any accepted build is
+// official, so resolving to the on-disk hash reads as untouched; with no match
+// the first hash stands in and the file reads as locally modified.
 exports.acceptedHashes = function (sums, disk) {
     const resolved = {};
 
@@ -98,15 +88,10 @@ exports.acceptedHashes = function (sums, disk) {
     return resolved;
 };
 
-// Plugins bundled from GitHub instead of wordpress.org. These follow the
-// repository's default branch: whatever it holds is what a site runs, and the
-// pull request diff is where that gets reviewed.
-//
-// wordpress.org carries a plugin under this slug too, at an older version, so
-// leaving it out of this list would not merely stop updates -- it would offer a
-// downgrade. It is here because the plugin is bundled from source, and it has
-// to be listed because nothing in the plugin's own headers points at its
-// repository.
+// Plugins bundled from GitHub instead of wordpress.org, following the repo's
+// default branch; the PR diff is the review. .org carries this slug too, at an
+// older version, so omitting it would offer a downgrade rather than just stop
+// updates. Listed here because nothing in the plugin's headers names its repo.
 exports.TRACKED = {
     'sqlite-database-integration': {
         repo: 'WordPress/sqlite-database-integration',
@@ -114,9 +99,9 @@ exports.TRACKED = {
     },
 };
 
-// Compares the copy on disk against the repository's default branch. Unlike
-// the wordpress.org path there is no proof to be had, so anything differing
-// from the branch is replaced and anything the branch doesn't have is removed.
+// Compares the copy on disk against the repo's default branch. With no checksum
+// to prove anything, whatever differs from the branch is replaced and whatever
+// the branch lacks is removed.
 exports.inspectTracked = async function (plugin, tracked) {
     const branch = await github.defaultBranch(tracked.repo);
     const wanted = await github.effectiveTree(tracked.repo, branch, tracked.path);
@@ -167,8 +152,8 @@ exports.filesUnder = function (root, prefix = '') {
     );
 };
 
-// Decides what happens to one plugin, without touching it. Every path out of
-// here that isn't 'update' or 'track' leaves the plugin exactly as it was.
+// Decides what happens to one plugin without touching it. Any status but
+// 'update' or 'track' leaves the plugin exactly as it was.
 exports.inspect = async function (plugin) {
     const tracked = exports.TRACKED[plugin.slug];
     if (tracked) {
@@ -186,13 +171,12 @@ exports.inspect = async function (plugin) {
 
     const latest = info.version;
     if (exports.compareVersions(latest, plugin.installed) <= 0) {
-        // Equal is the common case. Newer-than-.org happens when a plugin is
-        // bundled from somewhere else, and must never be "updated" backwards.
+        // Newer-than-.org means bundled from elsewhere; never downgrade it.
         return { ...plugin, latest, status: exports.compareVersions(plugin.installed, latest) > 0 ? 'ahead' : 'current' };
     }
 
-    // Checksums for what's installed. Their absence is the whole safety net
-    // for plugins bundled from outside wordpress.org: no proof, no update.
+    // Checksums for what's installed. Their absence is the safety net for
+    // plugins bundled from outside .org: no proof, no update.
     const oldSums = await api.pluginChecksums(plugin.slug, plugin.installed);
     if (!oldSums) {
         return { ...plugin, latest, status: 'unverifiable' };
@@ -213,8 +197,8 @@ exports.inspect = async function (plugin) {
         ignored: files.ignoredPaths(plugin.dir, paths),
     });
 
-    // All or nothing. Updating the files that happen to be clean would leave a
-    // plugin running a mix of two releases, which is worse than not updating.
+    // All or nothing: updating only the clean files would leave a plugin running
+    // a mix of two releases, worse than not updating.
     if (plan.conflicts.length || plan.localEdits.length || plan.absent.length) {
         return { ...plugin, latest, status: 'modified', plan };
     }

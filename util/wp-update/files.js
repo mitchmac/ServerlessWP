@@ -1,17 +1,14 @@
-// Reading and writing the working copy, shared by the core and plugin updates.
-//
-// Nothing here decides what should happen -- plan.js does that -- so every
-// function takes an explicit list of paths and never walks a directory looking
-// for work. That is what keeps a plugin or theme the owner added invisible to
-// an update.
+// Reading and writing the working copy, for the core and plugin updates. Nothing
+// here decides what happens (plan.js does); every function takes an explicit
+// path list and never walks a directory, which keeps owner-added files invisible.
 
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const { execFileSync } = require('child_process');
 
-// Stands in for a path occupied by something that isn't a plain file. It can
-// never equal a real md5, so plan.js treats it as content it doesn't own.
+// Marks a path occupied by something that isn't a plain file. Never equals a
+// real md5, so plan.js treats it as content it doesn't own.
 const NOT_A_FILE = 'not-a-file';
 
 exports.NOT_A_FILE = NOT_A_FILE;
@@ -22,8 +19,7 @@ function md5(file) {
 
 exports.md5 = md5;
 
-// Hashes only the paths given. Everything else under root is never read, let
-// alone written.
+// Hashes only the given paths; everything else under root is never read.
 exports.hashDisk = function (root, paths) {
     const disk = {};
 
@@ -41,8 +37,7 @@ exports.hashDisk = function (root, paths) {
     return disk;
 };
 
-// Paths git won't carry into a pull request. Writing them would produce
-// invisible changes and a report that repeats on every run.
+// Paths git won't carry into a PR; writing them makes invisible changes.
 exports.ignoredPaths = function (root, paths) {
     if (!paths.length) {
         return new Set();
@@ -56,10 +51,9 @@ exports.ignoredPaths = function (root, paths) {
             maxBuffer: 64 * 1024 * 1024,
         }).toString();
     } catch (error) {
-        // Exit 1 is "nothing was ignored", the common case. Anything else --
-        // no git, not a repository -- means we can't tell. The update then
-        // treats every path as tracked, which is the behaviour without a
-        // .gitignore at all; the checksum rules still guard each file.
+        // Exit 1 means nothing ignored (the common case). Anything else -- no
+        // git, not a repo -- and we treat every path as tracked; the checksum
+        // rules still guard each file.
         if (error.status !== 1) {
             console.warn(`git check-ignore did not run (${error.message.trim()}); assuming nothing is ignored.`);
         }
@@ -69,9 +63,8 @@ exports.ignoredPaths = function (root, paths) {
     return new Set(stdout.split('\0').filter(Boolean));
 };
 
-// Directories are only removed once the update has emptied them, so a
-// directory still holding anything -- including a file the owner added --
-// stays.
+// Removes parent directories only once emptied, so one still holding anything
+// -- including an owner-added file -- stays.
 function removeEmptyParents(root, filePath) {
     let dir = path.dirname(path.join(root, filePath));
 

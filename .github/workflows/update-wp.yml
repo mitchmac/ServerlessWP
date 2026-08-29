@@ -1,34 +1,17 @@
-# Opens a pull request when a new WordPress release comes out.
-#
-# This runs in every copy of the repository, not just upstream: a site deployed
-# from here is a repository nobody logs into, and DISALLOW_FILE_MODS means
-# wp-admin will never offer the update either. The pull request is how a site
-# owner finds out and how they review the change before it deploys.
-#
-# Two things have to be switched on by hand in a copy, and neither can be set
-# from this file -- see "Keeping WordPress updated" in the readme:
-#   - Settings > Actions > General > "Allow GitHub Actions to create and
-#     approve pull requests"
-#   - a scheduled workflow is disabled automatically after 60 days without a
-#     push, which is the normal state of a site repository
+# Opens a pull request when a new WordPress release comes out. Runs in every
+# copy, since a deployed site's repo has nobody logged in and DISALLOW_FILE_MODS
+# keeps wp-admin from offering the update. Two things must be enabled by hand per
+# copy -- see "Keeping WordPress updated" in the readme.
 name: Update WordPress
 on:
   schedule:
-  # 21:10 UTC. Core release parties start at 15:00 or 17:00 UTC depending on
-  # the cycle and the package ships an hour or two in, so this picks up a
-  # release the same day rather than the next one. Cron here is always UTC, so
-  # the time does not shift with daylight saving. The odd minute is deliberate:
-  # GitHub queues everything scheduled on the hour together and drops runs when
-  # that queue is full.
+  # Evening pass, then a fallback twelve hours later. UTC (cron ignores DST); the
+  # odd minute dodges GitHub's dropped on-the-hour queue.
   - cron: "10 21 * * *"
-  # A release that slips past the evening run, or an evening run GitHub drops,
-  # is picked up twelve hours later instead of twenty-four.
   - cron: "10 9 * * *"
   workflow_dispatch:
 
-# Repositories created after February 2023 give GITHUB_TOKEN read-only access
-# by default. The deploy buttons create a brand new repository, so this applies
-# to every copy, and without it the branch push fails in all of them.
+# New repos default GITHUB_TOKEN to read-only, so without this the push fails.
 permissions:
   contents: write
   pull-requests: write
@@ -50,8 +33,7 @@ jobs:
         id: update
         run: node util/wp-update --report "${{ runner.temp }}/wp-update.md"
 
-      # The report explains what was left untouched and why, so it is the pull
-      # request body rather than something only visible in the run log.
+      # The report explains what was left untouched and why, so it's the PR body.
       - name: Create Pull Request
         if: steps.update.outputs.updated == 'true'
         uses: peter-evans/create-pull-request@v7
@@ -62,9 +44,8 @@ jobs:
           delete-branch: true
           branch: 'wordpress-version-update'
 
-  # A separate job on its own branch, so a plugin update is never mixed into a
-  # core one. Either can be merged, closed or left sitting without affecting
-  # the other, and a plugin that breaks a site is one revert rather than two.
+  # Separate job and branch, so a plugin update never mixes into a core one and
+  # either can be merged or reverted on its own.
   plugins:
     name: Update plugins
     runs-on: ubuntu-latest
@@ -91,10 +72,8 @@ jobs:
           delete-branch: true
           branch: 'plugin-version-update'
 
-      # Themes can only be reported on: wordpress.org publishes no checksums
-      # for them, so an untouched theme can't be told from an edited one. With
-      # nothing to commit there is no pull request to carry the findings, so
-      # they go to the run summary. Never fails the job.
+      # Themes are report-only (no checksums to verify them), so with nothing to
+      # commit the findings go to the run summary. Never fails the job.
       - name: Report on themes
         if: always()
         continue-on-error: true
