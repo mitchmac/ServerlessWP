@@ -2,208 +2,142 @@
 
 WordPress hosting is silly.
 
-**Low maintenance** and **low cost/free** WordPress hosting on Vercel, Netlify, or AWS Lambda.
+Why should a small WordPress site need a server running around the clock?
 
-ServerlessWP puts WordPress in serverless functions and the database in a file. Deploy this repository to give it a try.
+ServerlessWP [[github.com/mitchmac/serverlesswp](https://github.com/mitchmac/serverlesswp)] enables **low maintenance** and **low cost/free** WordPress hosting on Vercel, Netlify, or AWS Lambda.
 
-Stay up-to-date at the ServerlessWP repository: [github.com/mitchmac/serverlesswp](https://github.com/mitchmac/serverlesswp)
+WordPress runs on demand in serverless functions, with a SQLite database stored in S3 or Vercel Blob. No always-on server or separate database hosting to manage.
 
-![WordPress 7.1](https://img.shields.io/badge/version-7.1-blue?logo=wordpress&labelColor=white&logoColor=black) ![PHP 8.3.33](https://img.shields.io/badge/version-8.3.33-blue?logo=php&labelColor=white)
-
-## Use Cases
-
-**This is currently an experimental project.** It's built for content sites rather than applications:
-
-✅ **Great fit:** personal blogs, documentation, portfolios, marketing and small business sites, dev and staging sites — anything that isn't heavily updated by more than one person at a time.
-
-✅ **Also great: headless/decoupled WordPress.** run WordPress purely as the editing backend and content API (REST or GraphQL) for a separate frontend.
-
-⚠️ **Use MySQL, not SQLite when:** sites with several people publishing at once, take a lot of form submissions,  ecommerce, membership sites, forums. SQLite+S3 and SQLite+Blob have [limited write concurrency](#sqlite--object-storage).
-
-
-## Quick Deploy
-
-**The easiest way to run WordPress with ServerlessWP is entirely on Vercel.** This button creates a private [Vercel Blob](https://vercel.com/docs/vercel-blob) store during setup. WordPress runs on a SQLite database kept in it, and media uploads are stored in it too, so they survive redeploys. No database to host, no credentials to copy, no other accounts to sign up for — and each git branch gets its own database.
-
-The deploy form pre-fills two settings, `SERVERLESSWP_STREAM_PROVIDER` and `SERVERLESSWP_STREAM_VERCEL_ACCESS`, which turn on [media uploads](#media-uploads-on-vercel-blob). Leave them as they are.
+**Just want to try?** Deploy on Vercel with a private [Vercel Blob](https://vercel.com/docs/vercel-blob) store for your SQLite database and media uploads. No separate database hosting or credentials to copy.
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fmitchmac%2Fserverlesswp&project-name=serverlesswp&repository-name=serverlesswp&stores=%5B%7B%22type%22%3A%22blob%22%2C%22access%22%3A%22private%22%2C%22envVarPrefix%22%3A%22SQLITE%22%7D%5D&env=SERVERLESSWP_STREAM_PROVIDER,SERVERLESSWP_STREAM_VERCEL_ACCESS&envDefaults=%7B%22SERVERLESSWP_STREAM_PROVIDER%22%3A%22vercel-blob%22%2C%22SERVERLESSWP_STREAM_VERCEL_ACCESS%22%3A%22private%22%7D&envDescription=Stores%20media%20uploads%20in%20the%20same%20private%20Blob%20store.%20Leave%20these%20as%20they%20are.&envLink=https%3A%2F%2Fgithub.com%2Fmitchmac%2Fserverlesswp%23media-uploads-on-vercel-blob)
 
-More on [how SQLite + Vercel Blob works](#sqlite--vercel-blob), [how media uploads work](#media-uploads-on-vercel-blob), and [when to use MySQL instead](#mysql-database-option).
+Leave the two pre-filled deploy settings as they are to enable [media uploads](#media-uploads-on-vercel-blob). Once deployed, open your site’s URL and complete the WordPress setup.
 
-Other ways to deploy (click to deploy):
+## Use cases
 
-- **[Just kicking the tires?](https://serverlesswp.com/vercel-deploy)** Deploy on Vercel with a temporary SQLite database on S3 that expires after a few days.
-- **[Netlify](https://app.netlify.com/start/deploy?repository=https://github.com/mitchmac/serverlesswp)** with your own database (SQLite+S3 or MySQL). Trade-offs vs. Vercel: 10 second max request duration instead of 60, manual branch config, and analytics/firewall are paid add-ons.
-- **AWS Lambda** with the Serverless Framework: `npm install && serverless deploy`
+Use the familiar WordPress admin to write posts, edit pages, and upload media.
 
-## Project goals
+**This is an experimental project**, best suited to blogs, portfolios, documentation, marketing and small business sites, and dev or staging sites.
 
-🌴 WordPress hosting made easy. Lower maintenance with serverless functions instead of servers.
+SQLite keeps setup simple for sites with light database activity, but some plugins are incompatible and competing database writes can fail. For multiple active editors, frequent form submissions, ecommerce, membership sites, or forums, use [MySQL/MariaDB](#mysql-database-option).
 
-💲 Small WordPress sites shouldn't cost much to host. **Vercel, Netlify, & AWS have free tiers**.
+## Why serverless WordPress?
 
-🔓 WordPress plugins and themes are extensively supported. No arbitrary limitations here.
+- **Less to maintain:** no server to manage; [WordPress updates](#keeping-wordpress-updated) arrive as pull requests you can review and merge.
+- **On-demand compute:** run WordPress when requests need it, without keeping your own server running around the clock.
+- **No database server required:** store SQLite in S3 or Vercel Blob.
+- **Branch previews:** try changes with a fresh SQLite database per branch, configured automatically on Vercel.
 
-⚡ Blazing fast websites that take advantage of caching and content delivery networks.
+The deploy button uses Vercel for the simplest setup, with Blob storage, [CDN delivery and automatic HTTPS](https://vercel.com/docs/cdn), and [DDoS protection and firewall tools](https://vercel.com/docs/vercel-firewall) in one place. Optional [Web Analytics](https://vercel.com/docs/analytics/quickstart) adds visitor insights once enabled with a tracking script in WordPress. Features and usage limits vary by plan; the [free Hobby plan](https://vercel.com/pricing) is for personal, non-commercial projects. You can also deploy on Netlify or AWS Lambda.
 
-🌎 Lower the carbon footprint of WordPress websites.
+## Other deployment options
 
-🤝 A helpful community. [Share your successes, ideas, or struggles](https://github.com/mitchmac/ServerlessWP/discussions) in the discussions.
+- **[Vercel with an S3 demo database](https://serverlesswp.com/vercel-deploy):** try SQLite + S3 with a temporary database that expires after a few days.
+- **[Netlify](https://app.netlify.com/start/deploy?repository=https://github.com/mitchmac/serverlesswp):** bring your own [SQLite + S3](#sqlite--s3) or [MySQL](#mysql-database-option) database.
+- **AWS Lambda:** deploy with the Serverless Framework using `npm install && serverless deploy`.
 
-## Deploy ServerlessWP
+## Customization
 
-### 1. Deploy this repository to Vercel, Netlify, or AWS.
-One of the links above will get you started. You'll just need a GitHub account.
+- **Plugins and themes:** WordPress lives in `wp/`. Add plugins to `wp/wp-content/plugins/` or themes to `wp/wp-content/themes/`, then commit and push to redeploy. See [Keeping WordPress updated](#keeping-wordpress-updated) for updates through pull requests.
+- **Uploads and generated files:** media uploads and supported plugin-generated files persist in S3 or Vercel Blob. See [the stream wrapper reference](#media-uploads-on-vercel-blob) for file-storage limitations.
+- **Caching:** use cache headers such as `s-maxage` to enable CDN caching. See [Vercel Edge Caching](https://vercel.com/docs/concepts/edge-network/caching) or [Netlify Cache Headers](https://docs.netlify.com/edge-functions/optional-configuration/#supported-headers).
+- **Request handling:** [api/index.js](api/index.js) runs PHP through [serverlesswp-node](https://github.com/mitchmac/serverlesswp-node) and provides hooks to modify the incoming `event` and WordPress `response`. Routing is configured in [vercel.json](vercel.json) or [netlify.toml](netlify.toml).
 
-### 2. Setup a database.
-**Vercel Blob or S3 are recommended because it's the quickest to get running and the least to maintain: nothing to provision, nothing running 24/7, and on Vercel no credentials to copy at all.** MySQL is equally supported and stays the better choice for the sites called out above — see [MySQL](#mysql-database-option).
+## Getting help
 
-If you used the Vercel button above, you're already done: the Blob store it created is your database. Skip to step 3.
+[Start a discussion](https://github.com/mitchmac/ServerlessWP/discussions) for setup help or to share your successes and ideas.
 
-Otherwise, pick your database below — [SQLite + object storage](#sqlite--object-storage) or [MySQL](#mysql-database-option) — then come back for uploads.
+## Contributing
 
-Whichever you choose, you set it up with environment variables. See [here for Vercel](https://vercel.com/docs/concepts/projects/environment-variables) and [here for Netlify](https://docs.netlify.com/environment-variables/overview/) for how to manage them. **Remember to redeploy** your project if you change environment variables after the initial deploy.
+Try ServerlessWP, [report problems](https://github.com/mitchmac/ServerlessWP/issues), and spread the word!
 
-### 3. File and media uploads (optional, can be done later) 
-If you used the Vercel button above, uploads are already set up - they go to the same Blob store as the database. See [media uploads on Vercel Blob](#media-uploads-on-vercel-blob) to turn this on for an existing project, or to use an S3 bucket instead.
+## License
 
-Otherwise, file and media uploads can be enabled using the included WP Offload Media Lite for Amazon S3 plugin. S3 setup details can be found [here](https://deliciousbrains.com/wp-offload-media/doc/amazon-s3-quick-start-guide/). The wp-config.php file is setup to use the following environment variables for use by the plugin:
-- S3_KEY_ID
-- S3_ACCESS_KEY
+GNU General Public License v3.0
 
-## SQLite + object storage
-WordPress usually runs with a MySQL (or MariaDB) database. That means hosting a database that runs 24/7.
+## Reference
 
-A [SQLite database](https://github.com/WordPress/sqlite-database-integration) option has been developed by members of the WordPress community. With the recent ability to *conditionally write* to object storage - Vercel Blob, or S3 and S3-compatible buckets - a decentralized and serverless data layer for ServerlessWP is possible.
+### Database options
 
-Check out the [diagram of the SQLite+S3 logic](https://github.com/mitchmac/ServerlessWP/wiki/How-does-SQLite-with-S3-work-with-ServerlessWP%3F) if you're interested in how it works.
+ServerlessWP supports MySQL or a [SQLite database](https://github.com/WordPress/sqlite-database-integration) stored in Vercel Blob or an S3-compatible bucket. SQLite runs on demand, but some plugins are incompatible and competing database writes can fail. Use MySQL for sites with multiple active editors or frequent submissions. See [how SQLite + S3 works](https://github.com/mitchmac/ServerlessWP/wiki/How-does-SQLite-with-S3-work-with-ServerlessWP%3F).
 
-ServerlessWP supports both SQLite and MySQL as database options. Some of the trade-offs:
+Database selection follows this order:
 
-| SQLite + object storage | MySQL |
-|---|---|
-| 🕑 on demand   | 24/7 hosting |
-| 💲 usage based (free tiers) | monthly fees (some limited free tiers) |
-| 🧩 some plugin incompatibility | full plugin compatibility |
-| ♾️ limited database update concurrency | few concurrency limitations |
-| ✔️ blogs, dev sites, documentation, single editor sites | any site |
-
-The main trade-off of using SQLite with ServerlessWP is:
-- if requests are handled by multiple underlying serverless functions at the same time and make a change to the database, the competing requests may fail. Sites with multiple editors working at the same time or receiving many form submissions aren't a great fit for SQLite.
+1. **MySQL:** all four connection variables below are set.
+2. **SQLite + S3:** `SQLITE_S3_BUCKET` is set.
+3. **SQLite + Vercel Blob:** `BLOB_STORE_ID`, `SQLITE_BLOB_STORE_ID`, or `SQLITE_BLOB_READ_WRITE_TOKEN` is set on Vercel.
+4. Otherwise, the setup page appears.
 
 ### SQLite + Vercel Blob
 
-The easiest option. On Vercel, the deploy button above creates a private [Vercel Blob](https://vercel.com/docs/vercel-blob) store for you during setup - no bucket or IAM credentials to create. The git branch is added to the name, so preview deployments each get their own database.
+Connect a **private** Blob store in your Vercel project's Storage tab. Vercel supplies the store ID and OIDC authentication; each new git branch starts with its own fresh SQLite database. The deploy button handles this setup and shares the store with media uploads.
 
-| SQLite+Vercel Blob | |
+| Environment variable | Purpose / default |
 |---|---|
-| BLOB_STORE_ID | id of the store holding the database - Vercel adds this when it connects a store |
-| SQLITE_BLOB_STORE_ID | optional: store id to use instead, for a store created with an env var prefix of `SQLITE` |
-| SQLITE_BLOB_READ_WRITE_TOKEN | optional: static read-write token, for a store that has one |
-| SQLITE_BLOB_PATHNAME | optional: base name for the database - defaults to `wp-sqlite` |
+| `BLOB_STORE_ID` | Connected store ID; supplied by Vercel. |
+| `SQLITE_BLOB_STORE_ID` | Optional database-specific store ID; overrides `BLOB_STORE_ID`. |
+| `SQLITE_BLOB_READ_WRITE_TOKEN` | Optional static token instead of OIDC. The database does **not** use `BLOB_READ_WRITE_TOKEN`. |
+| `SQLITE_BLOB_PATHNAME` | Database base name; default: `wp-sqlite`. |
 
-Connecting a store is all the setup there is. Vercel adds `BLOB_STORE_ID` to the project and mints a short-lived `VERCEL_OIDC_TOKEN` for each deployment, and the Blob SDK pairs the two to authenticate. To set this up on an existing project, create the store from the Storage tab with **private** access and connect it - there's nothing to copy.
-
-Stores that hand out a static `BLOB_READ_WRITE_TOKEN` work too, as `SQLITE_BLOB_READ_WRITE_TOKEN`. The unprefixed name isn't used for the database - that's the token a store connected only for media uploads gets, and a public upload store would fail every private write.
-
-The database and [media uploads](#media-uploads-on-vercel-blob) can share one private store, which is what the deploy button sets up. If you'd rather keep them apart, create the database store with an env var prefix of `SQLITE` so it lands on `SQLITE_BLOB_STORE_ID`, and leave the upload store on the unprefixed `BLOB_STORE_ID`.
-
-### Media uploads on Vercel Blob
-
-Serverless containers throw away anything written to disk, so `wp-content/uploads` has to live somewhere else. A PHP stream wrapper routes writes under `wp-content` to the same Blob store, and serves them back through the function with cache headers so the CDN keeps a copy.
-
-The deploy button turns this on. On an existing project, set:
-
-| Media uploads | |
-|---|---|
-| SERVERLESSWP_STREAM_PROVIDER | `vercel-blob` to store uploads in Vercel Blob, or `s3` for a bucket |
-| SERVERLESSWP_STREAM_VERCEL_ACCESS | `private` for a private store, `public` for a public one - it decides which host the files are read from |
-| SERVERLESSWP_STREAM_VERCEL_STORE_ID | optional: store id to use instead of `BLOB_STORE_ID` or `SQLITE_BLOB_STORE_ID` |
-| SERVERLESSWP_STREAM_CACHE_CONTROL | optional: `Cache-Control` for served files - defaults to `public, max-age=3600, s-maxage=86400` |
-
-There are no credentials to add. The store id comes from whichever of `SERVERLESSWP_STREAM_VERCEL_STORE_ID`, `BLOB_STORE_ID` or `SQLITE_BLOB_STORE_ID` is set, and the short-lived per-request OIDC token authenticates the writes, the same way the database does.
-
-A private store can only be read with a credential, so uploads are served by the function and cached at the edge. A public store can serve straight from the Blob CDN instead - point `SERVERLESSWP_STREAM_CDN_BASE_URL` at it.
-
-Not everything under `wp-content` is routed or served: plugins, themes, mu-plugins and languages ship with the deployment and stay local, and `.php`, `.log`, `.sqlite` and `.htaccess` files are never routed. The full list of settings, what gets served and the known limitations are in the [stream wrapper README](packages/serverlesswp-stream-wrapper/README.md).
+For separate database and upload stores, connect the private database store with the `SQLITE` environment variable prefix and the upload store without a prefix.
 
 ### SQLite + S3
 
-Works anywhere - Netlify, AWS, or Vercel - with any S3-compatible bucket, including Cloudflare R2. Setup a **private** bucket and use these environment variables:
+Create a **private** S3-compatible bucket (including Cloudflare R2), preferably near your functions. Works on Netlify, AWS, and Vercel.
 
-| SQLite+S3 | |
+| Environment variable | Purpose |
 |---|---|
-| SQLITE_S3_BUCKET | bucket name you created |
-| SQLITE_S3_API_KEY | API key to access the bucket |
-| SQLITE_S3_API_SECRET | API secret key to access the bucket |
-| SQLITE_S3_REGION | region where the bucket lives - create it near your serverless functions |
-| SQLITE_S3_ENDPOINT | optional: to update where the bucket is, like a Cloudflare R2 address |
+| `SQLITE_S3_BUCKET` | Bucket name. |
+| `SQLITE_S3_API_KEY` | API access key. |
+| `SQLITE_S3_API_SECRET` | API secret key. |
+| `SQLITE_S3_REGION` | Bucket region. |
+| `SQLITE_S3_ENDPOINT` | Optional custom endpoint, e.g. for Cloudflare R2. |
 
-## MySQL database option
+### MySQL database option
 
-The right call when you need full plugin compatibility or more than a couple of people writing at once. [TiDB](https://www.pingcap.com/tidb-cloud-serverless/) provides a cloud MySQL database with a generous free tier.
+Create a MySQL-compatible database and set the following; `wp-config.php` connects automatically. [TiDB](https://www.pingcap.com/tidb-cloud-serverless/) is one hosted option.
 
-After creating your database, set these environment variables with the credentials. ```wp-config.php``` is automatically configured to use them to connect.
-
-|  |  |
+| Environment variable | Purpose |
 |---|---|
-| DATABASE | database name you created |
-| USERNAME | database user to access the database |
-| PASSWORD | database user's password |
-| HOST |  address to access the database |
-| TABLE_PREFIX | optional: to use a prefix on the database tables |
+| `DATABASE` | Database name. |
+| `USERNAME` | Database user. |
+| `PASSWORD` | Database password. |
+| `HOST` | Database host. |
+| `TABLE_PREFIX` | Optional table prefix. |
 
-## Which database gets used
+### Media uploads on Vercel Blob
 
-The most explicitly configured option wins, so adding a Blob store for media won't take over an existing database:
+The stream wrapper persists uploads in object storage because local writes do not survive redeploys. The deploy button enables it; for an existing project, configure:
 
-1. **MySQL** - `DATABASE`, `USERNAME`, `PASSWORD`, and `HOST` all set
-2. **SQLite + S3** - `SQLITE_S3_BUCKET` set
-3. **SQLite + Vercel Blob** - `BLOB_STORE_ID` (or `SQLITE_BLOB_STORE_ID`, or `SQLITE_BLOB_READ_WRITE_TOKEN`) set on Vercel
-4. otherwise the setup page is shown
+| Environment variable | Purpose / default |
+|---|---|
+| `SERVERLESSWP_STREAM_PROVIDER` | `vercel-blob` for Vercel Blob, or `s3` for a bucket. |
+| `SERVERLESSWP_STREAM_VERCEL_ACCESS` | `private` or `public`; must match the store's access setting. |
+| `SERVERLESSWP_STREAM_VERCEL_STORE_ID` | Optional store ID; falls back to `BLOB_STORE_ID`, then `SQLITE_BLOB_STORE_ID`. |
+| `SERVERLESSWP_STREAM_CACHE_CONTROL` | Served-file cache header; default: `public, max-age=3600, s-maxage=86400`. |
+| `SERVERLESSWP_STREAM_CDN_BASE_URL` | Optional public Blob CDN URL to serve files directly. |
 
-## Customizing WordPress
-- WordPress and its files are in the ```/wp``` directory. You can add plugins or themes there in their respective directories in ```wp-content``` then commit the files to your repository so it will re-deploy.
-- Plugins like [Cache-Control](https://wordpress.org/plugins/cache-control/) can enable CDN caching with the s-maxage directive and make your site super fast. Refer to [Vercel Edge Caching](https://vercel.com/docs/concepts/edge-network/caching) or [Netlfiy Cache Headers](https://docs.netlify.com/edge-functions/optional-configuration/#supported-headers)
+Vercel OIDC authenticates writes without manually added credentials. Private uploads are served through the function and cached at the edge. Plugins, themes, mu-plugins, and languages stay local; `.php`, `.log`, `.sqlite`, and `.htaccess` files are never routed. See the [stream wrapper README](packages/serverlesswp-stream-wrapper/README.md) for all settings, S3 configuration, and limitations.
 
-## Keeping WordPress updated
-WordPress lives in your repository, so updates arrive as a pull request instead of through wp-admin. The **Update WordPress** action checks daily for a new release and opens a pull request against your default branch; merging it re-deploys your site.
+### Keeping WordPress updated
 
-Two settings need turning on once in your own copy of the repository:
+The **Update WordPress** GitHub Action checks daily and opens pull requests; merging them redeploys your site. Enable it in your repository:
 
-1. **Settings → Actions → General → Workflow permissions**, tick *Allow GitHub Actions to create and approve pull requests*. GitHub leaves this off by default and it cannot be enabled from a workflow file. Without it the branch is still pushed, so you can open the pull request yourself.
-2. **Actions → Update WordPress → Enable workflow**, if GitHub has disabled it. Scheduled workflows are switched off automatically after 60 days without a push — the normal state of a site repository. You can also run the update at any time with **Run workflow**.
+1. **Settings → Actions → General → Workflow permissions → Allow GitHub Actions to create and approve pull requests.** Without this, the action still pushes a branch for you to open a PR manually.
+2. **Actions → Update WordPress → Enable workflow**, if disabled. GitHub disables scheduled workflows after 60 days without a push. **Run workflow** starts a check manually.
 
-The update only replaces files that WordPress itself ships, and it checks each one against the checksums wordpress.org publishes before touching it. Your themes, plugins, uploads and `wp-config.php` are never candidates, and neither is a bundled file you have edited or deleted.
+| Component | Update behavior |
+|---|---|
+| WordPress core | Replaces files verified against wordpress.org checksums; skips edited or deleted files and preserves your plugins, themes, uploads, and `wp-config.php`. The PR lists skipped and modified core files. |
+| Bundled plugins | Separate PR; updates only plugins whose entire installed release matches wordpress.org checksums. Modified, premium, custom, and other unverified plugins are skipped and listed. |
+| SQLite Database Integration | Mirrors its GitHub default branch; review the PR diff. Updates remove files you add inside this plugin's directory, so keep custom code in a separate plugin. |
+| Themes | Reports available updates for manual installation; no automatic updates because wordpress.org provides no theme checksums. Themes bundled with WordPress are excluded from the report and covered by core updates. |
 
-The pull request body lists anything the update skipped and why, along with any core file that differs from what WordPress ships — so an edit you made to WordPress itself shows up before a later release collides with it.
-
-Bundled plugins are updated the same way, in a **separate** pull request, so a plugin update never rides along with a core one and either can be reverted on its own. A plugin is only replaced when wordpress.org can prove file by file that what's on disk is exactly the release it claims to be — so your own plugins, anything premium, and anything bundled from outside wordpress.org are left alone and listed in the pull request instead. If even one file of a plugin has been edited, the whole plugin is skipped rather than left running a mix of two releases.
-
-One exception: **SQLite Database Integration** is bundled from its GitHub repository rather than wordpress.org, and follows that repository's default branch. wordpress.org carries an older release of it, so there is nothing to check it against and the pull request diff is the review. Because the copy mirrors the branch, files you add inside that plugin's directory are removed by an update — keep your own code in its own plugin.
-
-Themes are only ever **reported on**, never updated. wordpress.org publishes no checksums for themes, so there is no way to tell a theme you have edited from an untouched one, and overwriting it would risk your work. Themes bundled with WordPress are excluded from the report because the core update already covers them. Anything else with a newer release is listed in the workflow run summary, and updating it is a manual step.
-
-To check any of this without changing anything:
+Check without changing files:
 
 ```bash
 node util/wp-update --dry-run
 node util/wp-update --plugins --dry-run
 node util/wp-update --themes
 ```
-
-## Customizing ServerlessWP
-- `netlify.toml` or `vercel.json` are where we configure ```/api/index.js``` to handle all requests
-- [mitchmac/serverlesswp-node](https://github.com/mitchmac/serverlesswp-node) is used to run PHP and handle the request
-- You can modify the incoming request through the ```event``` object in api/index.js. You can also modify the WordPress ```response``` object there. ServerlessWP has a basic plugin system to do this. Checkout out ```/api/index.js``` for hints.
-
-## Getting help
-Need help getting ServerlessWP installed? [Start a discussion](https://github.com/mitchmac/ServerlessWP/discussions).
-
-## Contributing
-- Using ServerlessWP and [reporting any problems you experience](https://github.com/mitchmac/ServerlessWP/issues) is a great way to help.
-- Spread the word!
-
-## License
-GNU General Public License v3.0
