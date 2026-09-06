@@ -29,9 +29,12 @@ jobs:
         with:
           node-version: 22.x
 
+      - name: Install locked framework
+        run: npm ci
+
       - name: Update WordPress
         id: update
-        run: node util/wp-update --report "${{ runner.temp }}/wp-update.md"
+        run: npm run wp:update -- --report "${{ runner.temp }}/wp-update.md"
 
       # The report explains what was left untouched and why, so it's the PR body.
       - name: Create Pull Request
@@ -58,9 +61,12 @@ jobs:
         with:
           node-version: 22.x
 
+      - name: Install locked framework
+        run: npm ci
+
       - name: Update plugins
         id: update
-        run: node util/wp-update --plugins --report "${{ runner.temp }}/plugin-update.md"
+        run: npm run wp:update -- --plugins --report "${{ runner.temp }}/plugin-update.md"
 
       - name: Create Pull Request
         if: steps.update.outputs.updated == 'true'
@@ -77,4 +83,4 @@ jobs:
       - name: Report on themes
         if: always()
         continue-on-error: true
-        run: node util/wp-update --themes
+        run: npm run wp:update -- --themes

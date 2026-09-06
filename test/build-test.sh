@@ -24,4 +24,4 @@ if [ -n "${SERVERLESSWP_LOCAL:-}" ]; then
 fi
 
 cd ..
-docker build -t serverlesswp-test -f test/Dockerfile "${BUILD_ARGS[@]}" .
+docker build -t "${TEST_IMAGE:-serverlesswp-test}" -f "${TEST_DOCKERFILE:-test/Dockerfile}" "${BUILD_ARGS[@]}" .

@@ -21,7 +21,7 @@ set -uo pipefail
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PORT="${PORT:-3998}"
 # Alongside the repo, not in TMPDIR: hardlinks cannot cross filesystems.
-FIXTURE="$(mktemp -d "$(dirname "$REPO")/.vercel-routing-XXXXXX")"
+FIXTURE="$(mktemp -d "${TMPDIR:-/tmp}/serverlesswp-vercel-routing-XXXXXX")"
 STUB_HEADER="x-routing-stub"
 DEV_PID=""
 FAILURES=0
@@ -181,7 +181,9 @@ echo
 echo "Source files (must never be served from the filesystem):"
 for p in /wp/wp-config.php /wp/wp-settings.php /wp/index.php \
          /wp/wp-content/plugins/sqlite-database-integration/load.php \
-         /util/sqliteS3.js /util/install.js /util/directory.js \
+         /node_modules/serverlesswp/src/wordpress/sqliteS3.js /node_modules/serverlesswp/src/wordpress/install.js /node_modules/serverlesswp/src/wordpress/directory.js \
+         /node_modules/serverlesswp/wordpress-assets/router.php \
+         /node_modules/serverlesswp/wordpress-assets/serverlesswp-stream-wrapper/bootstrap/prepend.php \
          /api/index.js /test/proxy.js /package.json /serverless.yml /netlify.toml; do
     expect_function "$p"
 done
@@ -190,15 +192,15 @@ echo
 echo "The dest-miss fallback (a matched route whose dest does not resolve):"
 # Vercel falls back to resolving the original request path. Under the old
 # config these returned the real source.
-denied /util/sqliteS3.js       util/sqliteS3.js
-denied /wp/util/sqliteS3.js    util/sqliteS3.js
+denied /node_modules/serverlesswp/src/wordpress/sqliteS3.js       node_modules/serverlesswp/src/wordpress/sqliteS3.js
+denied /wp/node_modules/serverlesswp/src/wordpress/sqliteS3.js    node_modules/serverlesswp/src/wordpress/sqliteS3.js
 denied /test/test-key.pem      test/test-key.pem
 denied /test/proxy.js          test/proxy.js
 
 echo
 echo "Path traversal (routes match before the path is resolved):"
-denied "/wp-content/../util/sqliteS3.js"    util/sqliteS3.js
-denied "/wp-includes/../../util/install.js" util/install.js
+denied "/wp-content/../node_modules/serverlesswp/src/wordpress/sqliteS3.js"    node_modules/serverlesswp/src/wordpress/sqliteS3.js
+denied "/wp-includes/../../node_modules/serverlesswp/src/wordpress/install.js" node_modules/serverlesswp/src/wordpress/install.js
 
 echo
 echo "Assets (must stay on the CDN):"

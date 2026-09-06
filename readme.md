@@ -42,7 +42,7 @@ The deploy button uses Vercel for the simplest setup, with Blob storage, [CDN de
 - **Plugins and themes:** WordPress lives in `wp/`. Add plugins to `wp/wp-content/plugins/` or themes to `wp/wp-content/themes/`, then commit and push to redeploy. See [Keeping WordPress updated](#keeping-wordpress-updated) for updates through pull requests.
 - **Uploads and generated files:** media uploads and supported plugin-generated files persist in S3 or Vercel Blob. See [the stream wrapper reference](#media-uploads-on-vercel-blob) for file-storage limitations.
 - **Caching:** use cache headers such as `s-maxage` to enable CDN caching. See [Vercel Edge Caching](https://vercel.com/docs/concepts/edge-network/caching) or [Netlify Cache Headers](https://docs.netlify.com/edge-functions/optional-configuration/#supported-headers).
-- **Request handling:** [api/index.js](api/index.js) runs PHP through [serverlesswp-node](https://github.com/mitchmac/serverlesswp-node) and provides hooks to modify the incoming `event` and WordPress `response`. Routing is configured in [vercel.json](vercel.json) or [netlify.toml](netlify.toml).
+- **Request handling:** [api/index.js](api/index.js) imports the WordPress handler from [serverlesswp-node](https://github.com/mitchmac/serverlesswp-node). The package owns runtime behavior and request hooks. Routing is configured in [vercel.json](vercel.json) or [netlify.toml](netlify.toml).
 
 ## Getting help
 
@@ -118,7 +118,7 @@ The stream wrapper persists uploads in object storage because local writes do no
 | `SERVERLESSWP_STREAM_CACHE_CONTROL` | Served-file cache header; default: `public, max-age=3600, s-maxage=86400`. |
 | `SERVERLESSWP_STREAM_CDN_BASE_URL` | Optional public Blob CDN URL to serve files directly. |
 
-Vercel OIDC authenticates writes without manually added credentials. Private uploads are served through the function and cached at the edge. Plugins, themes, mu-plugins, and languages stay local; `.php`, `.log`, `.sqlite`, and `.htaccess` files are never routed. See the [stream wrapper README](packages/serverlesswp-stream-wrapper/README.md) for all settings, S3 configuration, and limitations.
+Vercel OIDC authenticates writes without manually added credentials. Private uploads are served through the function and cached at the edge. Plugins, themes, mu-plugins, and languages stay local; `.php`, `.log`, `.sqlite`, and `.htaccess` files are never routed. See the [stream wrapper README](https://github.com/mitchmac/serverlesswp-node/tree/main/packages/serverlesswp-stream-wrapper) for all settings, S3 configuration, and limitations.
 
 ### Keeping WordPress updated
 
@@ -137,7 +137,25 @@ The **Update WordPress** GitHub Action checks daily and opens pull requests; mer
 Check without changing files:
 
 ```bash
-node util/wp-update --dry-run
-node util/wp-update --plugins --dry-run
-node util/wp-update --themes
+npm run wp:update -- --dry-run
+npm run wp:update -- --plugins --dry-run
+npm run wp:update -- --themes
 ```
+
+### Keeping the framework updated
+
+Framework code and PHP implementations ship in the `serverlesswp` npm dependency.
+Your `wp/` files remain site-owned: add plugins, MU plugins and themes normally.
+The committed ServerlessWP MU-plugin loaders explicitly import the installed
+package. `wp-config.php` remains complete and editable in your site, with no
+package import. Installation and builds do not generate or replace files under
+`wp/`; `wp-config.php` stays entirely site-owned.
+
+This repository is the source of truth for the handlers, MU-plugin loaders,
+deployment configuration and workflows. Bring changes to those files into your
+site through Git. The npm package contains the framework implementation, without
+scaffold templates or configuration migration tooling.
+
+Update the package and lockfile, test and deploy. See the
+[framework migration guide](docs/framework-package-migration.md) for existing
+sites, customization, runtime file locations and testing unpublished releases.

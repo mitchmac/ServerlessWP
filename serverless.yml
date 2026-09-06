@@ -20,3 +20,9 @@ functions:
       #USERNAME: ''
       #PASSWORD: Don't set this if you'll be commiting the file, instead use the AWS console or another method like Parameter Store
       #HOST: ''
+
+package:
+  patterns:
+    - wp/**
+    - node_modules/serverlesswp/wordpress-assets/**
+    - node_modules/serverlesswp/php-files/**

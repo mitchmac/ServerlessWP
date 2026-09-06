@@ -1,6 +1,8 @@
 [functions]
   directory = "api"
-  included_files = ["wp/**"]
+  node_bundler = "esbuild"
+  external_node_modules = ["serverlesswp", "sqlite3"]
+  included_files = ["wp/**", "node_modules/serverlesswp/wordpress-assets/**", "node_modules/serverlesswp/php-files/**"]
 [[redirects]]
   from = "/*"
   to = "/.netlify/functions/index/:splat"

@@ -18,7 +18,7 @@
   ],
   "functions": {
     "api/vercel.js": {
-      "includeFiles": "wp/**",
+      "includeFiles": "{wp/**,node_modules/serverlesswp/{wordpress-assets,php-files}/**}",
       "maxDuration": 60
     }
   },

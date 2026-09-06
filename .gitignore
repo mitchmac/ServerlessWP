@@ -10,3 +10,6 @@ test/local-pkg/*.tgz
 # Claude Code project memory and instructions.
 memory/
 CLAUDE.md
+
+# Generated public build output; wp/ remains site-owned.
+wp-public/
