@@ -1,7 +1,5 @@
 [functions]
   directory = "api"
-  node_bundler = "esbuild"
-  external_node_modules = ["serverlesswp", "sqlite3"]
   included_files = ["wp/**", "node_modules/serverlesswp/wordpress-assets/**", "node_modules/serverlesswp/php-files/**"]
 [[redirects]]
   from = "/*"

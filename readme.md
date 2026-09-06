@@ -156,6 +156,4 @@ deployment configuration and workflows. Bring changes to those files into your
 site through Git. The npm package contains the framework implementation, without
 scaffold templates or configuration migration tooling.
 
-Update the package and lockfile, test and deploy. See the
-[framework migration guide](docs/framework-package-migration.md) for existing
-sites, customization, runtime file locations and testing unpublished releases.
+Update the package and lockfile, test and deploy.
