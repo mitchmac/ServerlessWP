@@ -1,6 +1,0 @@
-vendor/
-node_modules/
-.phpunit.result.cache
-test-results/
-# Working notes: local paths and other repos' branch names.
-NEXT-STEPS.md
