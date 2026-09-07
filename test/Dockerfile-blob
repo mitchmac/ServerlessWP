@@ -1,10 +1,14 @@
 FROM public.ecr.aws/lambda/nodejs:22
 
 COPY package.json package-lock.json ${LAMBDA_TASK_ROOT}/
-RUN npm ci --omit=optional --omit=dev
+ARG LOCAL_SERVERLESSWP=
+COPY test/local-pkg/ /tmp/local-pkg/
+RUN if [ -n "$LOCAL_SERVERLESSWP" ]; then \
+        npm install --package-lock-only --ignore-scripts "/tmp/local-pkg/$LOCAL_SERVERLESSWP"; \
+    fi \
+    && npm ci --omit=optional --omit=dev
 
 COPY api/ ${LAMBDA_TASK_ROOT}/api/
-COPY util/ ${LAMBDA_TASK_ROOT}/util/
 COPY wp/ ${LAMBDA_TASK_ROOT}/wp/
 COPY test/installer.php ${LAMBDA_TASK_ROOT}/wp/
 COPY test/vercel-blob-emulator/undici-patch.js ${LAMBDA_TASK_ROOT}/blob-test/undici-patch.js

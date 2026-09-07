@@ -1,9 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
-cd ..
-docker build -t serverlesswp-blob-test -f test/Dockerfile-blob .
-cd test
+TEST_IMAGE=serverlesswp-blob-test TEST_DOCKERFILE=test/Dockerfile-blob ./build-test.sh
 
 # Clean up any leftovers from a previous run
 pkill -f "node proxy.js" 2>/dev/null || true

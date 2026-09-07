@@ -21,7 +21,7 @@ if (getenv('SERVERLESSWP_TESTING') !== '1') {
 require_once __DIR__ . '/wp-load.php';
 
 $muPlugin = WP_CONTENT_DIR . '/mu-plugins/serverlesswp-stream-wrapper.php';
-$payload  = WP_CONTENT_DIR . '/mu-plugins/serverlesswp-stream-wrapper/serverlesswp-stream-wrapper.php';
+$payload  = getenv('SERVERLESSWP_ASSETS_DIR') . '/serverlesswp-stream-wrapper/serverlesswp-stream-wrapper.php';
 
 // Replays serveRemoteFile()'s path computation under a real WordPress load, so
 // a failure to serve can be attributed to a specific condition rather than

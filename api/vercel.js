@@ -1,4 +1,4 @@
-const core = require('./index.js');
+const { handler } = require('serverlesswp/wordpress');
 
-module.exports = core.handler;
-module.exports.handler = core.handler;
+module.exports = handler;
+module.exports.handler = handler;
