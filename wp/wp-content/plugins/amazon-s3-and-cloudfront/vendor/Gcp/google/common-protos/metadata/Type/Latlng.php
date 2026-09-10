@@ -13,7 +13,7 @@ class Latlng
         if (static::$is_initialized == \true) {
             return;
         }
-        $pool->internalAddGeneratedFile("\n\xc3\x01\n\x18google/type/latlng.proto\x12\vgoogle.type\"-\n\x06LatLng\x12\x10\n\x08latitude\x18\x01 \x01(\x01\x12\x11\n\tlongitude\x18\x02 \x01(\x01Bc\n\x0fcom.google.typeB\vLatLngProtoP\x01Z8google.golang.org/genproto/googleapis/type/latlng;latlng\xf8\x01\x01\xa2\x02\x03GTPb\x06proto3", \true);
+        $pool->internalAddGeneratedFile("\n\xc0\x01\n\x18google/type/latlng.proto\x12\vgoogle.type\"-\n\x06LatLng\x12\x10\n\x08latitude\x18\x01 \x01(\x01\x12\x11\n\tlongitude\x18\x02 \x01(\x01B`\n\x0fcom.google.typeB\vLatLngProtoP\x01Z8google.golang.org/genproto/googleapis/type/latlng;latlng\xa2\x02\x03GTPb\x06proto3", \true);
         static::$is_initialized = \true;
     }
 }

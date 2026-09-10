@@ -19,6 +19,11 @@ use DeliciousBrains\WP_Offload_Media\Upgrades\Exceptions\Batch_Limits_Exceeded_E
 use DeliciousBrains\WP_Offload_Media\Upgrades\Exceptions\Too_Many_Errors_Exception;
 use WP_Error;
 
+// Exit if accessed directly.
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 /**
  * Upgrade Class
  *
@@ -29,44 +34,44 @@ use WP_Error;
 abstract class Upgrade {
 
 	/**
+	 * @var string
+	 */
+	const SETTINGS_KEY = 'post_meta_version';
+
+	/**
 	 * @var Amazon_S3_And_CloudFront
 	 */
-	protected $as3cf;
+	protected Amazon_S3_And_CloudFront $as3cf;
 
 	/**
 	 * @var int
 	 */
-	protected $upgrade_id = 0;
+	protected int $upgrade_id = 0;
 
 	/**
 	 * @var string
 	 */
-	protected $upgrade_name = 'base';
+	protected string $upgrade_name = 'base';
 
 	/**
 	 * @var string 'metadata', 'attachment'
 	 */
-	protected $upgrade_type = 'attachment';
+	protected string $upgrade_type = 'attachment';
 
 	/**
 	 * @var string
 	 */
-	protected $running_update_text;
+	protected string $running_update_text;
 
 	/**
 	 * @var string
 	 */
-	protected $settings_key = 'post_meta_version';
+	protected string $cron_hook;
 
 	/**
 	 * @var string
 	 */
-	protected $cron_hook;
-
-	/**
-	 * @var string
-	 */
-	protected $cron_schedule_key;
+	protected string $cron_schedule_key;
 
 	/**
 	 * @var mixed|void
@@ -81,67 +86,67 @@ abstract class Upgrade {
 	/**
 	 * @var int
 	 */
-	protected $error_count;
+	protected int $error_count = 0;
 
 	/**
 	 * @var string
 	 */
-	public static $lock_key = 'as3cf_upgrade_lock';
+	public static string $lock_key = 'as3cf_upgrade_lock';
 
 	/**
 	 * @var int Time limit in seconds.
 	 */
-	protected $time_limit = 20;
+	protected int $time_limit = 20;
 
 	/**
 	 * @var int Batch size limit for this request session.
 	 */
-	protected $size_limit = 500;
+	protected int $size_limit = 500;
 
 	/**
 	 * @var int Finish time
 	 */
-	protected $finish;
+	protected int $finish;
 
 	/**
 	 * @var int Maximum number of items to be processed in a single request.
 	 */
-	protected $max_items_processable;
+	protected int $max_items_processable;
 
 	/**
 	 * @var int Number of items processed.
 	 */
-	protected $items_processed;
+	protected int $items_processed = 0;
 
 	/**
 	 * @var mixed Last item processed.
 	 */
-	protected $last_item;
+	protected mixed $last_item;
 
 	/**
 	 * @var int The current blog ID.
 	 */
-	protected $blog_id;
+	protected int $blog_id = 0;
 
 	/**
 	 * @var string The wpdb prefix for the current blog.
 	 */
-	protected $blog_prefix;
+	protected string $blog_prefix;
 
 	/**
 	 * @var int The last completed blog ID.
 	 */
-	protected $last_blog_id;
+	protected int $last_blog_id = 0;
 
 	/**
 	 * @var array Blog IDs which are already processed.
 	 */
-	protected $processed_blogs_ids;
+	protected array $processed_blogs_ids;
 
 	/**
 	 * @var array Session data
 	 */
-	protected $session;
+	protected array $session;
 
 	const STATUS_RUNNING = 1;
 	const STATUS_ERROR   = 2;
@@ -152,21 +157,39 @@ abstract class Upgrade {
 	 *
 	 * @param Amazon_S3_And_CloudFront $as3cf - the instance of the as3cf class
 	 */
-	public function __construct( $as3cf ) {
+	public function __construct( Amazon_S3_And_CloudFront $as3cf ) {
 		$this->as3cf = $as3cf;
 
 		$this->running_update_text = $this->get_running_update_text();
 		$this->cron_hook           = 'as3cf_cron_update_' . $this->upgrade_name;
 		$this->cron_schedule_key   = 'as3cf_update_' . $this->upgrade_name . '_interval';
 
-		$this->cron_interval_in_minutes = apply_filters( 'as3cf_update_' . $this->upgrade_name . '_interval', 2 );
-		$this->error_threshold          = apply_filters(
-			'as3cf_update_' . $this->upgrade_name . '_error_threshold',
-			20
+		// Make sure interval is int between 1 and 5 minutes, default 2.
+		$this->cron_interval_in_minutes = max(
+			1,
+			min(
+				5,
+				(int) apply_filters( 'as3cf_update_' . $this->upgrade_name . '_interval', 2 )
+			)
 		);
-		$this->max_items_processable    = apply_filters(
-			'as3cf_update_' . $this->upgrade_name . '_batch_size',
-			$this->size_limit
+
+		// Make sure error threshold is int between 1 and 100, default 20.
+		$this->error_threshold = max(
+			1,
+			min(
+				100,
+				(int) apply_filters( 'as3cf_update_' . $this->upgrade_name . '_error_threshold', 20 )
+			)
+		);
+
+		// Make sure max items to be processed per batch is int between 1 and 2,000,
+		// default from upgrade class, base is 500.
+		$this->max_items_processable = max(
+			1,
+			min(
+				2000,
+				(int) apply_filters( 'as3cf_update_' . $this->upgrade_name . '_batch_size', $this->size_limit )
+			)
 		);
 
 		if ( $this->is_completed() ) {
@@ -193,7 +216,7 @@ abstract class Upgrade {
 	 *
 	 * @return bool
 	 */
-	protected function maybe_init() {
+	protected function maybe_init(): bool {
 		if ( AS3CF_Utils::is_ajax() ) {
 			return false;
 		}
@@ -239,7 +262,7 @@ abstract class Upgrade {
 	 *
 	 * @return int
 	 */
-	protected function count_items_to_process() {
+	protected function count_items_to_process(): int {
 		return count( $this->get_items_to_process( $this->blog_prefix, false, $this->last_item ) );
 	}
 
@@ -252,7 +275,7 @@ abstract class Upgrade {
 	 *
 	 * @return array
 	 */
-	abstract protected function get_items_to_process( $prefix, $limit, $offset = false );
+	abstract protected function get_items_to_process( string $prefix, int $limit, mixed $offset = false ): array;
 
 	/**
 	 * Upgrade item.
@@ -261,19 +284,19 @@ abstract class Upgrade {
 	 *
 	 * @return bool
 	 */
-	abstract protected function upgrade_item( $item );
+	abstract protected function upgrade_item( mixed $item ): bool;
 
 	/**
 	 * Get running update text.
 	 *
 	 * @return string
 	 */
-	abstract protected function get_running_update_text();
+	abstract protected function get_running_update_text(): string;
 
 	/**
 	 * Fire up the upgrade
 	 */
-	protected function init() {
+	protected function init(): void {
 		// Initialize the upgrade
 		$this->save_session( array( 'status' => self::STATUS_RUNNING ) );
 
@@ -283,7 +306,7 @@ abstract class Upgrade {
 	/**
 	 * WP Cron callback to run the upgrade.
 	 */
-	public function do_upgrade() {
+	public function do_upgrade(): void {
 		$this->lock_upgrade();
 		$this->start_timer();
 
@@ -300,7 +323,7 @@ abstract class Upgrade {
 	/**
 	 * Run or resume the main upgrade process.
 	 */
-	protected function run_upgrade() {
+	protected function run_upgrade(): void {
 		try {
 			$blog_id = $this->get_initial_blog_id();
 
@@ -339,11 +362,11 @@ abstract class Upgrade {
 	 * Upgrade the current blog.
 	 *
 	 * @return bool true if all items for the blog were upgraded, otherwise false.
-	 * @throws Batch_Limits_Exceeded_Exception
 	 *
+	 * @throws Batch_Limits_Exceeded_Exception
 	 * @throws Too_Many_Errors_Exception
 	 */
-	protected function upgrade_blog() {
+	protected function upgrade_blog(): bool {
 		$total    = $this->count_items_to_process();
 		$items    = $this->blog_batch_items();
 		$upgraded = 0;
@@ -364,7 +387,7 @@ abstract class Upgrade {
 		 * If the number upgraded is the same as the remaining total to process
 		 * then all items have been upgraded for this blog.
 		 */
-		if ( $upgraded === (int) $total ) {
+		if ( $upgraded === $total ) {
 			return true;
 		}
 
@@ -377,7 +400,7 @@ abstract class Upgrade {
 	 * @return int
 	 * @throws No_More_Blogs_Exception
 	 */
-	protected function next_blog_id() {
+	protected function next_blog_id(): int {
 		$blog_id = $this->blog_id ? $this->blog_id : $this->last_blog_id;
 
 		do {
@@ -397,7 +420,7 @@ abstract class Upgrade {
 	 *
 	 * @return array
 	 */
-	protected function blog_batch_items() {
+	protected function blog_batch_items(): array {
 		$limit = $this->max_items_processable - $this->items_processed;
 
 		return $this->get_items_to_process( $this->blog_prefix, $limit, $this->last_item );
@@ -406,7 +429,7 @@ abstract class Upgrade {
 	/**
 	 * Adds notices about issues with upgrades allowing user to restart them.
 	 */
-	public function maybe_display_notices() {
+	public function maybe_display_notices(): void {
 		$action_url = $this->as3cf->get_plugin_page_url( array(
 			'action' => 'restart_update',
 			'update' => $this->upgrade_name,
@@ -455,7 +478,7 @@ abstract class Upgrade {
 	 *
 	 * @return string
 	 */
-	protected function get_running_message() {
+	protected function get_running_message(): string {
 		return sprintf(
 		/* translators: %1$s is the type of data being updated, title cased, %2$s is formatted progress info, %3$s is extra info about the process, %4$d is an integer. */
 			__(
@@ -474,7 +497,7 @@ abstract class Upgrade {
 	 *
 	 * @return string
 	 */
-	protected function get_paused_message() {
+	protected function get_paused_message(): string {
 		return sprintf(
 		/* translators: %1$s is the type of data being updated, title cased, %2$s is formatted progress info, %3$s is also the type of data being updated. */
 			__(
@@ -492,7 +515,7 @@ abstract class Upgrade {
 	 *
 	 * @return string
 	 */
-	protected function get_error_message() {
+	protected function get_error_message(): string {
 		return sprintf(
 		/* translators: %1$s is the type of data being updated, title cased, %2$s is also the type of data being updated, %3$d is an integer. */
 			__(
@@ -510,7 +533,7 @@ abstract class Upgrade {
 	 *
 	 * @return string
 	 */
-	protected function get_progress_text() {
+	protected function get_progress_text(): string {
 		$progress = $this->calculate_progress();
 
 		if ( false === $progress ) {
@@ -533,9 +556,8 @@ abstract class Upgrade {
 	 * Calculate progress.
 	 *
 	 * @return bool|float
-	 * @throws Batch_Limits_Exceeded_Exception
 	 */
-	protected function calculate_progress() {
+	protected function calculate_progress(): float|bool {
 		$this->boot_session();
 
 		if ( is_multisite() ) {
@@ -562,7 +584,7 @@ abstract class Upgrade {
 	/**
 	 * Handler for the running upgrade actions
 	 */
-	public function maybe_handle_action() {
+	public function maybe_handle_action(): void {
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- existence/equality check, admin_init
 		if ( ! isset( $_GET['page'] ) || sanitize_key( $_GET['page'] ) !== $this->as3cf->get_plugin_slug() ) { // input var okay
 			return;
@@ -589,7 +611,7 @@ abstract class Upgrade {
 	/**
 	 * Exit upgrade with an error
 	 */
-	protected function upgrade_error() {
+	protected function upgrade_error(): void {
 		$this->close_session();
 		$this->session['status'] = self::STATUS_ERROR;
 		$this->save_session( $this->session );
@@ -599,7 +621,7 @@ abstract class Upgrade {
 	/**
 	 * Complete the upgrade
 	 */
-	protected function upgrade_finished() {
+	protected function upgrade_finished(): void {
 		$this->clear_session();
 		$this->update_saved_upgrade_id();
 		$this->unlock_upgrade();
@@ -609,7 +631,7 @@ abstract class Upgrade {
 	/**
 	 * Restart upgrade
 	 */
-	protected function action_restart_update() {
+	protected function action_restart_update(): void {
 		$this->init();
 		$this->end_action();
 	}
@@ -617,7 +639,7 @@ abstract class Upgrade {
 	/**
 	 * Pause upgrade
 	 */
-	protected function action_pause_update() {
+	protected function action_pause_update(): void {
 		$this->unschedule();
 
 		if ( $this->is_running() ) {
@@ -630,7 +652,7 @@ abstract class Upgrade {
 	/**
 	 * Common function for ending an action in a consistent way.
 	 */
-	private function end_action() {
+	private function end_action(): void {
 		// Make sure notices reflect new status.
 		$this->maybe_display_notices();
 
@@ -644,7 +666,7 @@ abstract class Upgrade {
 	 *
 	 * @param int $status
 	 */
-	protected function change_status_request( $status ) {
+	protected function change_status_request( int $status ): void {
 		$session           = $this->get_session();
 		$session['status'] = $status;
 		$this->save_session( $session );
@@ -653,14 +675,14 @@ abstract class Upgrade {
 	/**
 	 * Schedule the cron
 	 */
-	protected function schedule() {
+	protected function schedule(): void {
 		$this->as3cf->schedule_event( $this->cron_hook, $this->cron_schedule_key );
 	}
 
 	/**
 	 * Remove the cron schedule
 	 */
-	protected function unschedule() {
+	protected function unschedule(): void {
 		$this->as3cf->clear_scheduled_event( $this->cron_hook );
 	}
 
@@ -671,7 +693,7 @@ abstract class Upgrade {
 	 *
 	 * @return array
 	 */
-	public function cron_schedules( $schedules ) {
+	public function cron_schedules( array $schedules ): array {
 		// Add the upgrade interval to the existing schedules.
 		$schedules[ $this->cron_schedule_key ] = array(
 			'interval' => $this->cron_interval_in_minutes * 60,
@@ -704,7 +726,7 @@ abstract class Upgrade {
 	 *
 	 * @return array
 	 */
-	protected function get_session() {
+	protected function get_session(): array {
 		return get_site_option( 'as3cf_update_' . $this->upgrade_name . '_session', array() );
 	}
 
@@ -713,14 +735,14 @@ abstract class Upgrade {
 	 *
 	 * @param array $session session data to store
 	 */
-	protected function save_session( $session ) {
+	protected function save_session( array $session ): void {
 		update_site_option( 'as3cf_update_' . $this->upgrade_name . '_session', $session );
 	}
 
 	/**
 	 * Remove the session data to be used between requests
 	 */
-	protected function clear_session() {
+	protected function clear_session(): void {
 		delete_site_option( 'as3cf_update_' . $this->upgrade_name . '_session' );
 	}
 
@@ -729,15 +751,15 @@ abstract class Upgrade {
 	 *
 	 * @return int|mixed|string|WP_Error
 	 */
-	protected function get_saved_upgrade_id() {
-		return $this->as3cf->get_setting( $this->settings_key, 0 );
+	protected function get_saved_upgrade_id(): mixed {
+		return $this->as3cf->get_setting( self::SETTINGS_KEY, 0 );
 	}
 
 	/**
 	 * Update the saved upgrade ID
 	 */
-	protected function update_saved_upgrade_id() {
-		$this->as3cf->set_setting( $this->settings_key, $this->upgrade_id );
+	protected function update_saved_upgrade_id(): void {
+		$this->as3cf->set_setting( self::SETTINGS_KEY, $this->upgrade_id );
 		$this->as3cf->save_settings();
 	}
 
@@ -746,7 +768,7 @@ abstract class Upgrade {
 	 *
 	 * @return bool
 	 */
-	protected function has_previous_upgrade_completed() {
+	protected function has_previous_upgrade_completed(): bool {
 		// Has the previous upgrade completed yet?
 		$previous_id = $this->upgrade_id - 1;
 		if ( 0 !== $previous_id && (int) $this->get_saved_upgrade_id() < $previous_id ) {
@@ -760,7 +782,7 @@ abstract class Upgrade {
 	/**
 	 * Lock upgrade.
 	 */
-	protected function lock_upgrade() {
+	protected function lock_upgrade(): void {
 		set_site_transient( static::$lock_key, $this->upgrade_id, MINUTE_IN_SECONDS * 3 );
 	}
 
@@ -769,7 +791,7 @@ abstract class Upgrade {
 	 *
 	 * Voids the lock after 1 second rather than deleting to avoid a race condition.
 	 */
-	protected function unlock_upgrade() {
+	protected function unlock_upgrade(): void {
 		set_site_transient( static::$lock_key, $this->upgrade_id, 1 );
 	}
 
@@ -778,7 +800,7 @@ abstract class Upgrade {
 	 *
 	 * @return bool
 	 */
-	public static function is_locked() {
+	public static function is_locked(): bool {
 		return false !== get_site_transient( static::$lock_key );
 	}
 
@@ -787,7 +809,7 @@ abstract class Upgrade {
 	 *
 	 * @return bool
 	 */
-	protected function is_completed() {
+	protected function is_completed(): bool {
 		return $this->get_saved_upgrade_id() >= $this->upgrade_id;
 	}
 
@@ -796,7 +818,7 @@ abstract class Upgrade {
 	 *
 	 * @return bool
 	 */
-	protected function is_running() {
+	protected function is_running(): bool {
 		return self::STATUS_RUNNING === $this->get_upgrade_status();
 	}
 
@@ -805,7 +827,7 @@ abstract class Upgrade {
 	 *
 	 * @return bool
 	 */
-	protected function is_paused() {
+	protected function is_paused(): bool {
 		return self::STATUS_PAUSED === $this->get_upgrade_status();
 	}
 
@@ -814,7 +836,7 @@ abstract class Upgrade {
 	 *
 	 * phpcs:disable PEAR.Functions.FunctionCallSignature.Indent
 	 */
-	protected function start_timer() {
+	protected function start_timer(): void {
 		$this->finish = time() + apply_filters(
 				'as3cf_update_' . $this->upgrade_name . '_time_limit',
 				$this->time_limit
@@ -827,7 +849,7 @@ abstract class Upgrade {
 	 * @throws Batch_Limits_Exceeded_Exception
 	 * @throws Too_Many_Errors_Exception
 	 */
-	protected function check_batch_limits() {
+	protected function check_batch_limits(): void {
 		if ( $this->error_count > $this->error_threshold ) {
 			throw new Too_Many_Errors_Exception();
 		}
@@ -852,7 +874,7 @@ abstract class Upgrade {
 	 *
 	 * @return bool
 	 */
-	protected function blog_exists( $blog_id ) {
+	protected function blog_exists( int $blog_id ): bool {
 		static $all_ids;
 
 		if ( function_exists( 'get_site' ) ) {
@@ -869,14 +891,14 @@ abstract class Upgrade {
 	/**
 	 * Get the largest blog ID on the network.
 	 *
-	 * @return null|string
+	 * @return int
 	 */
-	protected function get_final_blog_id() {
+	protected function get_final_blog_id(): int {
 		global $wpdb;
 
 		if ( is_multisite() ) {
 			// phpcs:ignore WordPress.DB -- safe query, must not be cached
-			return $wpdb->get_var( "SELECT MAX(blog_id) FROM {$wpdb->blogs}" );
+			return (int) $wpdb->get_var( "SELECT MAX(blog_id) FROM $wpdb->blogs" );
 		}
 
 		return 1;
@@ -886,13 +908,14 @@ abstract class Upgrade {
 	 * Get the initial blog ID to start iterating with.
 	 *
 	 * @return int
+	 * @throws No_More_Blogs_Exception
 	 */
-	protected function get_initial_blog_id() {
+	protected function get_initial_blog_id(): int {
 		if ( $this->last_blog_id ) {
 			return $this->next_blog_id();
 		}
 
-		return (int) $this->get_final_blog_id();
+		return $this->get_final_blog_id();
 	}
 
 	/**
@@ -902,7 +925,7 @@ abstract class Upgrade {
 	 *
 	 * @return bool
 	 */
-	protected function is_blog_processable( $blog_id ) {
+	protected function is_blog_processable( int $blog_id ): bool {
 		if ( in_array( $blog_id, $this->processed_blogs_ids ) ) {
 			return false;
 		}
@@ -913,29 +936,29 @@ abstract class Upgrade {
 	/**
 	 * Populate the session properties from the saved state.
 	 */
-	protected function boot_session() {
+	protected function boot_session(): void {
 		$this->session             = $this->get_session();
 		$this->last_blog_id        = $this->load_last_blog_id();
-		$this->processed_blogs_ids = $this->load_processesed_blog_ids();
-		$this->error_count         = isset( $this->session['error_count'] ) ? $this->session['error_count'] : 0;
+		$this->processed_blogs_ids = $this->load_processed_blog_ids();
+		$this->error_count         = $this->session['error_count'] ?? 0;
 		$this->last_item           = $this->load_last_item();
 	}
 
 	/**
-	 * Get all of the processed blog IDs from the session.
+	 * Get all the processed blog IDs from the session.
 	 *
 	 * @return array
 	 */
-	protected function load_processesed_blog_ids() {
+	protected function load_processed_blog_ids(): array {
 		$session = $this->session ? $this->session : $this->get_session();
 
-		return isset( $session['processed_blog_ids'] ) ? $session['processed_blog_ids'] : array();
+		return $session['processed_blog_ids'] ?? array();
 	}
 
 	/**
 	 * Mark the current blog upgrade as complete.
 	 */
-	protected function blog_upgrade_completed() {
+	protected function blog_upgrade_completed(): void {
 		$this->last_blog_id          = $this->blog_id;
 		$this->processed_blogs_ids[] = $this->blog_id;
 		$this->last_item             = false;
@@ -946,14 +969,14 @@ abstract class Upgrade {
 	 *
 	 * @param mixed $item
 	 */
-	protected function item_upgrade_completed( $item ) {
+	protected function item_upgrade_completed( mixed $item ): void {
 		$this->last_item = $item;
 	}
 
 	/**
 	 * Prepare the session to be persisted.
 	 */
-	protected function close_session() {
+	protected function close_session(): void {
 		$this->session['last_blog_id']       = $this->last_blog_id;
 		$this->session['offset']             = $this->last_item;
 		$this->session['error_count']        = $this->error_count;
@@ -963,26 +986,24 @@ abstract class Upgrade {
 	/**
 	 * Load the last completed blog ID from the session.
 	 *
-	 * @return bool|int
+	 * @return int|null
 	 */
-	protected function load_last_blog_id() {
+	protected function load_last_blog_id(): int|null {
 		if ( ! empty( $this->session['last_blog_id'] ) ) {
 			return (int) $this->session['last_blog_id'];
 		}
 
-		return null;
+		return 0;
 	}
 
 	/**
 	 * Switch to the given blog, and update blog-specific state.
 	 *
 	 * @param int $blog_id
-	 *
-	 * @throws Batch_Limits_Exceeded_Exception
 	 */
-	protected function switch_to_blog( $blog_id ) {
+	protected function switch_to_blog( int $blog_id ): void {
 		$this->as3cf->switch_to_blog( $blog_id );
-		$this->blog_id     = (int) $blog_id;
+		$this->blog_id     = $blog_id;
 		$this->blog_prefix = $GLOBALS['wpdb']->prefix;
 	}
 
@@ -991,16 +1012,16 @@ abstract class Upgrade {
 	 *
 	 * @return bool|mixed
 	 */
-	protected function load_last_item() {
-		return isset( $this->session['offset'] ) ? $this->session['offset'] : false;
+	protected function load_last_item(): mixed {
+		return $this->session['offset'] ?? false;
 	}
 
 	/**
-	 * Whether or not the current screen can initialize the upgrade.
+	 * Whether the current screen can initialize the upgrade.
 	 *
 	 * @return bool
 	 */
-	protected function screen_can_init() {
+	protected function screen_can_init(): bool {
 		if ( is_multisite() ) {
 			return is_network_admin();
 		}
@@ -1013,7 +1034,7 @@ abstract class Upgrade {
 	 *
 	 * @return string
 	 */
-	public function get_locked_notification() {
+	public function get_locked_notification(): string {
 		return sprintf(
 		/* translators: %s is the type of data being updated, title cased. */
 			__(
@@ -1033,7 +1054,7 @@ abstract class Upgrade {
 	 *
 	 * @return array
 	 */
-	public function get_locked_notifications( array $notifications ) {
+	public function get_locked_notifications( array $notifications ): array {
 		$this->maybe_display_notices();
 
 		$notifications[ $this->upgrade_name ] = $this->get_locked_notification();
@@ -1050,7 +1071,7 @@ abstract class Upgrade {
 	 *
 	 * @return string
 	 */
-	public function get_running_upgrade( $running_upgrade ) {
+	public function get_running_upgrade( string $running_upgrade ): string {
 		if ( empty( $running_upgrade ) && ( $this->is_running() || $this->is_paused() || $this->is_locked() ) ) {
 			return $this->upgrade_name;
 		}

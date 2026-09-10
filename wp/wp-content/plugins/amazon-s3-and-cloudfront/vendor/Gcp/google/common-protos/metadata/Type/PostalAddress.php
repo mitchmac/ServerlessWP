@@ -13,7 +13,7 @@ class PostalAddress
         if (static::$is_initialized == \true) {
             return;
         }
-        $pool->internalAddGeneratedFile("\n\xb1\x03\n google/type/postal_address.proto\x12\vgoogle.type\"\xfd\x01\n\rPostalAddress\x12\x10\n\x08revision\x18\x01 \x01(\x05\x12\x13\n\vregion_code\x18\x02 \x01(\t\x12\x15\n\rlanguage_code\x18\x03 \x01(\t\x12\x13\n\vpostal_code\x18\x04 \x01(\t\x12\x14\n\fsorting_code\x18\x05 \x01(\t\x12\x1b\n\x13administrative_area\x18\x06 \x01(\t\x12\x10\n\x08locality\x18\x07 \x01(\t\x12\x13\n\vsublocality\x18\x08 \x01(\t\x12\x15\n\raddress_lines\x18\t \x03(\t\x12\x12\n\nrecipients\x18\n \x03(\t\x12\x14\n\forganization\x18\v \x01(\tBx\n\x0fcom.google.typeB\x12PostalAddressProtoP\x01ZFgoogle.golang.org/genproto/googleapis/type/postaladdress;postaladdress\xf8\x01\x01\xa2\x02\x03GTPb\x06proto3", \true);
+        $pool->internalAddGeneratedFile("\n\xae\x03\n google/type/postal_address.proto\x12\vgoogle.type\"\xfd\x01\n\rPostalAddress\x12\x10\n\x08revision\x18\x01 \x01(\x05\x12\x13\n\vregion_code\x18\x02 \x01(\t\x12\x15\n\rlanguage_code\x18\x03 \x01(\t\x12\x13\n\vpostal_code\x18\x04 \x01(\t\x12\x14\n\fsorting_code\x18\x05 \x01(\t\x12\x1b\n\x13administrative_area\x18\x06 \x01(\t\x12\x10\n\x08locality\x18\x07 \x01(\t\x12\x13\n\vsublocality\x18\x08 \x01(\t\x12\x15\n\raddress_lines\x18\t \x03(\t\x12\x12\n\nrecipients\x18\n \x03(\t\x12\x14\n\forganization\x18\v \x01(\tBu\n\x0fcom.google.typeB\x12PostalAddressProtoP\x01ZFgoogle.golang.org/genproto/googleapis/type/postaladdress;postaladdress\xa2\x02\x03GTPb\x06proto3", \true);
         static::$is_initialized = \true;
     }
 }

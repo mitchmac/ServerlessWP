@@ -9,13 +9,19 @@ namespace DeliciousBrains\WP_Offload_Media\Aws3\GuzzleHttp\Promise;
  * Thenning off of this promise will invoke the onFulfilled callback
  * immediately and ignore other callbacks.
  *
+ * @template TValue = mixed
+ * @template TReason = never
+ *
+ * @implements PromiseInterface<TValue, TReason>
+ *
  * @final
  */
 class FulfilledPromise implements PromiseInterface
 {
+    /** @var TValue */
     private $value;
     /**
-     * @param mixed $value
+     * @param TValue $value
      */
     public function __construct($value)
     {
@@ -24,6 +30,17 @@ class FulfilledPromise implements PromiseInterface
         }
         $this->value = $value;
     }
+    /**
+     * @template TFulfilledValue = never
+     * @template TFulfilledReason = never
+     * @template TRejectedValue = never
+     * @template TRejectedReason = never
+     *
+     * @param (callable(TValue): (TFulfilledValue|PromiseInterface<TFulfilledValue, TFulfilledReason>))|null $onFulfilled Invoked when the promise fulfills.
+     * @param (callable(TReason): (TRejectedValue|PromiseInterface<TRejectedValue, TRejectedReason>))|null   $onRejected  Invoked when the promise is rejected.
+     *
+     * @return ($onFulfilled is null ? self<TValue, TReason> : PromiseInterface<TFulfilledValue, TFulfilledReason|\Throwable>)
+     */
     public function then(?callable $onFulfilled = null, ?callable $onRejected = null) : PromiseInterface
     {
         // Return itself if there is no onFulfilled function.
@@ -44,6 +61,11 @@ class FulfilledPromise implements PromiseInterface
         });
         return $p;
     }
+    /**
+     * @param callable(TReason): mixed $onRejected Invoked when the promise is rejected.
+     *
+     * @return self<TValue, TReason>
+     */
     public function otherwise(callable $onRejected) : PromiseInterface
     {
         return $this->then(null, $onRejected);
@@ -56,7 +78,7 @@ class FulfilledPromise implements PromiseInterface
     {
         return self::FULFILLED;
     }
-    public function resolve($value) : void
+    public function resolve($value = null) : void
     {
         if ($value !== $this->value) {
             throw new \LogicException('Cannot resolve a fulfilled promise');

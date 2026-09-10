@@ -22,7 +22,7 @@ use DeliciousBrains\WP_Offload_Media\Gcp\Google\Cloud\Core\Exception\ServiceExce
 use DeliciousBrains\WP_Offload_Media\Gcp\GuzzleHttp\Psr7\CachingStream;
 /**
  * A streamWrapper implementation for handling `gs://bucket/path/to/file.jpg`.
- * Note that you can only open a file with mode 'r', 'rb', 'rt', 'w', 'wb', 'wt', 'a', 'ab', or 'at'.
+ * Note that you can only open a file with mode 'r', 'rb', 'rt', 'w', 'wb', 'wt', 'a', 'ab', 'at', 'x', 'xb', or 'xt'.
  *
  * See: http://php.net/manual/en/class.streamwrapper.php
  */
@@ -188,7 +188,8 @@ class StreamWrapper
      * download the file to see if it can be opened.
      *
      * @param string $path The path of the resource to open
-     * @param string $mode The fopen mode. Currently supports ('r', 'rb', 'rt', 'w', 'wb', 'wt', 'a', 'ab', 'at')
+     * @param string $mode The fopen mode. Currently supports ('r', 'rb', 'rt',
+     *        'w', 'wb', 'wt', 'a', 'ab', 'at', 'x', 'xb', 'xt')
      * @param int $flags Bitwise options STREAM_USE_PATH|STREAM_REPORT_ERRORS|STREAM_MUST_SEEK
      * @param string $openedPath Will be set to the path on success if STREAM_USE_PATH option is set
      * @return bool
@@ -225,6 +226,16 @@ class StreamWrapper
                 $name .= self::TAIL_NAME_SUFFIX;
             }
             $this->stream->setUploader($this->bucket->getStreamableUploader($this->stream, $options + ['name' => $name]));
+        } elseif ($mode == 'x') {
+            try {
+                if ($this->bucket->object($this->file)->exists()) {
+                    return $this->returnError('File already exists.', $flags);
+                }
+            } catch (ServiceException $ex) {
+                return $this->returnError($ex->getMessage(), $flags);
+            }
+            $this->stream = new WriteStream(null, $options);
+            $this->stream->setUploader($this->bucket->getStreamableUploader($this->stream, $options + ['name' => $this->file, 'ifGenerationMatch' => 0]));
         } elseif ($mode == 'r') {
             try {
                 // Lazy read from the source

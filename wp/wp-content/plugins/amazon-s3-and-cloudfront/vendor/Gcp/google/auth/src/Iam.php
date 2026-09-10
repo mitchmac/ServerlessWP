@@ -78,7 +78,7 @@ class Iam
         }
         $body = ['delegates' => $delegates, 'payload' => \base64_encode($stringToSign)];
         $headers = ['Authorization' => 'Bearer ' . $accessToken];
-        $request = new Psr7\Request('POST', $uri, $headers, Utils::streamFor(\json_encode($body)));
+        $request = new Psr7\Request('POST', $uri, $headers, Utils::streamFor((string) \json_encode($body)));
         $res = ($this->httpHandler)($request);
         $body = \json_decode((string) $res->getBody(), \true);
         return $body['signedBlob'];
@@ -104,7 +104,7 @@ class Iam
         $uri = $apiRoot . '/' . \sprintf(self::GENERATE_ID_TOKEN_PATH, $name);
         $headers['Authorization'] = 'Bearer ' . $bearerToken;
         $body = ['audience' => $targetAudience, 'includeEmail' => \true, 'useEmailAzp' => \true];
-        $request = new Psr7\Request('POST', $uri, $headers, Utils::streamFor(\json_encode($body)));
+        $request = new Psr7\Request('POST', $uri, $headers, Utils::streamFor((string) \json_encode($body)));
         $res = ($this->httpHandler)($request);
         $body = \json_decode((string) $res->getBody(), \true);
         return $body['token'];

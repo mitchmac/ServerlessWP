@@ -64,6 +64,11 @@ class BackendRule extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\
      */
     protected $operation_deadline = 0.0;
     /**
+     * Path translation specifies how to combine the backend address with the
+     * request path in order to produce the appropriate forwarding URL for the
+     * request. See [PathTranslation][google.api.BackendRule.PathTranslation] for
+     * more details.
+     *
      * Generated from protobuf field <code>.google.api.BackendRule.PathTranslation path_translation = 6;</code>
      */
     protected $path_translation = 0;
@@ -94,6 +99,15 @@ class BackendRule extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\
      * Generated from protobuf field <code>map<string, .google.api.BackendRule> overrides_by_request_protocol = 10;</code>
      */
     private $overrides_by_request_protocol;
+    /**
+     * The load balancing policy used for connection to the application backend.
+     * Defined as an arbitrary string to accomondate custom load balancing
+     * policies supported by the underlying channel, but suggest most users use
+     * one of the standard policies, such as the default, "RoundRobin".
+     *
+     * Generated from protobuf field <code>string load_balancing_policy = 11;</code>
+     */
+    protected $load_balancing_policy = '';
     protected $authentication;
     /**
      * Constructor.
@@ -130,6 +144,10 @@ class BackendRule extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\
      *           The number of seconds to wait for the completion of a long running
      *           operation. The default is no deadline.
      *     @type int $path_translation
+     *           Path translation specifies how to combine the backend address with the
+     *           request path in order to produce the appropriate forwarding URL for the
+     *           request. See [PathTranslation][google.api.BackendRule.PathTranslation] for
+     *           more details.
      *     @type string $jwt_audience
      *           The JWT audience is used when generating a JWT ID token for the backend.
      *           This ID token will be added in the HTTP "authorization" header, and sent
@@ -158,6 +176,11 @@ class BackendRule extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\
      *           for more details on the supported values.
      *     @type array|\Google\Protobuf\Internal\MapField $overrides_by_request_protocol
      *           The map between request protocol and the backend address.
+     *     @type string $load_balancing_policy
+     *           The load balancing policy used for connection to the application backend.
+     *           Defined as an arbitrary string to accomondate custom load balancing
+     *           policies supported by the underlying channel, but suggest most users use
+     *           one of the standard policies, such as the default, "RoundRobin".
      * }
      */
     public function __construct($data = NULL)
@@ -323,6 +346,11 @@ class BackendRule extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\
         return $this;
     }
     /**
+     * Path translation specifies how to combine the backend address with the
+     * request path in order to produce the appropriate forwarding URL for the
+     * request. See [PathTranslation][google.api.BackendRule.PathTranslation] for
+     * more details.
+     *
      * Generated from protobuf field <code>.google.api.BackendRule.PathTranslation path_translation = 6;</code>
      * @return int
      */
@@ -331,6 +359,11 @@ class BackendRule extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\
         return $this->path_translation;
     }
     /**
+     * Path translation specifies how to combine the backend address with the
+     * request path in order to produce the appropriate forwarding URL for the
+     * request. See [PathTranslation][google.api.BackendRule.PathTranslation] for
+     * more details.
+     *
      * Generated from protobuf field <code>.google.api.BackendRule.PathTranslation path_translation = 6;</code>
      * @param int $var
      * @return $this
@@ -479,6 +512,35 @@ class BackendRule extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\
     {
         $arr = GPBUtil::checkMapField($var, \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Internal\GPBType::STRING, \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Internal\GPBType::MESSAGE, \DeliciousBrains\WP_Offload_Media\Gcp\Google\Api\BackendRule::class);
         $this->overrides_by_request_protocol = $arr;
+        return $this;
+    }
+    /**
+     * The load balancing policy used for connection to the application backend.
+     * Defined as an arbitrary string to accomondate custom load balancing
+     * policies supported by the underlying channel, but suggest most users use
+     * one of the standard policies, such as the default, "RoundRobin".
+     *
+     * Generated from protobuf field <code>string load_balancing_policy = 11;</code>
+     * @return string
+     */
+    public function getLoadBalancingPolicy()
+    {
+        return $this->load_balancing_policy;
+    }
+    /**
+     * The load balancing policy used for connection to the application backend.
+     * Defined as an arbitrary string to accomondate custom load balancing
+     * policies supported by the underlying channel, but suggest most users use
+     * one of the standard policies, such as the default, "RoundRobin".
+     *
+     * Generated from protobuf field <code>string load_balancing_policy = 11;</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setLoadBalancingPolicy($var)
+    {
+        GPBUtil::checkString($var, True);
+        $this->load_balancing_policy = $var;
         return $this;
     }
     /**

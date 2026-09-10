@@ -712,6 +712,17 @@ class WP_MySQL_On_SQLite extends PDO {
 	private $in_transaction = false;
 
 	/**
+	 * Names of active user savepoints, outermost first.
+	 *
+	 * MySQL replaces a savepoint with the same name, while SQLite only shadows it.
+	 * Tracking normalized names prevents shadowed SQLite savepoints from becoming
+	 * visible again and supports case-insensitive lookup.
+	 *
+	 * @var string[]
+	 */
+	private $savepoint_names = array();
+
+	/**
 	 * Whether a MySQL table lock is active.
 	 *
 	 * Set to "true" when a lock is acquired using the MySQL LOCK statement.
@@ -1182,11 +1193,16 @@ class WP_MySQL_On_SQLite extends PDO {
 			$this->error_info = array( '00000', null, null );
 			return $stmt;
 		} catch ( Throwable $e ) {
-			try {
-				$this->rollback_user_transaction();
-				$this->table_lock_active = false;
-			} catch ( Throwable $rollback_exception ) {
-				// Ignore rollback errors.
+			// MySQL error 1305 reports a missing savepoint without ending the transaction.
+			$preserves_transaction = $e instanceof WP_MySQL_On_SQLite_Exception
+				&& 1305 === ( $e->errorInfo[1] ?? null );
+			if ( ! $preserves_transaction ) {
+				try {
+					$this->rollback_user_transaction();
+					$this->table_lock_active = false;
+				} catch ( Throwable $rollback_exception ) {
+					// Ignore rollback errors.
+				}
 			}
 			if ( $e instanceof WP_SQLite_Information_Schema_Exception ) {
 				$e = $this->convert_information_schema_exception( $e );
@@ -2092,7 +2108,8 @@ class WP_MySQL_On_SQLite extends PDO {
 		 * @see self::begin_wrapper_transaction()
 		 */
 		$this->connection->query( 'BEGIN IMMEDIATE' );
-		$this->in_transaction = true;
+		$this->in_transaction  = true;
+		$this->savepoint_names = array();
 	}
 
 	/**
@@ -2104,7 +2121,8 @@ class WP_MySQL_On_SQLite extends PDO {
 			return;
 		}
 		$this->connection->query( 'COMMIT' );
-		$this->in_transaction = false;
+		$this->in_transaction  = false;
+		$this->savepoint_names = array();
 	}
 
 	/**
@@ -2116,7 +2134,8 @@ class WP_MySQL_On_SQLite extends PDO {
 			return;
 		}
 		$this->connection->query( 'ROLLBACK' );
-		$this->in_transaction = false;
+		$this->in_transaction  = false;
+		$this->savepoint_names = array();
 	}
 
 	/**
@@ -2146,26 +2165,58 @@ class WP_MySQL_On_SQLite extends PDO {
 				break;
 			case 'savepointStatement':
 				$savepoint_name = $this->translate( $subnode->get_first_child_node( 'identifier' ) );
+				$savepoint_key  = null === $savepoint_name
+					? null
+					: strtolower( $this->unquote_sqlite_identifier( $savepoint_name ) );
 
 				// ROLLBACK/ROLLBACK TO SAVEPOINT <identifier>.
 				if ( WP_MySQL_Lexer::ROLLBACK_SYMBOL === $token->id ) {
 					if ( null === $savepoint_name ) {
 						$this->rollback_user_transaction();
 					} else {
+						// ROLLBACK TO keeps the named savepoint and deletes those created after it.
+						$index = array_search( $savepoint_key, $this->savepoint_names, true );
+						if ( false === $index ) {
+							throw $this->new_savepoint_does_not_exist_exception( $savepoint_name );
+						}
 						$this->execute_sqlite_query( sprintf( 'ROLLBACK TO SAVEPOINT %s', $savepoint_name ) );
+						array_splice( $this->savepoint_names, $index + 1 );
 					}
 					return;
 				}
 
 				// SAVEPOINT.
 				if ( WP_MySQL_Lexer::SAVEPOINT_SYMBOL === $token->id ) {
+					// In MySQL with autocommit enabled, a standalone savepoint is discarded
+					// immediately without starting a transaction.
+					if ( ! $this->inTransaction() ) {
+						return;
+					}
 					$this->execute_sqlite_query( sprintf( 'SAVEPOINT %s', $savepoint_name ) );
+
+					/*
+					 * MySQL deletes an existing savepoint when its name is reused, while
+					 * SQLite keeps it on the stack, shadowed by the new one. Drop the old
+					 * name so that it can no longer be referenced. The shadowed SQLite
+					 * savepoint is harmless; it is discarded when the transaction ends.
+					 */
+					$index = array_search( $savepoint_key, $this->savepoint_names, true );
+					if ( false !== $index ) {
+						array_splice( $this->savepoint_names, $index, 1 );
+					}
+					$this->savepoint_names[] = $savepoint_key;
 					return;
 				}
 
 				// RELEASE SAVEPOINT.
 				if ( WP_MySQL_Lexer::RELEASE_SYMBOL === $token->id ) {
+					// RELEASE deletes the named savepoint and those created after it.
+					$index = array_search( $savepoint_key, $this->savepoint_names, true );
+					if ( false === $index ) {
+						throw $this->new_savepoint_does_not_exist_exception( $savepoint_name );
+					}
 					$this->execute_sqlite_query( sprintf( 'RELEASE SAVEPOINT %s', $savepoint_name ) );
+					array_splice( $this->savepoint_names, $index );
 					return;
 				}
 
@@ -4892,6 +4943,8 @@ class WP_MySQL_On_SQLite extends PDO {
 		$is_binary = isset( $tokens[1] ) && WP_MySQL_Lexer::BINARY_SYMBOL === $tokens[1]->id;
 
 		if ( true === $is_binary ) {
+			// TODO: GLOB can match different invalid UTF-8 bytes as equal.
+			// Use byte-wise matching for full LIKE BINARY compatibility.
 			$children = $node->get_children();
 			return sprintf(
 				'GLOB _helper_like_to_glob_pattern(%s)',
@@ -7320,21 +7373,24 @@ class WP_MySQL_On_SQLite extends PDO {
 		}
 
 		// 7. Generate CREATE TABLE statement constraints, collect indexes.
+		$format_index_column = function ( $column ) {
+			$definition = $this->quote_mysql_identifier( $column['COLUMN_NAME'] );
+			if ( null !== $column['SUB_PART'] ) {
+				$definition .= sprintf( '(%d)', $column['SUB_PART'] );
+			}
+			if ( 'D' === $column['COLLATION'] ) {
+				$definition .= ' DESC';
+			}
+			return $definition;
+		};
+
 		foreach ( $grouped_constraints as $constraint ) {
 			ksort( $constraint );
 			$info = $constraint[1];
 
 			if ( 'PRIMARY' === $info['INDEX_NAME'] ) {
 				$sql  = '  PRIMARY KEY (';
-				$sql .= implode(
-					', ',
-					array_map(
-						function ( $column ) {
-							return $this->quote_mysql_identifier( $column['COLUMN_NAME'] );
-						},
-						$constraint
-					)
-				);
+				$sql .= implode( ', ', array_map( $format_index_column, $constraint ) );
 				$sql .= ')';
 			} else {
 				$is_unique = '0' === $info['NON_UNIQUE'];
@@ -7347,22 +7403,7 @@ class WP_MySQL_On_SQLite extends PDO {
 				);
 				$sql .= $this->quote_mysql_identifier( $info['INDEX_NAME'] );
 				$sql .= ' (';
-				$sql .= implode(
-					', ',
-					array_map(
-						function ( $column ) {
-							$definition = $this->quote_mysql_identifier( $column['COLUMN_NAME'] );
-							if ( null !== $column['SUB_PART'] ) {
-								$definition .= sprintf( '(%d)', $column['SUB_PART'] );
-							}
-							if ( 'D' === $column['COLLATION'] ) {
-								$definition .= ' DESC';
-							}
-							return $definition;
-						},
-						$constraint
-					)
-				);
+				$sql .= implode( ', ', array_map( $format_index_column, $constraint ) );
 				$sql .= ')';
 			}
 
@@ -7813,6 +7854,25 @@ class WP_MySQL_On_SQLite extends PDO {
 			'42S02',
 			$previous,
 			array( '42S02', 1146, $driver_message )
+		);
+	}
+
+	/**
+	 * Create a MySQL-compatible savepoint-not-found exception.
+	 *
+	 * @param  string $savepoint_name The missing savepoint name, as an SQLite identifier.
+	 * @return WP_MySQL_On_SQLite_Exception
+	 */
+	private function new_savepoint_does_not_exist_exception( string $savepoint_name ): WP_MySQL_On_SQLite_Exception {
+		$driver_message = sprintf(
+			'SAVEPOINT %s does not exist',
+			$this->unquote_sqlite_identifier( $savepoint_name )
+		);
+		return $this->new_driver_exception(
+			'SQLSTATE[42000]: Syntax error or access violation: 1305 ' . $driver_message,
+			'42000',
+			null,
+			array( '42000', 1305, $driver_message )
 		);
 	}
 

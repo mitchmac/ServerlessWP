@@ -9,6 +9,11 @@ use WP_Error;
 use WP_REST_Request;
 use WP_REST_Response;
 
+// Exit if accessed directly.
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 class Buckets extends API {
 	/** @var int */
 	protected static $version = 1;

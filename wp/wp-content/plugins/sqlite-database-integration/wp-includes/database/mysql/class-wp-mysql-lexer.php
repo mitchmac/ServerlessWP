@@ -42,7 +42,7 @@ class WP_MySQL_Lexer {
 	 * These are intended to be used with "strspn()" and "strcspn()" functions
 	 * for fast character class matching in the SQL payload.
 	 */
-	const WHITESPACE_MASK = " \t\n\r\f";
+	const WHITESPACE_MASK = " \t\n\r\f\v";
 	const DIGIT_MASK      = '0123456789';
 	const HEX_DIGIT_MASK  = '0123456789abcdefABCDEF';
 
@@ -2993,21 +2993,26 @@ class WP_MySQL_Lexer {
 	private function read_mysql_comment(): int {
 		// @TODO: Consider supporting optimizer hints (/*+ ... */) or document
 		//        that they are not supported.
-		// @TODO: Implement six-digit version number support (from MySQL 8.4).
 
-		// MySQL-specific comment in one of the following forms:
-		//   1. /*! ... */      - The content is treated as SQL.
-		//   2. /*!12345 ... */ - The content is treated as SQL when "MySQL version >= 12345".
+		// MySQL-specific comments in the following forms:
+		//   1. /*! ... */       - The content is treated as SQL.
+		//   2. /*!80400 ... */  - SQL when the server version is at least 8.4.0.
+		//   3. /*!080400 ... */ - The same version in six-digit form (MySQL 8.1+).
+		//
+		// See: https://dev.mysql.com/doc/refman/8.4/en/comments.html
 		$this->bytes_already_read += 3; // Consume the '/*!'.
 
-		// Check if the next 5 characters are digits.
-		$digit_count        = strspn( $this->sql, self::DIGIT_MASK, $this->bytes_already_read, 5 );
-		$is_version_comment = 5 === $digit_count;
-
-		// For version comments, extract the version number.
-		$version = $is_version_comment
-			? (int) substr( $this->sql, $this->bytes_already_read, $digit_count )
-			: 0;
+		// Version has 5 digits (Mmmrr) or 6 digits (MMmmrr + whitespace, MySQL 8.1+).
+		$digit_count    = strspn( $this->sql, self::DIGIT_MASK, $this->bytes_already_read, 6 );
+		$version_length = $digit_count < 5 ? 0 : 5;
+		if (
+			6 === $digit_count
+			&& $this->mysql_version >= 80100
+			&& 1 === strspn( $this->sql, self::WHITESPACE_MASK, $this->bytes_already_read + 6, 1 )
+		) {
+			$version_length = 6;
+		}
+		$version = (int) substr( $this->sql, $this->bytes_already_read, $version_length );
 
 		if ( $this->mysql_version < $version ) {
 			// Version not satisfied. Treat the content as a regular comment.
@@ -3015,7 +3020,7 @@ class WP_MySQL_Lexer {
 			return self::COMMENT;
 		} else {
 			// Version satisfied or not specified. Treat the content as SQL code.
-			$this->bytes_already_read += $digit_count; // Skip the version number.
+			$this->bytes_already_read += $version_length; // Skip the version number.
 			$this->in_mysql_comment    = true;
 			return self::MYSQL_COMMENT_START;
 		}
@@ -3078,11 +3083,12 @@ class WP_MySQL_Lexer {
 
 		// Determine function calls.
 		if ( isset( self::FUNCTIONS[ $type ] ) ) {
-			// Skip any whitespace character if the SQL mode says they should be ignored.
+			// Keep ignored whitespace outside the current token range.
+			$peek = $this->bytes_already_read;
 			if ( $this->is_sql_mode_active( self::SQL_MODE_IGNORE_SPACE ) ) {
-				$this->bytes_already_read += strspn( $this->sql, self::WHITESPACE_MASK, $this->bytes_already_read );
+				$peek += strspn( $this->sql, self::WHITESPACE_MASK, $peek );
 			}
-			if ( '(' !== ( $this->sql[ $this->bytes_already_read ] ?? null ) ) {
+			if ( '(' !== ( $this->sql[ $peek ] ?? null ) ) {
 				return self::IDENTIFIER;
 			}
 		}

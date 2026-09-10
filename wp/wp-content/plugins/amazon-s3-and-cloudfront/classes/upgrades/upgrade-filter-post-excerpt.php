@@ -15,24 +15,24 @@ class Upgrade_Filter_Post_Excerpt extends Upgrade_Filter_Post {
 	/**
 	 * @var int
 	 */
-	protected $upgrade_id = 6;
+	protected int $upgrade_id = 6;
 
 	/**
 	 * @var string
 	 */
-	protected $upgrade_name = 'filter_post_excerpt';
+	protected string $upgrade_name = 'filter_post_excerpt';
 
 	/**
 	 * @var string
 	 */
-	protected $column_name = 'post_excerpt';
+	protected string $column_name = 'post_excerpt';
 
 	/**
 	 * Get running update text.
 	 *
 	 * @return string
 	 */
-	protected function get_running_update_text() {
+	protected function get_running_update_text(): string {
 		return __( 'and ensuring that only the local URL exists in post excerpts.', 'amazon-s3-and-cloudfront' );
 	}
 
@@ -41,7 +41,7 @@ class Upgrade_Filter_Post_Excerpt extends Upgrade_Filter_Post {
 	 *
 	 * @return string
 	 */
-	protected function get_running_message() {
+	protected function get_running_message(): string {
 		return sprintf(
 		/* translators: %1$s is a % complete string, %2$s is a documentation link. */
 			__(
