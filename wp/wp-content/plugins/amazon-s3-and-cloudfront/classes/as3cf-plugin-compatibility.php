@@ -71,19 +71,21 @@ class AS3CF_Plugin_Compatibility {
 	/**
 	 * Register the compatibility hooks for the plugin.
 	 */
-	function compatibility_init() {
-		/*
-		 * WP_Customize_Control
-		 * /wp-includes/class-wp-customize_control.php
-		 */
-		add_filter( 'attachment_url_to_postid', array( $this, 'customizer_background_image' ), 10, 2 );
+	public function compatibility_init() {
+		if ( $this->as3cf->get_setting( 'serve-from-s3' ) ) {
+			/*
+			 * WP_Customize_Control
+			 * /wp-includes/class-wp-customize_control.php
+			 */
+			add_filter( 'attachment_url_to_postid', array( $this, 'customizer_background_image' ), 10, 2 );
 
-		/*
-		 * Responsive Images WP 4.4
-		 */
-		add_filter( 'wp_get_attachment_metadata', array( $this, 'wp_get_attachment_metadata' ), 10, 2 );
-		add_filter( 'wp_calculate_image_srcset', array( $this, 'wp_calculate_image_srcset' ), 10, 5 );
-		add_filter( 'wp_calculate_image_srcset_meta', array( $this, 'wp_calculate_image_srcset_meta' ), 10, 4 );
+			/*
+			 * Responsive Images WP 4.4
+			 */
+			add_filter( 'wp_get_attachment_metadata', array( $this, 'wp_get_attachment_metadata' ), 10, 2 );
+			add_filter( 'wp_calculate_image_srcset', array( $this, 'wp_calculate_image_srcset' ), 10, 5 );
+			add_filter( 'wp_calculate_image_srcset_meta', array( $this, 'wp_calculate_image_srcset_meta' ), 10, 4 );
+		}
 
 		// Maybe warn about PHP version if in admin screens.
 		add_action( 'admin_init', array( $this, 'maybe_warn_about_php_version' ) );
@@ -130,7 +132,6 @@ class AS3CF_Plugin_Compatibility {
 			2
 		);
 		add_filter( 'as3cf_remove_local_files', array( $this, 'customizer_crop_remove_original_image' ), 10, 3 );
-		add_filter( 'wp_unique_filename', array( $this, 'customizer_crop_unique_filename' ), 10, 3 );
 
 		/*
 		 * Regenerate Thumbnails (before v3)
@@ -273,11 +274,6 @@ class AS3CF_Plugin_Compatibility {
 	 * @return mixed
 	 */
 	public function wp_generate_attachment_metadata( $metadata ) {
-		// During customizer crop, leave wait lock alone until parent data is available.
-		if ( $this->is_customizer_crop_action() && empty( $metadata['attachment_parent'] ) ) {
-			return $metadata;
-		}
-
 		$this->wait_for_generate_attachment_metadata = false;
 
 		return $metadata;
@@ -598,18 +594,18 @@ class AS3CF_Plugin_Compatibility {
 			return $data;
 		}
 
-		// We're looking for the parent item, which can only be found by checking
-		// the attachment metadata for an attachment_parent value.
+		// For customizer crop, post parent will be another attachment.
+		$post_parent_id = wp_get_post_parent_id( $attachment_id );
+
 		if (
-			is_array( $data ) &&
-			! empty( $data['attachment_parent'] ) &&
-			is_int( $data['attachment_parent'] )
+			! empty( $post_parent_id ) &&
+			is_int( $post_parent_id )
 		) {
 			// With parent data ready to remove from local if offloaded or not,
 			// we can now turn off the wait lock for processing offloads.
 			$this->wait_for_generate_attachment_metadata = false;
 
-			$as3cf_item_parent = Media_Library_Item::get_by_source_id( $data['attachment_parent'] );
+			$as3cf_item_parent = Media_Library_Item::get_by_source_id( $post_parent_id );
 		}
 
 		if ( ! empty( $as3cf_item_parent ) ) {
@@ -655,12 +651,14 @@ class AS3CF_Plugin_Compatibility {
 	/**
 	 * Show the correct background image in the customizer
 	 *
+	 * @handles attachment_url_to_postid
+	 *
 	 * @param int|null $post_id
 	 * @param string   $url
 	 *
 	 * @return int|null
 	 */
-	function customizer_background_image( $post_id, $url ) {
+	public function customizer_background_image( $post_id, $url ) {
 		if ( ! is_null( $post_id ) ) {
 			return $post_id;
 		}
@@ -783,6 +781,8 @@ class AS3CF_Plugin_Compatibility {
 
 	/**
 	 * Fixes comparison of attachment metadata to already urlencoded content during 'the_content' filter.
+	 *
+	 * @handles wp_get_attachment_metadata
 	 *
 	 * @param array $data
 	 * @param int   $attachment_id
@@ -912,6 +912,8 @@ class AS3CF_Plugin_Compatibility {
 	/**
 	 * Alter the image meta data to add srcset support for object versioned provider URLs.
 	 *
+	 * @handles wp_calculate_image_srcset_meta
+	 *
 	 * @param array  $image_meta
 	 * @param array  $size_array
 	 * @param string $image_src
@@ -962,6 +964,8 @@ class AS3CF_Plugin_Compatibility {
 
 	/**
 	 * Replace local URLs with provider ones for srcset image sources.
+	 *
+	 * @handles wp_calculate_image_srcset
 	 *
 	 * @param array  $sources
 	 * @param array  $size_array
@@ -1016,30 +1020,6 @@ class AS3CF_Plugin_Compatibility {
 		}
 
 		return null;
-	}
-
-	/**
-	 * Filters the result when generating a unique file name for a customizer crop.
-	 *
-	 * @param string $filename Unique file name.
-	 * @param string $ext      File extension, eg. ".png".
-	 * @param string $dir      Directory path.
-	 *
-	 * @return string
-	 */
-	public function customizer_crop_unique_filename( $filename, $ext, $dir ) {
-		if ( false === $this->is_customizer_crop_action() ) {
-			return $filename;
-		}
-
-		// Get parent Post ID for cropped image.
-		$post_id = filter_input( INPUT_POST, 'id', FILTER_VALIDATE_INT );
-
-		/** @var Media_Library $media_library */
-		$media_library = $this->as3cf->get_integration_manager()->get_integration( 'mlib' );
-		$filename      = $media_library->filter_unique_filename( $filename, $ext, $dir, $post_id );
-
-		return $filename;
 	}
 
 	/**

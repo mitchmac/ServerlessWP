@@ -5,7 +5,7 @@ namespace DeliciousBrains\WP_Offload_Media\Aws3\JmesPath;
 use DeliciousBrains\WP_Offload_Media\Aws3\JmesPath\Lexer as T;
 /**
  * JMESPath Pratt parser
- * @link http://hall.org.ua/halls/wizzard/pdf/Vaughan.Pratt.TDOP.pdf
+ * @link https://dl.acm.org/doi/10.1145/512927.512931
  */
 class Parser
 {
@@ -17,7 +17,7 @@ class Parser
     private $expression;
     private static $nullToken = ['type' => T::T_EOF];
     private static $currentNode = ['type' => T::T_CURRENT];
-    private static $bp = [T::T_EOF => 0, T::T_QUOTED_IDENTIFIER => 0, T::T_IDENTIFIER => 0, T::T_RBRACKET => 0, T::T_RPAREN => 0, T::T_COMMA => 0, T::T_RBRACE => 0, T::T_NUMBER => 0, T::T_CURRENT => 0, T::T_EXPREF => 0, T::T_COLON => 0, T::T_PIPE => 1, T::T_OR => 2, T::T_AND => 3, T::T_COMPARATOR => 5, T::T_FLATTEN => 9, T::T_STAR => 20, T::T_FILTER => 21, T::T_DOT => 40, T::T_NOT => 45, T::T_LBRACE => 50, T::T_LBRACKET => 55, T::T_LPAREN => 60];
+    private static $bp = [T::T_EOF => 0, T::T_QUOTED_IDENTIFIER => 0, T::T_IDENTIFIER => 0, T::T_UNKNOWN => 0, T::T_LITERAL => 0, T::T_RBRACKET => 0, T::T_RPAREN => 0, T::T_COMMA => 0, T::T_RBRACE => 0, T::T_NUMBER => 0, T::T_CURRENT => 0, T::T_EXPREF => 0, T::T_COLON => 0, T::T_PIPE => 1, T::T_OR => 2, T::T_AND => 3, T::T_COMPARATOR => 5, T::T_FLATTEN => 9, T::T_STAR => 20, T::T_FILTER => 21, T::T_DOT => 40, T::T_NOT => 45, T::T_LBRACE => 50, T::T_LBRACKET => 55, T::T_LPAREN => 60];
     /** @var array Acceptable tokens after a dot token */
     private static $afterDot = [
         T::T_IDENTIFIER => \true,
@@ -198,6 +198,9 @@ class Parser
     }
     private function led_lparen(array $left)
     {
+        if (!isset($left['type'], $left['value']) || $left['type'] !== 'field') {
+            throw $this->syntax('Invalid function name');
+        }
         $args = [];
         $this->next();
         while ($this->token['type'] != T::T_RPAREN) {
@@ -244,6 +247,10 @@ class Parser
         if ($this->token['type'] == T::T_LBRACKET) {
             $this->next();
             return $this->parseMultiSelectList();
+        } elseif ($this->token['type'] == T::T_LBRACE) {
+            // Like the multi-select list above, a multi-select hash ends any
+            // projection: tokens that follow apply to the projected list.
+            return $this->nud_lbrace();
         }
         return $this->expr($bp);
     }

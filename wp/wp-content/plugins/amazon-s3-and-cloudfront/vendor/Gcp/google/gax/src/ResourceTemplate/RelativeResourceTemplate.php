@@ -158,6 +158,9 @@ class RelativeResourceTemplate implements ResourceTemplateInterface
             // In our flattened list of segments, we should never encounter a variable segment
             \assert($segment->getSegmentType() !== Segment::VARIABLE_SEGMENT);
             if ($segment->getSegmentType() == Segment::DOUBLE_WILDCARD_SEGMENT) {
+                if ($doubleWildcardPieceCount < 1) {
+                    throw $this->matchException($path, 'path does not contain enough segments to be matched');
+                }
                 $pathPiecesForSegment = \array_slice($slashPathPieces, $pathPiecesIndex, $doubleWildcardPieceCount);
                 $pathPiece = \implode('/', $pathPiecesForSegment);
                 $pathPiecesIndex += $doubleWildcardPieceCount;

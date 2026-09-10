@@ -51,7 +51,10 @@ trait RetryDeciderTrait
             if (!$shouldRetryMessages) {
                 return \false;
             }
-            $message = $ex instanceof RequestException && $ex->hasResponse() ? (string) $ex->getResponse()->getBody() : $ex->getMessage();
+            // Guzzle 7 carries the response on RequestException, Guzzle 8 only
+            // on its ResponseException subclass, hence the method_exists() check.
+            $response = $ex instanceof RequestException && \method_exists($ex, 'getResponse') ? $ex->getResponse() : null;
+            $message = $response ? (string) $response->getBody() : $ex->getMessage();
             try {
                 $message = $this->jsonDecode($message, \true);
             } catch (\InvalidArgumentException $ex) {

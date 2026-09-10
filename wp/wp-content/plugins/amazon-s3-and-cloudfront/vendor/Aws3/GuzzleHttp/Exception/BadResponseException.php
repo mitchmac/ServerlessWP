@@ -1,31 +1,11 @@
 <?php
 
+declare (strict_types=1);
 namespace DeliciousBrains\WP_Offload_Media\Aws3\GuzzleHttp\Exception;
 
-use DeliciousBrains\WP_Offload_Media\Aws3\Psr\Http\Message\RequestInterface;
-use DeliciousBrains\WP_Offload_Media\Aws3\Psr\Http\Message\ResponseInterface;
 /**
- * Exception when an HTTP error occurs (4xx or 5xx error)
+ * Exception thrown for HTTP responses with 4xx or 5xx status codes.
  */
-class BadResponseException extends RequestException
+class BadResponseException extends ResponseException
 {
-    public function __construct(string $message, RequestInterface $request, ResponseInterface $response, ?\Throwable $previous = null, array $handlerContext = [])
-    {
-        parent::__construct($message, $request, $response, $previous, $handlerContext);
-    }
-    /**
-     * Current exception and the ones that extend it will always have a response.
-     */
-    public function hasResponse() : bool
-    {
-        return \true;
-    }
-    /**
-     * This function narrows the return type from the parent class and does not allow it to be nullable.
-     */
-    public function getResponse() : ResponseInterface
-    {
-        /** @var ResponseInterface */
-        return parent::getResponse();
-    }
 }

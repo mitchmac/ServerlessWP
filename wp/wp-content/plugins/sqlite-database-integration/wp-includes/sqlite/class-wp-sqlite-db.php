@@ -563,6 +563,7 @@ class WP_SQLite_DB extends wpdb {
 		}
 
 		if ( ! $this->ready ) {
+			$this->check_current_query = true;
 			return false;
 		}
 
@@ -578,21 +579,30 @@ class WP_SQLite_DB extends wpdb {
 		// Log how the function was called.
 		$this->func_call = "\$db->query(\"$query\")";
 
+		/*
+		 * Mirror wpdb's query text validation.
+		 * TODO: Add full charset enforcement to MySQL on SQLite, where column
+		 * types and SQL mode are known, so all callers are protected.
+		 */
+		if ( $this->check_current_query && ! $this->check_ascii( $query ) ) {
+			$stripped_query = $this->strip_invalid_text_from_query( $query );
+			// Charset discovery can run queries, so clear their results.
+			$this->flush();
+			if ( $stripped_query !== $query ) {
+				$this->insert_id  = 0;
+				$this->last_query = $query;
+				wp_load_translations_early();
+				$this->last_error = __( 'WordPress database error: Could not perform query because it contains invalid data.' );
+				return false;
+			}
+		}
+		$this->check_current_query = true;
+
 		// Keep track of the last query for debug.
 		$this->last_query = $query;
 
-		// Save the query count before running another query.
+		// Save the query count after any charset discovery queries.
 		$last_query_count = count( $this->queries ?? array() );
-
-		/*
-		 * @TODO: wpdb uses "$this->check_current_query" and table metadata to
-		 * reject queries containing invalid text. Implement equivalent handling
-		 * for SQLite without relying on the MySQL-specific conversion pipeline.
-		 *
-		 * PCRE's "u" modifier can validate UTF-8 without constructing a converted
-		 * query copy: 1 === preg_match( '//u', $query ). The implementation must
-		 * preserve wpdb's exemptions for prevalidated and binary data.
-		 */
 		$this->_do_query( $query );
 
 		if ( $this->last_error ) {

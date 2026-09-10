@@ -31,6 +31,18 @@ class JWK
         // Len: 64
         'P-384' => '1.3.132.0.34',
     ];
+    // Known standard curves from the IANA JOSE registry which are not supported
+    private const KNOWN_UNSUPPORTED_EC_CURVES = [
+        'P-521',
+        // RFC 7518
+        'Ed25519',
+        // RFC 8037
+        'Ed448',
+        // RFC 8037
+        'X25519',
+        // RFC 8037
+        'X448',
+    ];
     // For keys with "kty" equal to "OKP" (Octet Key Pair), the "crv" parameter must contain the key subtype.
     // This library supports the following subtypes:
     private const OKP_SUBTYPES = ['Ed25519' => \true];
@@ -125,7 +137,10 @@ class JWK
                     throw new UnexpectedValueException('crv not set');
                 }
                 if (!isset(self::EC_CURVES[$jwk['crv']])) {
-                    throw new DomainException('Unrecognised or unsupported EC curve');
+                    if (!\in_array($jwk['crv'], self::KNOWN_UNSUPPORTED_EC_CURVES)) {
+                        throw new DomainException('Unrecognised EC curve');
+                    }
+                    return null;
                 }
                 if (empty($jwk['x']) || empty($jwk['y'])) {
                     throw new UnexpectedValueException('x and y not set');
@@ -187,6 +202,14 @@ class JWK
     {
         $mod = JWT::urlsafeB64Decode($n);
         $exp = JWT::urlsafeB64Decode($e);
+        // Correct encoding for ASN1, as ints are represented as unsigned in jwk
+        // but signed in ASN1. Prepending null byte makes it unsigned.
+        if (\strlen($mod) > 0 && \ord($mod[0]) >= 128) {
+            $mod = \chr(0) . $mod;
+        }
+        if (\strlen($exp) > 0 && \ord($exp[0]) >= 128) {
+            $exp = \chr(0) . $exp;
+        }
         $modulus = \pack('Ca*a*', 2, self::encodeLength(\strlen($mod)), $mod);
         $publicExponent = \pack('Ca*a*', 2, self::encodeLength(\strlen($exp)), $exp);
         $rsaPublicKey = \pack('Ca*a*a*', 48, self::encodeLength(\strlen($modulus) + \strlen($publicExponent)), $modulus, $publicExponent);

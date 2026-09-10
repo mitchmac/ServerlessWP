@@ -24,16 +24,6 @@ abstract class AbstractErrorParser
         $this->api = $api;
     }
     protected abstract function payload(ResponseInterface $response, StructureShape $member);
-    protected function extractPayload(StructureShape $member, ResponseInterface $response)
-    {
-        if ($member instanceof StructureShape) {
-            // Structure members parse top-level data into a specific key.
-            return $this->payload($response, $member);
-        } else {
-            // Streaming data is just the stream from the response body.
-            return $response->getBody();
-        }
-    }
     protected function populateShape(array &$data, ResponseInterface $response, ?CommandInterface $command = null)
     {
         $data['body'] = [];
@@ -41,12 +31,11 @@ abstract class AbstractErrorParser
             // If modeled error code is indicated, check for known error shape
             if (!empty($data['code'])) {
                 $errors = $this->api->getOperation($command->getName())->getErrors();
-                foreach ($errors as $key => $error) {
+                foreach ($errors as $error) {
                     // If error code matches a known error shape, populate the body
                     if ($this->errorCodeMatches($data, $error)) {
-                        $modeledError = $error;
-                        $data['body'] = $this->extractPayload($modeledError, $response);
-                        $data['error_shape'] = $modeledError;
+                        $data['body'] = $this->payload($response, $error);
+                        $data['error_shape'] = $error;
                         foreach ($error->getMembers() as $name => $member) {
                             switch ($member['location']) {
                                 case 'header':

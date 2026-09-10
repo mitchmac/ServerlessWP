@@ -3,22 +3,17 @@
 use DeliciousBrains\WP_Offload_Media\Items\Item;
 use DeliciousBrains\WP_Offload_Media\Items\Media_Library_Item;
 
-abstract class AS3CF_Filter {
+// Exit if accessed directly.
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
 
-	/**
-	 * The key used for storing the URL cache.
-	 */
-	const CACHE_KEY = 'amazonS3_cache';
+abstract class AS3CF_Filter {
 
 	/**
 	 * The cache group used by an external object cache for posts.
 	 */
-	const POST_CACHE_GROUP = 'post_amazonS3_cache';
-
-	/**
-	 * The cache group used by an external object cache for options.
-	 */
-	const OPTION_CACHE_GROUP = 'option_amazonS3_cache';
+	const POST_CACHE_GROUP = 'post_as3cf_url_cache';
 
 	/**
 	 * @var array IDs which have already been purged this request.
@@ -29,10 +24,33 @@ abstract class AS3CF_Filter {
 	 * @var Amazon_S3_And_CloudFront
 	 */
 	protected $as3cf;
+
 	/**
 	 * @var array
 	 */
 	protected $query_cache = array();
+
+	/**
+	 * URL caches handled in current process where post isn't known.
+	 * e.g. handling widgets and other theme related components.
+	 *
+	 * @var array
+	 */
+	protected $url_cache = array();
+
+	/**
+	 * URL caches handled in current process, keyed by post ID.
+	 *
+	 * @var array
+	 */
+	protected $url_cache_by_post_id = array();
+
+	/**
+	 * The key used for storing the URL cache.
+	 *
+	 * @var string
+	 */
+	protected static $cache_key = 'as3cf_url_cache';
 
 	/**
 	 * Constructor
@@ -56,8 +74,7 @@ abstract class AS3CF_Filter {
 	 * Set up the filter handler.
 	 */
 	public function setup() {
-		// Purge on attachment delete.
-		add_action( 'delete_attachment', array( $this, 'purge_cache_on_attachment_delete' ) );
+		// Nothing to see here, move along!
 	}
 
 	/**
@@ -106,13 +123,7 @@ abstract class AS3CF_Filter {
 			return $value;
 		}
 
-		$cache    = $this->get_option_cache();
-		$to_cache = array();
-		$value    = $this->process_content( $value, $cache, $to_cache );
-
-		$this->maybe_update_option_cache( $to_cache );
-
-		return $value;
+		return $this->process_content( $value, array(), $this->url_cache );
 	}
 
 	/**
@@ -151,11 +162,13 @@ abstract class AS3CF_Filter {
 			return $content;
 		}
 
-		$cache    = $this->get_post_cache();
-		$to_cache = array();
-		$content  = $this->process_content( $content, $cache, $to_cache );
+		$post_id = AS3CF_Utils::get_post_id();
 
-		$this->maybe_update_post_cache( $to_cache );
+		list( $cached, $to_cache ) = $this->maybe_init_post_cache( $post_id );
+
+		$content = $this->process_content( $content, $cached, $to_cache );
+
+		$this->maybe_update_post_cache( $post_id, $cached, $to_cache );
 
 		return $content;
 	}
@@ -172,29 +185,14 @@ abstract class AS3CF_Filter {
 			return $instance;
 		}
 
-		$cache        = $this->get_option_cache();
-		$to_cache     = array();
-		$update_cache = true;
-
-		// Editing widgets in Customizer throws an error if more than one option record is updated,
-		// therefore cache updating has to wait until render or edit via Appearance menu.
-		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- equality check way down the stack
-		if ( isset( $_POST['wp_customize'] ) && 'on' === $_POST['wp_customize'] ) {
-			$update_cache = false;
-		}
-
 		foreach ( $instance as $key => $value ) {
 			if ( empty( $value ) ) {
 				continue;
 			}
 
 			if ( in_array( $key, array( 'text', 'content' ) ) || AS3CF_Utils::is_url( $value ) ) {
-				$instance[ $key ] = $this->process_content( $value, $cache, $to_cache );
+				$instance[ $key ] = $this->process_content( $value, array(), $this->url_cache );
 			}
-		}
-
-		if ( $update_cache ) {
-			$this->maybe_update_option_cache( $to_cache );
 		}
 
 		return $instance;
@@ -203,36 +201,31 @@ abstract class AS3CF_Filter {
 	/**
 	 * Process content.
 	 *
-	 * @param string $content
-	 * @param array  $cache
-	 * @param array  $to_cache
+	 * @param mixed $content
+	 * @param array $cache
+	 * @param array $to_cache
 	 *
 	 * @return mixed
 	 */
-	protected function process_content( $content, $cache, &$to_cache ) {
-		if ( empty( $content ) ) {
-			// Nothing to filter, return
+	protected function process_content( mixed $content, array $cache, array &$to_cache ): mixed {
+		if ( empty( $content ) || ! is_string( $content ) ) {
+			// Nothing to filter, return.
 			return $content;
 		}
 
 		if ( ! $this->should_filter_content() ) {
-			// Not filtering content, return
+			// Not filtering content, return.
 			return $content;
 		}
 
+		// Perform pre-processing if required.
 		$content = $this->pre_replace_content( $content );
 
-		// Find URLs from img src
-		$url_pairs = $this->get_urls_from_img_src( $content, $to_cache );
-		$content   = $this->replace_urls( $content, $url_pairs );
-
-		// Find leftover URLs
+		// Actually process the content.
 		$content = $this->find_urls_and_replace( $content, $cache, $to_cache );
 
-		// Perform post processing if required
-		$content = $this->post_process_content( $content );
-
-		return $content;
+		// Perform post-processing if required.
+		return $this->post_process_content( $content );
 	}
 
 	/**
@@ -244,91 +237,15 @@ abstract class AS3CF_Filter {
 	 *
 	 * @return string
 	 */
-	protected function find_urls_and_replace( $value, $cache, &$to_cache ) {
+	protected function find_urls_and_replace( string $value, array $cache, array &$to_cache ): string {
 		if ( ! $this->should_filter_content() ) {
 			// Not filtering content, return
 			return $value;
 		}
 
 		$url_pairs = $this->get_urls_from_content( $value, $cache, $to_cache );
-		$value     = $this->replace_urls( $value, $url_pairs );
 
-		return $value;
-	}
-
-	/**
-	 * Get URLs from img src.
-	 *
-	 * @param string $content
-	 * @param array  $to_cache
-	 *
-	 * @return array
-	 */
-	protected function get_urls_from_img_src( $content, &$to_cache ) {
-		$url_pairs = array();
-
-		if ( ! is_string( $content ) ) {
-			return $url_pairs;
-		}
-
-		if ( ! preg_match_all( '/<img [^>]+>/', $content, $matches ) || ! isset( $matches[0] ) ) {
-			// No img tags found, return
-			return $url_pairs;
-		}
-
-		$matches      = array_unique( $matches[0] );
-		$item_sources = array();
-
-		foreach ( $matches as $image ) {
-			if ( ! preg_match( '/wp-image-([0-9]+)/i', $image, $class_id ) || ! isset( $class_id[1] ) ) {
-				// Can't determine ID from class, skip
-				continue;
-			}
-
-			if ( ! preg_match( '/src=\\\?["\']+([^"\'\\\]+)/', $image, $src ) || ! isset( $src[1] ) ) {
-				// Can't determine URL, skip
-				continue;
-			}
-
-			$url = $src[1];
-
-			if ( ! AS3CF_Utils::usable_url( $url ) ) {
-				continue;
-			}
-
-			if ( ! $this->url_needs_replacing( $url ) ) {
-				// URL already correct, skip
-				continue;
-			}
-
-			$bare_url = AS3CF_Utils::reduce_url( $url );
-
-			$item_sources[ $bare_url ] = array(
-				'id'          => absint( $class_id[1] ),
-				'source_type' => Media_Library_Item::source_type(),
-			);
-		}
-
-		if ( count( $item_sources ) > 1 ) {
-			/*
-			 * Warm object cache for use with 'get_post_meta()'.
-			 *
-			 * To avoid making a database call for each image, a single query
-			 * warms the object cache with the meta information for all images.
-			 */
-			update_meta_cache( 'post', array_unique( array_column( $item_sources, 'id' ) ) );
-		}
-
-		foreach ( $item_sources as $url => $item_source ) {
-			if ( ! $this->item_matches_src( $item_source, $url ) ) {
-				// Path doesn't match attachment, skip
-				continue;
-			}
-
-			$this->push_to_url_pairs( $url_pairs, $item_source, $url, $to_cache );
-		}
-
-		return $url_pairs;
+		return $this->replace_urls( $value, $url_pairs );
 	}
 
 	/**
@@ -340,12 +257,16 @@ abstract class AS3CF_Filter {
 	 *
 	 * @return array
 	 */
-	protected function get_urls_from_content( $content, $cache, &$to_cache ) {
+	protected function get_urls_from_content( string $content, array $cache, array &$to_cache ): array {
 		$url_pairs = array();
 
-		if ( ! is_string( $content ) ) {
+		if ( empty( $content ) ) {
 			return $url_pairs;
 		}
+
+		// Decode any html encoded quotes that might still be surrounding URLs.
+		// We're using ENT_HTML5 here as &apos; isn't caught by the default ENT_HTML401.
+		$content = htmlspecialchars_decode( $content, ENT_QUOTES | ENT_HTML5 );
 
 		if (
 			! preg_match_all( '/(http|https)?:?\/\/[^"\'\s<>()\\\]*/', $content, $matches ) ||
@@ -359,6 +280,7 @@ abstract class AS3CF_Filter {
 		$urls    = array();
 
 		foreach ( $matches as $url ) {
+			// Remove trailing punctuation, quotes, etc.
 			$url = preg_replace( '/[^a-zA-Z0-9]$/', '', $url );
 
 			if ( ! AS3CF_Utils::usable_url( $url ) ) {
@@ -378,14 +300,16 @@ abstract class AS3CF_Filter {
 				$item_source = $to_cache[ $bare_url ];
 
 				if ( $this->is_failure( $item_source ) ) {
-					// Attachment ID failure, continue
+					// Attachment ID failure, continue.
 					continue;
 				}
 			} elseif ( isset( $cache[ $bare_url ] ) ) {
 				$item_source = $cache[ $bare_url ];
 
 				if ( $this->is_failure( $item_source ) ) {
-					// Attachment ID failure, continue
+					// Attachment ID failure, add to in-flight cache and continue.
+					$to_cache[ $bare_url ] = $item_source;
+
 					continue;
 				}
 			}
@@ -419,18 +343,38 @@ abstract class AS3CF_Filter {
 	/**
 	 * Is failure?
 	 *
-	 * @param array $value
+	 * @param array|mixed $value
 	 *
 	 * @return bool
 	 */
-	protected function is_failure( $value ) {
+	protected function is_failure( mixed $value ): bool {
 		if ( ! is_array( $value ) || ! isset( $value['timestamp'] ) ) {
 			return false;
 		}
 
-		$expires = time() - ( 15 * MINUTE_IN_SECONDS );
+		static $expires = 0;
 
-		if ( $expires >= $value['timestamp'] ) {
+		if ( empty( $expires ) ) {
+			$timeout = defined( 'SCRIPT_DEBUG' ) && SCRIPT_DEBUG ? 1 : 15 * MINUTE_IN_SECONDS;
+
+			/**
+			 * Filter how long we wait to recheck a URL that we failed to find
+			 * a matching offload for.
+			 *
+			 * Min: 1 second
+			 * Max: 1 day
+			 * Default: 15 mins, 1 sec if SCRIPT_DEBUG defined and true
+			 *
+			 * @param int $timeout Seconds to wait until recheck.
+			 */
+			$timeout = min(
+				max( 1, (int) apply_filters( 'as3cf_url_cache_failure_timeout', $timeout ) ),
+				DAY_IN_SECONDS
+			);
+			$expires = time() - $timeout;
+		}
+
+		if ( $expires >= (int) $value['timestamp'] ) {
 			return false;
 		}
 
@@ -489,48 +433,37 @@ abstract class AS3CF_Filter {
 	 * @param string $find
 	 * @param array  $to_cache
 	 */
-	protected function push_to_url_pairs( &$url_pairs, $item_source, $find, &$to_cache ) {
-		$find_full = AS3CF_Utils::remove_size_from_filename( $find );
-		$find_full = $this->normalize_find_value( $this->as3cf->maybe_remove_query_string( $find_full ) );
+	protected function push_to_url_pairs(
+		array &$url_pairs,
+		array $item_source,
+		string $find,
+		array &$to_cache
+	): void {
 		$find_size = $this->normalize_find_value( $this->as3cf->maybe_remove_query_string( $find ) );
 
-		// Cache find URLs even if no replacement.
-		$to_cache[ $find_full ] = $item_source;
+		// The found size might be a fallback to full size, which is a valid
+		// replacement as long as all other criteria are met for getting the URL.
+		$size         = $this->get_size_string_from_url( $item_source, $find );
+		$replace_size = $this->get_url( $item_source, $size );
 
-		if ( wp_basename( $find_full ) !== wp_basename( $find_size ) ) {
-			$to_cache[ $find_size ] = $item_source;
-		}
+		// A previously cached URL might have been re-added and its ID changed.
+		if ( empty( $replace_size ) ) {
+			$this->url_cache_failure( $find, $to_cache );
 
-		$replace_full = $this->get_url( $item_source );
-
-		// Replacement URL can't be found.
-		if ( ! $replace_full ) {
 			return;
 		}
 
-		$size         = $this->get_size_string_from_url( $item_source, $find );
-		$replace_size = $this->get_url( $item_source, $size );
-		$parts        = wp_parse_url( $find );
+		// If here, we're ok to add or keep item in cache.
+		$to_cache[ $find_size ] = $item_source;
+
+		$parts = wp_parse_url( $find );
 
 		if ( ! isset( $parts['scheme'] ) ) {
-			$replace_full = AS3CF_Utils::remove_scheme( $replace_full );
 			$replace_size = AS3CF_Utils::remove_scheme( $replace_size );
 		}
 
-		// Find and replace full version
-		$url_pairs[ $find_full ] = $replace_full;
-
-		// Find and replace sized version
-		if ( wp_basename( $find_full ) !== wp_basename( $find_size ) ) {
-			$url_pairs[ $find_size ] = $replace_size;
-		}
-
-		// Prime cache, when filtering the opposite way
-		$replace_full = $this->as3cf->maybe_remove_query_string( $replace_full );
-		$replace_size = $this->as3cf->maybe_remove_query_string( $replace_size );
-
-		$to_cache[ $this->normalize_find_value( $replace_full ) ] = $item_source;
-		$to_cache[ $this->normalize_find_value( $replace_size ) ] = $item_source;
+		// Find and replace sized version.
+		$url_pairs[ $find_size ] = $replace_size;
 	}
 
 	/**
@@ -560,17 +493,16 @@ abstract class AS3CF_Filter {
 	 * @param string $url
 	 * @param array  $to_cache
 	 */
-	protected function url_cache_failure( $url, &$to_cache ) {
-		$full    = AS3CF_Utils::remove_size_from_filename( $url );
-		$failure = array(
-			'timestamp' => time(),
-		);
+	protected function url_cache_failure( string $url, array &$to_cache ): void {
+		static $failure = array();
 
-		$to_cache[ $full ] = $failure;
-
-		if ( $full !== $url ) {
-			$to_cache[ $url ] = $failure;
+		if ( empty( $failure ) ) {
+			$failure = array(
+				'timestamp' => time(),
+			);
 		}
+
+		$to_cache[ $url ] = $failure;
 	}
 
 	/**
@@ -610,44 +542,26 @@ abstract class AS3CF_Filter {
 	}
 
 	/**
-	 * Get post cache
+	 * Get post cache.
 	 *
-	 * @param null|int|WP_Post $post           Optional. Post ID or post object. Defaults to current post.
-	 * @param bool             $transform_ints Optional. If true (default), convert integer hits to array with id and source_type keys. If false, return integer hits as integers
+	 * @param int $post_id Post ID.
 	 *
-	 * @return array|int
+	 * @return array
 	 */
-	public function get_post_cache( $post = null, $transform_ints = true ) {
-		$post_id = AS3CF_Utils::get_post_id( $post );
-
-		if ( ! $post_id ) {
+	public function get_post_cache( int $post_id ): array {
+		if ( empty( $post_id ) ) {
 			return array();
 		}
 
 		if ( wp_using_ext_object_cache() ) {
 			$cache = wp_cache_get( $post_id, self::POST_CACHE_GROUP );
 		} else {
-			$cache = get_post_meta( $post_id, self::CACHE_KEY, true );
+			$cache = get_post_meta( $post_id, static::$cache_key, true );
 		}
 
 		// Data's not what we expected, reset.
 		if ( empty( $cache ) || ! is_array( $cache ) ) {
 			return array();
-		}
-
-		if ( ! $transform_ints ) {
-			return $cache;
-		}
-
-		// Handle old cache items that are stored as plain integers
-		foreach ( $cache as &$cache_item ) {
-			if ( ! is_array( $cache_item ) && is_numeric( $cache_item ) ) {
-				$id         = $cache_item;
-				$cache_item = array(
-					'id'          => $id,
-					'source_type' => Media_Library_Item::source_type(),
-				);
-			}
 		}
 
 		return $cache;
@@ -656,13 +570,11 @@ abstract class AS3CF_Filter {
 	/**
 	 * Set the cache for the given post.
 	 *
-	 * @param null|int|WP_Post $post Optional. Post ID or post object. Defaults to current post.
-	 * @param mixed            $data
+	 * @param int   $post_id Post ID.
+	 * @param mixed $data
 	 */
-	protected function set_post_cache( $post, $data ) {
-		$post_id = AS3CF_Utils::get_post_id( $post );
-
-		if ( ! $post_id ) {
+	protected function set_post_cache( int $post_id, mixed $data ): void {
+		if ( empty( $post_id ) ) {
 			return;
 		}
 
@@ -670,92 +582,77 @@ abstract class AS3CF_Filter {
 			$expires = apply_filters( 'as3cf_' . self::POST_CACHE_GROUP . '_expires', DAY_IN_SECONDS, $post_id, $data );
 			wp_cache_set( $post_id, $data, self::POST_CACHE_GROUP, $expires );
 		} else {
-			update_post_meta( $post_id, self::CACHE_KEY, $data );
+			update_post_meta( $post_id, static::$cache_key, $data );
 		}
 	}
 
 	/**
-	 * Set the option cache with the given data.
+	 * Get array of currently cached URLs and array to be cached for given Post ID.
 	 *
-	 * @param mixed $data
+	 * @param int $post_id Post ID.
+	 *
+	 * @return array Cached and To Cache arrays.
 	 */
-	protected function set_option_cache( $data ) {
-		if ( wp_using_ext_object_cache() ) {
-			$expires = apply_filters(
-				'as3cf_' . self::OPTION_CACHE_GROUP . '_expires',
-				DAY_IN_SECONDS,
-				self::CACHE_KEY,
-				$data
-			);
-			wp_cache_set( self::CACHE_KEY, $data, self::OPTION_CACHE_GROUP, $expires );
-		} else {
-			update_option( self::CACHE_KEY, $data );
+	protected function maybe_init_post_cache( int $post_id ): array {
+		$cached   = array();
+		$to_cache = array();
+
+		if ( ! empty( $post_id ) ) {
+			$cached   = $this->get_post_cache( $post_id );
+			$to_cache = empty( $this->url_cache_by_post_id[ $post_id ] ) ? array() : $this->url_cache_by_post_id[ $post_id ];
 		}
+
+		return array( $cached, $to_cache );
 	}
 
 	/**
-	 * Maybe update post cache
+	 * Maybe update post cache.
 	 *
-	 * @param array    $to_cache
-	 * @param bool|int $post_id
+	 * @param int   $post_id  Post ID.
+	 * @param array $cached   Old cache.
+	 * @param array $to_cache New cache.
 	 */
-	protected function maybe_update_post_cache( $to_cache, $post_id = false ) {
-		$post_id = AS3CF_Utils::get_post_id( $post_id );
-
-		// Data's not what we expected, skip it.
-		if ( ! $post_id || empty( $to_cache ) || ! is_array( $to_cache ) ) {
+	protected function maybe_update_post_cache( int $post_id, array $cached, array $to_cache ): void {
+		if ( empty( $post_id ) ) {
 			return;
 		}
 
-		$cached = $this->get_post_cache( $post_id, false );
-		$urls   = static::merge_cache( $cached, $to_cache );
-
-		if ( $urls !== $cached ) {
-			$this->set_post_cache( $post_id, $urls );
-		}
-	}
-
-	/**
-	 * Get option cache.
-	 *
-	 * @return array
-	 */
-	protected function get_option_cache() {
-		if ( wp_using_ext_object_cache() ) {
-			$cache = wp_cache_get( self::CACHE_KEY, self::OPTION_CACHE_GROUP );
-		} else {
-			$cache = get_option( self::CACHE_KEY, array() );
-		}
-
-		// Data's not what we expected, reset.
-		if ( empty( $cache ) || ! is_array( $cache ) ) {
-			return array();
-		}
-
-		return $cache;
-	}
-
-	/**
-	 * Maybe update option cache.
-	 *
-	 * @param array $to_cache
-	 */
-	protected function maybe_update_option_cache( $to_cache ) {
-		// Data's not what we expected, skip it.
-		if ( empty( $to_cache ) || ! is_array( $to_cache ) ) {
+		// There's some weird redirects that the templating system does while
+		// retaining the 1st post_id, which can clear out the new cache.
+		// So we never save an empty cache, which is fine as if post actually
+		// has no URLs, it'll not process anything, and if URLs churn, they'll
+		// result in a new non-empty cache.
+		if ( empty( $to_cache ) ) {
 			return;
 		}
 
-		$cached = $this->get_option_cache();
-		$urls   = static::merge_cache( $cached, $to_cache );
+		// Keep cache for any further in-process use, stops reset if follow-on
+		// processing only finds already rewritten URLs and so doesn't add
+		// anything to cache, or only adds failed URLs.
+		$this->url_cache_by_post_id[ $post_id ] = $to_cache;
 
-		if ( $urls !== $cached ) {
-			$this->set_option_cache( $urls );
+		// Before comparing cached to the new cache items, potentially add any
+		// previously cached failures to the new cache that are missing, and sort
+		// it. This is so that we don't get into a position where failed URLs
+		// that haven't yet been parsed cause the saved cache to flip-flop between
+		// having and not having the failed URLs.
+		$cached_failures = array_filter( $cached, array( $this, 'is_failure' ) );
+		$to_cache        = array_merge( $cached_failures, $to_cache );
+
+		ksort( $to_cache );
+
+		if ( $cached !== $to_cache ) {
+			$this->set_post_cache( $post_id, $to_cache );
 		}
 	}
 
 	/**
 	 * Purge items from cache on delete.
+	 *
+	 * NOTE: Only used for unit tests, no longer used on attachment delete as
+	 *       the cache is self-healing and will automatically drop redundant
+	 *       URLs when post updated, with redundant URLs otherwise just not
+	 *       being referenced during URL rewriting.
 	 *
 	 * @param int $post_id
 	 */
@@ -793,21 +690,7 @@ abstract class AS3CF_Filter {
  			WHERE meta_key = %s
  			AND meta_value LIKE %s;
 			",
-			self::CACHE_KEY,
-			'%"' . $url . '"%'
-		);
-
-		// phpcs:ignore WordPress.DB -- safe query, must not be cached
-		$wpdb->query( $sql );
-
-		// Purge option cache
-		$sql = $wpdb->prepare(
-			"
- 			DELETE FROM {$wpdb->options}
- 			WHERE option_name = %s
- 			AND option_value LIKE %s;
-			",
-			self::CACHE_KEY,
+			static::$cache_key,
 			'%"' . $url . '"%'
 		);
 
@@ -880,36 +763,15 @@ abstract class AS3CF_Filter {
 			return $css;
 		}
 
-		$post_id  = $this->get_custom_css_post_id( $stylesheet );
-		$cache    = $this->get_post_cache( $post_id );
-		$to_cache = array();
-		$css      = $this->process_content( $css, $cache, $to_cache );
+		$post_id = $this->get_custom_css_post_id( $stylesheet );
 
-		$this->maybe_update_post_cache( $to_cache, $post_id );
+		list( $cached, $to_cache ) = $this->maybe_init_post_cache( $post_id );
+
+		$css = $this->process_content( $css, $cached, $to_cache );
+
+		$this->maybe_update_post_cache( $post_id, $cached, $to_cache );
 
 		return $css;
-	}
-
-	/**
-	 * Merge content filtering cache arrays.
-	 *
-	 * @param array $existing_cache
-	 * @param array $merge_cache
-	 *
-	 * @return array
-	 */
-	public static function merge_cache( $existing_cache, $merge_cache ) {
-		if ( ! empty( $existing_cache ) ) {
-			$post_cache_keys = array_map( 'AS3CF_Utils::reduce_url', array_keys( $existing_cache ) );
-			$existing_cache  = array_combine( $post_cache_keys, $existing_cache );
-		}
-
-		if ( ! empty( $merge_cache ) ) {
-			$add_cache_keys = array_map( 'AS3CF_Utils::reduce_url', array_keys( $merge_cache ) );
-			$merge_cache    = array_combine( $add_cache_keys, $merge_cache );
-		}
-
-		return array_merge( $existing_cache, $merge_cache );
 	}
 
 	/**
@@ -919,10 +781,10 @@ abstract class AS3CF_Filter {
 	 *
 	 * @return int
 	 */
-	protected function get_custom_css_post_id( $stylesheet ) {
+	protected function get_custom_css_post_id( string $stylesheet ): int {
 		$post = wp_get_custom_css_post( $stylesheet );
 
-		if ( ! $post ) {
+		if ( empty( $post ) ) {
 			return 0;
 		}
 

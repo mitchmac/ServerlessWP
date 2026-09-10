@@ -85,12 +85,12 @@ class TreeCompiler
     private function visit_or(array $node)
     {
         $a = $this->makeVar('beforeOr');
-        return $this->write('%s = $value;', $a)->dispatch($node['children'][0])->write('if (!$value && $value !== "0" && $value !== 0) {')->indent()->write('$value = %s;', $a)->dispatch($node['children'][1])->outdent()->write('}');
+        return $this->write('%s = $value;', $a)->dispatch($node['children'][0])->write('if (!Utils::isTruthy($value)) {')->indent()->write('$value = %s;', $a)->dispatch($node['children'][1])->outdent()->write('}');
     }
     private function visit_and(array $node)
     {
         $a = $this->makeVar('beforeAnd');
-        return $this->write('%s = $value;', $a)->dispatch($node['children'][0])->write('if ($value || $value === "0" || $value === 0) {')->indent()->write('$value = %s;', $a)->dispatch($node['children'][1])->outdent()->write('}');
+        return $this->write('%s = $value;', $a)->dispatch($node['children'][0])->write('if (Utils::isTruthy($value)) {')->indent()->write('$value = %s;', $a)->dispatch($node['children'][1])->outdent()->write('}');
     }
     private function visit_not(array $node)
     {
@@ -159,7 +159,7 @@ class TreeCompiler
             $this->dispatch($arg);
             $this->write('%s[] = $value;', $args)->write('$value = %s;', $value);
         }
-        return $this->write('$value = Fd::getInstance()->__invoke("%s", %s);', $node['value'], $args);
+        return $this->write('$value = Fd::getInstance()->__invoke(%s, %s);', \var_export($node['value'], \true), $args);
     }
     private function visit_slice(array $node)
     {
@@ -188,7 +188,7 @@ class TreeCompiler
         $collected = $this->makeVar('collected');
         $this->write('// Visiting projection node')->dispatch($node['children'][0])->write('');
         if (!isset($node['from'])) {
-            $this->write('if (!is_array($value) || !($value instanceof \\stdClass)) { $value = null; }');
+            $this->write('if (!is_array($value) && !($value instanceof \\stdClass)) { $value = null; }');
         } elseif ($node['from'] == 'object') {
             $this->write('if (!Utils::isObject($value)) { $value = null; }');
         } elseif ($node['from'] == 'array') {

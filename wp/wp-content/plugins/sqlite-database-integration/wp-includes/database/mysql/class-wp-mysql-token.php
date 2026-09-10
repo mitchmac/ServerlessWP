@@ -172,9 +172,14 @@ class WP_MySQL_Token extends WP_Parser_Token {
 			/*
 			 * A backslash with any other character represents the character itself.
 			 * That is, \x evaluates to x, \\ evaluates to \, and \🙂 evaluates to 🙂.
+			 *
+			 * Use "s" (DOTALL) to match all characters including newlines. Do not use
+			 * "u", so non-UTF-8 bytes are preserved (binary or single-byte charsets).
+			 * Legacy multi-byte charsets like big5 or gbk, where a trail byte can be
+			 * a backslash, are not supported.
 			 */
 			$preg_quoted_backslash = preg_quote( $backslash );
-			$value                 = preg_replace( "/$preg_quoted_backslash(.)/u", '$1', $value );
+			$value                 = preg_replace( "/$preg_quoted_backslash(.)/s", '$1', $value );
 		}
 		return $value;
 	}

@@ -17,6 +17,7 @@
  */
 namespace DeliciousBrains\WP_Offload_Media\Gcp\Google\Auth;
 
+use DeliciousBrains\WP_Offload_Media\Gcp\Google\Auth\Credentials\ExternalAccountAuthorizedUserCredentials;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Auth\Credentials\ExternalAccountCredentials;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Auth\Credentials\ImpersonatedServiceAccountCredentials;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Auth\Credentials\InsecureCredentials;
@@ -140,27 +141,36 @@ abstract class CredentialsLoader implements GetUniverseDomainInterface, FetchAut
      * @param string|string[] $scope
      * @param array<mixed> $jsonKey
      * @param string|string[] $defaultScope
-     * @return ServiceAccountCredentials|UserRefreshCredentials|ImpersonatedServiceAccountCredentials|ExternalAccountCredentials
+     * @param bool $enableRegionalAccessBoundary Lookup and include the regional access boundary header.
+     * @return ServiceAccountCredentials|UserRefreshCredentials|ImpersonatedServiceAccountCredentials|ExternalAccountCredentials|ExternalAccountAuthorizedUserCredentials
      */
-    public static function makeCredentials($scope, array $jsonKey, $defaultScope = null)
+    public static function makeCredentials($scope, array $jsonKey, $defaultScope = null, bool $enableRegionalAccessBoundary = \false)
     {
         if (!\array_key_exists('type', $jsonKey)) {
             throw new \InvalidArgumentException('json key is missing the type field');
         }
         if ($jsonKey['type'] == 'service_account') {
             // Do not pass $defaultScope to ServiceAccountCredentials
-            return new ServiceAccountCredentials($scope, $jsonKey);
+            return new ServiceAccountCredentials($scope, $jsonKey, enableRegionalAccessBoundary: $enableRegionalAccessBoundary);
         }
         if ($jsonKey['type'] == 'authorized_user') {
             $anyScope = $scope ?: $defaultScope;
             return new UserRefreshCredentials($anyScope, $jsonKey);
         }
         if ($jsonKey['type'] == 'impersonated_service_account') {
-            return new ImpersonatedServiceAccountCredentials($scope, $jsonKey, null, $defaultScope);
+            return new ImpersonatedServiceAccountCredentials($scope, $jsonKey, defaultScope: $defaultScope, enableRegionalAccessBoundary: $enableRegionalAccessBoundary);
         }
         if ($jsonKey['type'] == 'external_account') {
             $anyScope = $scope ?: $defaultScope;
-            return new ExternalAccountCredentials($anyScope, $jsonKey);
+            return new ExternalAccountCredentials($anyScope, $jsonKey, $enableRegionalAccessBoundary);
+        }
+        if ($jsonKey['type'] == 'external_account_authorized_user') {
+            $anyScope = $scope ?: $defaultScope;
+            return new ExternalAccountAuthorizedUserCredentials($anyScope, $jsonKey);
+        }
+        if ($jsonKey['type'] == 'external_account_authorized_user') {
+            $anyScope = $scope ?: $defaultScope;
+            return new ExternalAccountAuthorizedUserCredentials($anyScope, $jsonKey);
         }
         throw new \InvalidArgumentException('invalid value in the type field');
     }

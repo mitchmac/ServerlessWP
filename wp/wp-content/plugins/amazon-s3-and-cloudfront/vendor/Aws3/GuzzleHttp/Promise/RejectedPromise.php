@@ -9,13 +9,19 @@ namespace DeliciousBrains\WP_Offload_Media\Aws3\GuzzleHttp\Promise;
  * Thenning off of this promise will invoke the onRejected callback
  * immediately and ignore other callbacks.
  *
+ * @template TValue = never
+ * @template TReason = mixed
+ *
+ * @implements PromiseInterface<TValue, TReason>
+ *
  * @final
  */
 class RejectedPromise implements PromiseInterface
 {
+    /** @var TReason */
     private $reason;
     /**
-     * @param mixed $reason
+     * @param TReason $reason
      */
     public function __construct($reason)
     {
@@ -24,6 +30,17 @@ class RejectedPromise implements PromiseInterface
         }
         $this->reason = $reason;
     }
+    /**
+     * @template TFulfilledValue = never
+     * @template TFulfilledReason = never
+     * @template TRejectedValue = never
+     * @template TRejectedReason = never
+     *
+     * @param (callable(TValue): (TFulfilledValue|PromiseInterface<TFulfilledValue, TFulfilledReason>))|null $onFulfilled Invoked when the promise fulfills.
+     * @param (callable(TReason): (TRejectedValue|PromiseInterface<TRejectedValue, TRejectedReason>))|null   $onRejected  Invoked when the promise is rejected.
+     *
+     * @return ($onRejected is null ? self<TValue, TReason> : PromiseInterface<TRejectedValue, TRejectedReason|\Throwable>)
+     */
     public function then(?callable $onFulfilled = null, ?callable $onRejected = null) : PromiseInterface
     {
         // If there's no onRejected callback then just return self.
@@ -46,6 +63,14 @@ class RejectedPromise implements PromiseInterface
         });
         return $p;
     }
+    /**
+     * @template TRejectedValue = never
+     * @template TRejectedReason = never
+     *
+     * @param callable(TReason): (TRejectedValue|PromiseInterface<TRejectedValue, TRejectedReason>) $onRejected Invoked when the promise is rejected.
+     *
+     * @return PromiseInterface<TRejectedValue, TRejectedReason|\Throwable>
+     */
     public function otherwise(callable $onRejected) : PromiseInterface
     {
         return $this->then(null, $onRejected);
@@ -61,7 +86,7 @@ class RejectedPromise implements PromiseInterface
     {
         return self::REJECTED;
     }
-    public function resolve($value) : void
+    public function resolve($value = null) : void
     {
         throw new \LogicException('Cannot resolve a rejected promise');
     }
