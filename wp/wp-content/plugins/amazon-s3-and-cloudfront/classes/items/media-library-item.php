@@ -12,87 +12,87 @@ class Media_Library_Item extends Item {
 	 *
 	 * @var string
 	 */
-	protected static $source_type_name = 'Media Library Item';
+	protected static string $source_type_name = 'Media Library Item';
 
 	/**
 	 * Internal source type identifier
 	 *
 	 * @var string
 	 */
-	protected static $source_type = 'media-library';
+	protected static string $source_type = 'media-library';
 
 	/**
 	 * Table that corresponds to this item type
 	 *
 	 * @var string
 	 */
-	protected static $source_table = 'posts';
+	protected static string $source_table = 'posts';
 
 	/**
 	 * Foreign key (if any) in the $source_table
 	 *
 	 * @var string
 	 */
-	protected static $source_fk = 'id';
+	protected static string $source_fk = 'id';
 
 	/**
 	 * Item's summary type name.
 	 *
 	 * @var string
 	 */
-	protected static $summary_type_name = 'Media Library';
+	protected static string $summary_type_name = 'Media Library';
 
 	/**
 	 * Item's summary type.
 	 *
 	 * @var string
 	 */
-	protected static $summary_type = 'media-library';
+	protected static string $summary_type = 'media-library';
 
 	/**
 	 * Item constructor.
 	 *
-	 * @param string $provider              Storage provider key name, e.g. "aws".
-	 * @param string $region                Region for item's bucket.
-	 * @param string $bucket                Bucket for item.
-	 * @param string $path                  Key path for item (full sized if type has thumbnails etc).
-	 * @param bool   $is_private            Is the object private in the bucket.
-	 * @param int    $source_id             ID that source has.
-	 * @param string $source_path           Path that source uses, could be relative or absolute depending on source.
-	 * @param string $original_filename     An optional filename with no path that was previously used for the item.
-	 * @param array  $extra_info            An optional associative array of extra data to be associated with the item.
-	 *                                      Recognised keys:
-	 *                                      'objects' => array of ...
-	 *                                      -- 'thumbnail' => array of ...
-	 *                                      -- -- 'source_file' => 'image-150x150.png'
-	 *                                      -- -- 'is_private'  => false
-	 *                                      'private_prefix' => 'private/'
-	 *                                      For backwards compatibility, if a simple array is supplied it is treated as
-	 *                                      private thumbnail sizes that should be private objects in the bucket.
-	 * @param int    $id                    Optional Item record ID.
-	 * @param int    $originator            Optional originator of record from ORIGINATORS const.
-	 * @param bool   $is_verified           Optional flag as to whether Item's objects are known to exist.
-	 * @param bool   $use_object_versioning Optional flag as to whether path prefix should use Object Versioning if type allows it.
+	 * @param string|null $provider              Storage provider key name, e.g. "aws".
+	 * @param string|null $region                Region for item's bucket.
+	 * @param string|null $bucket                Bucket for item.
+	 * @param string|null $path                  Key path for item (full sized if type has thumbnails etc).
+	 * @param bool        $is_private            Is the object private in the bucket.
+	 * @param int         $source_id             ID that source has.
+	 * @param string      $source_path           Path that source uses, could be relative or absolute depending on source.
+	 * @param string|null $original_filename     An optional filename with no path that was previously used for the item.
+	 * @param array|null  $extra_info            An optional associative array of extra data to be associated with the item.
+	 *                                           Recognised keys:
+	 *                                           'objects' => array of ...
+	 *                                           -- 'thumbnail' => array of ...
+	 *                                           -- -- 'source_file' => 'image-150x150.png'
+	 *                                           -- -- 'is_private'  => false
+	 *                                           'private_prefix' => 'private/'
+	 *                                           For backwards compatibility, if a simple array is supplied it is treated as
+	 *                                           private thumbnail sizes that should be private objects in the bucket.
+	 * @param int|null    $id                    Optional Item record ID.
+	 * @param int         $originator            Optional originator of record from ORIGINATORS const.
+	 * @param bool        $is_verified           Optional flag as to whether Item's objects are known to exist.
+	 * @param bool        $use_object_versioning Optional flag as to whether path prefix should use Object Versioning if type allows it.
 	 */
 	public function __construct(
-		$provider,
-		$region,
-		$bucket,
-		$path,
-		$is_private,
-		$source_id,
-		$source_path,
-		$original_filename = null,
-		$extra_info = array(),
-		$id = null,
-		$originator = 0,
-		$is_verified = true,
-		$use_object_versioning = self::CAN_USE_OBJECT_VERSIONING
+		?string $provider,
+		?string $region,
+		?string $bucket,
+		?string $path,
+		bool $is_private,
+		int $source_id,
+		string $source_path,
+		?string $original_filename = null,
+		?array $extra_info = array(),
+		?int $id = null,
+		int $originator = 0,
+		bool $is_verified = true,
+		bool $use_object_versioning = self::CAN_USE_OBJECT_VERSIONING
 	) {
 		// For Media Library items, the source path should be relative to the Media Library's uploads directory.
 		$uploads = wp_upload_dir();
 
-		if ( false === $uploads['error'] && 0 === strpos( $source_path, $uploads['basedir'] ) ) {
+		if ( false === $uploads['error'] && str_starts_with( $source_path, $uploads['basedir'] ) ) {
 			$source_path = AS3CF_Utils::unleadingslashit( substr( $source_path, strlen( $uploads['basedir'] ) ) );
 		}
 
@@ -137,8 +137,10 @@ class Media_Library_Item extends Item {
 	 * media library item.
 	 *
 	 * @return array
+	 *
+	 * @deprecated 3.4.0 Please use file functions instead.
 	 */
-	public function item_data_for_acl_filter() {
+	public function item_data_for_acl_filter(): array {
 		$item_data               = parent::item_data_for_acl_filter();
 		$media_library_item_data = wp_get_attachment_metadata( $this->source_id(), true );
 
@@ -158,9 +160,12 @@ class Media_Library_Item extends Item {
 	 * @param int   $source_id
 	 * @param array $options
 	 *
-	 * @return Item|WP_Error
+	 * @return Media_Library_Item|WP_Error
 	 */
-	public static function create_from_source_id( $source_id, $options = array() ) {
+	public static function create_from_source_id(
+		int $source_id,
+		array $options = array()
+	): Media_Library_Item|WP_Error {
 		if ( empty( $source_id ) ) {
 			return new WP_Error(
 				'exception',
@@ -256,11 +261,11 @@ class Media_Library_Item extends Item {
 			}
 		}
 
-		return new self(
-			'',
-			'',
-			'',
-			'',
+		return new static(
+			null,
+			null,
+			null,
+			null,
 			false,
 			$source_id,
 			$source_path,
@@ -284,7 +289,7 @@ class Media_Library_Item extends Item {
 	 *
 	 * @return string|false
 	 */
-	public function get_local_url( $object_key = null ) {
+	public function get_local_url( $object_key = null ): bool|string {
 		/** @var Amazon_S3_And_CloudFront $as3cf */
 		global $as3cf;
 		$url = '';
@@ -312,17 +317,21 @@ class Media_Library_Item extends Item {
 
 		$url = $as3cf->maybe_fix_local_subsite_url( $url );
 
-		if ( ! empty( $object_key ) ) {
-			$meta = get_post_meta( $this->source_id(), '_wp_attachment_metadata', true );
-			if ( empty( $meta['sizes'][ $object_key ]['file'] ) ) {
-				// No alternative sizes available, return
-				return $url;
-			}
-
-			$url = str_replace( wp_basename( $url ), $meta['sizes'][ $object_key ]['file'], $url );
+		// We now have the full local URL for the Media Library item to use as
+		// the base or fallback, and can swap in the source path for the size we want.
+		// But if we don't have an object key, or it's the primary we actually want,
+		// we're done!
+		if ( empty( $object_key ) || Item::primary_object_key() === $object_key ) {
+			return $url;
 		}
 
-		return $url;
+		$as3cf_file = $this->file( $object_key );
+
+		if ( empty( $as3cf_file ) ) {
+			return $url;
+		}
+
+		return str_replace( $file, $as3cf_file->source_path(), $url );
 	}
 
 	/**
@@ -330,9 +339,9 @@ class Media_Library_Item extends Item {
 	 *
 	 * @param int $source_id
 	 *
-	 * @return bool|Media_Library_Item
+	 * @return Media_Library_Item|bool
 	 */
-	public static function get_by_source_id( $source_id ) {
+	public static function get_by_source_id( int $source_id ): Media_Library_Item|bool {
 		$as3cf_item = parent::get_by_source_id( $source_id );
 
 		if ( ! $as3cf_item ) {
@@ -411,7 +420,7 @@ class Media_Library_Item extends Item {
 	 *
 	 * @return string|null
 	 */
-	public function get_acl_for_object_key( $object_key, $bucket = null ) {
+	public function get_acl_for_object_key( string $object_key, ?string $bucket = null ): ?string {
 		/** @var Amazon_S3_And_CloudFront $as3cf */
 		global $as3cf;
 
@@ -445,7 +454,7 @@ class Media_Library_Item extends Item {
 			WHERE posts.post_type = 'attachment'
 			AND posts.ID NOT IN (
 			    SELECT items.source_id
-				FROM " . static::items_table() . " AS items
+				FROM " . static::get_table_name() . " AS items
 				WHERE items.source_type = %s
 				AND items.source_id = posts.ID
 			)
@@ -493,13 +502,13 @@ class Media_Library_Item extends Item {
 		$sql = "
 			SELECT m.post_id
 			FROM " . $wpdb->postmeta . " AS m
-			LEFT JOIN " . $wpdb->posts . " AS p ON m.post_id = p.ID AND p.`post_type` = 'attachment'
+			INNER JOIN " . $wpdb->posts . " AS p ON m.post_id = p.ID AND p.`post_type` = 'attachment'
 			WHERE m.meta_key = '_wp_attached_file'
 			AND m.meta_value = %s
 			AND m.post_id != %d
 			AND m.post_id NOT IN (
 				SELECT i.source_id
-				FROM " . static::items_table() . " AS i
+				FROM " . static::get_table_name() . " AS i
 				WHERE i.source_type = %s
 				AND i.source_id = m.post_id
 			)
@@ -518,19 +527,7 @@ class Media_Library_Item extends Item {
 		}
 
 		foreach ( $results as $result ) {
-			$as3cf_item = new Media_Library_Item(
-				$this->provider(),
-				$this->region(),
-				$this->bucket(),
-				$this->path(),
-				$this->is_private(),
-				$result->post_id,
-				$this->source_path(),
-				wp_basename( $this->original_source_path() ),
-				$this->extra_info()
-			);
-			$as3cf_item->save();
-			$as3cf_item->duplicate_filesize_total( $this->source_id() );
+			$this->duplicate_for_source_id( $result->post_id );
 		}
 	}
 
@@ -541,7 +538,7 @@ class Media_Library_Item extends Item {
 	 *
 	 * @return object|null Object containing url and link text
 	 */
-	public static function admin_link( $error ) {
+	public static function admin_link( object $error ): ?object {
 		return (object) array(
 			'url'  => get_edit_post_link( $error->source_id, '' ),
 			'text' => __( 'Edit', 'amazon-s3-and-cloudfront' ),
@@ -551,9 +548,9 @@ class Media_Library_Item extends Item {
 	/**
 	 * Return a year/month string for the item
 	 *
-	 * @return string
+	 * @return string|null
 	 */
-	protected function get_item_time() {
+	protected function get_item_time(): ?string {
 		return $this->get_attachment_folder_year_month();
 	}
 
@@ -656,7 +653,7 @@ class Media_Library_Item extends Item {
 	 * @param int $original_size
 	 * @param int $total_size
 	 */
-	public function update_filesize_after_remove_local( $original_size, $total_size ) {
+	public function update_filesize_after_remove_local( int $original_size, int $total_size ): void {
 		update_post_meta( $this->source_id(), 'as3cf_filesize_total', $total_size );
 
 		// Update existing attachment metadata to add filesize if not present.
@@ -697,8 +694,10 @@ class Media_Library_Item extends Item {
 	 *
 	 * @param Item  $as3cf_item
 	 * @param array $paths
+	 *
+	 * @return array
 	 */
-	public function remove_duplicate_paths( Item $as3cf_item, $paths ) {
+	public function remove_duplicate_paths( Item $as3cf_item, array $paths ): array {
 		$full_size_paths        = AS3CF_Utils::fullsize_paths( $as3cf_item->full_source_paths() );
 		$as3cf_items_with_paths = static::get_by_source_path(
 			$full_size_paths,
@@ -748,7 +747,7 @@ class Media_Library_Item extends Item {
 		// phpcs:ignore WordPress.DB -- safe query, must not be cached
 		$attachment_count = (int) $wpdb->get_var( $sql );
 
-		$sql = 'SELECT count(id) FROM ' . static::items_table() . ' WHERE source_type = %s';
+		$sql = 'SELECT count(id) FROM ' . static::get_table_name() . ' WHERE source_type = %s';
 		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
 		$sql = $wpdb->prepare( $sql, static::$source_type );
 		// phpcs:ignore WordPress.DB, PluginCheck.Security.DirectDB.UnescapedDBParameter -- safe query, must not be cached
@@ -759,6 +758,37 @@ class Media_Library_Item extends Item {
 			'offloaded'     => $offloaded_count,
 			'not_offloaded' => max( $attachment_count - $offloaded_count, 0 ),
 		);
+	}
+
+	/**
+	 * Create duplicate of item for given source ID, or return duplicate if it already exists.
+	 *
+	 * @param int $source_id
+	 *
+	 * @return Media_Library_Item
+	 */
+	public function duplicate_for_source_id( int $source_id ): Media_Library_Item {
+		$as3cf_item = self::get_by_source_id( $source_id );
+
+		if ( empty( $as3cf_item ) || ! is_a( $as3cf_item, self::class ) ) {
+			$as3cf_item = new Media_Library_Item(
+				$this->provider(),
+				$this->region(),
+				$this->bucket(),
+				$this->path(),
+				$this->is_private(),
+				$source_id,
+				$this->source_path(),
+				wp_basename( $this->original_source_path() ),
+			);
+
+			$as3cf_item->set_private_prefix( $this->private_prefix() );
+			$as3cf_item->set_objects( $this->objects() );
+			$as3cf_item->save();
+			$as3cf_item->duplicate_filesize_total( $source_id );
+		}
+
+		return $as3cf_item;
 	}
 
 	/*

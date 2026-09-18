@@ -7,6 +7,7 @@ use DeliciousBrains\WP_Offload_Media\Aws3\Aws\Api\Validator;
 use DeliciousBrains\WP_Offload_Media\Aws3\Aws\Credentials\CredentialsInterface;
 use DeliciousBrains\WP_Offload_Media\Aws3\Aws\EndpointV2\EndpointProviderV2;
 use DeliciousBrains\WP_Offload_Media\Aws3\Aws\Exception\AwsException;
+use DeliciousBrains\WP_Offload_Media\Aws3\Aws\Signature\DpopSignature;
 use DeliciousBrains\WP_Offload_Media\Aws3\Aws\Signature\S3ExpressSignature;
 use DeliciousBrains\WP_Offload_Media\Aws3\Aws\Token\TokenAuthorization;
 use DeliciousBrains\WP_Offload_Media\Aws3\Aws\Token\TokenInterface;
@@ -64,11 +65,11 @@ final class Middleware
     public static function validation(Service $api, ?Validator $validator = null)
     {
         $validator = $validator ?: new Validator();
+        if ($api->isModifiedModel()) {
+            $api = new Service($api->getDefinition(), $api->getProvider());
+        }
         return function (callable $handler) use($api, $validator) {
             return function (CommandInterface $command, ?RequestInterface $request = null) use($api, $validator, $handler) {
-                if ($api->isModifiedModel()) {
-                    $api = new Service($api->getDefinition(), $api->getProvider());
-                }
                 $operation = $api->getOperation($command->getName());
                 $validator->validate($command->getName(), $operation->getInput(), $command->toArray());
                 return $handler($command, $request);
@@ -109,19 +110,23 @@ final class Middleware
         return function (callable $handler) use($signatureFunction, $credProvider, $tokenProvider, $config) {
             return function (CommandInterface $command, RequestInterface $request) use($handler, $signatureFunction, $credProvider, $tokenProvider, $config) {
                 $signer = $signatureFunction($command);
+                // Token authorization path
                 if ($signer instanceof TokenAuthorization) {
                     return $tokenProvider()->then(function (TokenInterface $token) use($handler, $command, $signer, $request) {
                         $command->getMetricsBuilder()->identifyMetricByValueAndAppend('token', $token);
                         return $handler($command, $signer->authorizeRequest($request, $token));
                     });
                 }
-                if ($signer instanceof S3ExpressSignature) {
-                    $credentialPromise = $config['s3_express_identity_provider']($command);
-                } else {
-                    $credentialPromise = $credProvider();
+                // DPoP path
+                if ($signer instanceof DpopSignature) {
+                    if (empty($key = $command['dpopKey']) || !$key instanceof \OpenSSLAsymmetricKey) {
+                        throw new \RuntimeException('A valid DPoP key must be present for DPoP signatures');
+                    }
+                    return $handler($command, $signer->signRequest($request, $key));
                 }
+                // Credential signing path
+                $credentialPromise = $signer instanceof S3ExpressSignature ? $config['s3_express_identity_provider']($command) : $credProvider();
                 return $credentialPromise->then(function (CredentialsInterface $creds) use($handler, $command, $signer, $request) {
-                    // Capture credentials metric
                     $command->getMetricsBuilder()->identifyMetricByValueAndAppend('credentials', $creds);
                     return $handler($command, $signer->signRequest($request, $creds));
                 });
@@ -187,7 +192,7 @@ final class Middleware
     {
         return function (callable $handler) {
             return function (CommandInterface $command, RequestInterface $request) use($handler) {
-                return $handler($command, $request->withHeader('aws-sdk-invocation-id', \md5(\uniqid(\gethostname(), \true))));
+                return $handler($command, $request->withHeader('amz-sdk-invocation-id', \md5(\uniqid(\gethostname(), \true))));
             };
         };
     }
@@ -277,8 +282,8 @@ final class Middleware
      */
     public static function mapRequest(callable $f)
     {
-        return function (callable $handler) use($f) {
-            return function (CommandInterface $command, ?RequestInterface $request = null) use($handler, $f) {
+        return static function (callable $handler) use($f) {
+            return static function (CommandInterface $command, ?RequestInterface $request = null) use($handler, $f) {
                 return $handler($command, $f($request));
             };
         };

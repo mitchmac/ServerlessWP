@@ -49,6 +49,7 @@ class S3EncryptionClient extends AbstractCryptoClient
      */
     public function __construct(S3Client $client, $instructionFileSuffix = null)
     {
+        \trigger_error('S3EncryptionClient is deprecated and will be removed in a future ' . 'release due to security vulnerabilities. Please migrate to ' . 'S3EncryptionClientV3 as soon as possible.' . "\n" . 'See https://docs.aws.amazon.com/sdk-for-php/v3/developer-guide/' . 'security.html for upgrade guidance.', \E_USER_DEPRECATED);
         $this->client = $client;
         $this->instructionFileSuffix = $instructionFileSuffix;
         MetricsBuilder::appendMetricsCaptureMiddleware($this->client->getHandlerList(), MetricsBuilder::S3_CRYPTO_V1N);
@@ -105,7 +106,13 @@ class S3EncryptionClient extends AbstractCryptoClient
         $strategy = $this->getMetadataStrategy($args, $instructionFileSuffix);
         unset($args['@MetadataStrategy']);
         $envelope = new MetadataEnvelope();
-        return Promise\Create::promiseFor($this->encrypt(Psr7\Utils::streamFor($args['Body']), $args['@CipherOptions'] ?: [], $provider, $envelope))->then(function ($encryptedBodyStream) use($args) {
+        $bodyStream = Psr7\Utils::streamFor($args['Body']);
+        // User-owned resource which should be detached instead of closed
+        // during garbage-collection
+        if (\is_resource($args['Body'])) {
+            $bodyStream = \DeliciousBrains\WP_Offload_Media\Aws3\Aws\detach_on_close_stream($bodyStream);
+        }
+        return Promise\Create::promiseFor($this->encrypt($bodyStream, $args['@CipherOptions'] ?: [], $provider, $envelope))->then(function ($encryptedBodyStream) use($args) {
             $hash = new PhpHash('sha256');
             $hashingEncryptedBodyStream = new HashingStream($encryptedBodyStream, $hash, self::getContentShaDecorator($args));
             return [$hashingEncryptedBodyStream, $args];

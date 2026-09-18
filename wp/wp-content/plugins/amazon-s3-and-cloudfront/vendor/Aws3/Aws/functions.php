@@ -2,8 +2,10 @@
 
 namespace DeliciousBrains\WP_Offload_Media\Aws3\Aws;
 
+use DeliciousBrains\WP_Offload_Media\Aws3\GuzzleHttp\Psr7\FnStream;
 use DeliciousBrains\WP_Offload_Media\Aws3\GuzzleHttp\Utils;
 use DeliciousBrains\WP_Offload_Media\Aws3\Psr\Http\Message\RequestInterface;
+use DeliciousBrains\WP_Offload_Media\Aws3\Psr\Http\Message\StreamInterface;
 use DeliciousBrains\WP_Offload_Media\Aws3\GuzzleHttp\Promise\FulfilledPromise;
 //-----------------------------------------------------------------------------
 // Functional functions
@@ -488,4 +490,18 @@ function is_associative(array $array) : bool
         return \false;
     }
     return !\array_is_list($array);
+}
+/**
+ * Decorates a PSR-7 stream so close() detaches the underlying resource
+ * instead of fclose()-ing it. Use at sites where the SDK wraps a
+ * user-owned PHP resource.
+ *
+ * @param StreamInterface $stream
+ * @return StreamInterface
+ */
+function detach_on_close_stream(StreamInterface $stream) : StreamInterface
+{
+    return FnStream::decorate($stream, ['close' => static function () use($stream) {
+        $stream->detach();
+    }]);
 }

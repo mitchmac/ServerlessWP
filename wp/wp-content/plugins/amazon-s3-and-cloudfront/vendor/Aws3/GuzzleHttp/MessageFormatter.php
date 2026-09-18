@@ -1,5 +1,6 @@
 <?php
 
+declare (strict_types=1);
 namespace DeliciousBrains\WP_Offload_Media\Aws3\GuzzleHttp;
 
 use DeliciousBrains\WP_Offload_Media\Aws3\Psr\Http\Message\MessageInterface;
@@ -25,16 +26,16 @@ use DeliciousBrains\WP_Offload_Media\Aws3\Psr\Http\Message\ResponseInterface;
  * - {code}:           Status code of the response (if available)
  * - {phrase}:         Reason phrase of the response  (if available)
  * - {error}:          Any error messages (if available)
- * - {req_header_*}:   Replace `*` with the lowercased name of a request header to add to the message
- * - {res_header_*}:   Replace `*` with the lowercased name of a response header to add to the message
+ * - {req_header_*}:   Replace `*` with the lowercased name of a request header
+ *                     to add to the message
+ * - {res_header_*}:   Replace `*` with the lowercased name of a response header
+ *                     to add to the message
  * - {req_headers}:    Request headers
  * - {res_headers}:    Response headers
  * - {req_body}:       Request body
  * - {res_body}:       Response body
- *
- * @final
  */
-class MessageFormatter implements MessageFormatterInterface
+final class MessageFormatter implements MessageFormatterInterface
 {
     /**
      * Apache Common Log Format.
@@ -49,7 +50,7 @@ class MessageFormatter implements MessageFormatterInterface
     /**
      * @var string Template used to format log messages
      */
-    private $template;
+    private string $template;
     /**
      * @param string $template Log message template
      */
@@ -67,8 +68,7 @@ class MessageFormatter implements MessageFormatterInterface
     public function format(RequestInterface $request, ?ResponseInterface $response = null, ?\Throwable $error = null) : string
     {
         $cache = [];
-        /** @var string */
-        return \preg_replace_callback('/{\\s*([A-Za-z_\\-\\.0-9]+)\\s*}/', function (array $matches) use($request, $response, $error, &$cache) {
+        $result = \preg_replace_callback('/{\\s*([A-Za-z_\\-\\.0-9]+)\\s*}/', function (array $matches) use($request, $response, $error, &$cache) : string {
             if (isset($cache[$matches[1]])) {
                 return $cache[$matches[1]];
             }
@@ -81,7 +81,7 @@ class MessageFormatter implements MessageFormatterInterface
                     $result = $response ? Psr7\Message::toString($response) : '';
                     break;
                 case 'req_headers':
-                    $result = \trim($request->getMethod() . ' ' . $request->getRequestTarget()) . ' HTTP/' . $request->getProtocolVersion() . "\r\n" . $this->headers($request);
+                    $result = \trim($request->getMethod() . ' ' . $request->getRequestTarget(), " \n\r\t\x00\v") . ' HTTP/' . $request->getProtocolVersion() . "\r\n" . $this->headers($request);
                     break;
                 case 'res_headers':
                     $result = $response ? \sprintf('HTTP/%s %d %s', $response->getProtocolVersion(), $response->getStatusCode(), $response->getReasonPhrase()) . "\r\n" . $this->headers($response) : 'NULL';
@@ -150,9 +150,14 @@ class MessageFormatter implements MessageFormatterInterface
                         $result = $response ? $response->getHeaderLine(\substr($matches[1], 11)) : 'NULL';
                     }
             }
+            $result = (string) $result;
             $cache[$matches[1]] = $result;
             return $result;
         }, $this->template);
+        if ($result === null) {
+            throw new \RuntimeException('Unable to format message: ' . \preg_last_error_msg());
+        }
+        return $result;
     }
     /**
      * Get headers from message as string
@@ -163,6 +168,6 @@ class MessageFormatter implements MessageFormatterInterface
         foreach ($message->getHeaders() as $name => $values) {
             $result .= $name . ': ' . \implode(', ', $values) . "\r\n";
         }
-        return \trim($result);
+        return \trim($result, " \n\r\t\x00\v");
     }
 }

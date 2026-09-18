@@ -5,6 +5,7 @@ namespace DeliciousBrains\WP_Offload_Media\Aws3\Aws\Crypto;
 use DeliciousBrains\WP_Offload_Media\Aws3\GuzzleHttp\Psr7;
 use DeliciousBrains\WP_Offload_Media\Aws3\GuzzleHttp\Psr7\AppendStream;
 use DeliciousBrains\WP_Offload_Media\Aws3\GuzzleHttp\Psr7\Stream;
+use DeliciousBrains\WP_Offload_Media\Aws3\Psr\Http\Message\StreamInterface;
 trait EncryptionTrait
 {
     private static $allowedOptions = ['Cipher' => \true, 'KeySize' => \true, 'Aad' => \true];
@@ -42,7 +43,7 @@ trait EncryptionTrait
      *
      * @internal
      */
-    public function encrypt(Stream $plaintext, array $cipherOptions, MaterialsProvider $provider, MetadataEnvelope $envelope)
+    public function encrypt(StreamInterface $plaintext, array $cipherOptions, MaterialsProvider $provider, MetadataEnvelope $envelope)
     {
         $materialsDescription = $provider->getMaterialsDescription();
         $cipherOptions = \array_intersect_key($cipherOptions, self::$allowedOptions);
@@ -92,7 +93,7 @@ trait EncryptionTrait
      *
      * @internal
      */
-    protected function getEncryptingStream(Stream $plaintext, $cek, &$cipherOptions)
+    protected function getEncryptingStream(StreamInterface $plaintext, $cek, &$cipherOptions)
     {
         switch ($cipherOptions['Cipher']) {
             case 'gcm':
