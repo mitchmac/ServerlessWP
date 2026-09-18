@@ -4,7 +4,7 @@ Contributors:      wordpressdotorg, aristath, janjakes, zieladam, berislav.grgic
 Requires at least: 6.4
 Tested up to:      7.1
 Requires PHP:      7.2
-Stable tag:        3.0.1
+Stable tag:        3.0.2
 License:           GPLv2 or later
 License URI:       https://www.gnu.org/licenses/gpl-2.0.html
 Tags:              sqlite, database
@@ -65,6 +65,13 @@ Contributions are welcome through the [SQLite Database Integration repository on
 Yes. The plugin replaces the default MySQL-based database layer with an SQLite-backed implementation. WordPress continues to use the `wpdb` API, while queries are internally adapted to SQLite syntax and behavior.
 
 == Changelog ==
+
+= 3.0.2 =
+
+* Fix schema reconstruction with native numeric results ([#506](https://github.com/WordPress/sqlite-database-integration/pull/506))
+* Fix lexer edge cases and string handling ([#505](https://github.com/WordPress/sqlite-database-integration/pull/505))
+* Preserve index prefix lengths and order in `SHOW CREATE TABLE` primary keys ([#500](https://github.com/WordPress/sqlite-database-integration/pull/500))
+* Align savepoint handling with MySQL semantics ([#496](https://github.com/WordPress/sqlite-database-integration/pull/496))
 
 = 3.0.1 =
 

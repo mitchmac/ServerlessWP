@@ -14,8 +14,6 @@
 
 namespace DeliciousBrains\WP_Offload_Media\Upgrades;
 
-use stdClass;
-
 /**
  * Upgrade_Item_Extra_Data Class
  *
@@ -28,35 +26,35 @@ class Upgrade_Item_Extra_Data extends Upgrade {
 	/**
 	 * @var int
 	 */
-	protected $upgrade_id = 10;
+	protected int $upgrade_id = 10;
 
 	/**
 	 * @var string
 	 */
-	protected $upgrade_name = 'item_extra_data';
+	protected string $upgrade_name = 'item_extra_data';
 
 	/**
 	 * @var string 'metadata', 'attachment'
 	 */
-	protected $upgrade_type = 'metadata';
+	protected string $upgrade_type = 'metadata';
 
 	/**
 	 * Get running update text.
 	 *
 	 * @return string
 	 */
-	protected function get_running_update_text() {
+	protected function get_running_update_text(): string {
 		return __( 'and updating metadata about offloaded items to new format.', 'amazon-s3-and-cloudfront' );
 	}
 
 	/**
 	 * Update extra_info in items table.
 	 *
-	 * @param stdClass $item
+	 * @param mixed $item
 	 *
 	 * @return bool
 	 */
-	protected function upgrade_item( $item ) {
+	protected function upgrade_item( mixed $item ): bool {
 		return true;
 	}
 
@@ -69,7 +67,7 @@ class Upgrade_Item_Extra_Data extends Upgrade {
 	 *
 	 * @return array
 	 */
-	protected function get_items_to_process( $prefix, $limit, $offset = false ) {
+	protected function get_items_to_process( string $prefix, int $limit, $offset = false ): array {
 		return array();
 	}
 }

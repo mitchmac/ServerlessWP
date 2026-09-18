@@ -3,7 +3,6 @@
 namespace DeliciousBrains\WP_Offload_Media\Aws3\Aws\Api\Parser;
 
 use DeliciousBrains\WP_Offload_Media\Aws3\Aws\Api\Parser\Exception\ParserException;
-use DeliciousBrains\WP_Offload_Media\Aws3\Psr\Http\Message\ResponseInterface;
 trait PayloadParserTrait
 {
     /**

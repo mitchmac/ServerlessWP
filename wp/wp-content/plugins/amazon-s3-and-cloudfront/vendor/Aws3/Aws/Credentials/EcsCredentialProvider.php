@@ -4,7 +4,7 @@ namespace DeliciousBrains\WP_Offload_Media\Aws3\Aws\Credentials;
 
 use DeliciousBrains\WP_Offload_Media\Aws3\Aws\Arn\Arn;
 use DeliciousBrains\WP_Offload_Media\Aws3\Aws\Exception\CredentialsException;
-use DeliciousBrains\WP_Offload_Media\Aws3\GuzzleHttp\Exception\ConnectException;
+use DeliciousBrains\WP_Offload_Media\Aws3\Aws\Handler\HttpHandlerError;
 use DeliciousBrains\WP_Offload_Media\Aws3\GuzzleHttp\Exception\GuzzleException;
 use DeliciousBrains\WP_Offload_Media\Aws3\GuzzleHttp\Psr7\Request;
 use DeliciousBrains\WP_Offload_Media\Aws3\GuzzleHttp\Promise;
@@ -45,7 +45,8 @@ class EcsCredentialProvider
      */
     public function __construct(array $config = [])
     {
-        $this->timeout = (float) isset($config['timeout']) ? $config['timeout'] : (\getenv(self::ENV_TIMEOUT) ?: self::DEFAULT_ENV_TIMEOUT);
+        $timeout = $config['timeout'] ?? (\getenv(self::ENV_TIMEOUT) ?: self::DEFAULT_ENV_TIMEOUT);
+        $this->timeout = \is_string($timeout) && \is_numeric($timeout) ? (float) $timeout : $timeout;
         $this->retries = (int) isset($config['retries']) ? $config['retries'] : ((int) \getenv(self::ENV_RETRIES) ?: self::DEFAULT_ENV_RETRIES);
         $this->client = $config['client'] ?? \DeliciousBrains\WP_Offload_Media\Aws3\Aws\default_http_handler();
     }
@@ -78,12 +79,13 @@ class EcsCredentialProvider
                         }
                         return new Credentials($result['AccessKeyId'], $result['SecretAccessKey'], $result['Token'], \strtotime($result['Expiration']), $result['AccountId'] ?? null, CredentialSources::ECS);
                     })->otherwise(function ($reason) {
-                        $reason = \is_array($reason) ? $reason['exception'] : $reason;
-                        $isRetryable = $reason instanceof ConnectException;
+                        $connectionError = \is_array($reason) && !empty($reason['connection_error']);
+                        $exception = \is_array($reason) ? $reason['exception'] ?? null : $reason;
+                        $isRetryable = $connectionError || $exception instanceof \Throwable && HttpHandlerError::isConnectionError($exception);
                         if ($isRetryable && $this->attempts < $this->retries) {
                             \sleep((int) \pow(1.2, $this->attempts));
                         } else {
-                            $msg = $reason->getMessage();
+                            $msg = $exception instanceof \Throwable ? $exception->getMessage() : \DeliciousBrains\WP_Offload_Media\Aws3\Aws\describe_type($reason);
                             throw new CredentialsException(\sprintf('Error retrieving credentials from container metadata after attempt %d/%d (%s)', $this->attempts, $this->retries, $msg));
                         }
                     }));

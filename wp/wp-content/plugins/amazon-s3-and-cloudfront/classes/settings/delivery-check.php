@@ -10,6 +10,11 @@ use AS3CF_Utils;
 use Exception;
 use WP_Error as AS3CF_Result;
 
+// Exit if accessed directly.
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 class Delivery_Check extends Domain_Check {
 	/**
 	 * @var Amazon_S3_And_CloudFront

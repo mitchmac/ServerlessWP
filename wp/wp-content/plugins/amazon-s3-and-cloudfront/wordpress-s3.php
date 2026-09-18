@@ -1,33 +1,41 @@
 <?php
-/*
-Plugin Name: WP Offload Media Lite
-Plugin URI: https://deliciousbrains.com
-Description: Automatically copies media uploads to Amazon S3, DigitalOcean Spaces or Google Cloud Storage for storage and delivery. Optionally configure Amazon CloudFront or another CDN for even faster delivery.
-Author: Delicious Brains
-License: GPLv2
-Version: 3.3.1
-Author URI: https://deliciousbrains.com/?utm_campaign=WP%2BOffload%2BS3&utm_source=wordpress.org&utm_medium=free%2Bplugin%2Blisting
-Network: True
-Text Domain: amazon-s3-and-cloudfront
-Domain Path: /languages/
-
-// Copyright (c) 2013 Delicious Brains. All rights reserved.
-//
-// Released under the GPL license
-// http://www.opensource.org/licenses/gpl-license.php
-//
-// **********************************************************************
-// This program is distributed in the hope that it will be useful, but
-// WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
-// **********************************************************************
-//
-// Forked Amazon S3 for WordPress with CloudFront (http://wordpress.org/extend/plugins/tantan-s3-cloudfront/)
-// which is a fork of Amazon S3 for WordPress (http://wordpress.org/extend/plugins/tantan-s3/).
-// Then completely rewritten.
-*/
+/**
+ * Plugin Name: WP Offload Media Lite
+ * Plugin URI: https://deliciousbrains.com
+ * Description: Automatically copies media uploads to Amazon S3, DigitalOcean Spaces or Google Cloud Storage for storage and delivery. Optionally configure Amazon CloudFront or another CDN for even faster delivery.
+ * Author: Delicious Brains
+ * License: GPLv2
+ * Version: 3.4.2
+ * Requires at least: 5.9
+ * Tested up to: 7.1
+ * Requires PHP: 8.1
+ * Author URI: https://deliciousbrains.com/?utm_campaign=WP%2BOffload%2BS3&utm_source=wordpress.org&utm_medium=free%2Bplugin%2Blisting
+ * Network: True
+ * Text Domain: amazon-s3-and-cloudfront
+ * Domain Path: /languages/
+ *
+ * Copyright (c) 2013 Delicious Brains. All rights reserved.
+ *
+ * Released under the GPL license
+ * http://www.opensource.org/licenses/gpl-license.php
+ *
+ * **********************************************************************
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * **********************************************************************
+ *
+ * Forked Amazon S3 for WordPress with CloudFront (http://wordpress.org/extend/plugins/tantan-s3-cloudfront/)
+ * which is a fork of Amazon S3 for WordPress (http://wordpress.org/extend/plugins/tantan-s3/).
+ * Then completely rewritten.
+ */
 
 // phpcs:disable SlevomatCodingStandard.Variables.UnusedVariable
+
+// Exit if accessed directly.
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
 
 if ( ! function_exists( 'as3cf_init' ) ) {
 	// Defines the path to the main plugin file.
@@ -37,7 +45,7 @@ if ( ! function_exists( 'as3cf_init' ) ) {
 	define( 'AS3CF_PATH', plugin_dir_path( AS3CF_FILE ) );
 
 	// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedVariableFound -- inherited
-	$GLOBALS['aws_meta']['amazon-s3-and-cloudfront']['version'] = '3.3.1';
+	$GLOBALS['aws_meta']['amazon-s3-and-cloudfront']['version'] = '3.4.2';
 
 	require_once AS3CF_PATH . 'classes/as3cf-compatibility-check.php';
 
