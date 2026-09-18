@@ -31,23 +31,23 @@ docker network rm serverlesswp-stream-wrapper-network 2>/dev/null || true
 
 BUCKET=stream-test-bucket
 
-if ! command -v mc &> /dev/null; then
-    wget https://dl.min.io/client/mc/release/linux-amd64/mc -O /usr/local/bin/mc
-    chmod +x /usr/local/bin/mc
-fi
-
 docker network create serverlesswp-stream-wrapper-network
 
+# MinIO withdrew its Docker Hub images (Sept 2026); Quay still serves them.
 docker run -d --name minio-stream-wrapper \
     --network serverlesswp-stream-wrapper-network \
     --network-alias minio \
     -p 9020:9000 \
     -e "MINIO_ROOT_USER=minioadmin" -e "MINIO_ROOT_PASSWORD=minioadmin" \
-    minio/minio server /data
+    quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z.hotfix.7aa24e772 server /data
 
-until mc alias set stream-minio http://localhost:9020 minioadmin minioadmin >/dev/null 2>&1; do sleep 1; done
-mc mb "stream-minio/${BUCKET}"
-mc anonymous set download "stream-minio/${BUCKET}"
+# The mc binary download (dl.min.io) is gone too, so run mc from the Quay image
+# on the same network, reaching the server directly at minio:9000.
+docker run --rm --network serverlesswp-stream-wrapper-network --entrypoint sh \
+    quay.io/minio/mc:latest -c "
+        until mc alias set stream http://minio:9000 minioadmin minioadmin >/dev/null 2>&1; do sleep 1; done &&
+        mc mb stream/${BUCKET} &&
+        mc anonymous set download stream/${BUCKET}"
 
 # SQLite on the same MinIO keeps WordPress bootable; the stream wrapper reads
 # the same credentials through the SQLITE_S3_* fallbacks in src/Config.php, so
@@ -93,9 +93,13 @@ npx playwright test e2e-stream-wrapper.spec.js "$@"
 # The spec proves the bytes round-trip through the wrapper. This proves they
 # actually reached the bucket rather than the container's local disk.
 echo "Checking the bucket for probe objects..."
-if ! mc ls --recursive "stream-minio/${BUCKET}" | grep -q "probe-.*\.txt"; then
+probe_listing=$(docker run --rm --network serverlesswp-stream-wrapper-network --entrypoint sh \
+    quay.io/minio/mc:latest -c "
+        mc alias set stream http://minio:9000 minioadmin minioadmin >/dev/null 2>&1 &&
+        mc ls --recursive stream/${BUCKET}" || true)
+if ! echo "$probe_listing" | grep -q "probe-.*\.txt"; then
     echo "FAILED: no probe object in ${BUCKET} — writes did not reach S3."
-    mc ls --recursive "stream-minio/${BUCKET}" || true
+    echo "$probe_listing"
     exit 1
 fi
 echo "Probe object found in ${BUCKET}."

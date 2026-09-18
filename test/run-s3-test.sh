@@ -12,26 +12,26 @@ docker network rm serverlesswp-test-network 2>/dev/null || true
 VERCEL=${VERCEL:-1}
 VERCEL_GIT_COMMIT_REF=${VERCEL_GIT_COMMIT_REF:-test_branch}
 
-if ! command -v mc &> /dev/null; then
-    wget https://dl.min.io/client/mc/release/linux-amd64/mc -O /usr/local/bin/mc
-    chmod +x /usr/local/bin/mc
-fi
-
 docker network create serverlesswp-test-network
 
+# MinIO withdrew its Docker Hub images (Sept 2026); Quay still serves them.
 docker run -d --name minio \
     --network serverlesswp-test-network \
     -p 9010:9000 -p 9011:9011 \
     -e "MINIO_ROOT_USER=minioadmin" -e "MINIO_ROOT_PASSWORD=minioadmin" \
-    minio/minio server /data --console-address ":9011"
+    quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z.hotfix.7aa24e772 server /data --console-address ":9011"
 
 sleep 5
 
-mc alias set local-minio http://localhost:9010 minioadmin minioadmin
-mc mb local-minio/test-bucket
-mc admin user add local-minio testuser testpass
-mc admin policy attach local-minio readwrite --user testuser
-mc anonymous set download local-minio/test-bucket
+# The mc binary download (dl.min.io) is gone too, so run mc from the Quay image
+# on the same network, reaching the server directly at minio:9000.
+docker run --rm --network serverlesswp-test-network --entrypoint sh \
+    quay.io/minio/mc:latest -c '
+        mc alias set local http://minio:9000 minioadmin minioadmin &&
+        mc mb local/test-bucket &&
+        mc admin user add local testuser testpass &&
+        mc admin policy attach local readwrite --user testuser &&
+        mc anonymous set download local/test-bucket'
 
 docker run \
     -e SQLITE_S3_BUCKET=test-bucket \
