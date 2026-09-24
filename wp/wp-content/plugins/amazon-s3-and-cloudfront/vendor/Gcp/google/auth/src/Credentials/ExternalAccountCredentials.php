@@ -34,6 +34,7 @@ use DeliciousBrains\WP_Offload_Media\Gcp\Google\Auth\UpdateMetadataInterface;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Auth\UpdateMetadataTrait;
 use DeliciousBrains\WP_Offload_Media\Gcp\GuzzleHttp\Psr7\Request;
 use InvalidArgumentException;
+use LogicException;
 /**
  * **IMPORTANT**:
  * This class does not validate the credential configuration. A security
@@ -45,7 +46,12 @@ use InvalidArgumentException;
  */
 class ExternalAccountCredentials implements FetchAuthTokenInterface, UpdateMetadataInterface, GetQuotaProjectInterface, GetUniverseDomainInterface, ProjectIdProviderInterface
 {
-    use UpdateMetadataTrait;
+    use UpdateMetadataTrait {
+        updateMetadata as traitUpdateMetadata;
+    }
+    use RegionalAccessBoundaryTrait {
+        buildRegionalAccessBoundaryLookupUrl as traitBuildRegionalAccessBoundaryLookupUrl;
+    }
     private const EXTERNAL_ACCOUNT_TYPE = 'external_account';
     private const CLOUD_RESOURCE_MANAGER_URL = 'https://cloudresourcemanager.UNIVERSE_DOMAIN/v1/projects/%s';
     private OAuth2 $auth;
@@ -60,8 +66,9 @@ class ExternalAccountCredentials implements FetchAuthTokenInterface, UpdateMetad
      * @param string|string[] $scope   The scope of the access request, expressed either as an array
      *                                 or as a space-delimited string.
      * @param array<mixed>    $jsonKey JSON credentials as an associative array.
+     * @param bool $enableRegionalAccessBoundary Lookup and include the regional access boundary header.
      */
-    public function __construct($scope, array $jsonKey)
+    public function __construct($scope, array $jsonKey, bool $enableRegionalAccessBoundary = \false)
     {
         if (!\array_key_exists('type', $jsonKey)) {
             throw new InvalidArgumentException('json key is missing the type field');
@@ -85,6 +92,7 @@ class ExternalAccountCredentials implements FetchAuthTokenInterface, UpdateMetad
         $this->quotaProject = $jsonKey['quota_project_id'] ?? null;
         $this->workforcePoolUserProject = $jsonKey['workforce_pool_user_project'] ?? null;
         $this->universeDomain = $jsonKey['universe_domain'] ?? GetUniverseDomainInterface::DEFAULT_UNIVERSE_DOMAIN;
+        $this->enableRegionalAccessBoundary = $enableRegionalAccessBoundary;
         $this->auth = new OAuth2(['tokenCredentialUri' => $jsonKey['token_url'], 'audience' => $jsonKey['audience'], 'scope' => $scope, 'subjectTokenType' => $jsonKey['subject_token_type'], 'subjectTokenFetcher' => self::buildCredentialSource($jsonKey), 'additionalOptions' => $this->workforcePoolUserProject ? ['userProject' => $this->workforcePoolUserProject] : []]);
         if (!$this->isWorkforcePool() && $this->workforcePoolUserProject) {
             throw new InvalidArgumentException('workforce_pool_user_project should not be set for non-workforce pool credentials.');
@@ -135,17 +143,24 @@ class ExternalAccountCredentials implements FetchAuthTokenInterface, UpdateMetad
                 $env['GOOGLE_EXTERNAL_ACCOUNT_OUTPUT_FILE'] = $outputFile;
             }
             if ($serviceAccountImpersonationUrl = $jsonKey['service_account_impersonation_url'] ?? null) {
-                // Parse email from URL. The formal looks as follows:
-                // https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/name@project-id.iam.gserviceaccount.com:generateAccessToken
-                $regex = '/serviceAccounts\\/(?<email>[^:]+):generateAccessToken$/';
-                if (\preg_match($regex, $serviceAccountImpersonationUrl, $matches)) {
-                    $env['GOOGLE_EXTERNAL_ACCOUNT_IMPERSONATED_EMAIL'] = $matches['email'];
+                if ($email = self::getServiceAccountImpersonationEmail($serviceAccountImpersonationUrl)) {
+                    $env['GOOGLE_EXTERNAL_ACCOUNT_IMPERSONATED_EMAIL'] = $email;
                 }
             }
             $timeoutMs = $credentialSource['executable']['timeout_millis'] ?? null;
             return new ExecutableSource($credentialSource['executable']['command'], $outputFile, $timeoutMs ? new ExecutableHandler($env, $timeoutMs) : new ExecutableHandler($env));
         }
         throw new InvalidArgumentException('Unable to determine credential source from json key.');
+    }
+    private static function getServiceAccountImpersonationEmail(string $serviceAccountImpersonationUrl) : string|null
+    {
+        // Parse email from URL. The formal looks as follows:
+        // https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/name@project-id.iam.gserviceaccount.com:generateAccessToken
+        $regex = '/serviceAccounts\\/(?<email>[^:]+):generateAccessToken$/';
+        if (\preg_match($regex, $serviceAccountImpersonationUrl, $matches)) {
+            return $matches['email'];
+        }
+        return null;
     }
     /**
      * @param string $stsToken
@@ -193,6 +208,23 @@ class ExternalAccountCredentials implements FetchAuthTokenInterface, UpdateMetad
             return $this->lastImpersonatedAccessToken = $this->getImpersonatedAccessToken($stsToken['access_token'], $httpHandler);
         }
         return $stsToken;
+    }
+    /**
+     * Updates metadata with the authorization token.
+     *
+     * @param array<mixed> $metadata metadata hashmap
+     * @param string $authUri optional auth uri
+     * @param callable|null $httpHandler callback which delivers psr7 request
+     * @return array<mixed> updated metadata hashmap
+     */
+    public function updateMetadata($metadata, $authUri = null, ?callable $httpHandler = null)
+    {
+        $metadata = $this->traitUpdateMetadata($metadata, $authUri, $httpHandler);
+        if ($this->enableRegionalAccessBoundary) {
+            $clientName = $this->serviceAccountImpersonationUrl ? self::getServiceAccountImpersonationEmail($this->serviceAccountImpersonationUrl) : null;
+            $metadata = $this->updateRegionalAccessBoundaryMetadata($metadata, $this->buildRegionalAccessBoundaryLookupUrl($clientName), $this->getUniverseDomain(), $httpHandler);
+        }
+        return $metadata;
     }
     /**
      * Get the cache token key for the credentials.
@@ -273,5 +305,27 @@ class ExternalAccountCredentials implements FetchAuthTokenInterface, UpdateMetad
     {
         $regex = '#//iam\\.googleapis\\.com/locations/[^/]+/workforcePools/#';
         return \preg_match($regex, $this->auth->getAudience()) === 1;
+    }
+    /**
+     * Builds and returns the URL for the regional access boundary lookup API.
+     */
+    private function buildRegionalAccessBoundaryLookupUrl(string|null $clientName) : string
+    {
+        if (null !== $clientName) {
+            return $this->traitBuildRegionalAccessBoundaryLookupUrl(serviceAccountEmail: $clientName);
+        }
+        // Try to parse as a workload identity pool.
+        // Audience format: //iam.googleapis.com/projects/PROJECT_NUMBER/locations/global/workloadIdentityPools/POOL_ID/providers/PROVIDER_ID
+        $regex = '/projects\\/([^\\/]+)\\/locations\\/global\\/workloadIdentityPools\\/([^\\/]+)/';
+        if (\preg_match($regex, $this->auth->getAudience(), $matches)) {
+            [$_, $projectNumber, $poolId] = $matches;
+            return $this->traitBuildRegionalAccessBoundaryLookupUrl(poolId: $poolId, projectNumber: $projectNumber);
+        }
+        // If that fails, try to parse as a workforce pool.
+        // Audience format: //iam.googleapis.com/locations/global/workforcePools/POOL_ID/providers/PROVIDER_ID
+        if (\preg_match('/locations\\/[^\\/]+\\/workforcePools\\/([^\\/]+)/', $this->auth->getAudience(), $matches)) {
+            return $this->traitBuildRegionalAccessBoundaryLookupUrl(poolId: $matches[1]);
+        }
+        throw new LogicException('Invalid audience format');
     }
 }

@@ -2,6 +2,7 @@
 
 namespace DeliciousBrains\WP_Offload_Media\Aws3\Aws\Api\ErrorParser;
 
+use DeliciousBrains\WP_Offload_Media\Aws3\Aws\Api\Parser\AbstractParser;
 use DeliciousBrains\WP_Offload_Media\Aws3\Aws\Api\Parser\PayloadParserTrait;
 use DeliciousBrains\WP_Offload_Media\Aws3\Aws\Api\StructureShape;
 use DeliciousBrains\WP_Offload_Media\Aws3\Psr\Http\Message\ResponseInterface;
@@ -29,9 +30,9 @@ trait JsonParserTrait
             $error_code = $this->extractErrorCode($response->getHeaderLine('X-Amzn-Errortype'));
         }
         $parsedBody = null;
-        $body = $response->getBody();
-        if (!$body->isSeekable() || $body->getSize()) {
-            $parsedBody = $this->parseJson((string) $body, $response);
+        $rawBody = AbstractParser::getBodyContents($response);
+        if (!empty($rawBody)) {
+            $parsedBody = $this->parseJson($rawBody, $response);
         }
         // Parse error code from response body
         if (!$error_code && $parsedBody) {
@@ -97,11 +98,11 @@ trait JsonParserTrait
     }
     protected function payload(ResponseInterface $response, StructureShape $member)
     {
-        $body = $response->getBody();
-        if (!$body->isSeekable() || $body->getSize()) {
-            $jsonBody = $this->parseJson($body, $response);
+        $rawBody = AbstractParser::getBodyContents($response);
+        if (!empty($rawBody)) {
+            $jsonBody = $this->parseJson($rawBody, $response);
         } else {
-            $jsonBody = (string) $body;
+            $jsonBody = $rawBody;
         }
         return $this->parser->parse($member, $jsonBody);
     }

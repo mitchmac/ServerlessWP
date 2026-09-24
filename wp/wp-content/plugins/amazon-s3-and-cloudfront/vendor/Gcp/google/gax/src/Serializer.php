@@ -38,6 +38,17 @@ use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Descriptor;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\DescriptorPool;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\FieldDescriptor;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Internal\Message;
+use DeliciousBrains\WP_Offload_Media\Gcp\Google\Rpc\BadRequest;
+use DeliciousBrains\WP_Offload_Media\Gcp\Google\Rpc\DebugInfo;
+use DeliciousBrains\WP_Offload_Media\Gcp\Google\Rpc\ErrorInfo;
+use DeliciousBrains\WP_Offload_Media\Gcp\Google\Rpc\Help;
+use DeliciousBrains\WP_Offload_Media\Gcp\Google\Rpc\LocalizedMessage;
+use DeliciousBrains\WP_Offload_Media\Gcp\Google\Rpc\PreconditionFailure;
+use DeliciousBrains\WP_Offload_Media\Gcp\Google\Rpc\QuotaFailure;
+use DeliciousBrains\WP_Offload_Media\Gcp\Google\Rpc\RequestInfo;
+use DeliciousBrains\WP_Offload_Media\Gcp\Google\Rpc\ResourceInfo;
+use DeliciousBrains\WP_Offload_Media\Gcp\Google\Rpc\RetryInfo;
+use DeliciousBrains\WP_Offload_Media\Gcp\Google\Rpc\Status;
 use RuntimeException;
 /**
  * Collection of methods to help with serialization of protobuf objects
@@ -157,7 +168,7 @@ class Serializer
         $result = [];
         // If metadata contains a "status" bin, use that instead
         if (isset($metadata['grpc-status-details-bin'])) {
-            $status = new \DeliciousBrains\WP_Offload_Media\Gcp\Google\Rpc\Status();
+            $status = new Status();
             $status->mergeFromString($metadata['grpc-status-details-bin'][0]);
             foreach ($status->getDetails() as $any) {
                 if (isset(KnownTypes::TYPE_URLS[$any->getTypeUrl()])) {
@@ -187,7 +198,18 @@ class Serializer
                 if (self::hasBinaryHeaderSuffix($key)) {
                     if (isset(KnownTypes::BIN_TYPES[$key])) {
                         $class = KnownTypes::BIN_TYPES[$key];
-                        /** @var Message $message */
+                        /**
+                         * @var BadRequest
+                         *    | DebugInfo
+                         *    | ErrorInfo
+                         *    | Help
+                         *    | LocalizedMessage
+                         *    | PreconditionFailure
+                         *    | QuotaFailure
+                         *    | RequestInfo
+                         *    | ResourceInfo
+                         *    | RetryInfo $message
+                         */
                         $message = new $class();
                         try {
                             $message->mergeFromString($value);
@@ -226,7 +248,7 @@ class Serializer
                 /** @var Message $unpacked */
                 $unpacked = $any->unpack();
                 $results[] = self::serializeToPhpArray($unpacked);
-            } catch (\Exception $ex) {
+            } catch (\Throwable $ex) {
                 // failed to unpack the $any object - show as unknown binary data
                 $results[] = ['typeUrl' => $any->getTypeUrl(), 'value' => '<Unknown Binary Data>'];
             }
@@ -414,7 +436,14 @@ class Serializer
      */
     private function checkFieldRepeated(FieldDescriptor $field) : bool
     {
-        return \method_exists($field, 'isRepeated') ? $field->isRepeated() : $field->getLabel() === GPBLabel::REPEATED;
+        /** @phpstan-ignore-next-line **/
+        if (\method_exists($field, 'isRepeated')) {
+            return $field->isRepeated();
+        }
+        if (\method_exists($field, 'getLabel')) {
+            return $field->getLabel() === GPBLabel::REPEATED;
+        }
+        throw new \Exception('No field repeated method avaialble');
     }
     /**
      * @param string $name

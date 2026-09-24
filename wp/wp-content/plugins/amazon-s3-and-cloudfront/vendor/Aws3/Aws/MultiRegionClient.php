@@ -51,9 +51,9 @@ class MultiRegionClient implements AwsClientInterface
             if (!$value instanceof PartitionInterface) {
                 throw new \InvalidArgumentException('No valid partition' . ' was provided. Provide a concrete partition or' . ' the name of a partition (e.g., "aws," "aws-cn,"' . ' or "aws-us-gov").');
             }
-            $ruleset = EndpointDefinitionProvider::getEndpointRuleset($args['service'], isset($args['version']) ? $args['version'] : 'latest');
             $partitions = EndpointDefinitionProvider::getPartitions();
-            $args['endpoint_provider'] = new EndpointProviderV2($ruleset, $partitions);
+            $parsed = EndpointDefinitionProvider::getParsedRuleset($args['service'], isset($args['version']) ? $args['version'] : 'latest', $partitions);
+            $args['endpoint_provider'] = new EndpointProviderV2($parsed, $partitions);
         }]];
     }
     /**
@@ -166,6 +166,7 @@ class MultiRegionClient implements AwsClientInterface
      */
     protected function getClientFromPool($region = '')
     {
+        $region = $region ?? '';
         if (empty($this->clientPool[$region])) {
             $factory = $this->factory;
             $this->clientPool[$region] = $factory(\array_replace($this->args, \array_filter(['region' => $region])));

@@ -36,9 +36,11 @@ use DeliciousBrains\WP_Offload_Media\Providers\Storage\Storage_Provider;
 use DeliciousBrains\WP_Offload_Media\Settings\Validation_Manager;
 use DeliciousBrains\WP_Offload_Media\Upgrades\Upgrade;
 use DeliciousBrains\WP_Offload_Media\Upgrades\Upgrade_Clear_Postmeta_Cache;
+use DeliciousBrains\WP_Offload_Media\Upgrades\Upgrade_Clear_Postmeta_Cache_340;
 use DeliciousBrains\WP_Offload_Media\Upgrades\Upgrade_Content_Replace_URLs;
 use DeliciousBrains\WP_Offload_Media\Upgrades\Upgrade_EDD_Replace_URLs;
 use DeliciousBrains\WP_Offload_Media\Upgrades\Upgrade_File_Sizes;
+use DeliciousBrains\WP_Offload_Media\Upgrades\Upgrade_Files_Table;
 use DeliciousBrains\WP_Offload_Media\Upgrades\Upgrade_Filter_Post_Excerpt;
 use DeliciousBrains\WP_Offload_Media\Upgrades\Upgrade_Fix_Broken_Item_Extra_Data;
 use DeliciousBrains\WP_Offload_Media\Upgrades\Upgrade_Item_Extra_Data;
@@ -47,6 +49,11 @@ use DeliciousBrains\WP_Offload_Media\Upgrades\Upgrade_Meta_WP_Error;
 use DeliciousBrains\WP_Offload_Media\Upgrades\Upgrade_Region_Meta;
 use DeliciousBrains\WP_Offload_Media\Upgrades\Upgrade_Tools_Errors;
 use DeliciousBrains\WP_Offload_Media\Upgrades\Upgrade_WPOS3_To_AS3CF;
+
+// Exit if accessed directly.
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
 
 class Amazon_S3_And_CloudFront extends AS3CF_Plugin_Base {
 
@@ -195,7 +202,7 @@ class Amazon_S3_And_CloudFront extends AS3CF_Plugin_Base {
 	 */
 	protected $api_manager;
 
-	const LATEST_UPGRADE_ROUTINE = 12;
+	const LATEST_UPGRADE_ROUTINE = 14;
 
 	/**
 	 * @param string      $plugin_file_path
@@ -272,6 +279,8 @@ class Amazon_S3_And_CloudFront extends AS3CF_Plugin_Base {
 			new Upgrade_Item_Extra_Data( $this );
 			new Upgrade_Clear_Postmeta_Cache( $this );
 			new Upgrade_Fix_Broken_Item_Extra_Data( $this );
+			new Upgrade_Files_Table( $this );
+			new Upgrade_Clear_Postmeta_Cache_340( $this );
 		}
 
 		// Plugin setup
@@ -792,6 +801,23 @@ class Amazon_S3_And_CloudFront extends AS3CF_Plugin_Base {
 	 */
 	function get_settings_nonce_key() {
 		return $this->get_plugin_prefix_slug() . '-save-settings';
+	}
+
+	/**
+	 * Have all the upgrade routines completed?
+	 *
+	 * @return bool
+	 */
+	public function is_upgraded(): bool {
+		static $upgraded = null;
+
+		if ( null !== $upgraded ) {
+			return $upgraded;
+		}
+
+		$upgraded = $this->get_setting( Upgrade::SETTINGS_KEY, 0 ) >= self::LATEST_UPGRADE_ROUTINE;
+
+		return $upgraded;
 	}
 
 	/**
@@ -1385,13 +1411,25 @@ class Amazon_S3_And_CloudFront extends AS3CF_Plugin_Base {
 
 		$bucket_path = AS3CF_Utils::trailingslash_prefix( $this->get_simple_file_prefix() ) . $suffix;
 
+		$region = $this->get_setting( 'region' );
+
+		if ( is_wp_error( $region ) ) {
+			return $get_parts ? array() : '';
+		}
+
+		$bucket = $this->get_setting( 'bucket' );
+
+		if ( is_wp_error( $bucket ) ) {
+			return $get_parts ? array() : '';
+		}
+
 		$as3cf_item = new Media_Library_Item(
 			$this->get_storage_provider()->get_provider_key_name(),
-			$this->get_setting( 'region' ),
-			$this->get_setting( 'bucket' ),
+			$region,
+			$bucket,
 			$bucket_path,
 			false,
-			null,
+			-1,
 			$bucket_path
 		);
 
@@ -1563,8 +1601,9 @@ class Amazon_S3_And_CloudFront extends AS3CF_Plugin_Base {
 	 * @param string $time
 	 *
 	 * @return bool
+	 * @throws Exception
 	 */
-	function does_file_exist( $filename, $time ) {
+	public function does_file_exist( string $filename, string $time ): bool {
 		if ( $this->does_file_exist_local( $filename, $time ) ) {
 			return true;
 		}
@@ -1584,7 +1623,7 @@ class Amazon_S3_And_CloudFront extends AS3CF_Plugin_Base {
 	 *
 	 * @return bool
 	 */
-	public function does_file_exist_local( $filename, $time ) {
+	public function does_file_exist_local( string $filename, string $time ): bool {
 		$path = wp_upload_dir( $time );
 		$path = ltrim( $path['subdir'], '/' );
 
@@ -1610,7 +1649,7 @@ class Amazon_S3_And_CloudFront extends AS3CF_Plugin_Base {
 	 * @return bool
 	 * @throws Exception
 	 */
-	function does_file_exist_provider( $filename, $time ) {
+	public function does_file_exist_provider( string $filename, string $time ): bool {
 		$bucket = $this->get_setting( 'bucket' );
 		$region = $this->get_setting( 'region' );
 
@@ -1633,8 +1672,9 @@ class Amazon_S3_And_CloudFront extends AS3CF_Plugin_Base {
 	 * @param string $time
 	 *
 	 * @return string
+	 * @throws Exception
 	 */
-	function generate_unique_filename( $name, $ext, $time ) {
+	public function generate_unique_filename( string $name, string $ext, string $time ): string {
 		$count    = 1;
 		$filename = $name . '-' . $count . $ext;
 
@@ -4647,7 +4687,7 @@ class Amazon_S3_And_CloudFront extends AS3CF_Plugin_Base {
 			$db_init_status = array();
 
 			foreach ( $table_prefixes as $blog_id => $table_prefix ) {
-				$table_name = $table_prefix . Item::ITEMS_TABLE;
+				$table_name = $table_prefix . Item::get_base_table_name();
 
 				$db_init_status[ $blog_id ] = array(
 					'name'   => $table_name,
@@ -4936,7 +4976,7 @@ class Amazon_S3_And_CloudFront extends AS3CF_Plugin_Base {
 	 *
 	 * @return string
 	 *
-	 * Note: This is a wrapper for a filter, which only fires default (storage) delivery provider is not in use.
+	 * Note: This is a wrapper for a filter, which only fires if default (storage) delivery provider is not in use.
 	 */
 	public function maybe_update_delivery_path( $path, $domain, $timestamp = null ) {
 		if ( static::get_default_delivery_provider() !== $this->get_delivery_provider()->get_provider_key_name() ) {

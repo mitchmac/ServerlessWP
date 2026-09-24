@@ -44,7 +44,7 @@ trait EncryptionTraitV2
      *s
      * @internal
      */
-    public function encrypt(Stream $plaintext, array $options, MaterialsProviderV2 $provider, MetadataEnvelope $envelope)
+    public function encrypt(StreamInterface $plaintext, array $options, MaterialsProviderV2 $provider, MetadataEnvelope $envelope)
     {
         $options = \array_change_key_case($options);
         $cipherOptions = \array_intersect_key($options['@cipheroptions'], self::$allowedOptions);
@@ -80,10 +80,10 @@ trait EncryptionTraitV2
         $envelope[MetadataEnvelope::IV_HEADER] = \base64_encode($cipherOptions['Iv']);
         $envelope[MetadataEnvelope::KEY_WRAP_ALGORITHM_HEADER] = $provider->getWrapAlgorithmName();
         $envelope[MetadataEnvelope::CONTENT_CRYPTO_SCHEME_HEADER] = $aesName;
-        $envelope[MetadataEnvelope::UNENCRYPTED_CONTENT_LENGTH_HEADER] = \strlen($plaintext);
+        $envelope[MetadataEnvelope::UNENCRYPTED_CONTENT_LENGTH_HEADER] = (string) \strlen($plaintext);
         $envelope[MetadataEnvelope::MATERIALS_DESCRIPTION_HEADER] = \json_encode($materialsDescription);
         if (!empty($cipherOptions['Tag'])) {
-            $envelope[MetadataEnvelope::CRYPTO_TAG_LENGTH_HEADER] = \strlen($cipherOptions['Tag']) * 8;
+            $envelope[MetadataEnvelope::CRYPTO_TAG_LENGTH_HEADER] = (string) (\strlen($cipherOptions['Tag']) * 8);
         }
         return $encryptingStream;
     }
@@ -102,14 +102,14 @@ trait EncryptionTraitV2
      *
      * @internal
      */
-    protected function getEncryptingStream(Stream $plaintext, $cek, &$cipherOptions)
+    protected function getEncryptingStream(StreamInterface $plaintext, $cek, &$cipherOptions)
     {
         switch ($cipherOptions['Cipher']) {
             // Only 'gcm' is supported for encryption currently
             case 'gcm':
                 $cipherOptions['TagLength'] = 16;
                 $encryptClass = self::$encryptClasses['gcm'];
-                $cipherTextStream = new $encryptClass($plaintext, $cek, $cipherOptions['Iv'], $cipherOptions['Aad'] = isset($cipherOptions['Aad']) ? $cipherOptions['Aad'] : '', $cipherOptions['TagLength'], $cipherOptions['KeySize']);
+                $cipherTextStream = new $encryptClass($plaintext, $cek, $cipherOptions['Iv'], $cipherOptions['Aad'] = $cipherOptions['Aad'] ?? '', $cipherOptions['TagLength'], $cipherOptions['KeySize']);
                 if (!empty($cipherOptions['Aad'])) {
                     \trigger_error("'Aad' has been supplied for content encryption" . " with " . $cipherTextStream->getAesName() . ". The" . " PHP SDK encryption client can decrypt an object" . " encrypted in this way, but other AWS SDKs may not be" . " able to.", \E_USER_WARNING);
                 }

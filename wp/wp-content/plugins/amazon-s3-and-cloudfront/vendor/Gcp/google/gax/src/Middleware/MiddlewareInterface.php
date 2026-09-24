@@ -39,13 +39,12 @@ use DeliciousBrains\WP_Offload_Media\Gcp\Google\ApiCore\ServerStream;
 use DeliciousBrains\WP_Offload_Media\Gcp\GuzzleHttp\Promise\PromiseInterface;
 /**
  * Middlewares must take a MiddlewareInterface as their first constructor
- * argument {@see Google\ApiCore\Middleware\ResponseMetadataMiddleware}, which
- * represents the next middleware in the chain. This next middleware MUST be
- * invoked by this MiddlewareInterface, and the result must be returned as part
- * of the `__invoke` method implementation.
+ * argument, which represents the next middleware in the chain. This next
+ * middleware MUST be invoked by this MiddlewareInterface, and the result must
+ * be returned as part of the `__invoke` method implementation.
  *
- * To create your own middleware, first implement the interface, as well as pass the handler
- * in through the constructor:
+ * To create your own middleware, first implement the interface, as well as
+ * pass the handler in through the constructor:
  *
  * ```
  * use Google\ApiCore\Call;
@@ -65,8 +64,8 @@ use DeliciousBrains\WP_Offload_Media\Gcp\GuzzleHttp\Promise\PromiseInterface;
  * }
  * ```
  *
- * Next, add the middleware to any class implementing `GapicClientTrait` by passing in a
- * callable which returns the new middleware:
+ * Next, add the middleware to any class implementing `GapicClientTrait` by
+ * passing in a callable which returns the new middleware:
  *
  * ```
  * $client = new ExampleGoogleApiServiceClient();
@@ -74,6 +73,8 @@ use DeliciousBrains\WP_Offload_Media\Gcp\GuzzleHttp\Promise\PromiseInterface;
  *     return new MyTestMiddleware($handler);
  * });
  * ```
+ *
+ * @see ResponseMetadataMiddleware
  */
 interface MiddlewareInterface
 {

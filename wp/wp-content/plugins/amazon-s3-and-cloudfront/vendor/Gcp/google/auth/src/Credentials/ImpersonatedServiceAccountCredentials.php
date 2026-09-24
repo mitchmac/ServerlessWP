@@ -25,6 +25,8 @@ use DeliciousBrains\WP_Offload_Media\Gcp\Google\Auth\HttpHandler\HttpClientCache
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Auth\HttpHandler\HttpHandlerFactory;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Auth\IamSignerTrait;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Auth\SignBlobInterface;
+use DeliciousBrains\WP_Offload_Media\Gcp\Google\Auth\UpdateMetadataInterface;
+use DeliciousBrains\WP_Offload_Media\Gcp\Google\Auth\UpdateMetadataTrait;
 use DeliciousBrains\WP_Offload_Media\Gcp\GuzzleHttp\Psr7\Request;
 use InvalidArgumentException;
 use LogicException;
@@ -37,10 +39,12 @@ use LogicException;
  * untrusted source, you should validate it before creating this class.
  * @see https://cloud.google.com/docs/authentication/external/externally-sourced-credentials
  */
-class ImpersonatedServiceAccountCredentials extends CredentialsLoader implements SignBlobInterface, GetUniverseDomainInterface
+class ImpersonatedServiceAccountCredentials extends CredentialsLoader implements SignBlobInterface, GetUniverseDomainInterface, UpdateMetadataInterface
 {
     use CacheTrait;
     use IamSignerTrait;
+    use UpdateMetadataTrait;
+    use RegionalAccessBoundaryTrait;
     private const CRED_TYPE = 'imp';
     private const IAM_SCOPE = 'https://www.googleapis.com/auth/iam';
     private const ID_TOKEN_IMPERSONATION_URL = 'https://iamcredentials.UNIVERSE_DOMAIN/v1/projects/-/serviceAccounts/%s:generateIdToken';
@@ -81,7 +85,7 @@ class ImpersonatedServiceAccountCredentials extends CredentialsLoader implements
      * @param string|string[]|null $defaultScope The scopes to be used if no "scopes" field exists
      *                                           in the `$jsonKey`.
      */
-    public function __construct(string|array|null $scope, string|array $jsonKey, private ?string $targetAudience = null, string|array|null $defaultScope = null)
+    public function __construct(string|array|null $scope, string|array $jsonKey, private ?string $targetAudience = null, string|array|null $defaultScope = null, bool $enableRegionalAccessBoundary = \false)
     {
         if (\is_string($jsonKey)) {
             if (!\file_exists($jsonKey)) {
@@ -114,7 +118,7 @@ class ImpersonatedServiceAccountCredentials extends CredentialsLoader implements
             }
             $jsonKey['source_credentials'] = match ($jsonKey['source_credentials']['type'] ?? null) {
                 // Do not pass $defaultScope to ServiceAccountCredentials
-                'service_account' => new ServiceAccountCredentials($scope, $jsonKey['source_credentials']),
+                'service_account' => new ServiceAccountCredentials(scope: $scope, jsonKey: $jsonKey['source_credentials']),
                 'authorized_user' => new UserRefreshCredentials($scope, $jsonKey['source_credentials']),
                 'external_account' => new ExternalAccountCredentials($scope, $jsonKey['source_credentials']),
                 default => throw new \InvalidArgumentException('invalid value in the type field'),
@@ -126,6 +130,7 @@ class ImpersonatedServiceAccountCredentials extends CredentialsLoader implements
         $this->serviceAccountImpersonationUrl = $jsonKey['service_account_impersonation_url'];
         $this->impersonatedServiceAccountName = $this->getImpersonatedServiceAccountNameFromUrl($this->serviceAccountImpersonationUrl);
         $this->sourceCredentials = $jsonKey['source_credentials'];
+        $this->enableRegionalAccessBoundary = $enableRegionalAccessBoundary;
     }
     /**
      * Helper function for extracting the Server Account Name from the URL saved in the account
@@ -223,5 +228,19 @@ class ImpersonatedServiceAccountCredentials extends CredentialsLoader implements
     public function getUniverseDomain() : string
     {
         return $this->sourceCredentials instanceof GetUniverseDomainInterface ? $this->sourceCredentials->getUniverseDomain() : self::DEFAULT_UNIVERSE_DOMAIN;
+    }
+    /**
+     * Updates metadata with the authorization token.
+     *
+     * @param array<mixed> $metadata metadata hashmap
+     * @param string $authUri optional auth uri
+     * @param callable|null $httpHandler callback which delivers psr7 request
+     * @return array<mixed> updated metadata hashmap
+     */
+    public function updateMetadata($metadata, $authUri = null, ?callable $httpHandler = null)
+    {
+        $metatadata = parent::updateMetadata($metadata, $authUri, $httpHandler);
+        $metatadata = $this->updateRegionalAccessBoundaryMetadata($metatadata, $this->buildRegionalAccessBoundaryLookupUrl(serviceAccountEmail: $this->impersonatedServiceAccountName), $this->getUniverseDomain(), $httpHandler);
+        return $metatadata;
     }
 }
