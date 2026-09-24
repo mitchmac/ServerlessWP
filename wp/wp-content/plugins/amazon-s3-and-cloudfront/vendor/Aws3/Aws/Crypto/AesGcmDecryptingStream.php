@@ -59,6 +59,9 @@ class AesGcmDecryptingStream implements AesStreamInterface
     }
     public function createStream()
     {
+        if (\strlen($this->tag) !== 16) {
+            throw new CryptoException('Unsupported GCM tag length; only 128-bit tags are supported.');
+        }
         $result = \openssl_decrypt((string) $this->cipherText, $this->getOpenSslName(), $this->key, \OPENSSL_RAW_DATA, $this->initializationVector, $this->tag, $this->aad);
         if ($result === \false) {
             throw new CryptoException('The requested object could not be ' . 'decrypted due to an invalid authentication tag.');

@@ -28,7 +28,7 @@ if ( ! defined( 'DB_ENGINE' ) ) {
  */
 if ( ! defined( 'FQDBDIR' ) ) {
 	if ( defined( 'DB_DIR' ) ) {
-		define( 'FQDBDIR', trailingslashit( DB_DIR ) );
+		define( 'FQDBDIR', rtrim( DB_DIR, '/\\' ) . '/' );
 	} elseif ( defined( 'WP_CONTENT_DIR' ) ) {
 		define( 'FQDBDIR', WP_CONTENT_DIR . '/database/' );
 	} else {
@@ -37,15 +37,14 @@ if ( ! defined( 'FQDBDIR' ) ) {
 }
 
 /**
- * FQDB is a database file name. If DB_FILE is defined, it is used
- * as FQDB.
+ * FQDB is the absolute path to the SQLite database file.
+ *
+ * If DB_FILE is defined, FQDB is defined here using FQDBDIR. When SQLite is
+ * used without DB_FILE, managed storage defines FQDB after resolving the
+ * randomized database path.
  *
  * @deprecated 3.0.0 Define DB_DIR and DB_FILE instead of overriding FQDB.
  */
-if ( ! defined( 'FQDB' ) ) {
-	if ( defined( 'DB_FILE' ) ) {
-		define( 'FQDB', FQDBDIR . DB_FILE );
-	} else {
-		define( 'FQDB', FQDBDIR . '.ht.sqlite' );
-	}
+if ( ! defined( 'FQDB' ) && defined( 'DB_FILE' ) ) {
+	define( 'FQDB', FQDBDIR . DB_FILE );
 }

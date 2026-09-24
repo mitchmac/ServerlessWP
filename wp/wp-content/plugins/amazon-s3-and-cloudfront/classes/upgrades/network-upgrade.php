@@ -4,6 +4,11 @@ namespace DeliciousBrains\WP_Offload_Media\Upgrades;
 
 use Amazon_S3_And_CloudFront;
 
+// Exit if accessed directly.
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 abstract class Network_Upgrade {
 
 	/**

@@ -432,25 +432,6 @@ class WP_SQLite_DB extends wpdb {
 			$this->init_charset();
 		}
 
-		// Migrate the database file from a legacy path, if it exists.
-		if ( ! defined( 'DB_FILE' ) && ! file_exists( FQDB ) ) {
-			$old_db_path = FQDBDIR . '.ht.sqlite.php';
-
-			if ( file_exists( $old_db_path ) ) {
-				if ( ! rename( $old_db_path, FQDB ) ) {
-					wp_die( 'Failed to rename database file.', 'Error!' );
-				}
-
-				foreach ( array( '-wal', '-shm', '-journal' ) as $suffix ) {
-					if ( file_exists( $old_db_path . $suffix ) ) {
-						if ( ! rename( $old_db_path . $suffix, FQDB . $suffix ) ) {
-							wp_die( 'Failed to rename database file.', 'Error!' );
-						}
-					}
-				}
-			}
-		}
-
 		if ( null === $this->dbname || '' === $this->dbname ) {
 			$this->bail(
 				'The database name was not set. The SQLite driver requires a database name to be set to emulate MySQL information schema tables.',
@@ -458,8 +439,6 @@ class WP_SQLite_DB extends wpdb {
 			);
 			return false;
 		}
-
-		$this->ensure_database_directory( FQDB );
 
 		try {
 			$options = array(
@@ -563,6 +542,7 @@ class WP_SQLite_DB extends wpdb {
 		}
 
 		if ( ! $this->ready ) {
+			$this->check_current_query = true;
 			return false;
 		}
 
@@ -578,21 +558,30 @@ class WP_SQLite_DB extends wpdb {
 		// Log how the function was called.
 		$this->func_call = "\$db->query(\"$query\")";
 
+		/*
+		 * Mirror wpdb's query text validation.
+		 * TODO: Add full charset enforcement to MySQL on SQLite, where column
+		 * types and SQL mode are known, so all callers are protected.
+		 */
+		if ( $this->check_current_query && ! $this->check_ascii( $query ) ) {
+			$stripped_query = $this->strip_invalid_text_from_query( $query );
+			// Charset discovery can run queries, so clear their results.
+			$this->flush();
+			if ( $stripped_query !== $query ) {
+				$this->insert_id  = 0;
+				$this->last_query = $query;
+				wp_load_translations_early();
+				$this->last_error = __( 'WordPress database error: Could not perform query because it contains invalid data.' );
+				return false;
+			}
+		}
+		$this->check_current_query = true;
+
 		// Keep track of the last query for debug.
 		$this->last_query = $query;
 
-		// Save the query count before running another query.
+		// Save the query count after any charset discovery queries.
 		$last_query_count = count( $this->queries ?? array() );
-
-		/*
-		 * @TODO: wpdb uses "$this->check_current_query" and table metadata to
-		 * reject queries containing invalid text. Implement equivalent handling
-		 * for SQLite without relying on the MySQL-specific conversion pipeline.
-		 *
-		 * PCRE's "u" modifier can validate UTF-8 without constructing a converted
-		 * query copy: 1 === preg_match( '//u', $query ). The implementation must
-		 * preserve wpdb's exemptions for prevalidated and binary data.
-		 */
 		$this->_do_query( $query );
 
 		if ( $this->last_error ) {
@@ -774,54 +763,6 @@ class WP_SQLite_DB extends wpdb {
 
 		return $this->dbh->getAttribute( PDO::ATTR_SERVER_VERSION ); // phpcs:ignore WordPress.DB.RestrictedClasses.mysql__PDO
 	}
-
-	/**
-	 * Make sure the SQLite database directory exists and is writable.
-	 * Create .htaccess and index.php files to prevent direct access.
-	 *
-	 * @param string $database_path The path to the SQLite database file.
-	 */
-	private function ensure_database_directory( string $database_path ) {
-		$dir = dirname( $database_path );
-
-		// Set the umask to 0000 to apply permissions exactly as specified.
-		// A non-zero umask affects new file and directory permissions.
-		$umask = umask( 0 );
-
-		// Ensure database directory.
-		if ( ! is_dir( $dir ) ) {
-			if ( ! @mkdir( $dir, 0700, true ) ) {
-				wp_die( sprintf( 'Failed to create database directory: %s', $dir ), 'Error!' );
-			}
-		}
-		if ( ! is_writable( $dir ) ) {
-			wp_die( sprintf( 'Database directory is not writable: %s', $dir ), 'Error!' );
-		}
-
-		// Ensure .htaccess file to prevent direct access.
-		$path = $dir . DIRECTORY_SEPARATOR . '.htaccess';
-		if ( ! is_file( $path ) ) {
-			$result = file_put_contents( $path, 'DENY FROM ALL', LOCK_EX );
-			if ( false === $result ) {
-				wp_die( sprintf( 'Failed to create file: %s', $path ), 'Error!' );
-			}
-			chmod( $path, 0600 );
-		}
-
-		// Ensure index.php file to prevent direct access.
-		$path = $dir . DIRECTORY_SEPARATOR . 'index.php';
-		if ( ! is_file( $path ) ) {
-			$result = file_put_contents( $path, '<?php // Silence is gold. ?>', LOCK_EX );
-			if ( false === $result ) {
-				wp_die( sprintf( 'Failed to create file: %s', $path ), 'Error!' );
-			}
-			chmod( $path, 0600 );
-		}
-
-		// Restore the original umask value.
-		umask( $umask );
-	}
-
 
 	/**
 	 * Format MySQL-on-SQLite driver error message.

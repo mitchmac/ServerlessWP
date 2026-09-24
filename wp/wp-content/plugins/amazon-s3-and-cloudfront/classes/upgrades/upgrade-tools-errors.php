@@ -17,24 +17,24 @@ class Upgrade_Tools_Errors extends Upgrade {
 	/**
 	 * @var int
 	 */
-	protected $upgrade_id = 9;
+	protected int $upgrade_id = 9;
 
 	/**
 	 * @var string
 	 */
-	protected $upgrade_name = 'tools_error';
+	protected string $upgrade_name = 'tools_error';
 
 	/**
 	 * @var string 'metadata', 'attachment'
 	 */
-	protected $upgrade_type = 'metadata';
+	protected string $upgrade_type = 'metadata';
 
 	/**
 	 * Get running update text.
 	 *
 	 * @return string
 	 */
-	protected function get_running_update_text() {
+	protected function get_running_update_text(): string {
 		return __( 'and reformatting internal data about previous errors from tools.', 'amazon-s3-and-cloudfront' );
 	}
 
@@ -47,7 +47,7 @@ class Upgrade_Tools_Errors extends Upgrade {
 	 *
 	 * @return array
 	 */
-	protected function get_items_to_process( $prefix, $limit, $offset = false ) {
+	protected function get_items_to_process( string $prefix, int $limit, $offset = false ): array {
 		global $as3cf;
 
 		if ( get_class( $as3cf ) !== 'Amazon_S3_And_CloudFront_Pro' ) {
@@ -67,7 +67,7 @@ class Upgrade_Tools_Errors extends Upgrade {
 	 *
 	 * @return bool
 	 */
-	protected function upgrade_item( $item ) {
+	protected function upgrade_item( mixed $item ): bool {
 		global $as3cf;
 
 		if ( empty( $item ) || ! is_string( $item ) ) {

@@ -8,6 +8,11 @@ use WP_HTTP_Response;
 use WP_REST_Request;
 use WP_REST_Response;
 
+// Exit if accessed directly.
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 abstract class API {
 	const NAMESPACE_BASE = 'wp-offload-media';
 

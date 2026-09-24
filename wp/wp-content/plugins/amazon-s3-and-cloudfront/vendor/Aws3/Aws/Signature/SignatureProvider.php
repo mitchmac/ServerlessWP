@@ -56,7 +56,7 @@ class SignatureProvider
     public static function resolve(callable $provider, $version, $service, $region)
     {
         $result = $provider($version, $service, $region);
-        if ($result instanceof SignatureInterface || $result instanceof BearerTokenAuthorization) {
+        if ($result instanceof SignatureInterface || $result instanceof BearerTokenAuthorization || $result instanceof DpopSignature) {
             return $result;
         }
         throw new UnresolvedSignatureException("Unable to resolve a signature for {$version}/{$service}/{$region}.\n" . "Valid signature versions include v4 and anonymous.");
@@ -117,6 +117,8 @@ class SignatureProvider
                     return new BearerTokenAuthorization();
                 case 'anonymous':
                     return new AnonymousSignature();
+                case 'dpop':
+                    return new DpopSignature($service);
                 default:
                     return null;
             }

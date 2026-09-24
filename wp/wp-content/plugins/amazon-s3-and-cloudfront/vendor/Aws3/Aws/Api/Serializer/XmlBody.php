@@ -71,8 +71,7 @@ class XmlBody
         foreach ($this->getStructureMembers($shape, $value) as $k => $definition) {
             // Default to member name
             $elementName = $k;
-            // Only use locationName for non-structure members
-            if (!$definition['member'] instanceof StructureShape && $definition['member']['locationName']) {
+            if ($definition['member']['locationName'] && !isset($definition['member']['locationNameAtStructureLevel'])) {
                 $elementName = $definition['member']['locationName'];
             }
             $this->format($definition['member'], $elementName, $definition['value'], $xml);
