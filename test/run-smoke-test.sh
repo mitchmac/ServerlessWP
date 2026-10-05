@@ -20,19 +20,19 @@ VERCEL_GIT_COMMIT_REF=${VERCEL_GIT_COMMIT_REF:-test_branch}
 
 docker network create serverlesswp-test-network
 
-# MinIO withdrew its Docker Hub images (Sept 2026); Quay still serves them.
+# MinIO no longer publishes images (Docker Hub and Quay); pgsty/minio is a maintained community build.
 docker run -d --name minio \
     --network serverlesswp-test-network \
     -p 9010:9000 -p 9011:9011 \
     -e "MINIO_ROOT_USER=minioadmin" -e "MINIO_ROOT_PASSWORD=minioadmin" \
-    quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z.hotfix.7aa24e772 server /data --console-address ":9011"
+    pgsty/minio:RELEASE.2026-08-04T00-00-00Z server /data --console-address ":9011"
 
 sleep 5
 
-# The mc binary download (dl.min.io) is gone too, so run mc from the Quay image
+# dl.min.io no longer serves the mc binary, so run mc from the pgsty/mc image
 # on the same network, reaching the server directly at minio:9000.
 docker run --rm --network serverlesswp-test-network --entrypoint sh \
-    quay.io/minio/mc:latest -c '
+    pgsty/mc:RELEASE.2026-09-16T00-00-00Z -c '
         mc alias set local http://minio:9000 minioadmin minioadmin &&
         mc mb local/test-bucket &&
         mc admin user add local testuser testpass &&
