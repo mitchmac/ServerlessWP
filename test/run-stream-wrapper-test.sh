@@ -33,18 +33,18 @@ BUCKET=stream-test-bucket
 
 docker network create serverlesswp-stream-wrapper-network
 
-# MinIO withdrew its Docker Hub images (Sept 2026); Quay still serves them.
+# MinIO no longer publishes images (Docker Hub and Quay); pgsty/minio is a maintained community build.
 docker run -d --name minio-stream-wrapper \
     --network serverlesswp-stream-wrapper-network \
     --network-alias minio \
     -p 9020:9000 \
     -e "MINIO_ROOT_USER=minioadmin" -e "MINIO_ROOT_PASSWORD=minioadmin" \
-    quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z.hotfix.7aa24e772 server /data
+    pgsty/minio:RELEASE.2026-08-04T00-00-00Z server /data
 
-# The mc binary download (dl.min.io) is gone too, so run mc from the Quay image
+# dl.min.io no longer serves the mc binary, so run mc from the pgsty/mc image
 # on the same network, reaching the server directly at minio:9000.
 docker run --rm --network serverlesswp-stream-wrapper-network --entrypoint sh \
-    quay.io/minio/mc:latest -c "
+    pgsty/mc:RELEASE.2026-09-16T00-00-00Z -c "
         until mc alias set stream http://minio:9000 minioadmin minioadmin >/dev/null 2>&1; do sleep 1; done &&
         mc mb stream/${BUCKET} &&
         mc anonymous set download stream/${BUCKET}"
@@ -94,7 +94,7 @@ npx playwright test e2e-stream-wrapper.spec.js "$@"
 # actually reached the bucket rather than the container's local disk.
 echo "Checking the bucket for probe objects..."
 probe_listing=$(docker run --rm --network serverlesswp-stream-wrapper-network --entrypoint sh \
-    quay.io/minio/mc:latest -c "
+    pgsty/mc:RELEASE.2026-09-16T00-00-00Z -c "
         mc alias set stream http://minio:9000 minioadmin minioadmin >/dev/null 2>&1 &&
         mc ls --recursive stream/${BUCKET}" || true)
 if ! echo "$probe_listing" | grep -q "probe-.*\.txt"; then

@@ -4,7 +4,7 @@
   "description": "",
   "license": "MIT",
   "dependencies": {
-    "serverlesswp": "^0.7.0"
+    "serverlesswp": "^0.7.1"
   },
   "engines": {
     "node": "22.x"
