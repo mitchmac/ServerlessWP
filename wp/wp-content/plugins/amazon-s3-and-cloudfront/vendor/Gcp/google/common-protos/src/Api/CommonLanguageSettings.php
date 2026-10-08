@@ -30,6 +30,7 @@ class CommonLanguageSettings extends \DeliciousBrains\WP_Offload_Media\Gcp\Googl
     private $destinations;
     /**
      * Configuration for which RPCs should be generated in the GAPIC client.
+     * Note: This field should not be used in most cases.
      *
      * Generated from protobuf field <code>.google.api.SelectiveGapicGeneration selective_gapic_generation = 3;</code>
      */
@@ -47,6 +48,7 @@ class CommonLanguageSettings extends \DeliciousBrains\WP_Offload_Media\Gcp\Googl
      *           The destination where API teams want this client library to be published.
      *     @type \Google\Api\SelectiveGapicGeneration $selective_gapic_generation
      *           Configuration for which RPCs should be generated in the GAPIC client.
+     *           Note: This field should not be used in most cases.
      * }
      */
     public function __construct($data = NULL)
@@ -110,6 +112,7 @@ class CommonLanguageSettings extends \DeliciousBrains\WP_Offload_Media\Gcp\Googl
     }
     /**
      * Configuration for which RPCs should be generated in the GAPIC client.
+     * Note: This field should not be used in most cases.
      *
      * Generated from protobuf field <code>.google.api.SelectiveGapicGeneration selective_gapic_generation = 3;</code>
      * @return \Google\Api\SelectiveGapicGeneration|null
@@ -128,6 +131,7 @@ class CommonLanguageSettings extends \DeliciousBrains\WP_Offload_Media\Gcp\Googl
     }
     /**
      * Configuration for which RPCs should be generated in the GAPIC client.
+     * Note: This field should not be used in most cases.
      *
      * Generated from protobuf field <code>.google.api.SelectiveGapicGeneration selective_gapic_generation = 3;</code>
      * @param \Google\Api\SelectiveGapicGeneration $var

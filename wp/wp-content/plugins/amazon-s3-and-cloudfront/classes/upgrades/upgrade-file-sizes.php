@@ -19,7 +19,7 @@ use Exception;
 /**
  * Upgrade_File_Sizes Class
  *
- * This class handles updating the file sizes in the meta data
+ * This class handles updating the file sizes in the metadata
  * for attachments that have been removed from the local server
  *
  * @since 0.9.3
@@ -29,24 +29,24 @@ class Upgrade_File_Sizes extends Upgrade {
 	/**
 	 * @var int
 	 */
-	protected $upgrade_id = 2;
+	protected int $upgrade_id = 2;
 
 	/**
 	 * @var string
 	 */
-	protected $upgrade_name = 'file_sizes';
+	protected string $upgrade_name = 'file_sizes';
 
 	/**
 	 * @var string 'metadata', 'attachment'
 	 */
-	protected $upgrade_type = 'attachments';
+	protected string $upgrade_type = 'attachments';
 
 	/**
 	 * Get running update text.
 	 *
 	 * @return string
 	 */
-	protected function get_running_update_text() {
+	protected function get_running_update_text(): string {
 		return __(
 			'and updating the metadata with the sizes of files that have been removed from the server. This will allow us to serve the correct size for media items and the total space used in Multisite subsites.',
 			'amazon-s3-and-cloudfront'
@@ -61,7 +61,7 @@ class Upgrade_File_Sizes extends Upgrade {
 	 * @return bool
 	 * @throws Exception
 	 */
-	protected function upgrade_item( $item ) {
+	protected function upgrade_item( mixed $item ): bool {
 		$provider_object = AS3CF_Utils::maybe_fix_serialized_string( $item->provider_object );
 		$fixed           = $item->provider_object !== $provider_object;
 
@@ -181,9 +181,13 @@ class Upgrade_File_Sizes extends Upgrade {
 	 *
 	 * @return array
 	 */
-	protected function get_items_to_process( $prefix, $limit, $offset = false ) {
+	protected function get_items_to_process( string $prefix, int $limit, $offset = false ): array {
 		$all_attachments = $this->get_provider_attachments( $prefix, $limit );
 		$attachments     = array();
+
+		if ( empty( $all_attachments ) || ! is_array( $all_attachments ) ) {
+			return $attachments;
+		}
 
 		foreach ( $all_attachments as $attachment ) {
 			if ( ! file_exists( get_attached_file( $attachment->ID, true ) ) ) {
@@ -199,11 +203,11 @@ class Upgrade_File_Sizes extends Upgrade {
 	 * that don't have the file size meta added already
 	 *
 	 * @param string   $prefix
-	 * @param null|int $limit
+	 * @param int|null $limit
 	 *
-	 * @return mixed
+	 * @return array|null
 	 */
-	protected function get_provider_attachments( $prefix, $limit = null ) {
+	protected function get_provider_attachments( string $prefix, ?int $limit = null ): array|null {
 		global $wpdb;
 
 		$sql = "SELECT pm1.`post_id` as `ID`, pm1.`meta_value` AS 'provider_object'
@@ -215,7 +219,7 @@ class Upgrade_File_Sizes extends Upgrade {
 				AND pm2.`post_id` is null";
 
 		if ( $limit && $limit > 0 ) {
-			$sql .= sprintf( ' LIMIT %d', (int) $limit );
+			$sql .= sprintf( ' LIMIT %d', $limit );
 		}
 
 		// phpcs:ignore WordPress.DB, PluginCheck.Security.DirectDB.UnescapedDBParameter -- safe query, must not be cached

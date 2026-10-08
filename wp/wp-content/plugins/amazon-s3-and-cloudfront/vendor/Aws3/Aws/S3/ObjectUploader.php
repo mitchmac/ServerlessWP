@@ -43,7 +43,7 @@ class ObjectUploader implements PromisorInterface
         $this->client = $client;
         $this->bucket = $bucket;
         $this->key = $key;
-        $this->body = Psr7\Utils::streamFor($body);
+        $this->body = $this->createStream($body);
         $this->acl = $acl;
         $this->options = $options + self::$defaults;
         // Handle "add_content_md5" option.
@@ -70,6 +70,23 @@ class ObjectUploader implements PromisorInterface
     public function upload()
     {
         return $this->promise()->wait();
+    }
+    /**
+     * Creates a stream from the provided body.
+     *
+     * @param mixed $body
+     *
+     * @return StreamInterface
+     */
+    private function createStream($body) : StreamInterface
+    {
+        $stream = Psr7\Utils::streamFor($body);
+        // User-owned resource which should be detached instead of closed
+        // during garbage-collection
+        if (\is_resource($body)) {
+            return \DeliciousBrains\WP_Offload_Media\Aws3\Aws\detach_on_close_stream($stream);
+        }
+        return $stream;
     }
     /**
      * Determines if the body should be uploaded using PutObject or the

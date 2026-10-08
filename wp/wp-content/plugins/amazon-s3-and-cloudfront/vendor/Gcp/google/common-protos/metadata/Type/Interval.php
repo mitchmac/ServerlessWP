@@ -14,7 +14,7 @@ class Interval
             return;
         }
         \DeliciousBrains\WP_Offload_Media\Gcp\GPBMetadata\Google\Protobuf\Timestamp::initOnce();
-        $pool->internalAddGeneratedFile("\n\x86\x02\n\x1agoogle/type/interval.proto\x12\vgoogle.type\"h\n\x08Interval\x12.\n\nstart_time\x18\x01 \x01(\v2\x1a.google.protobuf.Timestamp\x12,\n\x08end_time\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampBi\n\x0fcom.google.typeB\rIntervalProtoP\x01Z<google.golang.org/genproto/googleapis/type/interval;interval\xf8\x01\x01\xa2\x02\x03GTPb\x06proto3", \true);
+        $pool->internalAddGeneratedFile("\n\x83\x02\n\x1agoogle/type/interval.proto\x12\vgoogle.type\"h\n\x08Interval\x12.\n\nstart_time\x18\x01 \x01(\v2\x1a.google.protobuf.Timestamp\x12,\n\x08end_time\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampBf\n\x0fcom.google.typeB\rIntervalProtoP\x01Z<google.golang.org/genproto/googleapis/type/interval;interval\xa2\x02\x03GTPb\x06proto3", \true);
         static::$is_initialized = \true;
     }
 }

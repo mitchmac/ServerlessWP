@@ -28,11 +28,11 @@ if ( ! class_exists( 'AS3CF_Utils' ) ) {
 		/**
 		 * Get post ID.
 		 *
-		 * @param null|int|WP_Post $post Optional. Post ID or post object. Defaults to current post.
+		 * @param int|WP_Post|null $post Optional. Post ID or post object. Defaults to current post.
 		 *
 		 * @return int
 		 */
-		public static function get_post_id( $post = null ) {
+		public static function get_post_id( int|WP_Post|null $post = null ): int {
 			return (int) get_post_field( 'ID', $post );
 		}
 
@@ -150,20 +150,46 @@ if ( ! class_exists( 'AS3CF_Utils' ) ) {
 		 * Parses a URL into its components. Compatible with PHP < 5.4.7.
 		 *
 		 * @param string $url       The URL to parse.
-		 *
 		 * @param int    $component PHP_URL_ constant for URL component to return.
 		 *
 		 * @return mixed An array of the parsed components, mixed for a requested component, or false on error.
 		 */
-		public static function parse_url( $url, $component = -1 ) {
+		public static function parse_url( string $url, int $component = -1 ): mixed {
 			$url       = trim( $url );
-			$no_scheme = 0 === strpos( $url, '//' );
+			$no_scheme = str_starts_with( $url, '//' );
 
 			if ( $no_scheme ) {
 				$url = 'http:' . $url;
 			}
 
+			// Do a quick parse to check generally valid and get list of parts.
 			$parts = wp_parse_url( $url, $component );
+
+			// In some builds of PHP, parse_url strips some CJK characters, which breaks filename matching.
+			// To combat this, we wrap another parse with an encode/decode to protect the filename.
+			// We only do all this if there is a filename with an extension, i.e. includes "." after 1st char.
+			// This isn't a perfect test as ".." is a thing, but enough given our use-cases.
+			if (
+				is_array( $parts ) &&
+				! empty( $parts['path'] ) &&
+				is_string( $parts['path'] ) &&
+				strlen( self::unleadingslashit( untrailingslashit( $parts['path'] ) ) ) > 2 &&
+				false !== strpos( self::unleadingslashit( untrailingslashit( $parts['path'] ) ), '.', 1 ) &&
+				self::encode_filename_in_path( $url ) !== $url
+			) {
+				$encoded_url   = self::encode_filename_in_path( $url );
+				$parts['path'] = self::decode_filename_in_path( self::parse_url( $encoded_url, PHP_URL_PATH ) );
+			} elseif (
+				PHP_URL_PATH === $component &&
+				! empty( $parts ) &&
+				is_string( $parts ) &&
+				strlen( self::unleadingslashit( untrailingslashit( $parts ) ) ) > 2 &&
+				false !== strpos( self::unleadingslashit( untrailingslashit( $parts ) ), '.', 1 ) &&
+				self::encode_filename_in_path( $url ) !== $url
+			) {
+				$encoded_url = self::encode_filename_in_path( $url );
+				$parts       = self::decode_filename_in_path( self::parse_url( $encoded_url, PHP_URL_PATH ) );
+			}
 
 			if ( 0 < $component ) {
 				return $parts;
@@ -215,19 +241,19 @@ if ( ! class_exists( 'AS3CF_Utils' ) ) {
 		/**
 		 * Get file paths for all attachment versions.
 		 *
-		 * @param int        $attachment_id
-		 * @param bool       $exists_locally
-		 * @param array|bool $meta
-		 * @param bool       $include_backups
+		 * @param int        $attachment_id   Attachment ID.
+		 * @param bool       $exists_locally  Must exist locally to be included? Default true.
+		 * @param bool|array $meta            Optional attachment metadata, retrieved from db by default.
+		 * @param bool       $include_backups Include backup version, default true.
 		 *
 		 * @return array
 		 */
 		public static function get_attachment_file_paths(
-			$attachment_id,
-			$exists_locally = true,
-			$meta = false,
-			$include_backups = true
-		) {
+			int $attachment_id,
+			bool $exists_locally = true,
+			bool|array $meta = false,
+			bool $include_backups = true
+		): array {
 			$file_path = get_attached_file( $attachment_id, true );
 			$paths     = array(
 				Item::primary_object_key() => $file_path,
@@ -260,7 +286,38 @@ if ( ! class_exists( 'AS3CF_Utils' ) ) {
 
 			// Original Image (when large image scaled down to threshold size and used as "full").
 			if ( isset( $meta['original_image'] ) ) {
-				$paths['original_image'] = str_replace( $file_name, $meta['original_image'], $file_path );
+				$paths[ Item::original_image_object_key() ] = str_replace(
+					$file_name,
+					$meta['original_image'],
+					$file_path
+				);
+			}
+
+			// Source Image (when file type like HEIC converted to JPG).
+			if ( isset( $meta['source_image'] ) ) {
+				$paths[ Item::source_image_object_key() ] = str_replace(
+					$file_name,
+					$meta['source_image'],
+					$file_path
+				);
+			}
+
+			// Video file created from an animated gif.
+			if ( isset( $meta['animated_video'] ) ) {
+				$paths[ Item::animated_video_object_key() ] = str_replace(
+					$file_name,
+					$meta['animated_video'],
+					$file_path
+				);
+			}
+
+			// Poster image created for the video file created from an animated gif.
+			if ( isset( $meta['animated_video_poster'] ) ) {
+				$paths[ Item::animated_video_poster_object_key() ] = str_replace(
+					$file_name,
+					$meta['animated_video_poster'],
+					$file_path
+				);
 			}
 
 			// Sizes
@@ -272,13 +329,15 @@ if ( ! class_exists( 'AS3CF_Utils' ) ) {
 				}
 			}
 
-			$backups = get_post_meta( $attachment_id, '_wp_attachment_backup_sizes', true );
-
 			// Backups
-			if ( $include_backups && is_array( $backups ) ) {
-				foreach ( $backups as $size => $file ) {
-					if ( isset( $file['file'] ) ) {
-						$paths[ $size ] = str_replace( $file_name, $file['file'], $file_path );
+			if ( $include_backups ) {
+				$backups = get_post_meta( $attachment_id, '_wp_attachment_backup_sizes', true );
+
+				if ( is_array( $backups ) ) {
+					foreach ( $backups as $size => $file ) {
+						if ( isset( $file['file'] ) ) {
+							$paths[ $size ] = str_replace( $file_name, $file['file'], $file_path );
+						}
 					}
 				}
 			}
@@ -379,8 +438,8 @@ if ( ! class_exists( 'AS3CF_Utils' ) ) {
 		 *
 		 * @return string|false
 		 */
-		public static function current_domain() {
-			return wp_parse_url( home_url(), PHP_URL_HOST );
+		public static function current_domain(): string|false {
+			return static::parse_url( home_url(), PHP_URL_HOST );
 		}
 
 		/**
@@ -446,29 +505,6 @@ if ( ! class_exists( 'AS3CF_Utils' ) ) {
 			// TODO: Maybe check domain TLD.
 
 			return true;
-		}
-
-		/**
-		 * Is given URL considered SEO friendly?
-		 *
-		 * @param string $url
-		 *
-		 * @return bool
-		 */
-		public static function seo_friendly_url( $url ) {
-			$domain      = static::base_domain( wp_parse_url( $url, PHP_URL_HOST ) );
-			$base_domain = static::current_base_domain();
-
-			// If either domain is not a public domain then skip checks.
-			if ( ! static::is_public_domain( $domain ) || ! static::is_public_domain( $base_domain ) ) {
-				return true;
-			}
-
-			if ( substr( $domain, -strlen( $base_domain ) ) === $base_domain ) {
-				return true;
-			}
-
-			return false;
 		}
 
 		/**
@@ -583,7 +619,15 @@ if ( ! class_exists( 'AS3CF_Utils' ) ) {
 					array_unique(
 						array_intersect_key(
 							$paths,
-							array_flip( array( Item::primary_object_key(), 'file', 'full-orig', 'original_image' ) )
+							array_flip(
+								array(
+									Item::primary_object_key(),
+									'file',
+									'full-orig',
+									Item::original_image_object_key(),
+									Item::source_image_object_key(),
+								)
+							)
 						)
 					)
 				);
@@ -630,7 +674,7 @@ if ( ! class_exists( 'AS3CF_Utils' ) ) {
 		 *
 		 * @return string Encoded filename
 		 */
-		public static function encode_filename_in_path( $file ) {
+		public static function encode_filename_in_path( string $file ): string {
 			$url = wp_parse_url( $file );
 
 			if ( ! isset( $url['path'] ) ) {
@@ -638,14 +682,30 @@ if ( ! class_exists( 'AS3CF_Utils' ) ) {
 				return $file;
 			}
 
-			if ( isset( $url['query'] ) ) {
-				// Manually strip query string, as passing $url['path'] to basename results in corrupt � characters
-				$file_name = wp_basename( str_replace( '?' . $url['query'], '', $file ) );
-			} else {
-				$file_name = wp_basename( $file );
+			$file_name = $file;
+
+			// Strip fragment from URL.
+			if ( str_contains( $file_name, '#' ) ) {
+				$file_name = substr( $file_name, 0, strpos( $file, '#' ) );
 			}
 
-			if ( false !== strpos( $file_name, '%' ) ) {
+			// Strip query from URL.
+			if ( str_contains( $file_name, '?' ) ) {
+				$file_name = substr( $file_name, 0, strpos( $file_name, '?' ) );
+			}
+
+			// Normalize directory separators.
+			$file_name = str_replace( '\\', '/', $file_name );
+
+			// Pluck the filename from the truncated URL, if it exists.
+			// We're intentionally avoiding using wp_basename as it can strip chars in some builds of PHP.
+			$path_parts = explode( '/', self::unleadingslashit( untrailingslashit( $file_name ) ) );
+
+			if ( is_array( $path_parts ) ) {
+				$file_name = end( $path_parts );
+			}
+
+			if ( str_contains( $file_name, '%' ) ) {
 				// File name already encoded, return original
 				return $file;
 			}

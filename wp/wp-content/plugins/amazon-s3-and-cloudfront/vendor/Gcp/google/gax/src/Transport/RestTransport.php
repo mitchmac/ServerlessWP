@@ -134,7 +134,10 @@ class RestTransport implements TransportInterface
             }
             return $return;
         }, function (\Throwable $ex) {
-            if ($ex instanceof RequestException && $ex->hasResponse()) {
+            // Guzzle 7 carries the response on RequestException, Guzzle 8
+            // only on its ResponseException subclass, hence the
+            // method_exists() check.
+            if ($ex instanceof RequestException && \method_exists($ex, 'getResponse') && $ex->getResponse()) {
                 throw ApiException::createFromRequestException($ex);
             }
             throw $ex;
@@ -162,7 +165,7 @@ class RestTransport implements TransportInterface
         if (isset($options['decoderOptions'])) {
             $decoderOptions = $options['decoderOptions'];
         }
-        return new ServerStream($this->_serverStreamRequest($this->httpHandler, $request, $headers, $call->getDecodeType(), $callOptions, $decoderOptions), $call->getDescriptor());
+        return new ServerStream($this->doServerStreamRequest($this->httpHandler, $request, $headers, $call->getDecodeType(), $callOptions, $decoderOptions), $call->getDescriptor());
     }
     /**
      * Creates and starts a RestServerStreamingCall.
@@ -176,7 +179,7 @@ class RestTransport implements TransportInterface
      *
      * @return RestServerStreamingCall
      */
-    private function _serverStreamRequest($httpHandler, $request, $headers, $decodeType, $callOptions, $decoderOptions = [])
+    private function doServerStreamRequest($httpHandler, $request, $headers, $decodeType, $callOptions, $decoderOptions = [])
     {
         $call = new RestServerStreamingCall($httpHandler, $decodeType, $decoderOptions);
         $call->start($request, $headers, $callOptions);

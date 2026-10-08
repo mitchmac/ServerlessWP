@@ -23,7 +23,11 @@ class RestXmlParser extends AbstractRestParser
     }
     protected function payload(ResponseInterface $response, StructureShape $member, array &$result)
     {
-        $result += $this->parseMemberFromStream($response->getBody(), $member, $response);
+        $body = $response->getBody();
+        if ($body->isSeekable()) {
+            $body->rewind();
+        }
+        $result += $this->parseMemberFromStream($body, $member, $response);
     }
     public function parseMemberFromStream(StreamInterface $stream, StructureShape $member, $response)
     {

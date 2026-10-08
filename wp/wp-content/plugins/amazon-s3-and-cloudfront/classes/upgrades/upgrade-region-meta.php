@@ -18,7 +18,7 @@ use DeliciousBrains\WP_Offload_Media\Items\Media_Library_Item;
 /**
  * Upgrade_Region_Meta Class
  *
- * This class handles updating the region of the attachment's bucket in the meta data
+ * This class handles updating the region of the attachment's bucket in the metadata.
  *
  * @since 0.6.2
  */
@@ -27,24 +27,24 @@ class Upgrade_Region_Meta extends Upgrade {
 	/**
 	 * @var int
 	 */
-	protected $upgrade_id = 1;
+	protected int $upgrade_id = 1;
 
 	/**
 	 * @var string
 	 */
-	protected $upgrade_name = 'meta_with_region';
+	protected string $upgrade_name = 'meta_with_region';
 
 	/**
 	 * @var string 'metadata', 'attachment'
 	 */
-	protected $upgrade_type = 'metadata';
+	protected string $upgrade_type = 'metadata';
 
 	/**
 	 * Get running update text.
 	 *
 	 * @return string
 	 */
-	protected function get_running_update_text() {
+	protected function get_running_update_text(): string {
 		return __(
 			'and updating the metadata with the bucket region it is served from. This will allow us to serve your files from the proper region subdomain <span style="white-space:nowrap;">(e.g. s3-us-west-2.amazonaws.com)</span>.',
 			'amazon-s3-and-cloudfront'
@@ -58,7 +58,7 @@ class Upgrade_Region_Meta extends Upgrade {
 	 *
 	 * @return bool
 	 */
-	protected function upgrade_item( $item ) {
+	protected function upgrade_item( mixed $item ): bool {
 		$provider_object = AS3CF_Utils::maybe_fix_serialized_string( $item->provider_object );
 		$fixed           = $item->provider_object !== $provider_object;
 
@@ -121,12 +121,12 @@ class Upgrade_Region_Meta extends Upgrade {
 	 *
 	 * @return int
 	 */
-	protected function count_items_to_process() {
+	protected function count_items_to_process(): int {
 		return $this->count_attachments_without_region( $this->blog_prefix );
 	}
 
 	/**
-	 * Get all attachments that don't have region in their S3 meta data for a blog
+	 * Get all attachments that don't have region in their S3 metadata for a blog.
 	 *
 	 * @param string     $prefix
 	 * @param int        $limit
@@ -134,23 +134,19 @@ class Upgrade_Region_Meta extends Upgrade {
 	 *
 	 * @return array
 	 */
-	protected function get_items_to_process( $prefix, $limit, $offset = false ) {
-		$attachments = $this->get_attachments_without_region_results( $prefix, false, $limit );
-
-		return $attachments;
+	protected function get_items_to_process( string $prefix, int $limit, $offset = false ): array {
+		return $this->get_attachments_without_region_results( $prefix, false, $limit );
 	}
 
 	/**
-	 * Get a count of attachments that don't have region in their S3 meta data for a blog
+	 * Get a count of attachments that don't have region in their S3 metadata for a blog.
 	 *
 	 * @param string $prefix
 	 *
 	 * @return int
 	 */
-	protected function count_attachments_without_region( $prefix ) {
-		$count = $this->get_attachments_without_region_results( $prefix, true );
-
-		return $count;
+	protected function count_attachments_without_region( string $prefix ): int {
+		return $this->get_attachments_without_region_results( $prefix, true );
 	}
 
 	/**
@@ -158,11 +154,15 @@ class Upgrade_Region_Meta extends Upgrade {
 	 *
 	 * @param string   $prefix
 	 * @param bool     $count return count of attachments
-	 * @param null|int $limit
+	 * @param int|null $limit
 	 *
 	 * @return mixed
 	 */
-	protected function get_attachments_without_region_results( $prefix, $count = false, $limit = null ) {
+	protected function get_attachments_without_region_results(
+		string $prefix,
+		bool $count = false,
+		?int $limit = null
+	): mixed {
 		global $wpdb;
 
 		$sql = " FROM `{$prefix}postmeta`
@@ -179,7 +179,7 @@ class Upgrade_Region_Meta extends Upgrade {
 		$sql = "SELECT `post_id` as `ID`, `meta_value` AS 'provider_object'" . $sql;
 
 		if ( $limit && $limit > 0 ) {
-			$sql .= sprintf( ' LIMIT %d', (int) $limit );
+			$sql .= sprintf( ' LIMIT %d', $limit );
 		}
 
 		// phpcs:ignore WordPress.DB, PluginCheck.Security.DirectDB.UnescapedDBParameter -- safe query, must not be cached

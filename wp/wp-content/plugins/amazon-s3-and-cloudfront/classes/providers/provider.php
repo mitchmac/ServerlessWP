@@ -5,6 +5,11 @@ namespace DeliciousBrains\WP_Offload_Media\Providers;
 use Amazon_S3_And_CloudFront;
 use AS3CF_Plugin_Base;
 
+// Exit if accessed directly.
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 abstract class Provider {
 
 	/**
@@ -457,12 +462,14 @@ abstract class Provider {
 		}
 
 		$heading = sprintf(
+		/* translators: %1$s is a provider service name, %2$s is provider type. */
 			__( '%1$s %2$s Deprecated', 'amazon-s3-and-cloudfront' ),
 			static::get_provider_service_name(),
 			static::get_provider_type_name()
 		);
 
 		$message = sprintf(
+		/* translators: %1$s is a provider service name, %2$s is provider type. */
 			__(
 				'The <strong>%1$s</strong> %2$s has been deprecated and will be removed in a future major release. Please switch to a different %2$s.',
 				'amazon-s3-and-cloudfront'

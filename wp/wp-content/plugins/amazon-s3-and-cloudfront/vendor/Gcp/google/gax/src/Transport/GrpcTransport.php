@@ -159,6 +159,7 @@ class GrpcTransport extends BaseStub implements TransportInterface
             $requestEvent->rpcName = $call->getMethod();
             $requestEvent->processId = (int) \getmypid();
             $requestEvent->requestId = \crc32((string) \spl_object_id($bidiStream) . \getmypid());
+            $requestEvent->url = $this->getGrpcUrl();
             $this->logRequest($requestEvent);
         }
         return $bidiStream;
@@ -193,6 +194,7 @@ class GrpcTransport extends BaseStub implements TransportInterface
             $requestEvent->rpcName = $call->getMethod();
             $requestEvent->processId = (int) \getmypid();
             $requestEvent->requestId = \crc32((string) \spl_object_id($serverStream) . \getmypid());
+            $requestEvent->url = $this->getGrpcUrl();
             $this->logRequest($requestEvent);
         }
         return $serverStream;
@@ -215,6 +217,7 @@ class GrpcTransport extends BaseStub implements TransportInterface
             $requestEvent->rpcName = $call->getMethod();
             $requestEvent->processId = (int) \getmypid();
             $requestEvent->requestId = \crc32((string) \spl_object_id($call) . \getmypid());
+            $requestEvent->url = $this->getGrpcUrl();
             $this->logRequest($requestEvent);
         }
         /** @var Promise $promise */
@@ -259,6 +262,10 @@ class GrpcTransport extends BaseStub implements TransportInterface
             $callOptions['timeout'] = $options['timeoutMillis'] * 1000;
         }
         return $callOptions;
+    }
+    private function getGrpcUrl() : string
+    {
+        return 'grpc://' . \str_replace('dns:///', '', $this->getTarget());
     }
     private static function loadClientCertSource(callable $clientCertSource)
     {

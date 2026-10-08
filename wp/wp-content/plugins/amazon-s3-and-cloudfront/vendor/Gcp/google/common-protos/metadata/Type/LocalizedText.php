@@ -13,7 +13,7 @@ class LocalizedText
         if (static::$is_initialized == \true) {
             return;
         }
-        $pool->internalAddGeneratedFile("\n\xe9\x01\n google/type/localized_text.proto\x12\vgoogle.type\"4\n\rLocalizedText\x12\f\n\x04text\x18\x01 \x01(\t\x12\x15\n\rlanguage_code\x18\x02 \x01(\tBz\n\x0fcom.google.typeB\x12LocalizedTextProtoP\x01ZHgoogle.golang.org/genproto/googleapis/type/localized_text;localized_text\xf8\x01\x01\xa2\x02\x03GTPb\x06proto3", \true);
+        $pool->internalAddGeneratedFile("\n\xe6\x01\n google/type/localized_text.proto\x12\vgoogle.type\"4\n\rLocalizedText\x12\f\n\x04text\x18\x01 \x01(\t\x12\x15\n\rlanguage_code\x18\x02 \x01(\tBw\n\x0fcom.google.typeB\x12LocalizedTextProtoP\x01ZHgoogle.golang.org/genproto/googleapis/type/localized_text;localized_text\xa2\x02\x03GTPb\x06proto3", \true);
         static::$is_initialized = \true;
     }
 }

@@ -27,24 +27,24 @@ class Upgrade_Items_Table extends Upgrade {
 	/**
 	 * @var int
 	 */
-	protected $upgrade_id = 8;
+	protected int $upgrade_id = 8;
 
 	/**
 	 * @var string
 	 */
-	protected $upgrade_name = 'as3cf_items_table';
+	protected string $upgrade_name = 'as3cf_items_table';
 
 	/**
 	 * @var string 'metadata', 'attachment'
 	 */
-	protected $upgrade_type = 'metadata';
+	protected string $upgrade_type = 'metadata';
 
 	/**
 	 * Get running update text.
 	 *
 	 * @return string
 	 */
-	protected function get_running_update_text() {
+	protected function get_running_update_text(): string {
 		return __(
 			'and updating the plugin\'s metadata to use a faster storage method. During the update the site\'s total offloaded media count may be inaccurate but will settle down shortly after completing.',
 			'amazon-s3-and-cloudfront'
@@ -58,7 +58,7 @@ class Upgrade_Items_Table extends Upgrade {
 	 *
 	 * @return bool
 	 */
-	protected function upgrade_item( $item ) {
+	protected function upgrade_item( mixed $item ): bool {
 		$provider_object = AS3CF_Utils::maybe_fix_serialized_string( $item->provider_object );
 		$fixed           = $item->provider_object !== $provider_object;
 
@@ -87,7 +87,7 @@ class Upgrade_Items_Table extends Upgrade {
 						'Fixed legacy amazonS3_info metadata when moved to %1$s table, please check bucket and path for attachment ID %2$s',
 						'amazon-s3-and-cloudfront'
 					),
-					Media_Library_Item::items_table(),
+					Media_Library_Item::get_table_name(),
 					$item->ID
 				);
 				AS3CF_Error::log( $msg );
@@ -131,7 +131,7 @@ class Upgrade_Items_Table extends Upgrade {
 	 *
 	 * @return int
 	 */
-	protected function count_items_to_process() {
+	protected function count_items_to_process(): int {
 		return $this->count_attachments_with_legacy_metadata( $this->blog_prefix );
 	}
 
@@ -144,10 +144,8 @@ class Upgrade_Items_Table extends Upgrade {
 	 *
 	 * @return array
 	 */
-	protected function get_items_to_process( $prefix, $limit, $offset = false ) {
-		$attachments = $this->get_attachments_with_legacy_metadata( $prefix, false, $limit );
-
-		return $attachments;
+	protected function get_items_to_process( string $prefix, int $limit, $offset = false ): array {
+		return $this->get_attachments_with_legacy_metadata( $prefix, false, $limit );
 	}
 
 	/**
@@ -157,10 +155,8 @@ class Upgrade_Items_Table extends Upgrade {
 	 *
 	 * @return int
 	 */
-	protected function count_attachments_with_legacy_metadata( $prefix ) {
-		$count = $this->get_attachments_with_legacy_metadata( $prefix, true );
-
-		return $count;
+	protected function count_attachments_with_legacy_metadata( string $prefix ): int {
+		return $this->get_attachments_with_legacy_metadata( $prefix, true );
 	}
 
 	/**
@@ -168,11 +164,15 @@ class Upgrade_Items_Table extends Upgrade {
 	 *
 	 * @param string   $prefix Table prefix for blog.
 	 * @param bool     $count  return count of attachments
-	 * @param null|int $limit
+	 * @param int|null $limit
 	 *
 	 * @return mixed
 	 */
-	protected function get_attachments_with_legacy_metadata( $prefix, $count = false, $limit = null ) {
+	protected function get_attachments_with_legacy_metadata(
+		string $prefix,
+		bool $count = false,
+		?int $limit = null
+	): mixed {
 		global $wpdb;
 
 		$sql = "
@@ -193,7 +193,7 @@ class Upgrade_Items_Table extends Upgrade {
 		$sql .= ' ORDER BY ID, po_id';
 
 		if ( $limit && $limit > 0 ) {
-			$sql .= sprintf( ' LIMIT %d', (int) $limit );
+			$sql .= sprintf( ' LIMIT %d', $limit );
 		}
 
 		// phpcs:ignore WordPress.DB, PluginCheck.Security.DirectDB.UnescapedDBParameter -- safe query, must not be cached

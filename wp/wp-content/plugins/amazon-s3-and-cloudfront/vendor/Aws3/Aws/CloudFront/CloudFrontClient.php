@@ -110,6 +110,8 @@ use DeliciousBrains\WP_Offload_Media\Aws3\Aws\AwsClient;
  * @method \GuzzleHttp\Promise\Promise createAnycastIpListAsync(array $args = []) (supported in versions 2020-05-31)
  * @method \Aws\Result createCachePolicy(array $args = []) (supported in versions 2020-05-31)
  * @method \GuzzleHttp\Promise\Promise createCachePolicyAsync(array $args = []) (supported in versions 2020-05-31)
+ * @method \Aws\Result createConnectionFunction(array $args = []) (supported in versions 2020-05-31)
+ * @method \GuzzleHttp\Promise\Promise createConnectionFunctionAsync(array $args = []) (supported in versions 2020-05-31)
  * @method \Aws\Result createConnectionGroup(array $args = []) (supported in versions 2020-05-31)
  * @method \GuzzleHttp\Promise\Promise createConnectionGroupAsync(array $args = []) (supported in versions 2020-05-31)
  * @method \Aws\Result createContinuousDeploymentPolicy(array $args = []) (supported in versions 2020-05-31)
@@ -134,12 +136,16 @@ use DeliciousBrains\WP_Offload_Media\Aws3\Aws\AwsClient;
  * @method \GuzzleHttp\Promise\Promise createRealtimeLogConfigAsync(array $args = []) (supported in versions 2020-05-31)
  * @method \Aws\Result createResponseHeadersPolicy(array $args = []) (supported in versions 2020-05-31)
  * @method \GuzzleHttp\Promise\Promise createResponseHeadersPolicyAsync(array $args = []) (supported in versions 2020-05-31)
+ * @method \Aws\Result createTrustStore(array $args = []) (supported in versions 2020-05-31)
+ * @method \GuzzleHttp\Promise\Promise createTrustStoreAsync(array $args = []) (supported in versions 2020-05-31)
  * @method \Aws\Result createVpcOrigin(array $args = []) (supported in versions 2020-05-31)
  * @method \GuzzleHttp\Promise\Promise createVpcOriginAsync(array $args = []) (supported in versions 2020-05-31)
  * @method \Aws\Result deleteAnycastIpList(array $args = []) (supported in versions 2020-05-31)
  * @method \GuzzleHttp\Promise\Promise deleteAnycastIpListAsync(array $args = []) (supported in versions 2020-05-31)
  * @method \Aws\Result deleteCachePolicy(array $args = []) (supported in versions 2020-05-31)
  * @method \GuzzleHttp\Promise\Promise deleteCachePolicyAsync(array $args = []) (supported in versions 2020-05-31)
+ * @method \Aws\Result deleteConnectionFunction(array $args = []) (supported in versions 2020-05-31)
+ * @method \GuzzleHttp\Promise\Promise deleteConnectionFunctionAsync(array $args = []) (supported in versions 2020-05-31)
  * @method \Aws\Result deleteConnectionGroup(array $args = []) (supported in versions 2020-05-31)
  * @method \GuzzleHttp\Promise\Promise deleteConnectionGroupAsync(array $args = []) (supported in versions 2020-05-31)
  * @method \Aws\Result deleteContinuousDeploymentPolicy(array $args = []) (supported in versions 2020-05-31)
@@ -164,8 +170,12 @@ use DeliciousBrains\WP_Offload_Media\Aws3\Aws\AwsClient;
  * @method \GuzzleHttp\Promise\Promise deleteResourcePolicyAsync(array $args = []) (supported in versions 2020-05-31)
  * @method \Aws\Result deleteResponseHeadersPolicy(array $args = []) (supported in versions 2020-05-31)
  * @method \GuzzleHttp\Promise\Promise deleteResponseHeadersPolicyAsync(array $args = []) (supported in versions 2020-05-31)
+ * @method \Aws\Result deleteTrustStore(array $args = []) (supported in versions 2020-05-31)
+ * @method \GuzzleHttp\Promise\Promise deleteTrustStoreAsync(array $args = []) (supported in versions 2020-05-31)
  * @method \Aws\Result deleteVpcOrigin(array $args = []) (supported in versions 2020-05-31)
  * @method \GuzzleHttp\Promise\Promise deleteVpcOriginAsync(array $args = []) (supported in versions 2020-05-31)
+ * @method \Aws\Result describeConnectionFunction(array $args = []) (supported in versions 2020-05-31)
+ * @method \GuzzleHttp\Promise\Promise describeConnectionFunctionAsync(array $args = []) (supported in versions 2020-05-31)
  * @method \Aws\Result describeFunction(array $args = []) (supported in versions 2020-05-31)
  * @method \GuzzleHttp\Promise\Promise describeFunctionAsync(array $args = []) (supported in versions 2020-05-31)
  * @method \Aws\Result describeKeyValueStore(array $args = []) (supported in versions 2020-05-31)
@@ -180,6 +190,8 @@ use DeliciousBrains\WP_Offload_Media\Aws3\Aws\AwsClient;
  * @method \GuzzleHttp\Promise\Promise getCachePolicyAsync(array $args = []) (supported in versions 2020-05-31)
  * @method \Aws\Result getCachePolicyConfig(array $args = []) (supported in versions 2020-05-31)
  * @method \GuzzleHttp\Promise\Promise getCachePolicyConfigAsync(array $args = []) (supported in versions 2020-05-31)
+ * @method \Aws\Result getConnectionFunction(array $args = []) (supported in versions 2020-05-31)
+ * @method \GuzzleHttp\Promise\Promise getConnectionFunctionAsync(array $args = []) (supported in versions 2020-05-31)
  * @method \Aws\Result getConnectionGroup(array $args = []) (supported in versions 2020-05-31)
  * @method \GuzzleHttp\Promise\Promise getConnectionGroupAsync(array $args = []) (supported in versions 2020-05-31)
  * @method \Aws\Result getConnectionGroupByRoutingEndpoint(array $args = []) (supported in versions 2020-05-31)
@@ -220,6 +232,8 @@ use DeliciousBrains\WP_Offload_Media\Aws3\Aws\AwsClient;
  * @method \GuzzleHttp\Promise\Promise getResponseHeadersPolicyAsync(array $args = []) (supported in versions 2020-05-31)
  * @method \Aws\Result getResponseHeadersPolicyConfig(array $args = []) (supported in versions 2020-05-31)
  * @method \GuzzleHttp\Promise\Promise getResponseHeadersPolicyConfigAsync(array $args = []) (supported in versions 2020-05-31)
+ * @method \Aws\Result getTrustStore(array $args = []) (supported in versions 2020-05-31)
+ * @method \GuzzleHttp\Promise\Promise getTrustStoreAsync(array $args = []) (supported in versions 2020-05-31)
  * @method \Aws\Result getVpcOrigin(array $args = []) (supported in versions 2020-05-31)
  * @method \GuzzleHttp\Promise\Promise getVpcOriginAsync(array $args = []) (supported in versions 2020-05-31)
  * @method \Aws\Result listAnycastIpLists(array $args = []) (supported in versions 2020-05-31)
@@ -228,6 +242,8 @@ use DeliciousBrains\WP_Offload_Media\Aws3\Aws\AwsClient;
  * @method \GuzzleHttp\Promise\Promise listCachePoliciesAsync(array $args = []) (supported in versions 2020-05-31)
  * @method \Aws\Result listConflictingAliases(array $args = []) (supported in versions 2020-05-31)
  * @method \GuzzleHttp\Promise\Promise listConflictingAliasesAsync(array $args = []) (supported in versions 2020-05-31)
+ * @method \Aws\Result listConnectionFunctions(array $args = []) (supported in versions 2020-05-31)
+ * @method \GuzzleHttp\Promise\Promise listConnectionFunctionsAsync(array $args = []) (supported in versions 2020-05-31)
  * @method \Aws\Result listConnectionGroups(array $args = []) (supported in versions 2020-05-31)
  * @method \GuzzleHttp\Promise\Promise listConnectionGroupsAsync(array $args = []) (supported in versions 2020-05-31)
  * @method \Aws\Result listContinuousDeploymentPolicies(array $args = []) (supported in versions 2020-05-31)
@@ -240,6 +256,8 @@ use DeliciousBrains\WP_Offload_Media\Aws3\Aws\AwsClient;
  * @method \GuzzleHttp\Promise\Promise listDistributionsByAnycastIpListIdAsync(array $args = []) (supported in versions 2020-05-31)
  * @method \Aws\Result listDistributionsByCachePolicyId(array $args = []) (supported in versions 2020-05-31)
  * @method \GuzzleHttp\Promise\Promise listDistributionsByCachePolicyIdAsync(array $args = []) (supported in versions 2020-05-31)
+ * @method \Aws\Result listDistributionsByConnectionFunction(array $args = []) (supported in versions 2020-05-31)
+ * @method \GuzzleHttp\Promise\Promise listDistributionsByConnectionFunctionAsync(array $args = []) (supported in versions 2020-05-31)
  * @method \Aws\Result listDistributionsByConnectionMode(array $args = []) (supported in versions 2020-05-31)
  * @method \GuzzleHttp\Promise\Promise listDistributionsByConnectionModeAsync(array $args = []) (supported in versions 2020-05-31)
  * @method \Aws\Result listDistributionsByKeyGroup(array $args = []) (supported in versions 2020-05-31)
@@ -252,6 +270,8 @@ use DeliciousBrains\WP_Offload_Media\Aws3\Aws\AwsClient;
  * @method \GuzzleHttp\Promise\Promise listDistributionsByRealtimeLogConfigAsync(array $args = []) (supported in versions 2020-05-31)
  * @method \Aws\Result listDistributionsByResponseHeadersPolicyId(array $args = []) (supported in versions 2020-05-31)
  * @method \GuzzleHttp\Promise\Promise listDistributionsByResponseHeadersPolicyIdAsync(array $args = []) (supported in versions 2020-05-31)
+ * @method \Aws\Result listDistributionsByTrustStore(array $args = []) (supported in versions 2020-05-31)
+ * @method \GuzzleHttp\Promise\Promise listDistributionsByTrustStoreAsync(array $args = []) (supported in versions 2020-05-31)
  * @method \Aws\Result listDistributionsByVpcOriginId(array $args = []) (supported in versions 2020-05-31)
  * @method \GuzzleHttp\Promise\Promise listDistributionsByVpcOriginIdAsync(array $args = []) (supported in versions 2020-05-31)
  * @method \Aws\Result listDomainConflicts(array $args = []) (supported in versions 2020-05-31)
@@ -272,18 +292,26 @@ use DeliciousBrains\WP_Offload_Media\Aws3\Aws\AwsClient;
  * @method \GuzzleHttp\Promise\Promise listRealtimeLogConfigsAsync(array $args = []) (supported in versions 2020-05-31)
  * @method \Aws\Result listResponseHeadersPolicies(array $args = []) (supported in versions 2020-05-31)
  * @method \GuzzleHttp\Promise\Promise listResponseHeadersPoliciesAsync(array $args = []) (supported in versions 2020-05-31)
+ * @method \Aws\Result listTrustStores(array $args = []) (supported in versions 2020-05-31)
+ * @method \GuzzleHttp\Promise\Promise listTrustStoresAsync(array $args = []) (supported in versions 2020-05-31)
  * @method \Aws\Result listVpcOrigins(array $args = []) (supported in versions 2020-05-31)
  * @method \GuzzleHttp\Promise\Promise listVpcOriginsAsync(array $args = []) (supported in versions 2020-05-31)
+ * @method \Aws\Result publishConnectionFunction(array $args = []) (supported in versions 2020-05-31)
+ * @method \GuzzleHttp\Promise\Promise publishConnectionFunctionAsync(array $args = []) (supported in versions 2020-05-31)
  * @method \Aws\Result publishFunction(array $args = []) (supported in versions 2020-05-31)
  * @method \GuzzleHttp\Promise\Promise publishFunctionAsync(array $args = []) (supported in versions 2020-05-31)
  * @method \Aws\Result putResourcePolicy(array $args = []) (supported in versions 2020-05-31)
  * @method \GuzzleHttp\Promise\Promise putResourcePolicyAsync(array $args = []) (supported in versions 2020-05-31)
+ * @method \Aws\Result testConnectionFunction(array $args = []) (supported in versions 2020-05-31)
+ * @method \GuzzleHttp\Promise\Promise testConnectionFunctionAsync(array $args = []) (supported in versions 2020-05-31)
  * @method \Aws\Result testFunction(array $args = []) (supported in versions 2020-05-31)
  * @method \GuzzleHttp\Promise\Promise testFunctionAsync(array $args = []) (supported in versions 2020-05-31)
  * @method \Aws\Result updateAnycastIpList(array $args = []) (supported in versions 2020-05-31)
  * @method \GuzzleHttp\Promise\Promise updateAnycastIpListAsync(array $args = []) (supported in versions 2020-05-31)
  * @method \Aws\Result updateCachePolicy(array $args = []) (supported in versions 2020-05-31)
  * @method \GuzzleHttp\Promise\Promise updateCachePolicyAsync(array $args = []) (supported in versions 2020-05-31)
+ * @method \Aws\Result updateConnectionFunction(array $args = []) (supported in versions 2020-05-31)
+ * @method \GuzzleHttp\Promise\Promise updateConnectionFunctionAsync(array $args = []) (supported in versions 2020-05-31)
  * @method \Aws\Result updateConnectionGroup(array $args = []) (supported in versions 2020-05-31)
  * @method \GuzzleHttp\Promise\Promise updateConnectionGroupAsync(array $args = []) (supported in versions 2020-05-31)
  * @method \Aws\Result updateContinuousDeploymentPolicy(array $args = []) (supported in versions 2020-05-31)
@@ -308,6 +336,8 @@ use DeliciousBrains\WP_Offload_Media\Aws3\Aws\AwsClient;
  * @method \GuzzleHttp\Promise\Promise updateRealtimeLogConfigAsync(array $args = []) (supported in versions 2020-05-31)
  * @method \Aws\Result updateResponseHeadersPolicy(array $args = []) (supported in versions 2020-05-31)
  * @method \GuzzleHttp\Promise\Promise updateResponseHeadersPolicyAsync(array $args = []) (supported in versions 2020-05-31)
+ * @method \Aws\Result updateTrustStore(array $args = []) (supported in versions 2020-05-31)
+ * @method \GuzzleHttp\Promise\Promise updateTrustStoreAsync(array $args = []) (supported in versions 2020-05-31)
  * @method \Aws\Result updateVpcOrigin(array $args = []) (supported in versions 2020-05-31)
  * @method \GuzzleHttp\Promise\Promise updateVpcOriginAsync(array $args = []) (supported in versions 2020-05-31)
  * @method \Aws\Result verifyDnsConfiguration(array $args = []) (supported in versions 2020-05-31)
@@ -331,6 +361,8 @@ class CloudFrontClient extends AwsClient
      *   URLs for private distributions.
      * - private_key: (string) The filepath to the private key used to sign
      *   CloudFront URLs for private distributions.
+     * - algorithm: (int|string) Algorithm (name or openssl constant) to be used.
+     *   Defaults to SHA1. Supported algorithms are SHA1 and SHA256.
      *
      * @param array $options Array of configuration options used when signing
      *
@@ -346,7 +378,7 @@ class CloudFrontClient extends AwsClient
                 throw new \InvalidArgumentException("{$required} is required");
             }
         }
-        $urlSigner = new UrlSigner($options['key_pair_id'], $options['private_key']);
+        $urlSigner = new UrlSigner($options['key_pair_id'], $options['private_key'], $options['algorithm'] ?? Signer::DEFAULT_ALGORITHM);
         return $urlSigner->getSignedUrl($options['url'], isset($options['expires']) ? $options['expires'] : null, isset($options['policy']) ? $options['policy'] : null);
     }
     /**
@@ -364,6 +396,9 @@ class CloudFrontClient extends AwsClient
      *   URLs for private distributions.
      * - private_key: (string) The filepath ot the private key used to sign
      *   CloudFront URLs for private distributions.
+     * - algorithm: (int|string) OpenSSL signature algorithm constant (e.g.
+     *   OPENSSL_ALGO_SHA1, OPENSSL_ALGO_SHA256) or algorithm name string
+     *   (e.g. "sha256"). Defaults to OPENSSL_ALGO_SHA1.
      *
      * @param array $options Array of configuration options used when signing
      *
@@ -379,7 +414,7 @@ class CloudFrontClient extends AwsClient
                 throw new \InvalidArgumentException("{$required} is required");
             }
         }
-        $cookieSigner = new CookieSigner($options['key_pair_id'], $options['private_key']);
+        $cookieSigner = new CookieSigner($options['key_pair_id'], $options['private_key'], $options['algorithm'] ?? Signer::DEFAULT_ALGORITHM);
         return $cookieSigner->getSignedCookie(isset($options['url']) ? $options['url'] : null, isset($options['expires']) ? $options['expires'] : null, isset($options['policy']) ? $options['policy'] : null);
     }
 }

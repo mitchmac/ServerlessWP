@@ -1,6 +1,79 @@
 # CHANGELOG
 
 
+## 3.0.1 - 2026-08-05
+
+### Changed
+
+- Changed the default `TReason` of `FulfilledPromise` and `Create::promiseFor()` to `never`
+- Changed the default `TValue` of `RejectedPromise` and `Create::rejectionFor()` to `never`
+
+### Fixed
+
+- Fixed `EachPromise` abandoning its aggregate when the pending window drains unsettled
+- Fixed `EachPromise` admitting new work after its aggregate has settled
+
+
+## 3.0.0 - 2026-07-20
+
+### Added
+
+- Added `concurrency` config support to `Utils::all()` and `Each::of()`
+- Added generic PHPDoc annotations to promise APIs and collection callbacks
+- Added recursive and `concurrency` config support to `Utils::settle()`
+- Allowed promises to be resolved without passing a value
+
+### Changed
+
+- Changed `Utils::inspect()` to return actual rejection reasons
+- Changed `Utils::inspect()` to prefer the settled state over late wait function exceptions
+- Changed late rejection callbacks to follow rejected promises
+- Reject native PHP serialization of in-flight runtime objects
+- Made static helper classes non-instantiable
+- Require iterable inputs for promise collection helpers and `EachPromise`
+- Iterate `IteratorAggregate` inputs to collection helpers instead of treating them as a single value
+- Improved recursive `Utils::all()` handling of dynamically-added settled values and raw values
+
+### Removed
+
+- Dropped support for PHP 7.2 and 7.3
+
+
+## 2.5.1 - 2026-07-08
+
+### Fixed
+
+- Fixed recursive `Utils::all()` rejecting generator inputs
+
+
+## 2.5.0 - 2026-06-02
+
+### Deprecated
+
+- Deprecated passing non-iterable inputs to promise collection helpers and `EachPromise`
+
+
+## 2.4.1 - 2026-05-20
+
+### Fixed
+
+- Fixed cancelling settled coroutines when no current promise remains
+
+
+## 2.4.0 - 2026-05-20
+
+### Changed
+
+- Empty `EachPromise` instances now resolve when the task queue runs without `wait()`
+
+
+## 2.3.1 - 2026-05-19
+
+### Fixed
+
+- Fixed `Utils::inspect()` returning the internal reason array instead of the `AggregateException`
+
+
 ## 2.3.0 - 2025-08-22
 
 ### Added

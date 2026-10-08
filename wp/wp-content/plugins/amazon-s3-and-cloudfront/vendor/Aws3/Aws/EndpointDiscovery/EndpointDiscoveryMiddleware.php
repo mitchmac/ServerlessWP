@@ -20,21 +20,21 @@ class EndpointDiscoveryMiddleware
     private static $cache;
     private static $discoveryCooldown = 60;
     private $args;
-    private $client;
+    private \WeakReference $client;
     private $config;
     private $discoveryTimes = [];
     private $nextHandler;
     private $service;
     public static function wrap($client, $args, $config)
     {
-        return function (callable $handler) use($client, $args, $config) {
+        return static function (callable $handler) use($client, $args, $config) {
             return new static($handler, $client, $args, $config);
         };
     }
     public function __construct(callable $handler, AwsClient $client, array $args, $config)
     {
         $this->nextHandler = $handler;
-        $this->client = $client;
+        $this->client = \WeakReference::create($client);
         $this->args = $args;
         $this->service = $client->getApi();
         $this->config = $config;
@@ -58,7 +58,7 @@ class EndpointDiscoveryMiddleware
                 // Original endpoint may be used if discovery optional
                 $originalUri = $request->getUri();
                 $identifiers = $this->getIdentifiers($op);
-                $cacheKey = $this->getCacheKey($this->client->getCredentials()->wait(), $cmd, $identifiers);
+                $cacheKey = $this->getCacheKey($this->client->get()->getCredentials()->wait(), $cmd, $identifiers);
                 // Check/create cache
                 if (!isset(self::$cache)) {
                     self::$cache = new LruArrayCache($config->getCacheLimit());
@@ -95,7 +95,7 @@ class EndpointDiscoveryMiddleware
     {
         $discCmd = $this->getDiscoveryCommand($cmd, $identifiers);
         $this->discoveryTimes[$cacheKey] = \time();
-        $result = $this->client->execute($discCmd);
+        $result = $this->client->get()->execute($discCmd);
         if (isset($result['Endpoints'])) {
             $endpointData = [];
             foreach ($result['Endpoints'] as $datum) {
@@ -137,7 +137,7 @@ class EndpointDiscoveryMiddleware
                 $params['Identifiers'][$identifier] = $cmd[$identifier];
             }
         }
-        $command = $this->client->getCommand($endpointOperation, $params);
+        $command = $this->client->get()->getCommand($endpointOperation, $params);
         $command->getHandlerList()->appendBuild(Middleware::mapRequest(function (RequestInterface $r) {
             return $r->withHeader('x-amz-api-version', $this->service->getApiVersion());
         }), 'x-amz-api-version-header');
@@ -178,7 +178,7 @@ class EndpointDiscoveryMiddleware
         if (empty($newEndpoint)) {
             // If no more cached endpoints, make discovery call
             // if none made within cooldown for given key
-            if (\time() - $this->discoveryTimes[$cacheKey] < self::$discoveryCooldown) {
+            if (isset($this->discoveryTimes[$cacheKey]) && \time() - $this->discoveryTimes[$cacheKey] < self::$discoveryCooldown) {
                 // If no more cached endpoints and it's required,
                 // fail with original exception
                 if ($isRequired) {
