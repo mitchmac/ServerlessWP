@@ -4,12 +4,12 @@ Contributors:      wordpressdotorg, aristath, janjakes, zieladam, berislav.grgic
 Requires at least: 6.4
 Tested up to:      7.1
 Requires PHP:      7.2
-Stable tag:        3.0.1
+Stable tag:        3.1.0
 License:           GPLv2 or later
 License URI:       https://www.gnu.org/licenses/gpl-2.0.html
 Tags:              sqlite, database
 
-Run WordPress on SQLite instead of MySQL or MariaDB.
+Run WordPress on SQLite.
 
 == Description ==
 
@@ -48,6 +48,31 @@ No. Enabling SQLite starts a fresh WordPress installation in a separate database
 
 Disabling the plugin reconnects WordPress to the previous database. Content created while using SQLite is not transferred back.
 
+= Where is the SQLite database stored? =
+
+By default, the SQLite database is stored in a **randomized path** under `WP_CONTENT_DIR . '/database'`. The full path is recorded in `db-path.php` and exposed by the `DB_PATH` constant at runtime.
+
+For example:
+
+1. Database path: `WP_CONTENT_DIR . '/database/.ht.020a33c5d9e5407e8e93b43e55abf62e/.ht.sqlite'`
+2. Recorded in: `WP_CONTENT_DIR . '/database/db-path.php'` as `return __DIR__ . '/...';`
+3. Exposed by: `DB_PATH`
+
+The random path makes the database location difficult to guess when it is not otherwise protected. We recommend setting `DB_PATH` to an **explicit, protected path** outside the web root that your web server does not expose.
+
+Integrations should always read `DB_PATH` after WordPress loads instead of assuming a fixed database path.
+
+= How can I configure the database location? =
+
+To properly **secure the SQLite database**, define the `DB_PATH` constant to an **explicit path** that is protected from public web access. An explicit `DB_PATH` value is used as-is without randomization. Define it in `wp-config.php`:
+
+    // Use protected DB path that is not exposed by the web server.
+    define( 'DB_PATH', '/private/wordpress/database.sqlite' );
+
+**Caution:** An explicit `DB_PATH` must point to a **protected** location that your web server does not expose. Store the database outside the web root and make sure it's protected.
+
+The value of `DB_PATH` must be an absolute path to the SQLite database file, or `:memory:` for an in-memory SQLite database. The database directory must be writable by PHP. Changing `DB_PATH` selects a different database without moving an existing one.
+
 = What does the plugin require? =
 
 In addition to the WordPress and PHP versions listed above, the plugin requires the PDO SQLite PHP extension and SQLite 3.37.0 or newer. The setup screen also needs write access to the `wp-content` directory and will detect conflicting database drop-ins.
@@ -65,6 +90,56 @@ Contributions are welcome through the [SQLite Database Integration repository on
 Yes. The plugin replaces the default MySQL-based database layer with an SQLite-backed implementation. WordPress continues to use the `wpdb` API, while queries are internally adapted to SQLite syntax and behavior.
 
 == Changelog ==
+
+= 3.1.0 =
+
+**SQLite Database Integration 3.1 is here! 🎉**
+
+This release improves **database storage and configuration** and fixes several MySQL compatibility issues.
+
+**What's new**
+
+Version 3.1 improves how WordPress sites store, locate, and protect their SQLite databases. It also fixes SQL behavior and export compatibility:
+
+* **Randomized database paths:** The default database location is now a randomized directory under `wp-content/database/`, recorded in `wp-content/database/db-path.php`. ([#502](https://github.com/WordPress/sqlite-database-integration/pull/502))
+* **`DB_PATH`:** Configure the database with one full-path constant, also available at runtime for integrations. ([#512](https://github.com/WordPress/sqlite-database-integration/pull/512))
+* **SQL compatibility:** Fix `IF()` condition evaluation and make `TRADITIONAL` enable its component SQL modes. ([#518](https://github.com/WordPress/sqlite-database-integration/pull/518), [#509](https://github.com/WordPress/sqlite-database-integration/pull/509))
+* **WordPress table collations:** Default to `utf8mb4_unicode_520_ci` for new tables created with WordPress's charset settings, improving exports to MariaDB. Existing tables keep their recorded collation. ([#514](https://github.com/WordPress/sqlite-database-integration/pull/514))
+* **Documentation:** A new plugin README and expanded FAQ explain database storage and secure configuration. ([#520](https://github.com/WordPress/sqlite-database-integration/pull/520))
+
+For more information about database paths and secure configuration, read the [database storage guide](https://github.com/WordPress/sqlite-database-integration/blob/trunk/packages/plugin-sqlite-database-integration/README.md#database-storage).
+
+**Upgrading to 3.1**
+
+Upgrading an existing SQLite site is straightforward:
+
+1. **Back up** your SQLite database.
+2. **Update the plugin** to version 3.1.
+
+Existing `.ht.sqlite` and `.ht.sqlite.php` databases move to the randomized layout automatically unless a database file path is explicitly configured.
+
+To properly **secure the database**, set `DB_PATH` in `wp-config.php` to an absolute file path outside the web root that your web server does not expose. Its directory must be writable by PHP. Changing `DB_PATH` does not move an existing database.
+
+**Breaking changes**
+
+Review these changes if you use custom database settings or integrations:
+
+* **Database paths:** Default database files now move to randomized paths under `wp-content/database/`. Explicitly configured file paths stay unchanged. Integrations, including backup and migration tools, must read `DB_PATH` after WordPress loads instead of assuming a fixed filename.
+* **Legacy constants:** `DB_DIR` and `DB_FILE` are now deprecated. They and the previously deprecated `FQDB` and `FQDBDIR` remain supported, but `DB_PATH` takes precedence. Conflicting values trigger warnings.
+* **Absolute paths:** Relative database file and directory paths are now rejected. `:memory:` remains available for in-memory databases.
+
+**Thank you**
+
+Thank you to everyone who contributed, tested, and helped update integrations.
+
+**Changes since 3.0.2:** [`v3.0.2...v3.1.0`](https://github.com/WordPress/sqlite-database-integration/compare/v3.0.2...v3.1.0)
+
+= 3.0.2 =
+
+* Fix schema reconstruction with native numeric results ([#506](https://github.com/WordPress/sqlite-database-integration/pull/506))
+* Fix lexer edge cases and string handling ([#505](https://github.com/WordPress/sqlite-database-integration/pull/505))
+* Preserve index prefix lengths and order in `SHOW CREATE TABLE` primary keys ([#500](https://github.com/WordPress/sqlite-database-integration/pull/500))
+* Align savepoint handling with MySQL semantics ([#496](https://github.com/WordPress/sqlite-database-integration/pull/496))
 
 = 3.0.1 =
 

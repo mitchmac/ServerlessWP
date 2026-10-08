@@ -12,6 +12,11 @@ use DeliciousBrains\WP_Offload_Media\Providers\Storage\Streams\AWS_S3_Stream_Wra
 use Exception;
 use WP_Error;
 
+// Exit if accessed directly.
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 class AWS_Provider extends Storage_Provider {
 
 	/**

@@ -14,7 +14,6 @@ namespace DeliciousBrains\WP_Offload_Media\Upgrades;
 use AS3CF_Error;
 use DeliciousBrains\WP_Offload_Media\Items\Item;
 use DeliciousBrains\WP_Offload_Media\Items\Media_Library_Item;
-use stdClass;
 
 /**
  * Upgrade_Fix_Broken_Item_Extra_Data Class
@@ -28,35 +27,35 @@ class Upgrade_Fix_Broken_Item_Extra_Data extends Upgrade {
 	/**
 	 * @var int
 	 */
-	protected $upgrade_id = 12;
+	protected int $upgrade_id = 12;
 
 	/**
 	 * @var string
 	 */
-	protected $upgrade_name = 'fix_broken_item_extra_data';
+	protected string $upgrade_name = 'fix_broken_item_extra_data';
 
 	/**
 	 * @var string 'metadata', 'attachment'
 	 */
-	protected $upgrade_type = 'metadata';
+	protected string $upgrade_type = 'metadata';
 
 	/**
 	 * Get running update text.
 	 *
 	 * @return string
 	 */
-	protected function get_running_update_text() {
+	protected function get_running_update_text(): string {
 		return __( 'and updating metadata about offloaded items to new format.', 'amazon-s3-and-cloudfront' );
 	}
 
 	/**
 	 * Update extra_info in items table.
 	 *
-	 * @param stdClass $item
+	 * @param mixed $item
 	 *
 	 * @return bool
 	 */
-	protected function upgrade_item( $item ) {
+	protected function upgrade_item( mixed $item ): bool {
 		Item::disable_cache();
 		$as3cf_item = Media_Library_Item::get_by_source_id( $item->source_id );
 		Item::enable_cache();
@@ -85,7 +84,7 @@ class Upgrade_Fix_Broken_Item_Extra_Data extends Upgrade {
 	 *
 	 * @return int
 	 */
-	protected function count_items_to_process() {
+	protected function count_items_to_process(): int {
 		return $this->count_items_with_old_extra_info( $this->blog_prefix );
 	}
 
@@ -98,7 +97,7 @@ class Upgrade_Fix_Broken_Item_Extra_Data extends Upgrade {
 	 *
 	 * @return array
 	 */
-	protected function get_items_to_process( $prefix, $limit, $offset = false ) {
+	protected function get_items_to_process( string $prefix, int $limit, $offset = false ): array {
 		return $this->get_items_with_old_extra_info( $prefix, false, $limit );
 	}
 
@@ -109,7 +108,7 @@ class Upgrade_Fix_Broken_Item_Extra_Data extends Upgrade {
 	 *
 	 * @return int
 	 */
-	protected function count_items_with_old_extra_info( $prefix ) {
+	protected function count_items_with_old_extra_info( string $prefix ): int {
 		return $this->get_items_with_old_extra_info( $prefix, true );
 	}
 
@@ -118,14 +117,14 @@ class Upgrade_Fix_Broken_Item_Extra_Data extends Upgrade {
 	 *
 	 * @param string   $prefix Table prefix for blog.
 	 * @param bool     $count  return count of attachments
-	 * @param null|int $limit
+	 * @param int|null $limit
 	 *
 	 * @return mixed
 	 */
-	protected function get_items_with_old_extra_info( $prefix, $count = false, $limit = null ) {
+	protected function get_items_with_old_extra_info( string $prefix, bool $count = false, ?int $limit = null ): mixed {
 		global $wpdb;
 
-		$table = Item::ITEMS_TABLE;
+		$table = Item::get_base_table_name();
 
 		/**
 		 * Find items with legacy or broken extra_info data.
@@ -152,7 +151,7 @@ class Upgrade_Fix_Broken_Item_Extra_Data extends Upgrade {
 		$sql .= ' ORDER BY id';
 
 		if ( $limit && $limit > 0 ) {
-			$sql .= sprintf( ' LIMIT %d', (int) $limit );
+			$sql .= sprintf( ' LIMIT %d', $limit );
 		}
 
 		// phpcs:ignore WordPress.DB,PluginCheck.Security.DirectDB.UnescapedDBParameter -- safe query, must not be cached

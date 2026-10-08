@@ -3,6 +3,11 @@
 use DeliciousBrains\WP_Offload_Media\Settings_Interface;
 use DeliciousBrains\WP_Offload_Media\Settings_Trait;
 
+// Exit if accessed directly.
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 abstract class AS3CF_Plugin_Base implements Settings_Interface {
 	use Settings_Trait;
 
@@ -184,7 +189,9 @@ abstract class AS3CF_Plugin_Base implements Settings_Interface {
 		static $keys = null;
 
 		if ( is_null( $keys ) ) {
-			$keys = array_keys( array_diff_key( $this->get_defined_settings(), $this->get_legacy_defined_settings( array() ) ) );
+			$keys = array_keys(
+				array_diff_key( $this->get_defined_settings(), $this->get_legacy_defined_settings( array() ) )
+			);
 		}
 
 		return $keys;
@@ -534,7 +541,8 @@ abstract class AS3CF_Plugin_Base implements Settings_Interface {
 			__( 'Documentation', 'amazon-s3-and-cloudfront' )
 		);
 
-		$links[] = '<a href="' . static::get_plugin_page_url( array( 'hash' => '/support' ) ) . '">' . __( 'Support', 'amazon-s3-and-cloudfront' ) . '</a>';
+		$support_url = static::get_plugin_page_url( array( 'hash' => '/support' ) );
+		$links[]     = '<a href="' . $support_url . '">' . __( 'Support', 'amazon-s3-and-cloudfront' ) . '</a>';
 
 		$links[] = AS3CF_Utils::dbrains_link(
 			static::dbrains_url(

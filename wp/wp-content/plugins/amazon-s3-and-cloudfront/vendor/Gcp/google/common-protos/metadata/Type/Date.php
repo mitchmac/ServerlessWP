@@ -13,7 +13,7 @@ class Date
         if (static::$is_initialized == \true) {
             return;
         }
-        $pool->internalAddGeneratedFile("\n\xbe\x01\n\x16google/type/date.proto\x12\vgoogle.type\"0\n\x04Date\x12\f\n\x04year\x18\x01 \x01(\x05\x12\r\n\x05month\x18\x02 \x01(\x05\x12\v\n\x03day\x18\x03 \x01(\x05B]\n\x0fcom.google.typeB\tDateProtoP\x01Z4google.golang.org/genproto/googleapis/type/date;date\xf8\x01\x01\xa2\x02\x03GTPb\x06proto3", \true);
+        $pool->internalAddGeneratedFile("\n\xbb\x01\n\x16google/type/date.proto\x12\vgoogle.type\"0\n\x04Date\x12\f\n\x04year\x18\x01 \x01(\x05\x12\r\n\x05month\x18\x02 \x01(\x05\x12\v\n\x03day\x18\x03 \x01(\x05BZ\n\x0fcom.google.typeB\tDateProtoP\x01Z4google.golang.org/genproto/googleapis/type/date;date\xa2\x02\x03GTPb\x06proto3", \true);
         static::$is_initialized = \true;
     }
 }

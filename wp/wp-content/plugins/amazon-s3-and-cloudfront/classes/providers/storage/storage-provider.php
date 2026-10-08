@@ -13,6 +13,11 @@ use Exception;
 use WP_Error;
 use WP_Error as AS3CF_Result;
 
+// Exit if accessed directly.
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 abstract class Storage_Provider extends Provider implements Validator_Interface {
 	use Settings_Validator_Trait;
 

@@ -13,7 +13,7 @@ class Decimal
         if (static::$is_initialized == \true) {
             return;
         }
-        $pool->internalAddGeneratedFile("\n\xb2\x01\n\x19google/type/decimal.proto\x12\vgoogle.type\"\x18\n\x07Decimal\x12\r\n\x05value\x18\x01 \x01(\tBf\n\x0fcom.google.typeB\fDecimalProtoP\x01Z:google.golang.org/genproto/googleapis/type/decimal;decimal\xf8\x01\x01\xa2\x02\x03GTPb\x06proto3", \true);
+        $pool->internalAddGeneratedFile("\n\xaf\x01\n\x19google/type/decimal.proto\x12\vgoogle.type\"\x18\n\x07Decimal\x12\r\n\x05value\x18\x01 \x01(\tBc\n\x0fcom.google.typeB\fDecimalProtoP\x01Z:google.golang.org/genproto/googleapis/type/decimal;decimal\xa2\x02\x03GTPb\x06proto3", \true);
         static::$is_initialized = \true;
     }
 }

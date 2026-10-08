@@ -450,6 +450,7 @@ class WP_SQLite_Information_Schema_Builder {
 					('utf8_unicode_ci', 'utf8', 192, '', 'Yes', 8, 'PAD SPACE'),
 					('utf8mb4_bin', 'utf8mb4', 46, '', 'Yes', 1, 'PAD SPACE'),
 					('utf8mb4_unicode_ci', 'utf8mb4', 224, '', 'Yes', 8, 'PAD SPACE'),
+					('utf8mb4_unicode_520_ci', 'utf8mb4', 246, '', 'Yes', 8, 'PAD SPACE'),
 					('utf8mb4_0900_ai_ci', 'utf8mb4', 255, 'Yes', 'Yes', 0, 'NO PAD')
 				)";
 			default:

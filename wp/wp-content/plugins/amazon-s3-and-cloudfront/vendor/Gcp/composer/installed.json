@@ -65,17 +65,17 @@
         },
         {
             "name": "firebase\/php-jwt",
-            "version": "v7.0.3",
-            "version_normalized": "7.0.3.0",
+            "version": "v7.1.0",
+            "version_normalized": "7.1.0.0",
             "source": {
                 "type": "git",
-                "url": "https:\/\/github.com\/firebase\/php-jwt.git",
-                "reference": "28aa0694bcfdfa5e2959c394d5a1ee7a5083629e"
+                "url": "https:\/\/github.com\/googleapis\/php-jwt.git",
+                "reference": "b374a5d1a4f1f67fadc2165cdb284645945e2fc0"
             },
             "dist": {
                 "type": "zip",
-                "url": "https:\/\/api.github.com\/repos\/firebase\/php-jwt\/zipball\/28aa0694bcfdfa5e2959c394d5a1ee7a5083629e",
-                "reference": "28aa0694bcfdfa5e2959c394d5a1ee7a5083629e",
+                "url": "https:\/\/api.github.com\/repos\/googleapis\/php-jwt\/zipball\/b374a5d1a4f1f67fadc2165cdb284645945e2fc0",
+                "reference": "b374a5d1a4f1f67fadc2165cdb284645945e2fc0",
                 "shasum": ""
             },
             "require": {
@@ -83,6 +83,8 @@
             },
             "require-dev": {
                 "guzzlehttp\/guzzle": "^7.4",
+                "phpfastcache\/phpfastcache": "^9.2",
+                "phpseclib\/phpseclib": "~3.0",
                 "phpspec\/prophecy-phpunit": "^2.0",
                 "phpunit\/phpunit": "^9.5",
                 "psr\/cache": "^2.0||^3.0",
@@ -91,9 +93,10 @@
             },
             "suggest": {
                 "ext-sodium": "Support EdDSA (Ed25519) signatures",
-                "paragonie\/sodium_compat": "Support EdDSA (Ed25519) signatures when libsodium is not present"
+                "paragonie\/sodium_compat": "Support EdDSA (Ed25519) signatures when libsodium is not present",
+                "phpseclib\/phpseclib": "Support PS256 (RSASSA-PSS) signatures"
             },
-            "time": "2026-02-25T22:16:40+00:00",
+            "time": "2026-06-11T17:54:14+00:00",
             "type": "library",
             "installation-source": "dist",
             "autoload": {
@@ -118,43 +121,44 @@
                 }
             ],
             "description": "A simple library to encode and decode JSON Web Tokens (JWT) in PHP. Should conform to the current spec.",
-            "homepage": "https:\/\/github.com\/firebase\/php-jwt",
+            "homepage": "https:\/\/github.com\/googleapis\/php-jwt",
             "keywords": [
                 "jwt",
                 "php"
             ],
             "support": {
-                "issues": "https:\/\/github.com\/firebase\/php-jwt\/issues",
-                "source": "https:\/\/github.com\/firebase\/php-jwt\/tree\/v7.0.3"
+                "issues": "https:\/\/github.com\/googleapis\/php-jwt\/issues",
+                "source": "https:\/\/github.com\/googleapis\/php-jwt\/tree\/v7.1.0"
             },
             "install-path": "..\/firebase\/php-jwt"
         },
         {
             "name": "google\/auth",
-            "version": "v1.50.1",
-            "version_normalized": "1.50.1.0",
+            "version": "v1.53.0",
+            "version_normalized": "1.53.0.0",
             "source": {
                 "type": "git",
                 "url": "https:\/\/github.com\/googleapis\/google-auth-library-php.git",
-                "reference": "870c17ee3a1d73338d39a9ffa77a700ba77f5a83"
+                "reference": "d677d0b0c4bd52ab222a85df8e74e0d491c0cc5a"
             },
             "dist": {
                 "type": "zip",
-                "url": "https:\/\/api.github.com\/repos\/googleapis\/google-auth-library-php\/zipball\/870c17ee3a1d73338d39a9ffa77a700ba77f5a83",
-                "reference": "870c17ee3a1d73338d39a9ffa77a700ba77f5a83",
+                "url": "https:\/\/api.github.com\/repos\/googleapis\/google-auth-library-php\/zipball\/d677d0b0c4bd52ab222a85df8e74e0d491c0cc5a",
+                "reference": "d677d0b0c4bd52ab222a85df8e74e0d491c0cc5a",
                 "shasum": ""
             },
             "require": {
                 "firebase\/php-jwt": "^6.0||^7.0",
-                "guzzlehttp\/guzzle": "^7.4.5",
-                "guzzlehttp\/psr7": "^2.4.5",
+                "guzzlehttp\/guzzle": "^7.8.2||^8.0",
+                "guzzlehttp\/psr7": "^2.6.3||^3.0",
                 "php": "^8.1",
                 "psr\/cache": "^2.0||^3.0",
+                "psr\/http-client": "^1.0",
                 "psr\/http-message": "^1.1||^2.0",
                 "psr\/log": "^2.0||^3.0"
             },
             "require-dev": {
-                "guzzlehttp\/promises": "^2.0",
+                "guzzlehttp\/promises": "^2.0.3||^3.0",
                 "kelvinmo\/simplejwt": "^1.1.0",
                 "phpseclib\/phpseclib": "^3.0.35",
                 "phpspec\/prophecy-phpunit": "^2.1",
@@ -168,7 +172,7 @@
             "suggest": {
                 "phpseclib\/phpseclib": "May be used in place of OpenSSL for signing strings or for token management. Please require version ^2."
             },
-            "time": "2026-03-18T20:03:29+00:00",
+            "time": "2026-07-22T22:36:10+00:00",
             "type": "library",
             "installation-source": "dist",
             "autoload": {
@@ -190,31 +194,31 @@
             "support": {
                 "docs": "https:\/\/cloud.google.com\/php\/docs\/reference\/auth\/latest",
                 "issues": "https:\/\/github.com\/googleapis\/google-auth-library-php\/issues",
-                "source": "https:\/\/github.com\/googleapis\/google-auth-library-php\/tree\/v1.50.1"
+                "source": "https:\/\/github.com\/googleapis\/google-auth-library-php\/tree\/v1.53.0"
             },
             "install-path": "..\/google\/auth"
         },
         {
             "name": "google\/cloud-core",
-            "version": "v1.71.2",
-            "version_normalized": "1.71.2.0",
+            "version": "v1.73.1",
+            "version_normalized": "1.73.1.0",
             "source": {
                 "type": "git",
                 "url": "https:\/\/github.com\/googleapis\/google-cloud-php-core.git",
-                "reference": "1030847fcbb6b2ae70c48379cc5dbc7603f8faac"
+                "reference": "23f6a68674f07bc23d02a683405cd9d2d283688a"
             },
             "dist": {
                 "type": "zip",
-                "url": "https:\/\/api.github.com\/repos\/googleapis\/google-cloud-php-core\/zipball\/1030847fcbb6b2ae70c48379cc5dbc7603f8faac",
-                "reference": "1030847fcbb6b2ae70c48379cc5dbc7603f8faac",
+                "url": "https:\/\/api.github.com\/repos\/googleapis\/google-cloud-php-core\/zipball\/23f6a68674f07bc23d02a683405cd9d2d283688a",
+                "reference": "23f6a68674f07bc23d02a683405cd9d2d283688a",
                 "shasum": ""
             },
             "require": {
-                "google\/auth": "^1.34",
+                "google\/auth": "^1.53",
                 "google\/gax": "^1.38.0",
-                "guzzlehttp\/guzzle": "^6.5.8||^7.4.4",
-                "guzzlehttp\/promises": "^1.4||^2.0",
-                "guzzlehttp\/psr7": "^2.6",
+                "guzzlehttp\/guzzle": "^7.8.2||^8.0",
+                "guzzlehttp\/promises": "^2.0.3||^3.0",
+                "guzzlehttp\/psr7": "^2.6.3||^3.0",
                 "monolog\/monolog": "^2.9||^3.0",
                 "php": "^8.1",
                 "psr\/http-message": "^1.0||^2.0",
@@ -229,13 +233,13 @@
                 "phpdocumentor\/reflection-docblock": "^5.3.3||^6.0",
                 "phpspec\/prophecy-phpunit": "^2.0",
                 "phpunit\/phpunit": "^9.0",
-                "squizlabs\/php_codesniffer": "2.*"
+                "squizlabs\/php_codesniffer": "3.*"
             },
             "suggest": {
                 "opis\/closure": "May be used to serialize closures to process jobs in the batch daemon. Please require version ^3.",
                 "symfony\/lock": "Required for the Spanner cached based session pool. Please require the following commit: 3.3.x-dev#1ba6ac9"
             },
-            "time": "2026-03-17T23:07:39+00:00",
+            "time": "2026-08-07T09:39:23+00:00",
             "bin": [
                 "bin\/google-cloud-batch"
             ],
@@ -260,45 +264,46 @@
             ],
             "description": "Google Cloud PHP shared dependency, providing functionality useful to all components.",
             "support": {
-                "source": "https:\/\/github.com\/googleapis\/google-cloud-php-core\/tree\/v1.71.2"
+                "source": "https:\/\/github.com\/googleapis\/google-cloud-php-core\/tree\/v1.73.1"
             },
             "install-path": "..\/google\/cloud-core"
         },
         {
             "name": "google\/cloud-storage",
-            "version": "v1.49.2",
-            "version_normalized": "1.49.2.0",
+            "version": "v2.5.1",
+            "version_normalized": "2.5.1.0",
             "source": {
                 "type": "git",
                 "url": "https:\/\/github.com\/googleapis\/google-cloud-php-storage.git",
-                "reference": "1cab44377fc65c7feba1f706970f3abf5ccba392"
+                "reference": "95643e1db7846fc6572101611d95bfb746b9fb64"
             },
             "dist": {
                 "type": "zip",
-                "url": "https:\/\/api.github.com\/repos\/googleapis\/google-cloud-php-storage\/zipball\/1cab44377fc65c7feba1f706970f3abf5ccba392",
-                "reference": "1cab44377fc65c7feba1f706970f3abf5ccba392",
+                "url": "https:\/\/api.github.com\/repos\/googleapis\/google-cloud-php-storage\/zipball\/95643e1db7846fc6572101611d95bfb746b9fb64",
+                "reference": "95643e1db7846fc6572101611d95bfb746b9fb64",
                 "shasum": ""
             },
             "require": {
-                "google\/cloud-core": "^1.57",
+                "google\/cloud-core": "^1.72.0",
                 "php": "^8.1",
                 "ramsey\/uuid": "^4.2.3"
             },
             "require-dev": {
                 "erusev\/parsedown": "^1.6",
                 "google\/cloud-pubsub": "^2.0",
-                "phpdocumentor\/reflection": "^5.3.3||^6.0",
-                "phpdocumentor\/reflection-docblock": "^5.3.3||^6.0",
+                "nikic\/php-parser": "^5",
+                "phpdocumentor\/reflection": "^6.0",
+                "phpdocumentor\/reflection-docblock": "^5.3.3",
                 "phpseclib\/phpseclib": "^2.0||^3.0",
                 "phpspec\/prophecy-phpunit": "^2.0",
                 "phpunit\/phpunit": "^9.0",
-                "squizlabs\/php_codesniffer": "2.*"
+                "squizlabs\/php_codesniffer": "3.*"
             },
             "suggest": {
                 "google\/cloud-pubsub": "May be used to register a topic to receive bucket notifications.",
                 "phpseclib\/phpseclib": "May be used in place of OpenSSL for creating signed Cloud Storage URLs. Please require version ^2."
             },
-            "time": "2026-01-23T22:57:13+00:00",
+            "time": "2026-08-07T09:39:23+00:00",
             "type": "library",
             "extra": {
                 "component": {
@@ -320,23 +325,23 @@
             ],
             "description": "Cloud Storage Client for PHP",
             "support": {
-                "source": "https:\/\/github.com\/googleapis\/google-cloud-php-storage\/tree\/v1.49.2"
+                "source": "https:\/\/github.com\/googleapis\/google-cloud-php-storage\/tree\/v2.5.1"
             },
             "install-path": "..\/google\/cloud-storage"
         },
         {
             "name": "google\/common-protos",
-            "version": "4.12.5",
-            "version_normalized": "4.12.5.0",
+            "version": "4.14.1",
+            "version_normalized": "4.14.1.0",
             "source": {
                 "type": "git",
                 "url": "https:\/\/github.com\/googleapis\/common-protos-php.git",
-                "reference": "d6fda6dad6416035e3c789f3f0cc5cb8494956b2"
+                "reference": "4eb6813b8068653e055fc8a63dbda3446f3e8869"
             },
             "dist": {
                 "type": "zip",
-                "url": "https:\/\/api.github.com\/repos\/googleapis\/common-protos-php\/zipball\/d6fda6dad6416035e3c789f3f0cc5cb8494956b2",
-                "reference": "d6fda6dad6416035e3c789f3f0cc5cb8494956b2",
+                "url": "https:\/\/api.github.com\/repos\/googleapis\/common-protos-php\/zipball\/4eb6813b8068653e055fc8a63dbda3446f3e8869",
+                "reference": "4eb6813b8068653e055fc8a63dbda3446f3e8869",
                 "shasum": ""
             },
             "require": {
@@ -346,7 +351,7 @@
             "require-dev": {
                 "phpunit\/phpunit": "^9.6"
             },
-            "time": "2026-03-17T23:07:39+00:00",
+            "time": "2026-06-17T23:07:32+00:00",
             "type": "library",
             "extra": {
                 "component": {
@@ -382,34 +387,34 @@
                 "google"
             ],
             "support": {
-                "source": "https:\/\/github.com\/googleapis\/common-protos-php\/tree\/v4.12.5"
+                "source": "https:\/\/github.com\/googleapis\/common-protos-php\/tree\/v4.14.1"
             },
             "install-path": "..\/google\/common-protos"
         },
         {
             "name": "google\/gax",
-            "version": "v1.42.1",
-            "version_normalized": "1.42.1.0",
+            "version": "v1.47.1",
+            "version_normalized": "1.47.1.0",
             "source": {
                 "type": "git",
                 "url": "https:\/\/github.com\/googleapis\/gax-php.git",
-                "reference": "ab334c4869f4f16b6112acc95972a97b81dbfdda"
+                "reference": "0c25a2499a7204bee09e3cb28437a391d85976e5"
             },
             "dist": {
                 "type": "zip",
-                "url": "https:\/\/api.github.com\/repos\/googleapis\/gax-php\/zipball\/ab334c4869f4f16b6112acc95972a97b81dbfdda",
-                "reference": "ab334c4869f4f16b6112acc95972a97b81dbfdda",
+                "url": "https:\/\/api.github.com\/repos\/googleapis\/gax-php\/zipball\/0c25a2499a7204bee09e3cb28437a391d85976e5",
+                "reference": "0c25a2499a7204bee09e3cb28437a391d85976e5",
                 "shasum": ""
             },
             "require": {
-                "google\/auth": "^1.49",
-                "google\/common-protos": "^4.4",
+                "google\/auth": "^1.53",
+                "google\/common-protos": "^4.9",
                 "google\/grpc-gcp": "^0.4",
                 "google\/longrunning": "~0.4",
-                "google\/protobuf": "^4.31||^5.0",
+                "google\/protobuf": "^4.31||^5.34",
                 "grpc\/grpc": "^1.13",
-                "guzzlehttp\/promises": "^2.0",
-                "guzzlehttp\/psr7": "^2.0",
+                "guzzlehttp\/promises": "^2.0.3||^3.0",
+                "guzzlehttp\/psr7": "^2.6.3||^3.0",
                 "php": "^8.1",
                 "ramsey\/uuid": "^4.0"
             },
@@ -422,13 +427,20 @@
                 "phpstan\/phpstan": "^2.0",
                 "phpunit\/phpunit": "^9.6"
             },
-            "time": "2026-03-12T21:22:20+00:00",
+            "time": "2026-08-10T16:39:50+00:00",
             "type": "library",
+            "extra": {
+                "component": {
+                    "id": "gax",
+                    "path": "Gax",
+                    "entry": "README.md",
+                    "target": "googleapis\/gax-php.git"
+                }
+            },
             "installation-source": "dist",
             "autoload": {
                 "psr-4": {
-                    "DeliciousBrains\\WP_Offload_Media\\Gcp\\Google\\ApiCore\\": "src",
-                    "DeliciousBrains\\WP_Offload_Media\\Gcp\\GPBMetadata\\ApiCore\\": "metadata\/ApiCore"
+                    "DeliciousBrains\\WP_Offload_Media\\Gcp\\Google\\ApiCore\\": "src"
                 }
             },
             "notification-url": "https:\/\/packagist.org\/downloads\/",
@@ -442,7 +454,7 @@
             ],
             "support": {
                 "issues": "https:\/\/github.com\/googleapis\/gax-php\/issues",
-                "source": "https:\/\/github.com\/googleapis\/gax-php\/tree\/v1.42.1"
+                "source": "https:\/\/github.com\/googleapis\/gax-php\/tree\/v1.47.1"
             },
             "install-path": "..\/google\/gax"
         },
@@ -496,24 +508,24 @@
         },
         {
             "name": "google\/longrunning",
-            "version": "0.7.0",
-            "version_normalized": "0.7.0.0",
+            "version": "0.8.0",
+            "version_normalized": "0.8.0.0",
             "source": {
                 "type": "git",
                 "url": "https:\/\/github.com\/googleapis\/php-longrunning.git",
-                "reference": "5c0a0fc30a8f698a47a2e9fc61f6640aed35c84f"
+                "reference": "2c22ca5184cba320f5e7e012261b82bdc969a4f6"
             },
             "dist": {
                 "type": "zip",
-                "url": "https:\/\/api.github.com\/repos\/googleapis\/php-longrunning\/zipball\/5c0a0fc30a8f698a47a2e9fc61f6640aed35c84f",
-                "reference": "5c0a0fc30a8f698a47a2e9fc61f6640aed35c84f",
+                "url": "https:\/\/api.github.com\/repos\/googleapis\/php-longrunning\/zipball\/2c22ca5184cba320f5e7e012261b82bdc969a4f6",
+                "reference": "2c22ca5184cba320f5e7e012261b82bdc969a4f6",
                 "shasum": ""
             },
             "require-dev": {
                 "google\/gax": "^1.38.0",
                 "phpunit\/phpunit": "^9.0"
             },
-            "time": "2026-03-17T23:07:39+00:00",
+            "time": "2026-08-10T16:39:50+00:00",
             "type": "library",
             "extra": {
                 "component": {
@@ -537,7 +549,7 @@
             ],
             "description": "Google LongRunning Client for PHP",
             "support": {
-                "source": "https:\/\/github.com\/googleapis\/php-longrunning\/tree\/v0.7.0"
+                "source": "https:\/\/github.com\/googleapis\/php-longrunning\/tree\/v0.8.0"
             },
             "install-path": "..\/google\/longrunning"
         },
@@ -590,21 +602,21 @@
         },
         {
             "name": "grpc\/grpc",
-            "version": "1.74.0",
-            "version_normalized": "1.74.0.0",
+            "version": "1.82.0",
+            "version_normalized": "1.82.0.0",
             "source": {
                 "type": "git",
                 "url": "https:\/\/github.com\/grpc\/grpc-php.git",
-                "reference": "32bf4dba256d60d395582fb6e4e8d3936bcdb713"
+                "reference": "be984cb608f21e96453b3cfe54c748cc7b192250"
             },
             "dist": {
                 "type": "zip",
-                "url": "https:\/\/api.github.com\/repos\/grpc\/grpc-php\/zipball\/32bf4dba256d60d395582fb6e4e8d3936bcdb713",
-                "reference": "32bf4dba256d60d395582fb6e4e8d3936bcdb713",
+                "url": "https:\/\/api.github.com\/repos\/grpc\/grpc-php\/zipball\/be984cb608f21e96453b3cfe54c748cc7b192250",
+                "reference": "be984cb608f21e96453b3cfe54c748cc7b192250",
                 "shasum": ""
             },
             "require": {
-                "php": ">=7.0.0"
+                "php": ">=7.1.0"
             },
             "require-dev": {
                 "google\/auth": "^v1.3.0"
@@ -613,7 +625,7 @@
                 "ext-protobuf": "For better performance, install the protobuf C extension.",
                 "google\/protobuf": "To get started using grpc quickly, install the native protobuf library."
             },
-            "time": "2025-07-24T20:02:16+00:00",
+            "time": "2026-07-03T09:39:53+00:00",
             "type": "library",
             "installation-source": "dist",
             "autoload": {
@@ -631,32 +643,34 @@
                 "rpc"
             ],
             "support": {
-                "source": "https:\/\/github.com\/grpc\/grpc-php\/tree\/v1.74.0"
+                "source": "https:\/\/github.com\/grpc\/grpc-php\/tree\/v1.82.0"
             },
             "install-path": "..\/grpc\/grpc"
         },
         {
             "name": "guzzlehttp\/guzzle",
-            "version": "7.10.0",
-            "version_normalized": "7.10.0.0",
+            "version": "8.0.2",
+            "version_normalized": "8.0.2.0",
             "source": {
                 "type": "git",
                 "url": "https:\/\/github.com\/guzzle\/guzzle.git",
-                "reference": "b51ac707cfa420b7bfd4e4d5e510ba8008e822b4"
+                "reference": "d1cbca76970939a9c2ced55b1e25ea26f34fc773"
             },
             "dist": {
                 "type": "zip",
-                "url": "https:\/\/api.github.com\/repos\/guzzle\/guzzle\/zipball\/b51ac707cfa420b7bfd4e4d5e510ba8008e822b4",
-                "reference": "b51ac707cfa420b7bfd4e4d5e510ba8008e822b4",
+                "url": "https:\/\/api.github.com\/repos\/guzzle\/guzzle\/zipball\/d1cbca76970939a9c2ced55b1e25ea26f34fc773",
+                "reference": "d1cbca76970939a9c2ced55b1e25ea26f34fc773",
                 "shasum": ""
             },
             "require": {
                 "ext-json": "*",
-                "guzzlehttp\/promises": "^2.3",
-                "guzzlehttp\/psr7": "^2.8",
-                "php": "^7.2.5 || ^8.0",
+                "guzzlehttp\/promises": "^3.0.1",
+                "guzzlehttp\/psr7": "^3.0",
+                "php": "^7.4 || ^8.0",
                 "psr\/http-client": "^1.0",
-                "symfony\/deprecation-contracts": "^2.2 || ^3.0"
+                "psr\/http-factory": "^1.0",
+                "symfony\/polyfill-php80": "^1.25",
+                "symfony\/polyfill-php82": "^1.27"
             },
             "provide": {
                 "psr\/http-client-implementation": "1.0"
@@ -664,9 +678,10 @@
             "require-dev": {
                 "bamarni\/composer-bin-plugin": "^1.8.2",
                 "ext-curl": "*",
-                "guzzle\/client-integration-tests": "3.0.2",
+                "guzzle\/client-integration-tests": "4.0.1",
+                "guzzlehttp\/test-server": "^1.0",
                 "php-http\/message-factory": "^1.1",
-                "phpunit\/phpunit": "^8.5.39 || ^9.6.20",
+                "phpunit\/phpunit": "^9.6.34",
                 "psr\/log": "^1.1 || ^2.0 || ^3.0"
             },
             "suggest": {
@@ -674,7 +689,7 @@
                 "ext-intl": "Required for Internationalized Domain Name (IDN) support",
                 "psr\/log": "Required for using the Log middleware"
             },
-            "time": "2025-08-23T22:36:01+00:00",
+            "time": "2026-08-05T19:50:26+00:00",
             "type": "library",
             "extra": {
                 "bamarni-bin": {
@@ -684,9 +699,6 @@
             },
             "installation-source": "dist",
             "autoload": {
-                "files": [
-                    "src\/functions_include.php"
-                ],
                 "psr-4": {
                     "DeliciousBrains\\WP_Offload_Media\\Gcp\\GuzzleHttp\\": "src\/"
                 }
@@ -746,7 +758,7 @@
             ],
             "support": {
                 "issues": "https:\/\/github.com\/guzzle\/guzzle\/issues",
-                "source": "https:\/\/github.com\/guzzle\/guzzle\/tree\/7.10.0"
+                "source": "https:\/\/github.com\/guzzle\/guzzle\/tree\/8.0.2"
             },
             "funding": [
                 {
@@ -766,27 +778,27 @@
         },
         {
             "name": "guzzlehttp\/promises",
-            "version": "2.3.0",
-            "version_normalized": "2.3.0.0",
+            "version": "3.0.1",
+            "version_normalized": "3.0.1.0",
             "source": {
                 "type": "git",
                 "url": "https:\/\/github.com\/guzzle\/promises.git",
-                "reference": "481557b130ef3790cf82b713667b43030dc9c957"
+                "reference": "64f38b87fa7d371853804161bfc701c9bc2cc00a"
             },
             "dist": {
                 "type": "zip",
-                "url": "https:\/\/api.github.com\/repos\/guzzle\/promises\/zipball\/481557b130ef3790cf82b713667b43030dc9c957",
-                "reference": "481557b130ef3790cf82b713667b43030dc9c957",
+                "url": "https:\/\/api.github.com\/repos\/guzzle\/promises\/zipball\/64f38b87fa7d371853804161bfc701c9bc2cc00a",
+                "reference": "64f38b87fa7d371853804161bfc701c9bc2cc00a",
                 "shasum": ""
             },
             "require": {
-                "php": "^7.2.5 || ^8.0"
+                "php": "^7.4 || ^8.0"
             },
             "require-dev": {
                 "bamarni\/composer-bin-plugin": "^1.8.2",
-                "phpunit\/phpunit": "^8.5.44 || ^9.6.25"
+                "phpunit\/phpunit": "^9.6.34"
             },
-            "time": "2025-08-22T14:34:08+00:00",
+            "time": "2026-08-05T19:35:04+00:00",
             "type": "library",
             "extra": {
                 "bamarni-bin": {
@@ -832,7 +844,7 @@
             ],
             "support": {
                 "issues": "https:\/\/github.com\/guzzle\/promises\/issues",
-                "source": "https:\/\/github.com\/guzzle\/promises\/tree\/2.3.0"
+                "source": "https:\/\/github.com\/guzzle\/promises\/tree\/3.0.1"
             },
             "funding": [
                 {
@@ -852,39 +864,41 @@
         },
         {
             "name": "guzzlehttp\/psr7",
-            "version": "2.9.0",
-            "version_normalized": "2.9.0.0",
+            "version": "3.0.0",
+            "version_normalized": "3.0.0.0",
             "source": {
                 "type": "git",
                 "url": "https:\/\/github.com\/guzzle\/psr7.git",
-                "reference": "7d0ed42f28e42d61352a7a79de682e5e67fec884"
+                "reference": "b094ded77ee97a6027ad6cf0e8c7b9f88381814c"
             },
             "dist": {
                 "type": "zip",
-                "url": "https:\/\/api.github.com\/repos\/guzzle\/psr7\/zipball\/7d0ed42f28e42d61352a7a79de682e5e67fec884",
-                "reference": "7d0ed42f28e42d61352a7a79de682e5e67fec884",
+                "url": "https:\/\/api.github.com\/repos\/guzzle\/psr7\/zipball\/b094ded77ee97a6027ad6cf0e8c7b9f88381814c",
+                "reference": "b094ded77ee97a6027ad6cf0e8c7b9f88381814c",
                 "shasum": ""
             },
             "require": {
-                "php": "^7.2.5 || ^8.0",
-                "psr\/http-factory": "^1.0",
-                "psr\/http-message": "^1.1 || ^2.0",
-                "ralouphie\/getallheaders": "^3.0"
+                "php": "^7.4 || ^8.0",
+                "psr\/http-factory": "^1.1",
+                "psr\/http-message": "^2.0",
+                "symfony\/polyfill-php80": "^1.25",
+                "symfony\/polyfill-php82": "^1.27"
             },
             "provide": {
-                "psr\/http-factory-implementation": "1.0",
-                "psr\/http-message-implementation": "1.0"
+                "psr\/http-factory-implementation": "1.1",
+                "psr\/http-message-implementation": "2.0"
             },
             "require-dev": {
                 "bamarni\/composer-bin-plugin": "^1.8.2",
-                "http-interop\/http-factory-tests": "0.9.0",
+                "http-interop\/http-factory-tests": "1.1.0",
                 "jshttp\/mime-db": "1.54.0.1",
-                "phpunit\/phpunit": "^8.5.44 || ^9.6.25"
+                "php-http\/psr7-integration-tests": "^1.5.1",
+                "phpunit\/phpunit": "^9.6.34"
             },
             "suggest": {
                 "laminas\/laminas-httphandlerrunner": "Emit PSR-7 responses"
             },
-            "time": "2026-03-10T16:41:02+00:00",
+            "time": "2026-07-20T13:48:31+00:00",
             "type": "library",
             "extra": {
                 "bamarni-bin": {
@@ -952,7 +966,7 @@
             ],
             "support": {
                 "issues": "https:\/\/github.com\/guzzle\/psr7\/issues",
-                "source": "https:\/\/github.com\/guzzle\/psr7\/tree\/2.9.0"
+                "source": "https:\/\/github.com\/guzzle\/psr7\/tree\/3.0.0"
             },
             "funding": [
                 {
@@ -1351,53 +1365,6 @@
             "install-path": "..\/psr\/log"
         },
         {
-            "name": "ralouphie\/getallheaders",
-            "version": "3.0.3",
-            "version_normalized": "3.0.3.0",
-            "source": {
-                "type": "git",
-                "url": "https:\/\/github.com\/ralouphie\/getallheaders.git",
-                "reference": "120b605dfeb996808c31b6477290a714d356e822"
-            },
-            "dist": {
-                "type": "zip",
-                "url": "https:\/\/api.github.com\/repos\/ralouphie\/getallheaders\/zipball\/120b605dfeb996808c31b6477290a714d356e822",
-                "reference": "120b605dfeb996808c31b6477290a714d356e822",
-                "shasum": ""
-            },
-            "require": {
-                "php": ">=5.6"
-            },
-            "require-dev": {
-                "php-coveralls\/php-coveralls": "^2.1",
-                "phpunit\/phpunit": "^5 || ^6.5"
-            },
-            "time": "2019-03-08T08:55:37+00:00",
-            "type": "library",
-            "installation-source": "dist",
-            "autoload": {
-                "files": [
-                    "src\/getallheaders.php"
-                ]
-            },
-            "notification-url": "https:\/\/packagist.org\/downloads\/",
-            "license": [
-                "MIT"
-            ],
-            "authors": [
-                {
-                    "name": "Ralph Khattar",
-                    "email": "ralph.khattar@gmail.com"
-                }
-            ],
-            "description": "A polyfill for getallheaders.",
-            "support": {
-                "issues": "https:\/\/github.com\/ralouphie\/getallheaders\/issues",
-                "source": "https:\/\/github.com\/ralouphie\/getallheaders\/tree\/develop"
-            },
-            "install-path": "..\/ralouphie\/getallheaders"
-        },
-        {
             "name": "ramsey\/collection",
             "version": "2.1.1",
             "version_normalized": "2.1.1.0",
@@ -1478,21 +1445,21 @@
         },
         {
             "name": "ramsey\/uuid",
-            "version": "4.9.2",
-            "version_normalized": "4.9.2.0",
+            "version": "4.9.3",
+            "version_normalized": "4.9.3.0",
             "source": {
                 "type": "git",
                 "url": "https:\/\/github.com\/ramsey\/uuid.git",
-                "reference": "8429c78ca35a09f27565311b98101e2826affde0"
+                "reference": "1df15849d00943a67d677dc9cfd80795f038c9f8"
             },
             "dist": {
                 "type": "zip",
-                "url": "https:\/\/api.github.com\/repos\/ramsey\/uuid\/zipball\/8429c78ca35a09f27565311b98101e2826affde0",
-                "reference": "8429c78ca35a09f27565311b98101e2826affde0",
+                "url": "https:\/\/api.github.com\/repos\/ramsey\/uuid\/zipball\/1df15849d00943a67d677dc9cfd80795f038c9f8",
+                "reference": "1df15849d00943a67d677dc9cfd80795f038c9f8",
                 "shasum": ""
             },
             "require": {
-                "brick\/math": "^0.8.16 || ^0.9 || ^0.10 || ^0.11 || ^0.12 || ^0.13 || ^0.14",
+                "brick\/math": ">=0.8.16 <=0.18",
                 "php": "^8.0",
                 "ramsey\/collection": "^1.2 || ^2.0"
             },
@@ -1525,7 +1492,7 @@
                 "paragonie\/random-lib": "Provides RandomLib for use with the RandomLibAdapter",
                 "ramsey\/uuid-doctrine": "Allows the use of Ramsey\\Uuid\\Uuid as Doctrine field type."
             },
-            "time": "2025-12-14T04:43:48+00:00",
+            "time": "2026-06-18T03:57:49+00:00",
             "type": "library",
             "extra": {
                 "captainhook": {
@@ -1553,23 +1520,23 @@
             ],
             "support": {
                 "issues": "https:\/\/github.com\/ramsey\/uuid\/issues",
-                "source": "https:\/\/github.com\/ramsey\/uuid\/tree\/4.9.2"
+                "source": "https:\/\/github.com\/ramsey\/uuid\/tree\/4.9.3"
             },
             "install-path": "..\/ramsey\/uuid"
         },
         {
             "name": "rize\/uri-template",
-            "version": "0.4.1",
-            "version_normalized": "0.4.1.0",
+            "version": "0.4.2",
+            "version_normalized": "0.4.2.0",
             "source": {
                 "type": "git",
                 "url": "https:\/\/github.com\/rize\/UriTemplate.git",
-                "reference": "abb53c8b73a5b6c24e11f49036ab842f560cad33"
+                "reference": "7ad22944daede547b4542e1c977ec4a81aa20832"
             },
             "dist": {
                 "type": "zip",
-                "url": "https:\/\/api.github.com\/repos\/rize\/UriTemplate\/zipball\/abb53c8b73a5b6c24e11f49036ab842f560cad33",
-                "reference": "abb53c8b73a5b6c24e11f49036ab842f560cad33",
+                "url": "https:\/\/api.github.com\/repos\/rize\/UriTemplate\/zipball\/7ad22944daede547b4542e1c977ec4a81aa20832",
+                "reference": "7ad22944daede547b4542e1c977ec4a81aa20832",
                 "shasum": ""
             },
             "require": {
@@ -1580,7 +1547,7 @@
                 "phpstan\/phpstan": "^1.12",
                 "phpunit\/phpunit": "~10.0"
             },
-            "time": "2025-12-02T15:19:04+00:00",
+            "time": "2026-05-07T15:30:40+00:00",
             "type": "library",
             "installation-source": "dist",
             "autoload": {
@@ -1606,7 +1573,7 @@
             ],
             "support": {
                 "issues": "https:\/\/github.com\/rize\/UriTemplate\/issues",
-                "source": "https:\/\/github.com\/rize\/UriTemplate\/tree\/0.4.1"
+                "source": "https:\/\/github.com\/rize\/UriTemplate\/tree\/0.4.2"
             },
             "funding": [
                 {
@@ -1625,38 +1592,128 @@
             "install-path": "..\/rize\/uri-template"
         },
         {
-            "name": "symfony\/deprecation-contracts",
-            "version": "v3.6.0",
-            "version_normalized": "3.6.0.0",
+            "name": "symfony\/polyfill-php80",
+            "version": "v1.37.0",
+            "version_normalized": "1.37.0.0",
             "source": {
                 "type": "git",
-                "url": "https:\/\/github.com\/symfony\/deprecation-contracts.git",
-                "reference": "63afe740e99a13ba87ec199bb07bbdee937a5b62"
+                "url": "https:\/\/github.com\/symfony\/polyfill-php80.git",
+                "reference": "dfb55726c3a76ea3b6459fcfda1ec2d80a682411"
             },
             "dist": {
                 "type": "zip",
-                "url": "https:\/\/api.github.com\/repos\/symfony\/deprecation-contracts\/zipball\/63afe740e99a13ba87ec199bb07bbdee937a5b62",
-                "reference": "63afe740e99a13ba87ec199bb07bbdee937a5b62",
+                "url": "https:\/\/api.github.com\/repos\/symfony\/polyfill-php80\/zipball\/dfb55726c3a76ea3b6459fcfda1ec2d80a682411",
+                "reference": "dfb55726c3a76ea3b6459fcfda1ec2d80a682411",
                 "shasum": ""
             },
             "require": {
-                "php": ">=8.1"
+                "php": ">=7.2"
             },
-            "time": "2024-09-25T14:21:43+00:00",
+            "time": "2026-04-10T16:19:22+00:00",
             "type": "library",
             "extra": {
                 "thanks": {
-                    "url": "https:\/\/github.com\/symfony\/contracts",
-                    "name": "symfony\/contracts"
-                },
-                "branch-alias": {
-                    "dev-main": "3.6-dev"
+                    "url": "https:\/\/github.com\/symfony\/polyfill",
+                    "name": "symfony\/polyfill"
                 }
             },
             "installation-source": "dist",
             "autoload": {
                 "files": [
-                    "function.php"
+                    "bootstrap.php"
+                ],
+                "psr-4": {
+                    "DeliciousBrains\\WP_Offload_Media\\Gcp\\Symfony\\Polyfill\\Php80\\": ""
+                },
+                "classmap": [
+                    "Resources\/stubs"
+                ]
+            },
+            "notification-url": "https:\/\/packagist.org\/downloads\/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Ion Bazan",
+                    "email": "ion.bazan@gmail.com"
+                },
+                {
+                    "name": "Nicolas Grekas",
+                    "email": "p@tchwork.com"
+                },
+                {
+                    "name": "Symfony Community",
+                    "homepage": "https:\/\/symfony.com\/contributors"
+                }
+            ],
+            "description": "Symfony polyfill backporting some PHP 8.0+ features to lower PHP versions",
+            "homepage": "https:\/\/symfony.com",
+            "keywords": [
+                "compatibility",
+                "polyfill",
+                "portable",
+                "shim"
+            ],
+            "support": {
+                "source": "https:\/\/github.com\/symfony\/polyfill-php80\/tree\/v1.37.0"
+            },
+            "funding": [
+                {
+                    "url": "https:\/\/symfony.com\/sponsor",
+                    "type": "custom"
+                },
+                {
+                    "url": "https:\/\/github.com\/fabpot",
+                    "type": "github"
+                },
+                {
+                    "url": "https:\/\/github.com\/nicolas-grekas",
+                    "type": "github"
+                },
+                {
+                    "url": "https:\/\/tidelift.com\/funding\/github\/packagist\/symfony\/symfony",
+                    "type": "tidelift"
+                }
+            ],
+            "install-path": "..\/symfony\/polyfill-php80"
+        },
+        {
+            "name": "symfony\/polyfill-php82",
+            "version": "v1.38.1",
+            "version_normalized": "1.38.1.0",
+            "source": {
+                "type": "git",
+                "url": "https:\/\/github.com\/symfony\/polyfill-php82.git",
+                "reference": "002dc0cfe5fd4ed6033d48f27d4f19a486c4b04b"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https:\/\/api.github.com\/repos\/symfony\/polyfill-php82\/zipball\/002dc0cfe5fd4ed6033d48f27d4f19a486c4b04b",
+                "reference": "002dc0cfe5fd4ed6033d48f27d4f19a486c4b04b",
+                "shasum": ""
+            },
+            "require": {
+                "php": ">=7.2"
+            },
+            "time": "2026-05-26T12:45:58+00:00",
+            "type": "library",
+            "extra": {
+                "thanks": {
+                    "url": "https:\/\/github.com\/symfony\/polyfill",
+                    "name": "symfony\/polyfill"
+                }
+            },
+            "installation-source": "dist",
+            "autoload": {
+                "files": [
+                    "bootstrap.php"
+                ],
+                "psr-4": {
+                    "DeliciousBrains\\WP_Offload_Media\\Gcp\\Symfony\\Polyfill\\Php82\\": ""
+                },
+                "classmap": [
+                    "Resources\/stubs"
                 ]
             },
             "notification-url": "https:\/\/packagist.org\/downloads\/",
@@ -1673,10 +1730,16 @@
                     "homepage": "https:\/\/symfony.com\/contributors"
                 }
             ],
-            "description": "A generic function and convention to trigger deprecation notices",
+            "description": "Symfony polyfill backporting some PHP 8.2+ features to lower PHP versions",
             "homepage": "https:\/\/symfony.com",
+            "keywords": [
+                "compatibility",
+                "polyfill",
+                "portable",
+                "shim"
+            ],
             "support": {
-                "source": "https:\/\/github.com\/symfony\/deprecation-contracts\/tree\/v3.6.0"
+                "source": "https:\/\/github.com\/symfony\/polyfill-php82\/tree\/v1.38.1"
             },
             "funding": [
                 {
@@ -1688,11 +1751,15 @@
                     "type": "github"
                 },
                 {
+                    "url": "https:\/\/github.com\/nicolas-grekas",
+                    "type": "github"
+                },
+                {
                     "url": "https:\/\/tidelift.com\/funding\/github\/packagist\/symfony\/symfony",
                     "type": "tidelift"
                 }
             ],
-            "install-path": "..\/symfony\/deprecation-contracts"
+            "install-path": "..\/symfony\/polyfill-php82"
         }
     ],
     "dev": true,

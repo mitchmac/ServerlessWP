@@ -10,6 +10,9 @@ namespace DeliciousBrains\WP_Offload_Media\Gcp\GuzzleHttp\Promise;
  * which registers callbacks to receive either a promise’s eventual value or
  * the reason why the promise cannot be fulfilled.
  *
+ * @template TValue = mixed
+ * @template TReason = mixed
+ *
  * @see https://promisesaplus.com/
  */
 interface PromiseInterface
@@ -21,8 +24,15 @@ interface PromiseInterface
      * Appends fulfillment and rejection handlers to the promise, and returns
      * a new promise resolving to the return value of the called handler.
      *
-     * @param callable $onFulfilled Invoked when the promise fulfills.
-     * @param callable $onRejected  Invoked when the promise is rejected.
+     * @template TFulfilledValue = never
+     * @template TFulfilledReason = never
+     * @template TRejectedValue = never
+     * @template TRejectedReason = never
+     *
+     * @param (callable(TValue): (TFulfilledValue|PromiseInterface<TFulfilledValue, TFulfilledReason>))|null $onFulfilled Invoked when the promise fulfills.
+     * @param (callable(TReason): (TRejectedValue|PromiseInterface<TRejectedValue, TRejectedReason>))|null   $onRejected  Invoked when the promise is rejected.
+     *
+     * @return PromiseInterface<($onFulfilled is null ? TValue : TFulfilledValue)|($onRejected is null ? never : TRejectedValue), ($onFulfilled is null ? never : TFulfilledReason|\Throwable)|($onRejected is null ? TReason : TRejectedReason|\Throwable)>
      */
     public function then(?callable $onFulfilled = null, ?callable $onRejected = null) : PromiseInterface;
     /**
@@ -31,7 +41,12 @@ interface PromiseInterface
      * or to its original fulfillment value if the promise is instead
      * fulfilled.
      *
-     * @param callable $onRejected Invoked when the promise is rejected.
+     * @template TRejectedValue = never
+     * @template TRejectedReason = never
+     *
+     * @param callable(TReason): (TRejectedValue|PromiseInterface<TRejectedValue, TRejectedReason>) $onRejected Invoked when the promise is rejected.
+     *
+     * @return PromiseInterface<TValue|TRejectedValue, TRejectedReason|\Throwable>
      */
     public function otherwise(callable $onRejected) : PromiseInterface;
     /**
@@ -39,20 +54,22 @@ interface PromiseInterface
      *
      * The three states can be checked against the constants defined on
      * PromiseInterface: PENDING, FULFILLED, and REJECTED.
+     *
+     * @return self::PENDING|self::FULFILLED|self::REJECTED
      */
     public function getState() : string;
     /**
-     * Resolve the promise with the given value.
+     * Resolve the promise with the given value, or with null if no value is given.
      *
-     * @param mixed $value
+     * @param TValue|PromiseInterface<TValue, TReason>|null $value
      *
      * @throws \RuntimeException if the promise is already resolved.
      */
-    public function resolve($value) : void;
+    public function resolve($value = null) : void;
     /**
      * Reject the promise with the given reason.
      *
-     * @param mixed $reason
+     * @param TReason $reason
      *
      * @throws \RuntimeException if the promise is already resolved.
      */
@@ -71,7 +88,7 @@ interface PromiseInterface
      *
      * If the promise cannot be waited on, then the promise will be rejected.
      *
-     * @return mixed
+     * @return ($unwrap is true ? TValue : null)
      *
      * @throws \LogicException if the promise has no wait function or if the
      *                         promise does not settle after waiting.

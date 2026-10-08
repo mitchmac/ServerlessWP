@@ -49,8 +49,10 @@ class WP_SQLite_DB extends wpdb {
 		 */
 		$GLOBALS['wpdb'] = $this;
 
+		// The SQLite driver may use the charset and collation while connecting.
+		$this->init_charset();
+
 		parent::__construct( '', '', $dbname, '' );
-		$this->charset = 'utf8mb4';
 	}
 
 	/**
@@ -233,6 +235,36 @@ class WP_SQLite_DB extends wpdb {
 	}
 
 	/**
+	 * Sets $this->charset and $this->collate.
+	 *
+	 * This overrides wpdb::init_charset(). SQLite stores all text as UTF-8, and
+	 * the emulated MySQL connection always uses utf8mb4 (see set_charset()), so
+	 * the charset is always utf8mb4, and only a UTF-8 DB_COLLATE applies.
+	 *
+	 * Unlike in wpdb, the result doesn't depend on the database connection.
+	 * This is important, as the SQLite driver may use the charset and collation
+	 * while connecting (see the constructor).
+	 *
+	 * @see wpdb::init_charset()
+	 */
+	public function init_charset() {
+		$collate = defined( 'DB_COLLATE' ) ? strtolower( (string) DB_COLLATE ) : '';
+
+		// MySQL 8.0.30 and newer name the utf8 collations "utf8mb3_*".
+		$collate = preg_replace( '/^utf8mb3_/', 'utf8_', $collate );
+
+		// Collations of other charsets don't apply to the utf8mb4 connection.
+		if ( ! preg_match( '/^utf8(mb4)?_/', $collate ) ) {
+			$collate = '';
+		}
+
+		$charset_collate = $this->resolve_charset( 'utf8mb4', $collate );
+
+		$this->charset = $charset_collate['charset'];
+		$this->collate = $charset_collate['collate'];
+	}
+
+	/**
 	 * Determines the best charset and collation to use given a charset and collation.
 	 *
 	 * For example, when able, utf8mb4 should be used instead of utf8.
@@ -254,25 +286,7 @@ class WP_SQLite_DB extends wpdb {
 			return compact( 'charset', 'collate' );
 		}
 
-		if ( 'utf8' === $charset ) {
-			$charset = 'utf8mb4';
-		}
-
-		if ( 'utf8mb4' === $charset ) {
-			// _general_ is outdated, so we can upgrade it to _unicode_, instead.
-			if ( ! $collate || 'utf8_general_ci' === $collate ) {
-				$collate = 'utf8mb4_unicode_ci';
-			} else {
-				$collate = str_replace( 'utf8_', 'utf8mb4_', $collate );
-			}
-		}
-
-		// _unicode_520_ is a better collation, we should use that when it's available.
-		if ( $this->has_cap( 'utf8mb4_520' ) && 'utf8mb4_unicode_ci' === $collate ) {
-			$collate = 'utf8mb4_unicode_520_ci';
-		}
-
-		return compact( 'charset', 'collate' );
+		return $this->resolve_charset( $charset, $collate );
 	}
 
 	/**
@@ -428,29 +442,6 @@ class WP_SQLite_DB extends wpdb {
 			);
 		}
 
-		if ( ! isset( $this->charset ) ) {
-			$this->init_charset();
-		}
-
-		// Migrate the database file from a legacy path, if it exists.
-		if ( ! defined( 'DB_FILE' ) && ! file_exists( FQDB ) ) {
-			$old_db_path = FQDBDIR . '.ht.sqlite.php';
-
-			if ( file_exists( $old_db_path ) ) {
-				if ( ! rename( $old_db_path, FQDB ) ) {
-					wp_die( 'Failed to rename database file.', 'Error!' );
-				}
-
-				foreach ( array( '-wal', '-shm', '-journal' ) as $suffix ) {
-					if ( file_exists( $old_db_path . $suffix ) ) {
-						if ( ! rename( $old_db_path . $suffix, FQDB . $suffix ) ) {
-							wp_die( 'Failed to rename database file.', 'Error!' );
-						}
-					}
-				}
-			}
-		}
-
 		if ( null === $this->dbname || '' === $this->dbname ) {
 			$this->bail(
 				'The database name was not set. The SQLite driver requires a database name to be set to emulate MySQL information schema tables.',
@@ -459,8 +450,6 @@ class WP_SQLite_DB extends wpdb {
 			return false;
 		}
 
-		$this->ensure_database_directory( FQDB );
-
 		try {
 			$options = array(
 				'sqlite_journal_mode' => defined( 'SQLITE_JOURNAL_MODE' ) ? SQLITE_JOURNAL_MODE : null,
@@ -468,7 +457,7 @@ class WP_SQLite_DB extends wpdb {
 			$dbh     = new WP_MySQL_On_SQLite(
 				sprintf(
 					'mysql-on-sqlite:path=%s;dbname=%s',
-					str_replace( ';', ';;', FQDB ),
+					str_replace( ';', ';;', DB_PATH ),
 					str_replace( ';', ';;', $this->dbname )
 				),
 				null,
@@ -563,6 +552,7 @@ class WP_SQLite_DB extends wpdb {
 		}
 
 		if ( ! $this->ready ) {
+			$this->check_current_query = true;
 			return false;
 		}
 
@@ -578,21 +568,30 @@ class WP_SQLite_DB extends wpdb {
 		// Log how the function was called.
 		$this->func_call = "\$db->query(\"$query\")";
 
+		/*
+		 * Mirror wpdb's query text validation.
+		 * TODO: Add full charset enforcement to MySQL on SQLite, where column
+		 * types and SQL mode are known, so all callers are protected.
+		 */
+		if ( $this->check_current_query && ! $this->check_ascii( $query ) ) {
+			$stripped_query = $this->strip_invalid_text_from_query( $query );
+			// Charset discovery can run queries, so clear their results.
+			$this->flush();
+			if ( $stripped_query !== $query ) {
+				$this->insert_id  = 0;
+				$this->last_query = $query;
+				wp_load_translations_early();
+				$this->last_error = __( 'WordPress database error: Could not perform query because it contains invalid data.' );
+				return false;
+			}
+		}
+		$this->check_current_query = true;
+
 		// Keep track of the last query for debug.
 		$this->last_query = $query;
 
-		// Save the query count before running another query.
+		// Save the query count after any charset discovery queries.
 		$last_query_count = count( $this->queries ?? array() );
-
-		/*
-		 * @TODO: wpdb uses "$this->check_current_query" and table metadata to
-		 * reject queries containing invalid text. Implement equivalent handling
-		 * for SQLite without relying on the MySQL-specific conversion pipeline.
-		 *
-		 * PCRE's "u" modifier can validate UTF-8 without constructing a converted
-		 * query copy: 1 === preg_match( '//u', $query ). The implementation must
-		 * preserve wpdb's exemptions for prevalidated and binary data.
-		 */
 		$this->_do_query( $query );
 
 		if ( $this->last_error ) {
@@ -776,52 +775,43 @@ class WP_SQLite_DB extends wpdb {
 	}
 
 	/**
-	 * Make sure the SQLite database directory exists and is writable.
-	 * Create .htaccess and index.php files to prevent direct access.
+	 * Resolves the charset and collation as wpdb::determine_charset() does.
 	 *
-	 * @param string $database_path The path to the SQLite database file.
+	 * Unlike in wpdb, this doesn't need a database connection. The emulated
+	 * MySQL server (5.7 or newer) always supports utf8mb4_unicode_520_ci.
+	 *
+	 * @see wpdb::determine_charset()
+	 *
+	 * @param string $charset The character set to check.
+	 * @param string $collate The collation to check.
+	 * @return array {
+	 *     The most appropriate character set and collation to use.
+	 *
+	 *     @type string $charset Character set.
+	 *     @type string $collate Collation.
+	 * }
 	 */
-	private function ensure_database_directory( string $database_path ) {
-		$dir = dirname( $database_path );
+	private function resolve_charset( $charset, $collate ) {
+		if ( 'utf8' === $charset ) {
+			$charset = 'utf8mb4';
+		}
 
-		// Set the umask to 0000 to apply permissions exactly as specified.
-		// A non-zero umask affects new file and directory permissions.
-		$umask = umask( 0 );
-
-		// Ensure database directory.
-		if ( ! is_dir( $dir ) ) {
-			if ( ! @mkdir( $dir, 0700, true ) ) {
-				wp_die( sprintf( 'Failed to create database directory: %s', $dir ), 'Error!' );
+		if ( 'utf8mb4' === $charset ) {
+			// _general_ is outdated, so we can upgrade it to _unicode_, instead.
+			if ( ! $collate || 'utf8_general_ci' === $collate ) {
+				$collate = 'utf8mb4_unicode_ci';
+			} else {
+				$collate = str_replace( 'utf8_', 'utf8mb4_', $collate );
 			}
 		}
-		if ( ! is_writable( $dir ) ) {
-			wp_die( sprintf( 'Database directory is not writable: %s', $dir ), 'Error!' );
+
+		// _unicode_520_ is a better collation, we should use that when it's available.
+		if ( 'utf8mb4_unicode_ci' === $collate ) {
+			$collate = 'utf8mb4_unicode_520_ci';
 		}
 
-		// Ensure .htaccess file to prevent direct access.
-		$path = $dir . DIRECTORY_SEPARATOR . '.htaccess';
-		if ( ! is_file( $path ) ) {
-			$result = file_put_contents( $path, 'DENY FROM ALL', LOCK_EX );
-			if ( false === $result ) {
-				wp_die( sprintf( 'Failed to create file: %s', $path ), 'Error!' );
-			}
-			chmod( $path, 0600 );
-		}
-
-		// Ensure index.php file to prevent direct access.
-		$path = $dir . DIRECTORY_SEPARATOR . 'index.php';
-		if ( ! is_file( $path ) ) {
-			$result = file_put_contents( $path, '<?php // Silence is gold. ?>', LOCK_EX );
-			if ( false === $result ) {
-				wp_die( sprintf( 'Failed to create file: %s', $path ), 'Error!' );
-			}
-			chmod( $path, 0600 );
-		}
-
-		// Restore the original umask value.
-		umask( $umask );
+		return compact( 'charset', 'collate' );
 	}
-
 
 	/**
 	 * Format MySQL-on-SQLite driver error message.

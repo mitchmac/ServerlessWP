@@ -13,7 +13,7 @@ class PhoneNumber
         if (static::$is_initialized == \true) {
             return;
         }
-        $pool->internalAddGeneratedFile("\n\xd9\x02\n\x1egoogle/type/phone_number.proto\x12\vgoogle.type\"\xab\x01\n\vPhoneNumber\x12\x15\n\ve164_number\x18\x01 \x01(\tH\x00\x128\n\nshort_code\x18\x02 \x01(\v2\".google.type.PhoneNumber.ShortCodeH\x00\x12\x11\n\textension\x18\x03 \x01(\t\x1a0\n\tShortCode\x12\x13\n\vregion_code\x18\x01 \x01(\t\x12\x0e\n\x06number\x18\x02 \x01(\tB\x06\n\x04kindBt\n\x0fcom.google.typeB\x10PhoneNumberProtoP\x01ZDgoogle.golang.org/genproto/googleapis/type/phone_number;phone_number\xf8\x01\x01\xa2\x02\x03GTPb\x06proto3", \true);
+        $pool->internalAddGeneratedFile("\n\xd6\x02\n\x1egoogle/type/phone_number.proto\x12\vgoogle.type\"\xab\x01\n\vPhoneNumber\x12\x15\n\ve164_number\x18\x01 \x01(\tH\x00\x128\n\nshort_code\x18\x02 \x01(\v2\".google.type.PhoneNumber.ShortCodeH\x00\x12\x11\n\textension\x18\x03 \x01(\t\x1a0\n\tShortCode\x12\x13\n\vregion_code\x18\x01 \x01(\t\x12\x0e\n\x06number\x18\x02 \x01(\tB\x06\n\x04kindBq\n\x0fcom.google.typeB\x10PhoneNumberProtoP\x01ZDgoogle.golang.org/genproto/googleapis/type/phone_number;phone_number\xa2\x02\x03GTPb\x06proto3", \true);
         static::$is_initialized = \true;
     }
 }

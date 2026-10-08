@@ -18,24 +18,24 @@ class Upgrade_EDD_Replace_URLs extends Upgrade {
 	/**
 	 * @var int
 	 */
-	protected $upgrade_id = 5;
+	protected int $upgrade_id = 5;
 
 	/**
 	 * @var string
 	 */
-	protected $upgrade_name = 'replace_edd_urls';
+	protected string $upgrade_name = 'replace_edd_urls';
 
 	/**
 	 * @var string 'metadata', 'attachment'
 	 */
-	protected $upgrade_type = 'post meta';
+	protected string $upgrade_type = 'post meta';
 
 	/**
 	 * Get running update text.
 	 *
 	 * @return string
 	 */
-	protected function get_running_update_text() {
+	protected function get_running_update_text(): string {
 		return __( 'and ensuring that only the local URL exists in EDD post meta.', 'amazon-s3-and-cloudfront' );
 	}
 
@@ -48,17 +48,17 @@ class Upgrade_EDD_Replace_URLs extends Upgrade {
 	 *
 	 * @return array
 	 */
-	protected function get_items_to_process( $prefix, $limit, $offset = false ) {
+	protected function get_items_to_process( string $prefix, int $limit, $offset = false ): array {
 		global $wpdb;
 
 		$sql = "SELECT * FROM `{$prefix}postmeta` WHERE meta_key = 'edd_download_files'";
 
 		if ( false !== $offset ) {
-			$sql .= " AND meta_id > {$offset->meta_id}";
+			$sql .= " AND meta_id > $offset->meta_id";
 		}
 
 		if ( $limit && $limit > 0 ) {
-			$sql .= sprintf( ' LIMIT %d', (int) $limit );
+			$sql .= sprintf( ' LIMIT %d', $limit );
 		}
 
 		// phpcs:ignore WordPress.DB,PluginCheck.Security.DirectDB.UnescapedDBParameter -- safe query, must not be cached
@@ -72,7 +72,7 @@ class Upgrade_EDD_Replace_URLs extends Upgrade {
 	 *
 	 * @return bool
 	 */
-	protected function upgrade_item( $item ) {
+	protected function upgrade_item( mixed $item ): bool {
 		$attachments = AS3CF_Utils::maybe_unserialize( $item->meta_value );
 
 		if ( ! is_array( $attachments ) || empty( $attachments ) ) {

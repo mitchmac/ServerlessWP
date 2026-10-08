@@ -15,7 +15,7 @@ class Utils
     public static function isTruthy($value)
     {
         if (!$value) {
-            return $value === 0 || $value === '0';
+            return $value === 0 || $value === 0.0 || $value === '0';
         } elseif ($value instanceof \stdClass) {
             return (bool) \get_object_vars($value);
         } else {
@@ -46,10 +46,13 @@ class Utils
             return 'expression';
         } elseif ($arg instanceof \ArrayAccess && $arg instanceof \Countable) {
             return \count($arg) == 0 || $arg->offsetExists(0) ? 'array' : 'object';
-        } elseif (\method_exists($arg, '__toString')) {
-            return 'string';
+        } elseif (\is_object($arg)) {
+            if (\method_exists($arg, '__toString')) {
+                return 'string';
+            }
+            throw new \InvalidArgumentException('Unable to determine JMESPath type from ' . \get_class($arg));
         }
-        throw new \InvalidArgumentException('Unable to determine JMESPath type from ' . \get_class($arg));
+        throw new \InvalidArgumentException('Unable to determine JMESPath type from ' . \gettype($arg));
     }
     /**
      * Determine if the provided value is a JMESPath compatible object.
@@ -82,7 +85,10 @@ class Utils
         return $value instanceof \Countable && $value instanceof \ArrayAccess ? \count($value) == 0 || $value->offsetExists(0) : \false;
     }
     /**
-     * JSON aware value comparison function.
+     * JSON-semantic equality: one number type, structural comparison for arrays
+     * and objects, and no object key-order sensitivity.
+     * Empty arrays and empty objects compare equal because PHP cannot represent
+     * that distinction after associative JSON decoding.
      *
      * @param mixed $a First value to compare
      * @param mixed $b Second value to compare
@@ -91,15 +97,28 @@ class Utils
      */
     public static function isEqual($a, $b)
     {
-        if ($a === $b) {
-            return \true;
-        } elseif ($a instanceof \stdClass) {
-            return self::isEqual((array) $a, $b);
-        } elseif ($b instanceof \stdClass) {
-            return self::isEqual($a, (array) $b);
-        } else {
-            return \false;
+        $typeA = self::type($a);
+        $typeB = self::type($b);
+        if ($typeA !== $typeB) {
+            return ($typeA === 'array' || $typeA === 'object') && ($typeB === 'array' || $typeB === 'object') && (array) $a === [] && (array) $b === [];
         }
+        if ($typeA === 'number') {
+            return $a == $b;
+        }
+        if ($typeA === 'array' || $typeA === 'object') {
+            $a = (array) $a;
+            $b = (array) $b;
+            if (\count($a) !== \count($b)) {
+                return \false;
+            }
+            foreach ($a as $key => $value) {
+                if (!\array_key_exists($key, $b) || !self::isEqual($value, $b[$key])) {
+                    return \false;
+                }
+            }
+            return \true;
+        }
+        return $a === $b;
     }
     /**
      * Safely add together two values.
@@ -134,7 +153,7 @@ class Utils
      * @param callable $sortFn Callable used to sort values
      *
      * @return array Returns the sorted array
-     * @link http://en.wikipedia.org/wiki/Schwartzian_transform
+     * @link https://en.wikipedia.org/wiki/Schwartzian_transform
      */
     public static function stableSort(array $data, callable $sortFn)
     {
@@ -164,7 +183,7 @@ class Utils
      */
     public static function slice($value, $start = null, $stop = null, $step = 1)
     {
-        if (!\is_array($value) && !\is_string($value)) {
+        if (!\is_string($value) && !self::isArray($value)) {
             throw new \InvalidArgumentException('Expects string or array');
         }
         return self::sliceIndices($value, $start, $stop, $step);
@@ -203,7 +222,10 @@ class Utils
     private static function sliceIndices($subject, $start, $stop, $step)
     {
         $type = \gettype($subject);
-        $len = $type == 'string' ? \mb_strlen($subject, 'UTF-8') : \count($subject);
+        if ($type == 'string') {
+            $subject = \mb_str_split($subject, 1, 'UTF-8');
+        }
+        $len = \count($subject);
         list($start, $stop, $step) = self::adjustSlice($len, $start, $stop, $step);
         $result = [];
         if ($step > 0) {
