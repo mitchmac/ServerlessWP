@@ -2,6 +2,7 @@
 
 namespace DeliciousBrains\WP_Offload_Media\Aws3\Aws\Api\ErrorParser;
 
+use DeliciousBrains\WP_Offload_Media\Aws3\Aws\Api\Parser\AbstractParser;
 use DeliciousBrains\WP_Offload_Media\Aws3\Aws\Api\Parser\PayloadParserTrait;
 use DeliciousBrains\WP_Offload_Media\Aws3\Aws\Api\Parser\XmlParser;
 use DeliciousBrains\WP_Offload_Media\Aws3\Aws\Api\Service;
@@ -22,11 +23,12 @@ class XmlErrorParser extends AbstractErrorParser
     }
     public function __invoke(ResponseInterface $response, ?CommandInterface $command = null)
     {
+        $response = AbstractParser::getResponseWithCachingStream($response);
         $code = (string) $response->getStatusCode();
         $data = ['type' => $code[0] == '4' ? 'client' : 'server', 'request_id' => null, 'code' => null, 'message' => null, 'parsed' => null];
-        $body = $response->getBody();
-        if ($body->getSize() > 0) {
-            $this->parseBody($this->parseXml($body, $response), $data);
+        $rawBody = AbstractParser::getBodyContents($response);
+        if (!empty($rawBody)) {
+            $this->parseBody($this->parseXml($rawBody, $response), $data);
         } else {
             $this->parseHeaders($response, $data);
         }
@@ -72,11 +74,16 @@ class XmlErrorParser extends AbstractErrorParser
     }
     protected function payload(ResponseInterface $response, StructureShape $member)
     {
-        $xmlBody = $this->parseXml($response->getBody(), $response);
+        $rawBody = AbstractParser::getBodyContents($response);
+        if (empty($rawBody)) {
+            return $rawBody;
+        }
+        $xmlBody = $this->parseXml($rawBody, $response);
         $prefix = $this->registerNamespacePrefix($xmlBody);
         $errorBody = $xmlBody->xpath("//{$prefix}Error");
         if (\is_array($errorBody) && !empty($errorBody[0])) {
             return $this->parser->parse($member, $errorBody[0]);
         }
+        return $rawBody;
     }
 }

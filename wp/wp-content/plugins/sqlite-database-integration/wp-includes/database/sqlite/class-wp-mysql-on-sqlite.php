@@ -83,12 +83,6 @@ class WP_MySQL_On_SQLite extends PDO {
 	const GLOBAL_VARIABLES_TABLE_NAME = self::RESERVED_PREFIX . 'global_variables';
 
 	/**
-	 * Name of the connection-private TEMP table used to build empty result sets
-	 * without acquiring a write lock on the database. See create_result_statement_from_data().
-	 */
-	private const EMPTY_RESULT_TABLE_NAME = self::RESERVED_PREFIX . 'empty_result';
-
-	/**
 	 * The name of the SQLite driver version variable.
 	 *
 	 * This internal variable is used to store the latest version of the SQLite
@@ -679,14 +673,6 @@ class WP_MySQL_On_SQLite extends PDO {
 	private $is_readonly;
 
 	/**
-	 * Whether the TEMP table backing empty result sets has been created on this
-	 * connection. See create_result_statement_from_data().
-	 *
-	 * @var bool
-	 */
-	private $empty_result_table_ready = false;
-
-	/**
 	 * Type of wrapper transaction that is active for the MySQL query emulation.
 	 *
 	 * Possible values:
@@ -710,6 +696,17 @@ class WP_MySQL_On_SQLite extends PDO {
 	 * @var bool
 	 */
 	private $in_transaction = false;
+
+	/**
+	 * Names of active user savepoints, outermost first.
+	 *
+	 * MySQL replaces a savepoint with the same name, while SQLite only shadows it.
+	 * Tracking normalized names prevents shadowed SQLite savepoints from becoming
+	 * visible again and supports case-insensitive lookup.
+	 *
+	 * @var string[]
+	 */
+	private $savepoint_names = array();
 
 	/**
 	 * Whether a MySQL table lock is active.
@@ -1134,8 +1131,8 @@ class WP_MySQL_On_SQLite extends PDO {
 			 * [GRAMMAR]
 			 * simpleStatement: selectStatement | showStatement | utilityStatement | ...
 			 */
-			if ( null !== $child_node && $child_node->has_child_node() ) {
-				$statement_node = $child_node->get_first_child_node();
+			$statement_node = null !== $child_node ? $child_node->get_first_child_node() : null;
+			if ( null !== $statement_node ) {
 				if (
 					'selectStatement' === $statement_node->rule_name
 					|| 'showStatement' === $statement_node->rule_name
@@ -1169,11 +1166,25 @@ class WP_MySQL_On_SQLite extends PDO {
 				$this->last_result_statement = $this->create_result_statement_from_data( array(), array() );
 			}
 
+			/*
+			 * PDO SQLite reports affected rows only for INSERT, UPDATE, and DELETE.
+			 * For other statements, it can report the row count of the last write,
+			 * including the driver's internal writes. Use 0 for them instead.
+			 *
+			 * [GRAMMAR]
+			 * simpleStatement: insertStatement | replaceStatement | updateStatement | deleteStatement | ...
+			 */
+			$reports_affected_rows = null !== $statement_node && in_array(
+				$statement_node->rule_name,
+				array( 'insertStatement', 'replaceStatement', 'updateStatement', 'deleteStatement' ),
+				true
+			);
+
 			$stmt = new WP_MySQL_On_SQLite_Statement(
 				$this->last_result_statement,
 				$query,
 				$this->create_column_meta_resolver( $this->last_column_meta ),
-				$this->last_affected_rows
+				$reports_affected_rows ? $this->last_affected_rows : 0
 			);
 			if ( null !== $fetch_mode ) {
 				$stmt->setFetchMode( $fetch_mode, ...$fetch_mode_args );
@@ -1182,11 +1193,16 @@ class WP_MySQL_On_SQLite extends PDO {
 			$this->error_info = array( '00000', null, null );
 			return $stmt;
 		} catch ( Throwable $e ) {
-			try {
-				$this->rollback_user_transaction();
-				$this->table_lock_active = false;
-			} catch ( Throwable $rollback_exception ) {
-				// Ignore rollback errors.
+			// MySQL error 1305 reports a missing savepoint without ending the transaction.
+			$preserves_transaction = $e instanceof WP_MySQL_On_SQLite_Exception
+				&& 1305 === ( $e->errorInfo[1] ?? null );
+			if ( ! $preserves_transaction ) {
+				try {
+					$this->rollback_user_transaction();
+					$this->table_lock_active = false;
+				} catch ( Throwable $rollback_exception ) {
+					// Ignore rollback errors.
+				}
 			}
 			if ( $e instanceof WP_SQLite_Information_Schema_Exception ) {
 				$e = $this->convert_information_schema_exception( $e );
@@ -2092,7 +2108,8 @@ class WP_MySQL_On_SQLite extends PDO {
 		 * @see self::begin_wrapper_transaction()
 		 */
 		$this->connection->query( 'BEGIN IMMEDIATE' );
-		$this->in_transaction = true;
+		$this->in_transaction  = true;
+		$this->savepoint_names = array();
 	}
 
 	/**
@@ -2104,7 +2121,8 @@ class WP_MySQL_On_SQLite extends PDO {
 			return;
 		}
 		$this->connection->query( 'COMMIT' );
-		$this->in_transaction = false;
+		$this->in_transaction  = false;
+		$this->savepoint_names = array();
 	}
 
 	/**
@@ -2116,7 +2134,8 @@ class WP_MySQL_On_SQLite extends PDO {
 			return;
 		}
 		$this->connection->query( 'ROLLBACK' );
-		$this->in_transaction = false;
+		$this->in_transaction  = false;
+		$this->savepoint_names = array();
 	}
 
 	/**
@@ -2146,26 +2165,58 @@ class WP_MySQL_On_SQLite extends PDO {
 				break;
 			case 'savepointStatement':
 				$savepoint_name = $this->translate( $subnode->get_first_child_node( 'identifier' ) );
+				$savepoint_key  = null === $savepoint_name
+					? null
+					: strtolower( $this->unquote_sqlite_identifier( $savepoint_name ) );
 
 				// ROLLBACK/ROLLBACK TO SAVEPOINT <identifier>.
 				if ( WP_MySQL_Lexer::ROLLBACK_SYMBOL === $token->id ) {
 					if ( null === $savepoint_name ) {
 						$this->rollback_user_transaction();
 					} else {
+						// ROLLBACK TO keeps the named savepoint and deletes those created after it.
+						$index = array_search( $savepoint_key, $this->savepoint_names, true );
+						if ( false === $index ) {
+							throw $this->new_savepoint_does_not_exist_exception( $savepoint_name );
+						}
 						$this->execute_sqlite_query( sprintf( 'ROLLBACK TO SAVEPOINT %s', $savepoint_name ) );
+						array_splice( $this->savepoint_names, $index + 1 );
 					}
 					return;
 				}
 
 				// SAVEPOINT.
 				if ( WP_MySQL_Lexer::SAVEPOINT_SYMBOL === $token->id ) {
+					// In MySQL with autocommit enabled, a standalone savepoint is discarded
+					// immediately without starting a transaction.
+					if ( ! $this->inTransaction() ) {
+						return;
+					}
 					$this->execute_sqlite_query( sprintf( 'SAVEPOINT %s', $savepoint_name ) );
+
+					/*
+					 * MySQL deletes an existing savepoint when its name is reused, while
+					 * SQLite keeps it on the stack, shadowed by the new one. Drop the old
+					 * name so that it can no longer be referenced. The shadowed SQLite
+					 * savepoint is harmless; it is discarded when the transaction ends.
+					 */
+					$index = array_search( $savepoint_key, $this->savepoint_names, true );
+					if ( false !== $index ) {
+						array_splice( $this->savepoint_names, $index, 1 );
+					}
+					$this->savepoint_names[] = $savepoint_key;
 					return;
 				}
 
 				// RELEASE SAVEPOINT.
 				if ( WP_MySQL_Lexer::RELEASE_SYMBOL === $token->id ) {
+					// RELEASE deletes the named savepoint and those created after it.
+					$index = array_search( $savepoint_key, $this->savepoint_names, true );
+					if ( false === $index ) {
+						throw $this->new_savepoint_does_not_exist_exception( $savepoint_name );
+					}
 					$this->execute_sqlite_query( sprintf( 'RELEASE SAVEPOINT %s', $savepoint_name ) );
+					array_splice( $this->savepoint_names, $index );
 					return;
 				}
 
@@ -2874,14 +2925,22 @@ class WP_MySQL_On_SQLite extends PDO {
 
 		// Handle IF NOT EXISTS.
 		if ( $subnode->has_child_node( 'ifNotExists' ) ) {
-			$tables_table = $this->information_schema_builder->get_table_name( $table_is_temporary, 'tables' );
-			$table_exists = $this->execute_sqlite_query(
-				sprintf(
-					'SELECT 1 FROM %s WHERE table_schema = ? AND table_name = ?',
-					$this->quote_sqlite_identifier( $tables_table )
-				),
-				array( $this->get_saved_db_name(), $table_name )
-			)->fetchColumn();
+			if ( $table_is_temporary ) {
+				/*
+				 * The temporary information schema tables are created with the
+				 * first temporary table of a session, so they may not exist yet.
+				 */
+				$table_exists = $this->information_schema_builder->temporary_table_exists( $table_name );
+			} else {
+				$tables_table = $this->information_schema_builder->get_table_name( false, 'tables' );
+				$table_exists = $this->execute_sqlite_query(
+					sprintf(
+						'SELECT 1 FROM %s WHERE table_schema = ? AND table_name = ?',
+						$this->quote_sqlite_identifier( $tables_table )
+					),
+					array( $this->get_saved_db_name(), $table_name )
+				)->fetchColumn();
+			}
 
 			if ( $table_exists ) {
 				$this->last_result_statement = $this->create_result_statement_from_data( array(), array() );
@@ -4892,6 +4951,8 @@ class WP_MySQL_On_SQLite extends PDO {
 		$is_binary = isset( $tokens[1] ) && WP_MySQL_Lexer::BINARY_SYMBOL === $tokens[1]->id;
 
 		if ( true === $is_binary ) {
+			// TODO: GLOB can match different invalid UTF-8 bytes as equal.
+			// Use byte-wise matching for full LIKE BINARY compatibility.
 			$children = $node->get_children();
 			return sprintf(
 				'GLOB _helper_like_to_glob_pattern(%s)',
@@ -4968,6 +5029,15 @@ class WP_MySQL_On_SQLite extends PDO {
 		}
 
 		switch ( $child->id ) {
+			case WP_MySQL_Lexer::IF_SYMBOL:
+				// CASE also supports SQLite versions before IIF() was added in 3.32.0.
+				$nodes = $node->get_child_nodes();
+				return sprintf(
+					'CASE WHEN %s THEN %s ELSE %s END',
+					$this->translate( $nodes[0] ),
+					$this->translate( $nodes[1] ),
+					$this->translate( $nodes[2] )
+				);
 			case WP_MySQL_Lexer::DATABASE_SYMBOL:
 				return $this->quote_sqlite_value( $this->db_name );
 			case WP_MySQL_Lexer::CURRENT_TIMESTAMP_SYMBOL:
@@ -5099,12 +5169,12 @@ class WP_MySQL_On_SQLite extends PDO {
 				} elseif ( is_string( $found_rows ) ) {
 					return (int) $this->execute_sqlite_query(
 						sprintf( 'SELECT COUNT(*) FROM (%s)', $found_rows )
-					)->fetchColumn()[0];
+					)->fetchColumn();
 				} elseif ( is_array( $found_rows ) && isset( $found_rows[0] ) ) {
 					return (int) $this->execute_sqlite_query(
 						sprintf( 'SELECT COUNT(*) FROM (%s)', $found_rows[0] ),
 						$found_rows[1] ?? array()
-					)->fetchColumn()[0];
+					)->fetchColumn();
 				} else {
 					return 0;
 				}
@@ -5404,8 +5474,8 @@ class WP_MySQL_On_SQLite extends PDO {
 				}
 			}
 
-			$table_is_temporary = $this->information_schema_builder->temporary_table_exists( $table_name );
-			$sqlite_table_name  = $this->information_schema_builder->get_table_name( $table_is_temporary, $table_name );
+			// Temporary tables are not listed in the information schema.
+			$sqlite_table_name = $this->information_schema_builder->get_table_name( false, $table_name );
 
 			// We need to fetch the SQLite column information, because the information
 			// schema tables don't contain records for the information schema itself.
@@ -5576,7 +5646,7 @@ class WP_MySQL_On_SQLite extends PDO {
 		}
 
 		// 7. If foreign key constraints were enabled, verify and enable them.
-		if ( '1' === $pragma_foreign_keys ) {
+		if ( 1 === (int) $pragma_foreign_keys ) {
 			$this->execute_sqlite_query( 'PRAGMA foreign_key_check' );
 			$this->execute_sqlite_query( 'PRAGMA foreign_keys = ON' );
 		}
@@ -6250,6 +6320,20 @@ class WP_MySQL_On_SQLite extends PDO {
 				| self::SQL_MODES['ANSI_QUOTES']
 				| self::SQL_MODES['IGNORE_SPACE']
 				| self::SQL_MODES['ONLY_FULL_GROUP_BY'];
+		}
+
+		if ( ( $sql_modes & self::SQL_MODES['TRADITIONAL'] ) !== 0 ) {
+			$sql_modes |= self::SQL_MODES['STRICT_TRANS_TABLES']
+				| self::SQL_MODES['STRICT_ALL_TABLES']
+				| self::SQL_MODES['NO_ZERO_IN_DATE']
+				| self::SQL_MODES['NO_ZERO_DATE']
+				| self::SQL_MODES['ERROR_FOR_DIVISION_BY_ZERO']
+				| self::SQL_MODES['NO_ENGINE_SUBSTITUTION'];
+
+			// TRADITIONAL included NO_AUTO_CREATE_USER until its removal in MySQL 8.0.11.
+			if ( ! $this->is_sql_mode_removed( 'NO_AUTO_CREATE_USER' ) ) {
+				$sql_modes |= self::SQL_MODES['NO_AUTO_CREATE_USER'];
+			}
 		}
 
 		$this->active_sql_modes = $sql_modes;
@@ -7054,7 +7138,7 @@ class WP_MySQL_On_SQLite extends PDO {
 				}
 				$rows[] = sprintf( '  PRIMARY KEY (%s)', implode( ', ', $column_list ) );
 			} else {
-				$is_unique = '0' === $info['NON_UNIQUE'];
+				$is_unique = 0 === (int) $info['NON_UNIQUE'];
 
 				// Prefix the original index name with the table name.
 				// This is to avoid conflicting index names in SQLite.
@@ -7320,24 +7404,27 @@ class WP_MySQL_On_SQLite extends PDO {
 		}
 
 		// 7. Generate CREATE TABLE statement constraints, collect indexes.
+		$format_index_column = function ( $column ) {
+			$definition = $this->quote_mysql_identifier( $column['COLUMN_NAME'] );
+			if ( null !== $column['SUB_PART'] ) {
+				$definition .= sprintf( '(%d)', $column['SUB_PART'] );
+			}
+			if ( 'D' === $column['COLLATION'] ) {
+				$definition .= ' DESC';
+			}
+			return $definition;
+		};
+
 		foreach ( $grouped_constraints as $constraint ) {
 			ksort( $constraint );
 			$info = $constraint[1];
 
 			if ( 'PRIMARY' === $info['INDEX_NAME'] ) {
 				$sql  = '  PRIMARY KEY (';
-				$sql .= implode(
-					', ',
-					array_map(
-						function ( $column ) {
-							return $this->quote_mysql_identifier( $column['COLUMN_NAME'] );
-						},
-						$constraint
-					)
-				);
+				$sql .= implode( ', ', array_map( $format_index_column, $constraint ) );
 				$sql .= ')';
 			} else {
-				$is_unique = '0' === $info['NON_UNIQUE'];
+				$is_unique = 0 === (int) $info['NON_UNIQUE'];
 
 				$sql  = sprintf(
 					'  %s%s%sKEY ',
@@ -7347,22 +7434,7 @@ class WP_MySQL_On_SQLite extends PDO {
 				);
 				$sql .= $this->quote_mysql_identifier( $info['INDEX_NAME'] );
 				$sql .= ' (';
-				$sql .= implode(
-					', ',
-					array_map(
-						function ( $column ) {
-							$definition = $this->quote_mysql_identifier( $column['COLUMN_NAME'] );
-							if ( null !== $column['SUB_PART'] ) {
-								$definition .= sprintf( '(%d)', $column['SUB_PART'] );
-							}
-							if ( 'D' === $column['COLLATION'] ) {
-								$definition .= ' DESC';
-							}
-							return $definition;
-						},
-						$constraint
-					)
-				);
+				$sql .= implode( ', ', array_map( $format_index_column, $constraint ) );
 				$sql .= ')';
 			}
 
@@ -7666,38 +7738,22 @@ class WP_MySQL_On_SQLite extends PDO {
 	 * @return PDOStatement   The corresponding PDO SQLite statement.
 	 */
 	private function create_result_statement_from_data( array $columns, array $rows ): PDOStatement {
+		/*
+		 * The statement writes nothing, but PDO SQLite can report the row count
+		 * of the last write for it. Default the affected rows to 0.
+		 */
+		$this->last_affected_rows = $this->last_affected_rows ?? 0;
+
 		$pdo = $this->connection->get_pdo();
 
 		/*
-		 * With 0 columns, we need to create a PDO statement that has no columns.
-		 * This can be done using a noop INSERT statement that modifies no data.
+		 * With 0 columns, we need a PDO statement with no columns and no rows.
+		 *
+		 * An unknown pragma has no columns, needs no table, takes no locks,
+		 * and SQLite ignores it.
 		 */
 		if ( 0 === count( $columns ) ) {
-			/*
-			 * Build a 0-column statement to represent an empty result set.
-			 *
-			 * A no-op "INSERT ... WHERE FALSE" into a regular table still acquires
-			 * SQLite's write lock, even though it writes nothing. That makes
-			 * no-write statements such as "SET sql_mode = ..." fatal with
-			 * "database is locked" whenever another connection holds the write
-			 * lock. Writing to a connection-private TEMP table uses the temp
-			 * database, which has no shared lock, so it never contends.
-			 */
-			if ( ! $this->empty_result_table_ready ) {
-				$pdo->exec(
-					sprintf(
-						'CREATE TEMP TABLE IF NOT EXISTS %s ( placeholder_for_empty_insert )',
-						$this->quote_sqlite_identifier( self::EMPTY_RESULT_TABLE_NAME )
-					)
-				);
-				$this->empty_result_table_ready = true;
-			}
-			return $pdo->query(
-				sprintf(
-					'INSERT INTO %s ( placeholder_for_empty_insert ) SELECT NULL WHERE FALSE',
-					$this->quote_sqlite_identifier( self::EMPTY_RESULT_TABLE_NAME )
-				)
-			);
+			return $pdo->query( 'PRAGMA ' . self::RESERVED_PREFIX . 'empty_result' );
 		}
 
 		/*
@@ -7813,6 +7869,25 @@ class WP_MySQL_On_SQLite extends PDO {
 			'42S02',
 			$previous,
 			array( '42S02', 1146, $driver_message )
+		);
+	}
+
+	/**
+	 * Create a MySQL-compatible savepoint-not-found exception.
+	 *
+	 * @param  string $savepoint_name The missing savepoint name, as an SQLite identifier.
+	 * @return WP_MySQL_On_SQLite_Exception
+	 */
+	private function new_savepoint_does_not_exist_exception( string $savepoint_name ): WP_MySQL_On_SQLite_Exception {
+		$driver_message = sprintf(
+			'SAVEPOINT %s does not exist',
+			$this->unquote_sqlite_identifier( $savepoint_name )
+		);
+		return $this->new_driver_exception(
+			'SQLSTATE[42000]: Syntax error or access violation: 1305 ' . $driver_message,
+			'42000',
+			null,
+			array( '42000', 1305, $driver_message )
 		);
 	}
 

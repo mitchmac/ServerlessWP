@@ -5,24 +5,49 @@ namespace DeliciousBrains\WP_Offload_Media\Gcp\GuzzleHttp\Promise;
 
 final class Each
 {
+    private function __construct()
+    {
+    }
     /**
      * Given an iterator that yields promises or values, returns a promise that
      * is fulfilled with a null value when the iterator has been consumed or
      * the aggregate promise has been fulfilled or rejected.
      *
-     * $onFulfilled is a function that accepts the fulfilled value, iterator
-     * index, and the aggregate promise. The callback can invoke any necessary
+     * $onFulfilled is a function that accepts the fulfilled value, iterable
+     * key, and the aggregate promise. The callback can invoke any necessary
      * side effects and choose to resolve or reject the aggregate if needed.
      *
-     * $onRejected is a function that accepts the rejection reason, iterator
-     * index, and the aggregate promise. The callback can invoke any necessary
+     * $onRejected is a function that accepts the rejection reason, iterable
+     * key, and the aggregate promise. The callback can invoke any necessary
      * side effects and choose to resolve or reject the aggregate if needed.
      *
-     * @param mixed $iterable Iterator or array to iterate over.
+     * The config array accepts a concurrency option matching {@see ofLimit}.
+     * Other config keys are ignored by this wrapper.
+     *
+     * @template TKey of array-key
+     * @template TValue
+     * @template TReason
+     *
+     * @param iterable<TKey, TValue|PromiseInterface<TValue, TReason>>              $iterable    Iterator or array to iterate over.
+     * @param (callable(TValue, TKey, PromiseInterface<mixed, mixed>): mixed)|null  $onFulfilled
+     * @param (callable(TReason, TKey, PromiseInterface<mixed, mixed>): mixed)|null $onRejected
+     * @param array{concurrency?: int|(callable(int): int)}                         $config      Configuration options.
+     *
+     * @return PromiseInterface<mixed, mixed>
      */
-    public static function of($iterable, ?callable $onFulfilled = null, ?callable $onRejected = null) : PromiseInterface
+    public static function of(iterable $iterable, ?callable $onFulfilled = null, ?callable $onRejected = null, array $config = []) : PromiseInterface
     {
-        return (new EachPromise($iterable, ['fulfilled' => $onFulfilled, 'rejected' => $onRejected]))->promise();
+        $eachConfig = [];
+        if (null !== $onFulfilled) {
+            $eachConfig['fulfilled'] = $onFulfilled;
+        }
+        if (null !== $onRejected) {
+            $eachConfig['rejected'] = $onRejected;
+        }
+        if (isset($config['concurrency'])) {
+            $eachConfig['concurrency'] = $config['concurrency'];
+        }
+        return (new EachPromise($iterable, $eachConfig))->promise();
     }
     /**
      * Like of, but only allows a certain number of outstanding promises at any
@@ -30,24 +55,37 @@ final class Each
      *
      * $concurrency may be an integer or a function that accepts the number of
      * pending promises and returns a numeric concurrency limit value to allow
-     * for dynamic a concurrency size.
+     * for a dynamic concurrency size.
      *
-     * @param mixed        $iterable
-     * @param int|callable $concurrency
+     * @template TKey of array-key
+     * @template TValue
+     * @template TReason
+     *
+     * @param iterable<TKey, TValue|PromiseInterface<TValue, TReason>>              $iterable
+     * @param int|(callable(int): int)                                              $concurrency
+     * @param (callable(TValue, TKey, PromiseInterface<mixed, mixed>): mixed)|null  $onFulfilled
+     * @param (callable(TReason, TKey, PromiseInterface<mixed, mixed>): mixed)|null $onRejected
+     *
+     * @return PromiseInterface<mixed, mixed>
      */
-    public static function ofLimit($iterable, $concurrency, ?callable $onFulfilled = null, ?callable $onRejected = null) : PromiseInterface
+    public static function ofLimit(iterable $iterable, $concurrency, ?callable $onFulfilled = null, ?callable $onRejected = null) : PromiseInterface
     {
-        return (new EachPromise($iterable, ['fulfilled' => $onFulfilled, 'rejected' => $onRejected, 'concurrency' => $concurrency]))->promise();
+        return self::of($iterable, $onFulfilled, $onRejected, ['concurrency' => $concurrency]);
     }
     /**
-     * Like limit, but ensures that no promise in the given $iterable argument
-     * is rejected. If any promise is rejected, then the aggregate promise is
-     * rejected with the encountered rejection.
+     * Like ofLimit, but rejects the aggregate promise on the first rejection.
      *
-     * @param mixed        $iterable
-     * @param int|callable $concurrency
+     * @template TKey of array-key
+     * @template TValue
+     * @template TReason
+     *
+     * @param iterable<TKey, TValue|PromiseInterface<TValue, TReason>>             $iterable
+     * @param int|(callable(int): int)                                             $concurrency
+     * @param (callable(TValue, TKey, PromiseInterface<mixed, mixed>): mixed)|null $onFulfilled
+     *
+     * @return PromiseInterface<mixed, mixed>
      */
-    public static function ofLimitAll($iterable, $concurrency, ?callable $onFulfilled = null) : PromiseInterface
+    public static function ofLimitAll(iterable $iterable, $concurrency, ?callable $onFulfilled = null) : PromiseInterface
     {
         return self::ofLimit($iterable, $concurrency, $onFulfilled, function ($reason, $idx, PromiseInterface $aggregate) : void {
             $aggregate->reject($reason);

@@ -5,6 +5,9 @@ namespace DeliciousBrains\WP_Offload_Media\Aws3\GuzzleHttp\Promise;
 
 final class Is
 {
+    private function __construct()
+    {
+    }
     /**
      * Returns true if a promise is pending.
      */

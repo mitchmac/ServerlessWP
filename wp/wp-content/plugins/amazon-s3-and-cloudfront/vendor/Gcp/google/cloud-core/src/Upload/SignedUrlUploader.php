@@ -62,7 +62,7 @@ class SignedUrlUploader extends ResumableUploader
      */
     protected function createResumeUri()
     {
-        $headers = $this->headers + ['Content-Type' => $this->contentType, 'Content-Length' => 0, 'x-goog-resumable' => 'start'];
+        $headers = $this->headers + ['Content-Type' => $this->contentType, 'Content-Length' => '0', 'x-goog-resumable' => 'start'];
         $request = new Request('POST', $this->uri, $headers);
         $response = $this->requestWrapper->send($request, $this->requestOptions);
         return $this->resumeUri = $response->getHeaderLine('Location');
