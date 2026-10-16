@@ -8,40 +8,72 @@
  */
 require_once __DIR__ . '/../database/version.php';
 
-// Require the constants file.
-require_once __DIR__ . '/../../constants.php';
+try {
+	// Require the constants file.
+	require_once __DIR__ . '/../../constants.php';
 
-// Bail early if DB_ENGINE is not defined as sqlite.
-if ( ! defined( 'DB_ENGINE' ) || 'sqlite' !== DB_ENGINE ) {
-	return;
+	// Bail early if DB_ENGINE is not defined as sqlite.
+	if ( ! defined( 'DB_ENGINE' ) || 'sqlite' !== DB_ENGINE ) {
+		return;
+	}
+
+	if ( ! extension_loaded( 'pdo' ) ) {
+		wp_die(
+			new WP_Error(
+				'pdo_not_loaded',
+				sprintf(
+					'<h1>%1$s</h1><p>%2$s</p>',
+					'PHP PDO Extension is not loaded',
+					'Your PHP installation appears to be missing the PDO extension which is required for this version of WordPress and the type of database you have specified.'
+				)
+			),
+			'PHP PDO Extension is not loaded.'
+		);
+	}
+
+	if ( ! extension_loaded( 'pdo_sqlite' ) ) {
+		wp_die(
+			new WP_Error(
+				'pdo_driver_not_loaded',
+				sprintf(
+					'<h1>%1$s</h1><p>%2$s</p>',
+					'PDO Driver for SQLite is missing',
+					'Your PHP installation appears not to have the right PDO drivers loaded. These are required for this version of WordPress and the type of database you have specified.'
+				)
+			),
+			'PDO Driver for SQLite is missing.'
+		);
+	}
+
+	require_once __DIR__ . '/class-wp-sqlite-storage.php';
+
+	if ( defined( 'DB_PATH' ) ) {
+		$database_storage = WP_SQLite_Storage::with_explicit_path( DB_PATH );
+	} elseif ( defined( 'FQDB' ) ) {
+		$database_storage = WP_SQLite_Storage::with_explicit_path( FQDB );
+	} else {
+		$database_storage = WP_SQLite_Storage::with_secret_path( FQDBDIR );
+	}
+	$database_path = $database_storage->initialize();
+} catch ( Throwable $exception ) {
+	error_log( 'SQLite database error: ' . (string) $exception );
+
+	// WP-CLI can load the drop-in before wp_die() dependencies are available.
+	if ( defined( 'WP_CLI' ) && WP_CLI ) {
+		WP_CLI::error( $exception->getMessage() );
+	}
+
+	// Use htmlspecialchars() with an explicit charset because esc_html() reads the
+	// blog_charset option, but the database and object cache are not initialized yet.
+	wp_die( htmlspecialchars( $exception->getMessage(), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8' ), 'SQLite database error', array( 'response' => 503 ) );
 }
 
-if ( ! extension_loaded( 'pdo' ) ) {
-	wp_die(
-		new WP_Error(
-			'pdo_not_loaded',
-			sprintf(
-				'<h1>%1$s</h1><p>%2$s</p>',
-				'PHP PDO Extension is not loaded',
-				'Your PHP installation appears to be missing the PDO extension which is required for this version of WordPress and the type of database you have specified.'
-			)
-		),
-		'PHP PDO Extension is not loaded.'
-	);
+if ( ! defined( 'DB_PATH' ) ) {
+	define( 'DB_PATH', $database_path );
 }
 
-if ( ! extension_loaded( 'pdo_sqlite' ) ) {
-	wp_die(
-		new WP_Error(
-			'pdo_driver_not_loaded',
-			sprintf(
-				'<h1>%1$s</h1><p>%2$s</p>',
-				'PDO Driver for SQLite is missing',
-				'Your PHP installation appears not to have the right PDO drivers loaded. These are required for this version of WordPress and the type of database you have specified.'
-			)
-		),
-		'PDO Driver for SQLite is missing.'
-	);
+if ( ! defined( 'FQDB' ) ) {
+	define( 'FQDB', $database_path );
 }
 
 require_once __DIR__ . '/../database/load.php';

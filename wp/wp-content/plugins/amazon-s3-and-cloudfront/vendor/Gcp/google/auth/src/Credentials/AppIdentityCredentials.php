@@ -27,8 +27,6 @@ use DeliciousBrains\WP_Offload_Media\Gcp\Google\Auth\CredentialsLoader;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Auth\ProjectIdProviderInterface;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Auth\SignBlobInterface;
 /**
- * @deprecated
- *
  * AppIdentityCredentials supports authorization on Google App Engine.
  *
  * It can be used to authorize requests using the AuthTokenMiddleware or
@@ -54,6 +52,7 @@ use DeliciousBrains\WP_Offload_Media\Gcp\Google\Auth\SignBlobInterface;
  *
  * $res = $client->get('volumes?q=Henry+David+Thoreau&country=US');
  * ```
+ * @deprecated
  */
 class AppIdentityCredentials extends CredentialsLoader implements SignBlobInterface, ProjectIdProviderInterface
 {

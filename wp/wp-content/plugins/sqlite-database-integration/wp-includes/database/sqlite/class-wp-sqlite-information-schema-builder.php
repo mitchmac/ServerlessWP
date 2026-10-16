@@ -381,12 +381,16 @@ class WP_SQLite_Information_Schema_Builder {
 		/*
 		 * We could search in the "{$this->temporary_table_prefix}tables" table,
 		 * but it may not exist yet, so using "sqlite_temp_master" is simpler.
+		 *
+		 * The name is matched case-insensitively, as it is in the information
+		 * schema tables. The fetched value is not compared to a string, because
+		 * PDO SQLite returns native types when fetches are not stringified.
 		 */
 		$stmt = $this->connection->query(
-			"SELECT 1 FROM sqlite_temp_master WHERE type = 'table' AND name = ?",
+			"SELECT 1 FROM sqlite_temp_master WHERE type = 'table' AND name = ? COLLATE NOCASE",
 			array( $table_name )
 		);
-		return $stmt->fetchColumn() === '1';
+		return false !== $stmt->fetchColumn();
 	}
 
 	/**
@@ -450,6 +454,7 @@ class WP_SQLite_Information_Schema_Builder {
 					('utf8_unicode_ci', 'utf8', 192, '', 'Yes', 8, 'PAD SPACE'),
 					('utf8mb4_bin', 'utf8mb4', 46, '', 'Yes', 1, 'PAD SPACE'),
 					('utf8mb4_unicode_ci', 'utf8mb4', 224, '', 'Yes', 8, 'PAD SPACE'),
+					('utf8mb4_unicode_520_ci', 'utf8mb4', 246, '', 'Yes', 8, 'PAD SPACE'),
 					('utf8mb4_0900_ai_ci', 'utf8mb4', 255, 'Yes', 'Yes', 0, 'NO PAD')
 				)";
 			default:
@@ -776,7 +781,16 @@ class WP_SQLite_Information_Schema_Builder {
 		$table_refs = $child_node->get_first_child_node( 'tableRefList' )->get_child_nodes();
 		foreach ( $table_refs as $table_ref ) {
 			$table_name         = $this->get_table_name_from_node( $table_ref );
-			$table_is_temporary = $has_temporary_keyword || $this->temporary_table_exists( $table_name );
+			$table_is_temporary = $this->temporary_table_exists( $table_name );
+
+			/*
+			 * DROP TEMPORARY TABLE drops only temporary tables. When there is no
+			 * such table, there is nothing to record. The temporary information
+			 * schema tables may not even exist yet.
+			 */
+			if ( $has_temporary_keyword && ! $table_is_temporary ) {
+				continue;
+			}
 
 			$this->delete_values(
 				$this->get_table_name( $table_is_temporary, 'tables' ),
@@ -1801,9 +1815,15 @@ class WP_SQLite_Information_Schema_Builder {
 		// Find which index includes referenced column names as a prefix.
 		$unique_constraint_name = null;
 		foreach ( $index_columns_map as $index_name => $index_columns ) {
+			// An index with fewer columns than the reference can't have them as a prefix.
+			if ( count( $index_columns ) < count( $reference_parts ) ) {
+				continue;
+			}
+
+			// Column names are case-insensitive in MySQL.
 			$is_prefix = true;
 			foreach ( $reference_parts as $i => $reference_part ) {
-				if ( $index_columns[ $i ] !== $this->get_value( $reference_part ) ) {
+				if ( 0 !== strcasecmp( $index_columns[ $i ], $this->get_value( $reference_part ) ) ) {
 					$is_prefix = false;
 					break;
 				}

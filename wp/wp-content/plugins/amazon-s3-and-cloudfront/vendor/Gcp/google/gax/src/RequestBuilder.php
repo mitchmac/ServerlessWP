@@ -97,7 +97,7 @@ class RequestBuilder
                     $queryParams['$alt'] = 'json;enum-encoding=int';
                 }
                 $uri = $this->buildUri($pathTemplate, $queryParams);
-                return new Request($config['method'], $uri, ['Content-Type' => 'application/json'] + $headers, $body);
+                return new Request(\strtoupper($config['method']), $uri, ['Content-Type' => 'application/json'] + $headers, $body);
             }
         }
         // No valid uriTemplate found - construct an exception

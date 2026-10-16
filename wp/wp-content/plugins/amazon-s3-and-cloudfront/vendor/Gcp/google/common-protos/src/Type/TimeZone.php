@@ -16,13 +16,13 @@ use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\RepeatedField;
 class TimeZone extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Internal\Message
 {
     /**
-     * IANA Time Zone Database time zone, e.g. "America/New_York".
+     * IANA Time Zone Database time zone. For example "America/New_York".
      *
      * Generated from protobuf field <code>string id = 1;</code>
      */
     protected $id = '';
     /**
-     * Optional. IANA Time Zone Database version number, e.g. "2019a".
+     * Optional. IANA Time Zone Database version number. For example "2019a".
      *
      * Generated from protobuf field <code>string version = 2;</code>
      */
@@ -34,9 +34,9 @@ class TimeZone extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Int
      *     Optional. Data for populating the Message object.
      *
      *     @type string $id
-     *           IANA Time Zone Database time zone, e.g. "America/New_York".
+     *           IANA Time Zone Database time zone. For example "America/New_York".
      *     @type string $version
-     *           Optional. IANA Time Zone Database version number, e.g. "2019a".
+     *           Optional. IANA Time Zone Database version number. For example "2019a".
      * }
      */
     public function __construct($data = NULL)
@@ -45,7 +45,7 @@ class TimeZone extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Int
         parent::__construct($data);
     }
     /**
-     * IANA Time Zone Database time zone, e.g. "America/New_York".
+     * IANA Time Zone Database time zone. For example "America/New_York".
      *
      * Generated from protobuf field <code>string id = 1;</code>
      * @return string
@@ -55,7 +55,7 @@ class TimeZone extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Int
         return $this->id;
     }
     /**
-     * IANA Time Zone Database time zone, e.g. "America/New_York".
+     * IANA Time Zone Database time zone. For example "America/New_York".
      *
      * Generated from protobuf field <code>string id = 1;</code>
      * @param string $var
@@ -68,7 +68,7 @@ class TimeZone extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Int
         return $this;
     }
     /**
-     * Optional. IANA Time Zone Database version number, e.g. "2019a".
+     * Optional. IANA Time Zone Database version number. For example "2019a".
      *
      * Generated from protobuf field <code>string version = 2;</code>
      * @return string
@@ -78,7 +78,7 @@ class TimeZone extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Int
         return $this->version;
     }
     /**
-     * Optional. IANA Time Zone Database version number, e.g. "2019a".
+     * Optional. IANA Time Zone Database version number. For example "2019a".
      *
      * Generated from protobuf field <code>string version = 2;</code>
      * @param string $var
