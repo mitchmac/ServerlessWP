@@ -313,6 +313,17 @@ class WP_SQLite_Information_Schema_Builder {
 	);
 
 	/**
+	 * Zero values of temporal data types, without fractional seconds.
+	 */
+	const TEMPORAL_ZERO_VALUE_MAP = array(
+		'date'      => '0000-00-00',
+		'time'      => '00:00:00',
+		'datetime'  => '0000-00-00 00:00:00',
+		'timestamp' => '0000-00-00 00:00:00',
+		'year'      => '0000',
+	);
+
+	/**
 	 * A prefix for information schema table names.
 	 *
 	 * @var string
@@ -381,12 +392,16 @@ class WP_SQLite_Information_Schema_Builder {
 		/*
 		 * We could search in the "{$this->temporary_table_prefix}tables" table,
 		 * but it may not exist yet, so using "sqlite_temp_master" is simpler.
+		 *
+		 * The name is matched case-insensitively, as it is in the information
+		 * schema tables. The fetched value is not compared to a string, because
+		 * PDO SQLite returns native types when fetches are not stringified.
 		 */
 		$stmt = $this->connection->query(
-			"SELECT 1 FROM sqlite_temp_master WHERE type = 'table' AND name = ?",
+			"SELECT 1 FROM sqlite_temp_master WHERE type = 'table' AND name = ? COLLATE NOCASE",
 			array( $table_name )
 		);
-		return $stmt->fetchColumn() === '1';
+		return false !== $stmt->fetchColumn();
 	}
 
 	/**
@@ -450,6 +465,7 @@ class WP_SQLite_Information_Schema_Builder {
 					('utf8_unicode_ci', 'utf8', 192, '', 'Yes', 8, 'PAD SPACE'),
 					('utf8mb4_bin', 'utf8mb4', 46, '', 'Yes', 1, 'PAD SPACE'),
 					('utf8mb4_unicode_ci', 'utf8mb4', 224, '', 'Yes', 8, 'PAD SPACE'),
+					('utf8mb4_unicode_520_ci', 'utf8mb4', 246, '', 'Yes', 8, 'PAD SPACE'),
 					('utf8mb4_0900_ai_ci', 'utf8mb4', 255, 'Yes', 'Yes', 0, 'NO PAD')
 				)";
 			default:
@@ -660,11 +676,14 @@ class WP_SQLite_Information_Schema_Builder {
 			// ADD
 			if ( WP_MySQL_Lexer::ADD_SYMBOL === $first_token->id ) {
 				// ADD [COLUMN] (...[, ...])
-				$column_definitions = $action->get_descendant_nodes( 'columnDefinition' );
-				if ( count( $column_definitions ) > 0 ) {
-					foreach ( $column_definitions as $column_definition ) {
-						$name = $this->get_value( $column_definition->get_first_child_node( 'identifier' ) );
+				$table_element_list = $action->get_first_child_node( 'tableElementList' );
+				if ( null !== $table_element_list ) {
+					foreach ( $table_element_list->get_descendant_nodes( 'columnDefinition' ) as $column_definition ) {
+						$name = $this->get_value( $column_definition->get_first_child_node( 'fieldIdentifier' ) );
 						$this->record_add_column( $table_is_temporary, $table_name, $name, $column_definition );
+					}
+					foreach ( $table_element_list->get_descendant_nodes( 'tableConstraintDef' ) as $constraint ) {
+						$this->record_add_constraint_or_index( $table_is_temporary, $table_name, $constraint );
 					}
 					continue;
 				}
@@ -760,6 +779,16 @@ class WP_SQLite_Information_Schema_Builder {
 					continue;
 				}
 			}
+
+			// ALTER [COLUMN]
+			if ( WP_MySQL_Lexer::ALTER_SYMBOL === $first_token->id ) {
+				// SET DEFAULT and DROP DEFAULT
+				$column_ref = $action->get_first_child_node( 'fieldIdentifier' );
+				if ( null !== $column_ref && $action->has_child_token( WP_MySQL_Lexer::DEFAULT_SYMBOL ) ) {
+					$name = $this->get_value( $column_ref );
+					$this->record_alter_column_default( $table_is_temporary, $table_name, $name, $action );
+				}
+			}
 		}
 	}
 
@@ -776,7 +805,16 @@ class WP_SQLite_Information_Schema_Builder {
 		$table_refs = $child_node->get_first_child_node( 'tableRefList' )->get_child_nodes();
 		foreach ( $table_refs as $table_ref ) {
 			$table_name         = $this->get_table_name_from_node( $table_ref );
-			$table_is_temporary = $has_temporary_keyword || $this->temporary_table_exists( $table_name );
+			$table_is_temporary = $this->temporary_table_exists( $table_name );
+
+			/*
+			 * DROP TEMPORARY TABLE drops only temporary tables. When there is no
+			 * such table, there is nothing to record. The temporary information
+			 * schema tables may not even exist yet.
+			 */
+			if ( $has_temporary_keyword && ! $table_is_temporary ) {
+				continue;
+			}
 
 			$this->delete_values(
 				$this->get_table_name( $table_is_temporary, 'tables' ),
@@ -986,6 +1024,104 @@ class WP_SQLite_Information_Schema_Builder {
 		WP_Parser_Node $node
 	): void {
 		$this->record_change_column( $table_is_temporary, $table_name, $column_name, $column_name, $node );
+	}
+
+	/**
+	 * Record SET DEFAULT or DROP DEFAULT data in the information schema.
+	 *
+	 * @param bool           $table_is_temporary Whether the table is temporary.
+	 * @param string         $table_name         The table name.
+	 * @param string         $column_name        The column name.
+	 * @param WP_Parser_Node $node               The "alterListItem" AST node.
+	 */
+	private function record_alter_column_default(
+		bool $table_is_temporary,
+		string $table_name,
+		string $column_name,
+		WP_Parser_Node $node
+	): void {
+		$columns_table = $this->get_table_name( $table_is_temporary, 'columns' );
+		$column        = $this->connection->query(
+			'SELECT DATA_TYPE, DATETIME_PRECISION, IS_NULLABLE, EXTRA FROM ' . $this->connection->quote_identifier( $columns_table ) . '
+			WHERE table_schema = ? AND table_name = ? AND column_name = ?',
+			array( self::SAVED_DATABASE_NAME, $table_name, $column_name )
+		)->fetch( PDO::FETCH_ASSOC );
+		if ( false === $column ) {
+			throw WP_SQLite_Information_Schema_Exception::column_not_found( $column_name, $table_name );
+		}
+
+		/*
+		 * MySQL accepts these changes but hides them from its schema.
+		 * These are known MySQL bugs that are not worth replicating.
+		 *
+		 * @see https://bugs.mysql.com/bug.php?id=111702
+		 * @see https://bugs.mysql.com/bug.php?id=80222
+		 */
+		if ( str_contains( $column['EXTRA'], 'auto_increment' ) ) {
+			throw new Exception( 'SET DEFAULT and DROP DEFAULT on AUTO_INCREMENT columns are not supported.' );
+		}
+
+		$default = null;
+		$extra   = trim( str_replace( 'DEFAULT_GENERATED', '', $column['EXTRA'] ) );
+		if ( $node->has_child_token( WP_MySQL_Lexer::SET_SYMBOL ) ) {
+			$expression         = $node->get_first_child_node( 'exprWithParentheses' );
+			$literal            = $expression ? $this->get_parenthesized_default_literal( $expression ) : null;
+			$datetime_precision = null === $column['DATETIME_PRECISION'] ? null : (int) $column['DATETIME_PRECISION'];
+			$default            = $literal
+				? $this->get_literal_default( $literal, $column['DATA_TYPE'], $column_name, $datetime_precision )
+				: $this->get_default_value( $node, $column['DATA_TYPE'], $column_name, $datetime_precision );
+			if ( null === $default && 'NO' === $column['IS_NULLABLE'] ) {
+				throw WP_SQLite_Information_Schema_Exception::invalid_default_value( $column_name );
+			}
+			if ( $expression && ! $literal ) {
+				$extra = trim( 'DEFAULT_GENERATED ' . $extra );
+			}
+		}
+
+		$this->update_values(
+			$columns_table,
+			array(
+				'column_default' => $default,
+				'extra'          => $extra,
+			),
+			array(
+				'table_schema' => self::SAVED_DATABASE_NAME,
+				'table_name'   => $table_name,
+				'column_name'  => $column_name,
+			)
+		);
+	}
+
+	/**
+	 * Find a literal wrapped only in parentheses or unary plus operators.
+	 *
+	 * @param  WP_Parser_Node $node The default expression.
+	 * @return WP_Parser_Node|null  The literal, or null for other expressions.
+	 */
+	private function get_parenthesized_default_literal( WP_Parser_Node $node ): ?WP_Parser_Node {
+		while ( 'literal' !== $node->rule_name ) {
+			$children = $node->get_children();
+			if (
+				3 === count( $children )
+				&& $children[0] instanceof WP_Parser_Token
+				&& WP_MySQL_Lexer::OPEN_PAR_SYMBOL === $children[0]->id
+				&& $children[2] instanceof WP_Parser_Token
+				&& WP_MySQL_Lexer::CLOSE_PAR_SYMBOL === $children[2]->id
+			) {
+				$children = array( $children[1] );
+			} elseif (
+				2 === count( $children )
+				&& $children[0] instanceof WP_Parser_Token
+				&& WP_MySQL_Lexer::PLUS_OPERATOR === $children[0]->id
+			) {
+				$children = array( $children[1] );
+			}
+			if ( 1 !== count( $children ) || ! $children[0] instanceof WP_Parser_Node ) {
+				return null;
+			}
+			$node = $children[0];
+		}
+		return $node;
 	}
 
 	/**
@@ -1801,9 +1937,15 @@ class WP_SQLite_Information_Schema_Builder {
 		// Find which index includes referenced column names as a prefix.
 		$unique_constraint_name = null;
 		foreach ( $index_columns_map as $index_name => $index_columns ) {
+			// An index with fewer columns than the reference can't have them as a prefix.
+			if ( count( $index_columns ) < count( $reference_parts ) ) {
+				continue;
+			}
+
+			// Column names are case-insensitive in MySQL.
 			$is_prefix = true;
 			foreach ( $reference_parts as $i => $reference_part ) {
-				if ( $index_columns[ $i ] !== $this->get_value( $reference_part ) ) {
+				if ( 0 !== strcasecmp( $index_columns[ $i ], $this->get_value( $reference_part ) ) ) {
 					$is_prefix = false;
 					break;
 				}
@@ -2059,34 +2201,57 @@ class WP_SQLite_Information_Schema_Builder {
 		if ( null === $default_attr ) {
 			return null;
 		}
+		$datetime_precision = $this->get_column_datetime_precision( $node, $data_type );
+		return $this->get_default_value( $default_attr, $data_type, $column_name, $datetime_precision );
+	}
 
+	/**
+	 * Extract a default value from a column attribute or ALTER COLUMN action.
+	 *
+	 * @param  WP_Parser_Node $node               The "columnAttribute" or "alterListItem" AST node.
+	 * @param  string         $data_type          The column data type as stored in information schema.
+	 * @param  string         $column_name        The column name.
+	 * @param  int|null       $datetime_precision The column fractional seconds precision.
+	 * @return string|null                        The default value as stored in information schema.
+	 */
+	private function get_default_value( WP_Parser_Node $node, string $data_type, string $column_name, ?int $datetime_precision ): ?string {
 		/*
 		 * [GRAMMAR]
-		 * DEFAULT_SYMBOL (
-		 *    signedLiteral
-		 *    | NOW_SYMBOL timeFunctionParameters?
-		 *    | {serverVersion >= 80013}? exprWithParentheses
-		 * )
+		 * columnAttribute:
+		 *   DEFAULT_SYMBOL (
+		 *      signedLiteral
+		 *      | NOW_SYMBOL timeFunctionParameters?
+		 *      | {serverVersion >= 80013}? exprWithParentheses
+		 *   )
+		 *
+		 * alterListItem:
+		 *   ALTER_SYMBOL COLUMN_SYMBOL? fieldIdentifier SET_SYMBOL DEFAULT_SYMBOL (
+		 *      {serverVersion >= 80014}? exprWithParentheses
+		 *      | signedLiteral
+		 *   )
 		 */
 
 		// DEFAULT NOW()
-		if ( $default_attr->has_child_token( WP_MySQL_Lexer::NOW_SYMBOL ) ) {
+		if ( $node->has_child_token( WP_MySQL_Lexer::NOW_SYMBOL ) ) {
 			return 'CURRENT_TIMESTAMP';
 		}
 
 		// DEFAULT signedLiteral
-		$signed_literal = $default_attr->get_first_child_node( 'signedLiteral' );
+		$signed_literal = $node->get_first_child_node( 'signedLiteral' );
 		if ( $signed_literal ) {
 			$literal = $signed_literal->get_first_child_node( 'literal' );
 			if ( null === $literal ) {
 				// A signed number, such as "-5", has no "literal" child node.
-				return $this->get_value( $signed_literal );
+				// Like MySQL, drop the unary plus, e.g., "+5" becomes "5".
+				$number  = ltrim( $this->get_value( $signed_literal ), '+' );
+				$default = $this->normalize_literal_default( $number, $data_type, $column_name );
+				return $this->get_temporal_zero_value( $data_type, $default, $datetime_precision ) ?? $default;
 			}
-			return $this->get_literal_default( $literal, $data_type, $column_name );
+			return $this->get_literal_default( $literal, $data_type, $column_name, $datetime_precision );
 		}
 
 		// DEFAULT (expression) - MySQL 8.0.13+ supports exprWithParentheses
-		$expr_with_parens = $default_attr->get_first_child_node( 'exprWithParentheses' );
+		$expr_with_parens = $node->get_first_child_node( 'exprWithParentheses' );
 		if ( $expr_with_parens ) {
 			return $this->serialize_mysql_expression( $expr_with_parens );
 		}
@@ -2097,12 +2262,13 @@ class WP_SQLite_Information_Schema_Builder {
 	/**
 	 * Extract and normalize a literal default value.
 	 *
-	 * @param  WP_Parser_Node $literal     The "literal" AST node.
-	 * @param  string         $data_type   The column data type as stored in information schema.
-	 * @param  string         $column_name The column name.
-	 * @return string|null                 The default value as stored in information schema.
+	 * @param  WP_Parser_Node $literal            The "literal" AST node.
+	 * @param  string         $data_type          The column data type as stored in information schema.
+	 * @param  string         $column_name        The column name.
+	 * @param  int|null       $datetime_precision The column fractional seconds precision.
+	 * @return string|null                        The default value as stored in information schema.
 	 */
-	private function get_literal_default( WP_Parser_Node $literal, string $data_type, string $column_name ): ?string {
+	private function get_literal_default( WP_Parser_Node $literal, string $data_type, string $column_name, ?int $datetime_precision ): ?string {
 		// DEFAULT NULL
 		if ( $literal->has_child_node( 'nullLiteral' ) ) {
 			return null;
@@ -2112,17 +2278,37 @@ class WP_SQLite_Information_Schema_Builder {
 		if ( $literal->has_child_node( 'boolLiteral' ) ) {
 			$bool_literal = $literal->get_first_child_node( 'boolLiteral' );
 			$bool_value   = $bool_literal->has_child_token( WP_MySQL_Lexer::TRUE_SYMBOL ) ? '1' : '0';
-			return 'bit' === $data_type ? "b'{$bool_value}'" : $bool_value;
+			$default      = 'bit' === $data_type ? "b'{$bool_value}'" : $bool_value;
+		} else {
+			$default = $this->normalize_literal_default( $this->get_value( $literal ), $data_type, $column_name );
 		}
 
-		$default = $this->get_value( $literal );
+		/*
+		 * Normalize numeric zero defaults to MySQL's temporal zero values.
+		 * Also normalize string zeros, even where strict MySQL rejects them.
+		 * Preserve YEAR strings '0' and '00', which MySQL interprets as 2000.
+		 */
+		if ( 'year' === $data_type && $literal->has_child_node( 'textLiteral' ) ) {
+			return $default;
+		}
+		return $this->get_temporal_zero_value( $data_type, $default, $datetime_precision ) ?? $default;
+	}
 
+	/**
+	 * Normalize a literal default value for the column data type.
+	 *
+	 * @param  string $default_value The literal default value.
+	 * @param  string $data_type     The column data type as stored in information schema.
+	 * @param  string $column_name   The column name.
+	 * @return string                The default value as stored in information schema.
+	 */
+	private function normalize_literal_default( string $default_value, string $data_type, string $column_name ): string {
 		if ( 'bit' === $data_type ) {
 			/*
 			 * @TODO: Validate and normalize defaults from their AST and the full
 			 * column definition before storing them in the information schema.
 			 */
-			$bit_default = $this->get_bit_default( $default );
+			$bit_default = $this->get_bit_default( $default_value );
 			if ( null === $bit_default ) {
 				throw WP_SQLite_Information_Schema_Exception::invalid_default_value( $column_name );
 			}
@@ -2130,21 +2316,48 @@ class WP_SQLite_Information_Schema_Builder {
 		}
 
 		/*
-		 * @TODO: Non-BIT literal defaults are currently stored verbatim. To
-		 * match MySQL, they should be normalized. For example:
+		 * @TODO: Non-BIT literal defaults, except for temporal zero values, are
+		 * currently stored verbatim. To match MySQL, they should be normalized.
+		 * For example:
 		 *  - BINARY/VARBINARY defaults stored as 0x hex literals.
 		 *  - Hex and bit literals coerced to raw bytes for text columns and to
 		 *    their decimal value for numeric columns.
 		 *  - The charset introducer dropped from text-literal defaults.
 		 *  - Numeric defaults normalized, e.g. 1.0 to 1 or 1e3 to 1000.
 		 */
-		return $default;
+		return $default_value;
+	}
+
+	/**
+	 * Get the zero value of a temporal column when its default is zero.
+	 *
+	 * For example, a 0, '0', -0.0, or 0e0 default of a DATETIME(3) column has
+	 * the zero value of "0000-00-00 00:00:00.000".
+	 *
+	 * @param  string   $data_type          The column data type as stored in information schema.
+	 * @param  string   $default_value      The column default value of a number or string literal.
+	 * @param  int|null $datetime_precision The column fractional seconds precision.
+	 * @return string|null                  The zero value, or null when the column is not temporal
+	 *                                      or the default is not zero.
+	 */
+	private function get_temporal_zero_value( string $data_type, string $default_value, ?int $datetime_precision ): ?string {
+		$zero_value = self::TEMPORAL_ZERO_VALUE_MAP[ $data_type ] ?? null;
+
+		// A signed number can be a hex literal, such as "-0x0", which is not numeric.
+		if ( null === $zero_value || ! is_numeric( $default_value ) || 0.0 !== (float) $default_value ) {
+			return null;
+		}
+
+		if ( $datetime_precision > 0 ) {
+			$zero_value .= '.' . str_repeat( '0', $datetime_precision );
+		}
+		return $zero_value;
 	}
 
 	/**
 	 * Normalize a BIT default value to a MySQL bit literal.
 	 *
-	 * The value may be a bit literal, a hex literal, or a decimal.
+	 * The value may be a bit literal, a hex literal, or a non-negative decimal.
 	 *
 	 * @param  string      $default_value The BIT default value.
 	 * @return string|null                The default as a bit literal, e.g. "b'101'", or null when not a bit value.
@@ -2174,8 +2387,8 @@ class WP_SQLite_Information_Schema_Builder {
 			return "b'" . decbin( hexdec( $matches[1] ) ) . "'";
 		}
 
-		// Decimal, e.g. 5, or a numeric string literal such as '0'.
-		if ( is_numeric( $value ) ) {
+		// Non-negative decimal, e.g. 5, or a numeric string literal such as '0'.
+		if ( is_numeric( $value ) && $value >= 0 ) {
 			return "b'" . decbin( (int) $value ) . "'";
 		}
 
@@ -2675,11 +2888,14 @@ class WP_SQLite_Information_Schema_Builder {
 	 */
 	private function get_column_datetime_precision( WP_Parser_Node $node, string $data_type ): ?int {
 		if ( 'time' === $data_type || 'datetime' === $data_type || 'timestamp' === $data_type ) {
-			$precision = $node->get_first_descendant_node( 'typeDatetimePrecision' );
+			// Expressions in the column definition may have their own precision,
+			// e.g., "CAST(... AS DATETIME(6))", so only the data type is checked.
+			$type_node = $node->get_first_descendant_node( 'dataType' );
+			$precision = $type_node->get_first_descendant_node( 'typeDatetimePrecision' );
 			if ( null === $precision ) {
 				return 0;
 			} else {
-				return (int) $this->get_value( $precision );
+				return (int) $precision->get_first_child_token( WP_MySQL_Lexer::INT_NUMBER )->get_value();
 			}
 		}
 		return null;

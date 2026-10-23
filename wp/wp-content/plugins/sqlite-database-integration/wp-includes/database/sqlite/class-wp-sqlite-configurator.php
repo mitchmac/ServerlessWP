@@ -75,20 +75,49 @@ class WP_SQLite_Configurator {
 	 * SQLite driver version and attempt to repair any configuration corruption.
 	 */
 	public function configure_database(): void {
-		// Use an EXCLUSIVE transaction to prevent multiple connections
-		// from attempting to configure the database at the same time.
-		$this->driver->execute_sqlite_query( 'BEGIN EXCLUSIVE TRANSACTION' );
+		/*
+		 * In SQLite, disabling foreign keys inside a transaction is a no-op.
+		 * We need to disable them here, because some configuration operations
+		 * may expect them disabled, e.g., to avoid triggering cascades.
+		 *
+		 * See:
+		 *   https://www.sqlite.org/lang_altertable.html#making_other_kinds_of_table_schema_changes
+		 */
+		$foreign_keys = $this->driver->execute_sqlite_query( 'PRAGMA foreign_keys' )->fetchColumn();
+		$this->driver->execute_sqlite_query( 'PRAGMA foreign_keys = OFF' );
+		$transaction_started = false;
 		try {
+			// Use an EXCLUSIVE transaction to prevent multiple connections
+			// from attempting to configure the database at the same time.
+			$this->driver->execute_sqlite_query( 'BEGIN EXCLUSIVE TRANSACTION' );
+			$transaction_started = true;
+			$this->set_driver_in_transaction( true );
+
+			// Read the saved version within the transaction, before it's updated.
+			$saved_version = $this->driver->get_saved_driver_version();
+
 			$this->ensure_global_variables_table();
 			$this->schema_builder->ensure_information_schema_tables();
 			$this->schema_reconstructor->ensure_correct_information_schema();
-			$this->save_current_driver_version();
 			$this->ensure_database_data();
+			$this->run_migrations( $saved_version );
+			$this->save_current_driver_version();
+			$this->driver->execute_sqlite_query( 'COMMIT' );
 		} catch ( Throwable $e ) {
-			$this->driver->execute_sqlite_query( 'ROLLBACK' );
+			// Roll back only the transaction started here, unless a failed
+			// MySQL query already rolled it back in the driver.
+			if ( $transaction_started && $this->driver->inTransaction() ) {
+				$this->driver->execute_sqlite_query( 'ROLLBACK' );
+			}
 			throw $e;
+		} finally {
+			if ( $transaction_started ) {
+				$this->set_driver_in_transaction( false );
+			}
+			if ( 1 === (int) $foreign_keys ) {
+				$this->driver->execute_sqlite_query( 'PRAGMA foreign_keys = ON' );
+			}
 		}
-		$this->driver->execute_sqlite_query( 'COMMIT' );
 	}
 
 	/**
@@ -253,6 +282,29 @@ class WP_SQLite_Configurator {
 	}
 
 	/**
+	 * Ensure that the driver knows that we started or ended an SQLite transaction.
+	 *
+	 * This is a workaround for PHP < 8.4, where PDO::inTransaction() doesn't
+	 * reflect transaction state started via a query, such as "BEGIN EXCLUSIVE".
+	 *
+	 * @see WP_MySQL_On_SQLite::inTransaction()
+	 *
+	 * @param bool $in_transaction Whether the driver is in a transaction.
+	 */
+	private function set_driver_in_transaction( bool $in_transaction ): void {
+		if ( PHP_VERSION_ID >= 80400 ) {
+			return;
+		}
+
+		// Bind the closure to the driver class, so that it can access the private
+		// property even when the driver is an instance of a subclass.
+		$set_in_transaction = function () use ( $in_transaction ): void {
+			$this->in_transaction = $in_transaction;
+		};
+		Closure::bind( $set_in_transaction, $this->driver, WP_MySQL_On_SQLite::class )();
+	}
+
+	/**
 	 * Save the current SQLite driver version.
 	 *
 	 * This method saves the current SQLite driver version to the database.
@@ -271,5 +323,205 @@ class WP_SQLite_Configurator {
 				SQLITE_DRIVER_VERSION,
 			)
 		);
+	}
+
+	/**
+	 * Migrate data stored by older driver versions.
+	 *
+	 * This is used when a new driver version needs to change some existing data.
+	 * Migrations can be version-gated so that they don't rerun on every update.
+	 *
+	 * @param string $saved_version The driver version that last configured the database.
+	 */
+	private function run_migrations( string $saved_version ): void {
+		// Drop ON UPDATE CURRENT_TIMESTAMP triggers created by versions <= 3.1.1.
+		// Run this before other migrations would drop them by table rebuilds.
+		if ( version_compare( $saved_version, '3.1.1', '<=' ) ) {
+			$this->migrate_on_update_triggers();
+		}
+
+		// Fix temporal precision and zero defaults stored by versions <= 3.1.1.
+		if ( version_compare( $saved_version, '3.1.1', '<=' ) ) {
+			$this->migrate_datetime_precision();
+			$this->migrate_temporal_zero_defaults();
+		}
+	}
+
+	/**
+	 * Migrate ON UPDATE CURRENT_TIMESTAMP triggers to column metadata.
+	 *
+	 * Handles old ON UPDATE triggers with the following name formats:
+	 *
+	 *   1. Versions 3.0.0 to 3.1.1: "_wp_sqlite_{table}_{column}_on_update"
+	 *   2. Versions before 3.0.0: "__{table}_{column}_on_update__"
+	 */
+	private function migrate_on_update_triggers(): void {
+		$connection    = $this->driver->get_connection();
+		$columns_table = $connection->quote_identifier( $this->schema_builder->get_table_name( false, 'columns' ) );
+		$columns       = $this->driver->execute_sqlite_query(
+			sprintf(
+				"SELECT c.TABLE_NAME, c.COLUMN_NAME, c.EXTRA, t.name AS TRIGGER_NAME
+				FROM %s AS c
+				JOIN main.sqlite_master AS t ON t.type = 'trigger'
+				AND t.tbl_name = c.TABLE_NAME COLLATE NOCASE
+				AND (
+					t.name = '__' || c.TABLE_NAME || '_' || c.COLUMN_NAME || '_on_update__' COLLATE NOCASE
+					OR t.name = ? || c.TABLE_NAME || '_' || c.COLUMN_NAME || '_on_update' COLLATE NOCASE
+				)
+				WHERE c.TABLE_SCHEMA = ?",
+				$columns_table
+			),
+			array( WP_MySQL_On_SQLite::RESERVED_PREFIX, WP_SQLite_Information_Schema_Builder::SAVED_DATABASE_NAME )
+		)->fetchAll( PDO::FETCH_ASSOC );
+
+		foreach ( $columns as $column ) {
+			if ( ! str_contains( $column['EXTRA'], 'on update CURRENT_TIMESTAMP' ) ) {
+				$this->driver->execute_sqlite_query(
+					sprintf( 'UPDATE %s SET EXTRA = ? WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? AND COLUMN_NAME = ?', $columns_table ),
+					array(
+						trim( $column['EXTRA'] . ' on update CURRENT_TIMESTAMP' ),
+						WP_SQLite_Information_Schema_Builder::SAVED_DATABASE_NAME,
+						$column['TABLE_NAME'],
+						$column['COLUMN_NAME'],
+					)
+				);
+			}
+			$this->driver->execute_sqlite_query(
+				sprintf( 'DROP TRIGGER main.%s', $connection->quote_identifier( $column['TRIGGER_NAME'] ) )
+			);
+		}
+	}
+
+	/**
+	 * Migrate DATETIME_PRECISION values stored by older driver versions.
+	 *
+	 * Older versions stored 0 regardless of fractional seconds precision.
+	 * The correct value is read from the column type, such as "datetime(3)".
+	 */
+	private function migrate_datetime_precision(): void {
+		// CAST() reads the leading integer, e.g., "3)" as 3, or returns 0 when there is none.
+		$this->driver->execute_sqlite_query(
+			sprintf(
+				"UPDATE %s
+				SET DATETIME_PRECISION = CAST(SUBSTR(COLUMN_TYPE, INSTR(COLUMN_TYPE, '(') + 1) AS INTEGER)
+				WHERE DATA_TYPE IN ('time', 'datetime', 'timestamp')",
+				$this->driver->get_connection()->quote_identifier(
+					$this->schema_builder->get_table_name( false, 'columns' )
+				)
+			)
+		);
+	}
+
+	/**
+	 * Migrate zero defaults of temporal columns stored by older driver versions.
+	 *
+	 * Older driver versions stored defaults such as "DEFAULT 0" of a TIMESTAMP
+	 * column verbatim, while MySQL stores them as a zero date/time value. Rows
+	 * that got such a default store it as well, so they get the zero value too.
+	 */
+	private function migrate_temporal_zero_defaults(): void {
+		$connection    = $this->driver->get_connection();
+		$columns_table = $connection->quote_identifier(
+			$this->schema_builder->get_table_name( false, 'columns' )
+		);
+
+		// Read SQLite defaults; reconstructed metadata may already be normalized.
+		$columns = $this->driver->execute_sqlite_query(
+			sprintf(
+				"SELECT c.TABLE_NAME, c.COLUMN_NAME, c.DATA_TYPE, c.DATETIME_PRECISION, p.dflt_value
+				FROM %s AS c
+				JOIN pragma_table_info(c.TABLE_NAME, 'main') AS p ON c.COLUMN_NAME = p.name
+				WHERE c.TABLE_SCHEMA = ?
+				AND c.DATA_TYPE IN ('date', 'time', 'datetime', 'timestamp', 'year')
+				AND c.EXTRA NOT LIKE '%%DEFAULT_GENERATED%%'
+				AND p.dflt_value IS NOT NULL",
+				$columns_table
+			),
+			array( WP_SQLite_Information_Schema_Builder::SAVED_DATABASE_NAME )
+		)->fetchAll( PDO::FETCH_ASSOC );
+
+		// Normalize zeros, such as 0, '0', -0.0, or 0e0.
+		$table_columns = array();
+		foreach ( $columns as $column ) {
+			// SQLite returns the default as an SQL literal, e.g., 0, '0', or "0".
+			$default   = $column['dflt_value'];
+			$is_string = in_array( $default[0], array( "'", '"', '`' ), true );
+			if ( $is_string ) {
+				$default = substr( $default, 1, -1 );
+			}
+			if ( ! is_numeric( $default ) || 0.0 !== (float) $default ) {
+				continue;
+			}
+
+			// A string zero of a YEAR column, such as '0', can be the year 2000.
+			if ( $is_string && 'year' === $column['DATA_TYPE'] ) {
+				continue;
+			}
+
+			$zero_value = WP_SQLite_Information_Schema_Builder::TEMPORAL_ZERO_VALUE_MAP[ $column['DATA_TYPE'] ];
+			$precision  = (int) $column['DATETIME_PRECISION'];
+			if ( $precision > 0 ) {
+				$zero_value .= '.' . str_repeat( '0', $precision );
+			}
+
+			$table_columns[ $column['TABLE_NAME'] ][] = array(
+				'name'        => $column['COLUMN_NAME'],
+				'zero_value'  => $zero_value,
+				'old_default' => $default,
+				'is_string'   => $is_string,
+			);
+		}
+
+		foreach ( $table_columns as $table_name => $repaired_columns ) {
+			// Drop triggers, so they don't run during row repair. The table rebuild drops them anyway.
+			$triggers = $this->driver->execute_sqlite_query(
+				"SELECT name FROM sqlite_master WHERE type = 'trigger' AND tbl_name = ? COLLATE NOCASE",
+				array( $table_name )
+			)->fetchAll( PDO::FETCH_COLUMN );
+			foreach ( $triggers as $trigger ) {
+				$this->driver->execute_sqlite_query(
+					sprintf( 'DROP TRIGGER %s', $connection->quote_identifier( $trigger ) )
+				);
+			}
+
+			$alter_list = array();
+			foreach ( $repaired_columns as $column ) {
+				// Preserve numeric and string types so comparisons apply the same
+				// SQLite conversion as when the defaults were stored.
+				$quoted_column = $connection->quote_identifier( $column['name'] );
+				$this->driver->execute_sqlite_query(
+					sprintf(
+						'UPDATE %s SET %s = ? WHERE %s = %s',
+						$connection->quote_identifier( $table_name ),
+						$quoted_column,
+						$quoted_column,
+						$column['is_string'] ? '?' : $column['old_default']
+					),
+					$column['is_string']
+						? array( $column['zero_value'], $column['old_default'] )
+						: array( $column['zero_value'] )
+				);
+
+				$alter_list[] = sprintf(
+					'ALTER COLUMN `%s` SET DEFAULT %s',
+					str_replace( '`', '``', $column['name'] ),
+					$this->driver->quote( $column['zero_value'] )
+				);
+			}
+
+			// ALTER TABLE stores the new defaults, and it recreates the table to apply them.
+			try {
+				$this->driver->query(
+					sprintf( 'ALTER TABLE `%s` %s', str_replace( '`', '``', $table_name ), implode( ', ', $alter_list ) )
+				);
+			} catch ( WP_MySQL_On_SQLite_Exception $e ) {
+				throw new WP_MySQL_On_SQLite_Exception(
+					$this->driver,
+					sprintf( 'Failed to recreate table "%s": %s', $table_name, $e->getMessage() ),
+					$e->getCode(),
+					$e
+				);
+			}
+		}
 	}
 }

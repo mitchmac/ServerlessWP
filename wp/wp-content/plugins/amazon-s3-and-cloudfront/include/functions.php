@@ -2,6 +2,11 @@
 
 use DeliciousBrains\WP_Offload_Media\Items\Media_Library_Item;
 
+// Exit if accessed directly.
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 if ( ! function_exists( 'as3cf_get_attachment_url' ) ) {
 	/**
 	 * Get the url of the file from provider, may be a signed expiring URL if associated file is set as private.
