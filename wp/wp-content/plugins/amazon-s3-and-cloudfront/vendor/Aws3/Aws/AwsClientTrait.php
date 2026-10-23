@@ -56,7 +56,7 @@ trait AwsClientTrait
         if (!empty($this->aliases[\ucfirst($name)])) {
             $name = $this->aliases[\ucfirst($name)];
         }
-        $params = isset($args[0]) ? $args[0] : [];
+        $params = $args['args'] ?? $args[0] ?? [];
         if (!empty($isAsync)) {
             return $this->executeAsync($this->getCommand($name, $params));
         }

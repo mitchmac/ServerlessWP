@@ -60,7 +60,6 @@ class WP_SQLite_PDO_User_Defined_Functions {
 		'localtime'                    => 'now',
 		'localtimestamp'               => 'now',
 		'isnull'                       => 'isnull',
-		'if'                           => '_if',
 		'regexp'                       => 'regexp',
 		'field'                        => 'field',
 		'log'                          => 'log',
@@ -566,21 +565,6 @@ class WP_SQLite_PDO_User_Defined_Functions {
 	}
 
 	/**
-	 * Method to emulate MySQL IF() function.
-	 *
-	 * As 'IF' is a reserved word for PHP, function name must be changed.
-	 *
-	 * @param mixed $expression The statement to be evaluated as true or false.
-	 * @param mixed $truthy     Statement or value returned if $expression is true.
-	 * @param mixed $falsy      Statement or value returned if $expression is false.
-	 *
-	 * @return mixed
-	 */
-	public function _if( $expression, $truthy, $falsy ) {
-		return ( true === $expression ) ? $truthy : $falsy;
-	}
-
-	/**
 	 * Method to emulate MySQL REGEXP() function.
 	 *
 	 * @param string $pattern Regular expression to match.
@@ -950,8 +934,8 @@ class WP_SQLite_PDO_User_Defined_Functions {
 	 *        affect also other patterns than just "LIKE BINARY". We should
 	 *        consider applying some of the conversions more broadly.
 	 *
-	 * @param string $pattern
-	 * @return string
+	 * @param string|null $pattern
+	 * @return string|null
 	 */
 	public function _helper_like_to_glob_pattern( $pattern ) {
 		if ( null === $pattern ) {
@@ -991,10 +975,9 @@ class WP_SQLite_PDO_User_Defined_Functions {
 		 * This is true also for multi-byte characters:
 		 *   SELECT '\\©' prints '\©', but LIKE '\\©' is equivalent to LIKE '©'.
 		 *
-		 * However, the multi-byte behavior is likely to depend on the charset.
-		 * For now, we'll assume UTF-8 and thus the "u" modifier for the regex.
+		 * Use "s" to include escaped newlines and omit "u" to preserve raw bytes.
 		 */
-		$pattern = preg_replace( '/\\\\(.)/u', '$1', $pattern );
+		$pattern = preg_replace( '/\\\\(.)/s', '$1', $pattern );
 
 		return $pattern;
 	}
