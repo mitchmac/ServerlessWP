@@ -195,6 +195,78 @@
                         "defaultKmsKeyName": {
                             "type": "string",
                             "description": "A Cloud KMS key that will be used to encrypt objects inserted into this bucket, if no encryption method is specified."
+                        },
+                        "googleManagedEncryptionEnforcementConfig": {
+                            "type": "object",
+                            "description": "If set, the new objects created in this bucket must comply with this enforcement config. Changing this has no effect on existing objects; it applies to new objects only. If omitted, the new objects are allowed to be encrypted with Google Managed Encryption type by default.",
+                            "properties": {
+                                "restrictionMode": {
+                                    "type": "string",
+                                    "description": "Restriction mode for Google-Managed Encryption Keys. Defaults to NotRestricted.",
+                                    "enum": [
+                                        "NotRestricted",
+                                        "FullyRestricted"
+                                    ],
+                                    "enumDescriptions": [
+                                        "Creation of new objects with Google Managed Encryption is not restricted.",
+                                        "Creation of new objects with Google Managed Encryption is fully restricted."
+                                    ]
+                                },
+                                "effectiveTime": {
+                                    "type": "string",
+                                    "description": "Server-determined value indicating when this configuration became effective. In RFC 3339 format.",
+                                    "format": "date-time",
+                                    "readOnly": true
+                                }
+                            }
+                        },
+                        "customerManagedEncryptionEnforcementConfig": {
+                            "type": "object",
+                            "description": "If set, the new objects created in this bucket must comply with this enforcement config. Changing this has no effect on existing objects; it applies to new objects only. If omitted, the new objects are allowed to be encrypted with Customer Managed Encryption type by default.",
+                            "properties": {
+                                "restrictionMode": {
+                                    "type": "string",
+                                    "description": "Restriction mode for Customer-Managed Encryption Keys. Defaults to NotRestricted.",
+                                    "enum": [
+                                        "NotRestricted",
+                                        "FullyRestricted"
+                                    ],
+                                    "enumDescriptions": [
+                                        "Creation of new objects with Customer-Managed Encryption is not restricted.",
+                                        "Creation of new objects with Customer-Managed Encryption is fully restricted."
+                                    ]
+                                },
+                                "effectiveTime": {
+                                    "type": "string",
+                                    "description": "Server-determined value indicating when this configuration became effective. In RFC 3339 format.",
+                                    "format": "date-time",
+                                    "readOnly": true
+                                }
+                            }
+                        },
+                        "customerSuppliedEncryptionEnforcementConfig": {
+                            "type": "object",
+                            "description": "If set, the new objects created in this bucket must comply with this enforcement config. Changing this has no effect on existing objects; it applies to new objects only. If omitted, the new objects are allowed to be encrypted with Customer Supplied Encryption type by default.",
+                            "properties": {
+                                "restrictionMode": {
+                                    "type": "string",
+                                    "description": "Restriction mode for Customer-Supplied Encryption Keys. Defaults to NotRestricted.",
+                                    "enum": [
+                                        "NotRestricted",
+                                        "FullyRestricted"
+                                    ],
+                                    "enumDescriptions": [
+                                        "Creation of new objects with Customer-Supplied Encryption is not restricted.",
+                                        "Creation of new objects with Customer-Supplied Encryption is fully restricted."
+                                    ]
+                                },
+                                "effectiveTime": {
+                                    "type": "string",
+                                    "description": "Server-determined value indicating when this configuration became effective. In RFC 3339 format.",
+                                    "format": "date-time",
+                                    "readOnly": true
+                                }
+                            }
                         }
                     }
                 },
@@ -249,6 +321,61 @@
                         "publicAccessPrevention": {
                             "type": "string",
                             "description": "The bucket's Public Access Prevention configuration. Currently, 'inherited' and 'enforced' are supported."
+                        }
+                    }
+                },
+                "ipFilter": {
+                    "type": "object",
+                    "description": "The bucket's IP filter configuration.",
+                    "properties": {
+                        "mode": {
+                            "type": "string",
+                            "description": "The bucket's IP filter mode. E.g., 'Enabled', 'Disabled'.",
+                            "enum": [
+                                "Enabled",
+                                "Disabled"
+                            ]
+                        },
+                        "publicNetworkSource": {
+                            "type": "object",
+                            "description": "The public network source configuration for IP filtering.",
+                            "properties": {
+                                "allowedIpCidrRanges": {
+                                    "type": "array",
+                                    "description": "Allowed public IP CIDR ranges.",
+                                    "items": {
+                                        "type": "string"
+                                    }
+                                }
+                            }
+                        },
+                        "vpcNetworkSources": {
+                            "type": "array",
+                            "description": "Private VPC network sources for IP filtering.",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "network": {
+                                        "type": "string",
+                                        "description": "The fully qualified VPC network name."
+                                    },
+                                    "allowedIpCidrRanges": {
+                                        "type": "array",
+                                        "description": "Allowed IP CIDR ranges.",
+                                        "items": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "allowCrossOrgVpcs": {
+                            "type": "boolean",
+                            "description": "Whether to allow cross-organization VPCs."
+                        },
+                        "allowAllServiceAgentAccess": {
+                            "type": "boolean",
+                            "description": "Whether to allow service agent access."
                         }
                     }
                 },
@@ -824,6 +951,10 @@
                 "destination": {
                     "$ref": "Object",
                     "description": "Properties of the resulting object."
+                },
+                "deleteSourceObjects": {
+                    "type": "boolean",
+                    "description": "If true, the source objects will be deleted after a successful compose operation."
                 },
                 "kind": {
                     "type": "string",
@@ -1489,6 +1620,41 @@
                     "type": "string",
                     "description": "The modification time of the object metadata in RFC 3339 format. Set initially to object creation time and then updated whenever any metadata of the object changes. This includes changes made by a requester, such as modifying custom metadata, as well as changes made by Cloud Storage on behalf of a requester, such as changing the storage class based on an Object Lifecycle Configuration.",
                     "format": "date-time"
+                },
+                "contexts" : {
+                    "type": "object",
+                    "description": "User-defined or system-defined object contexts. Represented as key-payload pairs, where the key identifies the context and the payload contains the associated value and additional metadata.",
+                    "properties" : {
+                        "custom" : {
+                            "type": "object",
+                            "description": "User-provided object contexts where each entry consists of a unique key and a corresponding payload.",
+                            "additionalProperties": {
+                                "$ref": "ObjectCustomContextPayload",
+                                "description": "A single user-defined object context."
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "ObjectCustomContextPayload": {
+            "id": "ObjectCustomContextPayload",
+            "type": "object",
+            "description": "The payload associated with a user-defined context key.",
+            "properties": {
+                "value": {
+                    "type": "string",
+                    "description": "The value of the object contexts."
+                },
+                "createTime": {
+                    "type": "string",
+                    "format": "date-time",
+                    "description": "The time at which the object contexts was created in RFC 3339 format."
+                },
+                "updateTime": {
+                    "type": "string",
+                    "format": "date-time",
+                    "description": "The time at which the object context was last updated in RFC 3339 format."
                 }
             }
         },
@@ -4792,6 +4958,11 @@
                             "description": "Name of the bucket in which to look for objects.",
                             "required": true,
                             "location": "path"
+                        },
+                        "filter": {
+                            "type": "string",
+                            "description": "Filter results to include only objects to which the specified context is attached. You can filter by the presence, absence, or specific value of context keys.",
+                            "location": "query"
                         },
                         "delimiter": {
                             "type": "string",

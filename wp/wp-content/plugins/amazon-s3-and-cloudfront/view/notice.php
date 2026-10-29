@@ -1,6 +1,11 @@
 <?php
 // phpcs:disable WordPress.WP.GlobalVariablesOverride.Prohibited
 
+// Exit if accessed directly.
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 /** @var string $message */
 
 $as3cf_auto_p        = ( isset( $auto_p ) ) ? $auto_p : 'true';

@@ -137,7 +137,14 @@ class ResumableUploader extends AbstractUploader
             $data = new LimitStream($this->data, $this->chunkSize ?: -1, $rangeStart);
             $currStreamLimitSize = $data->getSize();
             $rangeEnd = $rangeStart + ($currStreamLimitSize - 1);
-            $headers = $this->headers + ['Content-Length' => $currStreamLimitSize, 'Content-Type' => $this->contentType, 'Content-Range' => "bytes {$rangeStart}-{$rangeEnd}/{$size}"];
+            $headers = $this->headers + ['Content-Length' => (string) $currStreamLimitSize, 'Content-Type' => $this->contentType, 'Content-Range' => "bytes {$rangeStart}-{$rangeEnd}/{$size}"];
+            $customHeaders = $this->requestOptions['restOptions']['headers'] ?? [];
+            // Check if this chunk is the final one
+            $isFinalChunk = $size !== '*' && (int) ($rangeEnd + 1) === (int) $size;
+            if (!$isFinalChunk) {
+                unset($customHeaders['X-Goog-Hash']);
+            }
+            $headers = \array_merge($headers, $customHeaders);
             $request = new Request('PUT', $resumeUri, $headers, $data);
             try {
                 $response = $this->requestWrapper->send($request, $this->requestOptions);
@@ -184,7 +191,7 @@ class ResumableUploader extends AbstractUploader
      */
     protected function createResumeUri()
     {
-        $headers = $this->headers + ['X-Upload-Content-Type' => $this->contentType, 'X-Upload-Content-Length' => $this->data->getSize(), 'Content-Type' => 'application/json'];
+        $headers = $this->headers + ['X-Upload-Content-Type' => $this->contentType, 'X-Upload-Content-Length' => (string) $this->data->getSize(), 'Content-Type' => 'application/json'];
         $body = $this->jsonEncode($this->metadata);
         $request = new Request('POST', $this->uri, $headers, $body);
         $response = $this->requestWrapper->send($request, $this->requestOptions);

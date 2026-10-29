@@ -13,7 +13,7 @@ class Quaternion
         if (static::$is_initialized == \true) {
             return;
         }
-        $pool->internalAddGeneratedFile("\n\xde\x01\n\x1cgoogle/type/quaternion.proto\x12\vgoogle.type\"8\n\nQuaternion\x12\t\n\x01x\x18\x01 \x01(\x01\x12\t\n\x01y\x18\x02 \x01(\x01\x12\t\n\x01z\x18\x03 \x01(\x01\x12\t\n\x01w\x18\x04 \x01(\x01Bo\n\x0fcom.google.typeB\x0fQuaternionProtoP\x01Z@google.golang.org/genproto/googleapis/type/quaternion;quaternion\xf8\x01\x01\xa2\x02\x03GTPb\x06proto3", \true);
+        $pool->internalAddGeneratedFile("\n\xdb\x01\n\x1cgoogle/type/quaternion.proto\x12\vgoogle.type\"8\n\nQuaternion\x12\t\n\x01x\x18\x01 \x01(\x01\x12\t\n\x01y\x18\x02 \x01(\x01\x12\t\n\x01z\x18\x03 \x01(\x01\x12\t\n\x01w\x18\x04 \x01(\x01Bl\n\x0fcom.google.typeB\x0fQuaternionProtoP\x01Z@google.golang.org/genproto/googleapis/type/quaternion;quaternion\xa2\x02\x03GTPb\x06proto3", \true);
         static::$is_initialized = \true;
     }
 }
