@@ -43,7 +43,7 @@ class QuerySerializer
             $body += \call_user_func($this->paramBuilder, $operation->getInput(), $commandArgs);
         }
         $body = \http_build_query($body, '', '&', \PHP_QUERY_RFC3986);
-        $headers = ['Content-Length' => \strlen($body), 'Content-Type' => 'application/x-www-form-urlencoded'];
+        $headers = ['Content-Length' => (string) \strlen($body), 'Content-Type' => 'application/x-www-form-urlencoded'];
         $requestUri = $operation['http']['requestUri'] ?? null;
         if ($endpoint instanceof RulesetEndpoint) {
             $this->setEndpointV2RequestOptions($endpoint, $headers);
