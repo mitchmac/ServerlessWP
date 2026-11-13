@@ -10,41 +10,20 @@ use RuntimeException;
 class UploadedFile implements UploadedFileInterface
 {
     private const ERROR_MAP = [\UPLOAD_ERR_OK => 'UPLOAD_ERR_OK', \UPLOAD_ERR_INI_SIZE => 'UPLOAD_ERR_INI_SIZE', \UPLOAD_ERR_FORM_SIZE => 'UPLOAD_ERR_FORM_SIZE', \UPLOAD_ERR_PARTIAL => 'UPLOAD_ERR_PARTIAL', \UPLOAD_ERR_NO_FILE => 'UPLOAD_ERR_NO_FILE', \UPLOAD_ERR_NO_TMP_DIR => 'UPLOAD_ERR_NO_TMP_DIR', \UPLOAD_ERR_CANT_WRITE => 'UPLOAD_ERR_CANT_WRITE', \UPLOAD_ERR_EXTENSION => 'UPLOAD_ERR_EXTENSION'];
-    /**
-     * @var string|null
-     */
-    private $clientFilename;
-    /**
-     * @var string|null
-     */
-    private $clientMediaType;
-    /**
-     * @var int
-     */
-    private $error;
-    /**
-     * @var string|null
-     */
-    private $file;
-    /**
-     * @var bool
-     */
-    private $moved = \false;
-    /**
-     * @var int|null
-     */
-    private $size;
-    /**
-     * @var StreamInterface|null
-     */
-    private $stream;
+    private ?string $clientFilename;
+    private ?string $clientMediaType;
+    private int $error;
+    private ?string $file = null;
+    private bool $moved = \false;
+    private ?int $size;
+    private ?StreamInterface $stream = null;
     /**
      * @param StreamInterface|string|resource $streamOrFile
      */
     public function __construct($streamOrFile, ?int $size, int $errorStatus, ?string $clientFilename = null, ?string $clientMediaType = null)
     {
         $this->setError($errorStatus);
-        $this->size = $size;
+        $this->size = Integers::assertOptionalNonNegativeSize($size, 'Uploaded file size');
         $this->clientFilename = $clientFilename;
         $this->clientMediaType = $clientMediaType;
         if ($this->isOk()) {
@@ -80,10 +59,6 @@ class UploadedFile implements UploadedFileInterface
         }
         $this->error = $error;
     }
-    private static function isStringNotEmpty($param) : bool
-    {
-        return \is_string($param) && \false === empty($param);
-    }
     /**
      * Return true if there is no upload error
      */
@@ -117,20 +92,24 @@ class UploadedFile implements UploadedFileInterface
         $file = $this->file;
         return new LazyOpenStream($file, 'r+');
     }
-    public function moveTo($targetPath) : void
+    public function moveTo(string $targetPath) : void
     {
         $this->validateActive();
-        if (\false === self::isStringNotEmpty($targetPath)) {
+        if ($targetPath === '') {
             throw new InvalidArgumentException('Invalid path provided for move operation; must be a non-empty string');
         }
         if ($this->file) {
             $this->moved = \PHP_SAPI === 'cli' ? \rename($this->file, $targetPath) : \move_uploaded_file($this->file, $targetPath);
         } else {
-            Utils::copyToStream($this->getStream(), new LazyOpenStream($targetPath, 'w'));
+            $stream = $this->getStream();
+            if ($stream->isSeekable()) {
+                $stream->rewind();
+            }
+            Utils::copyToStream($stream, new LazyOpenStream($targetPath, 'w'));
             $this->moved = \true;
         }
         if (\false === $this->moved) {
-            throw new RuntimeException(\sprintf('Uploaded file could not be moved to %s', $targetPath));
+            throw new RuntimeException(\sprintf('Uploaded file could not be moved to %s', DiagnosticValue::escape($targetPath)));
         }
     }
     public function getSize() : ?int

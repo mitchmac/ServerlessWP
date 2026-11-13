@@ -17,9 +17,9 @@
  */
 class WP_SQLite_Connection {
 	/**
-	 * The default timeout in seconds for SQLite to wait for a writable lock.
+	 * The default time in milliseconds for SQLite to wait for a lock.
 	 */
-	const DEFAULT_SQLITE_TIMEOUT = 10;
+	const DEFAULT_SQLITE_BUSY_TIMEOUT = 10000;
 
 	/**
 	 * The supported SQLite journal modes.
@@ -76,8 +76,8 @@ class WP_SQLite_Connection {
 	 *                                         Must be set when PDO instance is not provided.
 	 *     @type PDO|null        $pdo          Optional. PDO instance with SQLite connection.
 	 *                                         If not provided, a new PDO instance will be created.
-	 *     @type int|null        $timeout      Optional. SQLite timeout in seconds.
-	 *                                         The time to wait for a writable lock.
+	 *     @type int|null        $busy_timeout Optional. SQLite busy timeout in milliseconds.
+	 *                                         The time to wait for a lock. Defaults to 10000.
 	 *     @type string|null     $journal_mode Optional. SQLite journal mode. Defaults to WAL.
 	 *     @type string|int|null $synchronous  Optional. SQLite synchronous setting. Defaults to
 	 *                                         NORMAL when the effective journal mode is WAL.
@@ -107,13 +107,14 @@ class WP_SQLite_Connection {
 		// Throw exceptions on error.
 		$this->pdo->setAttribute( PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION );
 
-		// Configure SQLite timeout.
-		if ( isset( $options['timeout'] ) && is_int( $options['timeout'] ) ) {
-			$timeout = $options['timeout'];
-		} else {
-			$timeout = self::DEFAULT_SQLITE_TIMEOUT;
+		// Configure SQLite busy timeout. SQLite stores it as a 32-bit signed integer.
+		$busy_timeout = $options['busy_timeout'] ?? self::DEFAULT_SQLITE_BUSY_TIMEOUT;
+		if ( ! is_int( $busy_timeout ) || $busy_timeout < 0 || $busy_timeout > 2147483647 ) {
+			throw new InvalidArgumentException(
+				'Invalid SQLite busy timeout. It must be an integer from 0 to 2147483647.'
+			);
 		}
-		$this->pdo->setAttribute( PDO::ATTR_TIMEOUT, $timeout );
+		$this->query( 'PRAGMA busy_timeout = ' . $busy_timeout );
 
 		// Configure SQLite journal mode. Default to WAL for best throughput.
 		$effective_journal_mode = null;

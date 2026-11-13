@@ -71,7 +71,8 @@ class InstanceProfileProvider
      */
     public function __construct(array $config = [])
     {
-        $this->timeout = (float) \getenv(self::ENV_TIMEOUT) ?: $config['timeout'] ?? self::DEFAULT_TIMEOUT;
+        $timeout = (float) \getenv(self::ENV_TIMEOUT) ?: $config['timeout'] ?? self::DEFAULT_TIMEOUT;
+        $this->timeout = \is_string($timeout) && \is_numeric($timeout) ? (float) $timeout : $timeout;
         $this->profile = $config['profile'] ?? null;
         $this->retries = (int) \getenv(self::ENV_RETRIES) ?: $config['retries'] ?? self::DEFAULT_RETRIES;
         $this->client = $config['client'] ?? \DeliciousBrains\WP_Offload_Media\Aws3\Aws\default_http_handler();
@@ -181,7 +182,7 @@ class InstanceProfileProvider
         $userAgent .= ' ' . \DeliciousBrains\WP_Offload_Media\Aws3\Aws\default_user_agent();
         $request = $request->withHeader('User-Agent', $userAgent);
         foreach ($headers as $key => $value) {
-            $request = $request->withHeader($key, $value);
+            $request = $request->withHeader($key, (string) $value);
         }
         return $fn($request, ['timeout' => $this->timeout])->then(function (ResponseInterface $response) {
             return (string) $response->getBody();

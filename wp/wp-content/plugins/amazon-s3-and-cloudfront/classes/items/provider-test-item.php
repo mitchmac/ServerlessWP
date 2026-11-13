@@ -10,14 +10,14 @@ class Provider_Test_Item extends Media_Library_Item {
 	 *
 	 * @var string
 	 */
-	protected static $source_type_name = 'Provider Test Item';
+	protected static string $source_type_name = 'Provider Test Item';
 
 	/**
 	 * Internal source type identifier.
 	 *
 	 * @var string
 	 */
-	protected static $source_type = 'provider-test';
+	protected static string $source_type = 'provider-test';
 
 	/**
 	 * Overrides the parent implementation to avoid storing anything in the database.
@@ -26,7 +26,7 @@ class Provider_Test_Item extends Media_Library_Item {
 	 *
 	 * @return int|WP_Error
 	 */
-	public function save( $update_duplicates = true ) {
+	public function save( bool $update_duplicates = true ): int|WP_Error {
 		return 0;
 	}
 
@@ -38,7 +38,7 @@ class Provider_Test_Item extends Media_Library_Item {
 	 *
 	 * @return array
 	 */
-	public function remove_duplicate_paths( Item $as3cf_item, $paths ): array {
+	public function remove_duplicate_paths( Item $as3cf_item, array $paths ): array {
 		return $paths;
 	}
 }

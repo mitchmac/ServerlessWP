@@ -2,6 +2,11 @@
 
 namespace DeliciousBrains\WP_Offload_Media\Integrations;
 
+// Exit if accessed directly.
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 class Integration_Manager {
 
 	/**

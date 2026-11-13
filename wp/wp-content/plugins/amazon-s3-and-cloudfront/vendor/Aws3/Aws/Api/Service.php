@@ -61,7 +61,7 @@ class Service extends AbstractModel
      */
     public static function createSerializer(Service $api, $endpoint)
     {
-        static $mapping = ['json' => Serializer\JsonRpcSerializer::class, 'query' => Serializer\QuerySerializer::class, 'rest-json' => Serializer\RestJsonSerializer::class, 'rest-xml' => Serializer\RestXmlSerializer::class];
+        static $mapping = ['json' => Serializer\JsonRpcSerializer::class, 'query' => Serializer\QuerySerializer::class, 'rest-json' => Serializer\RestJsonSerializer::class, 'rest-xml' => Serializer\RestXmlSerializer::class, 'smithy-rpc-v2-cbor' => Serializer\RpcV2CborSerializer::class];
         $proto = $api->getProtocol();
         if (isset($mapping[$proto])) {
             return new $mapping[$proto]($api, $endpoint);
@@ -83,7 +83,7 @@ class Service extends AbstractModel
      */
     public static function createErrorParser($protocol, ?Service $api = null)
     {
-        static $mapping = ['json' => ErrorParser\JsonRpcErrorParser::class, 'query' => ErrorParser\XmlErrorParser::class, 'rest-json' => ErrorParser\RestJsonErrorParser::class, 'rest-xml' => ErrorParser\XmlErrorParser::class, 'ec2' => ErrorParser\XmlErrorParser::class];
+        static $mapping = ['json' => ErrorParser\JsonRpcErrorParser::class, 'query' => ErrorParser\XmlErrorParser::class, 'rest-json' => ErrorParser\RestJsonErrorParser::class, 'rest-xml' => ErrorParser\XmlErrorParser::class, 'ec2' => ErrorParser\XmlErrorParser::class, 'smithy-rpc-v2-cbor' => ErrorParser\RpcV2CborErrorParser::class];
         if (isset($mapping[$protocol])) {
             return new $mapping[$protocol]($api);
         }
@@ -98,7 +98,7 @@ class Service extends AbstractModel
      */
     public static function createParser(Service $api)
     {
-        static $mapping = ['json' => Parser\JsonRpcParser::class, 'query' => Parser\QueryParser::class, 'rest-json' => Parser\RestJsonParser::class, 'rest-xml' => Parser\RestXmlParser::class];
+        static $mapping = ['json' => Parser\JsonRpcParser::class, 'query' => Parser\QueryParser::class, 'rest-json' => Parser\RestJsonParser::class, 'rest-xml' => Parser\RestXmlParser::class, 'smithy-rpc-v2-cbor' => Parser\RpcV2CborParser::class];
         $proto = $api->getProtocol();
         if (isset($mapping[$proto])) {
             return new $mapping[$proto]($api);

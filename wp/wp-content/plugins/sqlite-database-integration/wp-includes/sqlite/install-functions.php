@@ -23,13 +23,14 @@ function sqlite_make_db_sqlite() {
 		$translator = new WP_MySQL_On_SQLite(
 			sprintf(
 				'mysql-on-sqlite:path=%s;dbname=%s',
-				str_replace( ';', ';;', FQDB ),
+				str_replace( ';', ';;', DB_PATH ),
 				str_replace( ';', ';;', $wpdb->dbname )
 			),
 			null,
 			null,
 			array(
 				'sqlite_journal_mode' => defined( 'SQLITE_JOURNAL_MODE' ) ? SQLITE_JOURNAL_MODE : null,
+				'sqlite_busy_timeout' => defined( 'SQLITE_BUSY_TIMEOUT' ) ? SQLITE_BUSY_TIMEOUT : null,
 			)
 		);
 		$translator->setAttribute( PDO::ATTR_STRINGIFY_FETCHES, true ); // phpcs:ignore WordPress.DB.RestrictedClasses.mysql__PDO

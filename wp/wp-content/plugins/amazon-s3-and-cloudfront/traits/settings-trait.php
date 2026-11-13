@@ -4,6 +4,11 @@ namespace DeliciousBrains\WP_Offload_Media;
 
 use AS3CF_Utils;
 
+// Exit if accessed directly.
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 trait Settings_Trait {
 	/**
 	 * Are only legacy defines in use?
@@ -149,7 +154,10 @@ trait Settings_Trait {
 
 			$this->listen_for_settings_constant_changes();
 
-			update_site_option( 'as3cf_constant_' . static::settings_constant(), array_diff_key( $this->defined_settings, array_flip( $this->get_monitored_settings_blacklist() ) ) );
+			update_site_option(
+				'as3cf_constant_' . static::settings_constant(),
+				array_diff_key( $this->defined_settings, array_flip( $this->get_monitored_settings_blacklist() ) )
+			);
 		}
 
 		return $this->defined_settings;
@@ -250,7 +258,12 @@ trait Settings_Trait {
 				 * @param mixed  $old_value
 				 * @param string $setting
 				 */
-				do_action( 'as3cf_constant_' . static::settings_constant() . '_changed_' . $setting, $new_value, $old_value, $setting );
+				do_action(
+					'as3cf_constant_' . static::settings_constant() . '_changed_' . $setting,
+					$new_value,
+					$old_value,
+					$setting
+				);
 
 				/**
 				 * Generic hook for setting change.
@@ -259,7 +272,12 @@ trait Settings_Trait {
 				 * @param mixed  $old_value
 				 * @param string $setting
 				 */
-				do_action( 'as3cf_constant_' . static::settings_constant() . '_changed', $new_value, $old_value, $setting );
+				do_action(
+					'as3cf_constant_' . static::settings_constant() . '_changed',
+					$new_value,
+					$old_value,
+					$setting
+				);
 			}
 		}
 	}
@@ -315,7 +333,11 @@ trait Settings_Trait {
 
 		foreach ( $settings as $key => $value ) {
 			if ( ! empty( $value ) && in_array( $key, $sensitive_settings ) ) {
-				$settings[ $key ] = _x( '-- not shown --', 'placeholder for sensitive setting, e.g. secret access key', 'amazon-s3-and-cloudfront' );
+				$settings[ $key ] = _x(
+					'-- not shown --',
+					'placeholder for sensitive setting, e.g. secret access key',
+					'amazon-s3-and-cloudfront'
+				);
 			}
 		}
 

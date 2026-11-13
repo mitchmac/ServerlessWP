@@ -6,6 +6,7 @@ use DeliciousBrains\WP_Offload_Media\Aws3\Aws\Api\Service;
 use DeliciousBrains\WP_Offload_Media\Aws3\Aws\Api\StructureShape;
 use DeliciousBrains\WP_Offload_Media\Aws3\Aws\CommandInterface;
 use DeliciousBrains\WP_Offload_Media\Aws3\Aws\ResultInterface;
+use DeliciousBrains\WP_Offload_Media\Aws3\GuzzleHttp\Psr7\CachingStream;
 use DeliciousBrains\WP_Offload_Media\Aws3\Psr\Http\Message\ResponseInterface;
 use DeliciousBrains\WP_Offload_Media\Aws3\Psr\Http\Message\StreamInterface;
 /**
@@ -32,4 +33,19 @@ abstract class AbstractParser
      */
     public abstract function __invoke(CommandInterface $command, ResponseInterface $response);
     public abstract function parseMemberFromStream(StreamInterface $stream, StructureShape $member, $response);
+    public static function getBodyContents(ResponseInterface $response) : string
+    {
+        $body = $response->getBody();
+        if ($body->isSeekable()) {
+            $body->rewind();
+        }
+        return $body->getContents();
+    }
+    public static function getResponseWithCachingStream(ResponseInterface $response) : ResponseInterface
+    {
+        if (!$response->getBody()->isSeekable()) {
+            return $response->withBody(new CachingStream($response->getBody()));
+        }
+        return $response;
+    }
 }

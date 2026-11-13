@@ -8,20 +8,19 @@ use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Internal\GPBType;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\Internal\GPBUtil;
 use DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobuf\RepeatedField;
 /**
- * Represents a postal address, e.g. for postal delivery or payments addresses.
- * Given a postal address, a postal service can deliver items to a premise, P.O.
- * Box or similar.
- * It is not intended to model geographical locations (roads, towns,
- * mountains).
- * In typical usage an address would be created via user input or from importing
+ * Represents a postal address, such as for postal delivery or payments
+ * addresses. With a postal address, a postal service can deliver items to a
+ * premise, P.O. box, or similar. A postal address is not intended to model
+ * geographical locations like roads, towns, or mountains.
+ * In typical usage, an address would be created by user input or from importing
  * existing data, depending on the type of process.
- * Advice on address input / editing:
- *  - Use an i18n-ready address widget such as
- *    https://github.com/google/libaddressinput)
- * - Users should not be presented with UI elements for input or editing of
- *   fields outside countries where that field is used.
- * For more guidance on how to use this schema, please see:
- * https://support.google.com/business/answer/6397478
+ * Advice on address input or editing:
+ *  - Use an internationalization-ready address widget such as
+ *  https://github.com/google/libaddressinput.
+ *  - Users should not be presented with UI elements for input or editing of
+ *  fields outside countries where that field is used.
+ * For more guidance on how to use this schema, see:
+ * https://support.google.com/business/answer/6397478.
  *
  * Generated from protobuf message <code>google.type.PostalAddress</code>
  */
@@ -38,8 +37,8 @@ class PostalAddress extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobu
     /**
      * Required. CLDR region code of the country/region of the address. This
      * is never inferred and it is up to the user to ensure the value is
-     * correct. See http://cldr.unicode.org/ and
-     * http://www.unicode.org/cldr/charts/30/supplemental/territory_information.html
+     * correct. See https://cldr.unicode.org/ and
+     * https://www.unicode.org/cldr/charts/30/supplemental/territory_information.html
      * for details. Example: "CH" for Switzerland.
      *
      * Generated from protobuf field <code>string region_code = 2;</code>
@@ -63,8 +62,8 @@ class PostalAddress extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobu
     /**
      * Optional. Postal code of the address. Not all countries use or require
      * postal codes to be present, but where they are used, they may trigger
-     * additional validation with other parts of the address (e.g. state/zip
-     * validation in the U.S.A.).
+     * additional validation with other parts of the address (for example,
+     * state or zip code validation in the United States).
      *
      * Generated from protobuf field <code>string postal_code = 4;</code>
      */
@@ -72,9 +71,9 @@ class PostalAddress extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobu
     /**
      * Optional. Additional, country-specific, sorting code. This is not used
      * in most regions. Where it is used, the value is either a string like
-     * "CEDEX", optionally followed by a number (e.g. "CEDEX 7"), or just a number
-     * alone, representing the "sector code" (Jamaica), "delivery area indicator"
-     * (Malawi) or "post office indicator" (e.g. Côte d'Ivoire).
+     * "CEDEX", optionally followed by a number (for example, "CEDEX 7"), or just
+     * a number alone, representing the "sector code" (Jamaica), "delivery area
+     * indicator" (Malawi) or "post office indicator" (Côte d'Ivoire).
      *
      * Generated from protobuf field <code>string sorting_code = 5;</code>
      */
@@ -83,47 +82,48 @@ class PostalAddress extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobu
      * Optional. Highest administrative subdivision which is used for postal
      * addresses of a country or region.
      * For example, this can be a state, a province, an oblast, or a prefecture.
-     * Specifically, for Spain this is the province and not the autonomous
-     * community (e.g. "Barcelona" and not "Catalonia").
-     * Many countries don't use an administrative area in postal addresses. E.g.
-     * in Switzerland this should be left unpopulated.
+     * For Spain, this is the province and not the autonomous
+     * community (for example, "Barcelona" and not "Catalonia").
+     * Many countries don't use an administrative area in postal addresses. For
+     * example, in Switzerland, this should be left unpopulated.
      *
      * Generated from protobuf field <code>string administrative_area = 6;</code>
      */
     protected $administrative_area = '';
     /**
-     * Optional. Generally refers to the city/town portion of the address.
+     * Optional. Generally refers to the city or town portion of the address.
      * Examples: US city, IT comune, UK post town.
      * In regions of the world where localities are not well defined or do not fit
-     * into this structure well, leave locality empty and use address_lines.
+     * into this structure well, leave `locality` empty and use `address_lines`.
      *
      * Generated from protobuf field <code>string locality = 7;</code>
      */
     protected $locality = '';
     /**
      * Optional. Sublocality of the address.
-     * For example, this can be neighborhoods, boroughs, districts.
+     * For example, this can be a neighborhood, borough, or district.
      *
      * Generated from protobuf field <code>string sublocality = 8;</code>
      */
     protected $sublocality = '';
     /**
      * Unstructured address lines describing the lower levels of an address.
-     * Because values in address_lines do not have type information and may
-     * sometimes contain multiple values in a single field (e.g.
+     * Because values in `address_lines` do not have type information and may
+     * sometimes contain multiple values in a single field (for example,
      * "Austin, TX"), it is important that the line order is clear. The order of
-     * address lines should be "envelope order" for the country/region of the
-     * address. In places where this can vary (e.g. Japan), address_language is
-     * used to make it explicit (e.g. "ja" for large-to-small ordering and
-     * "ja-Latn" or "en" for small-to-large). This way, the most specific line of
-     * an address can be selected based on the language.
+     * address lines should be "envelope order" for the country or region of the
+     * address. In places where this can vary (for example, Japan),
+     * `address_language` is used to make it explicit (for example, "ja" for
+     * large-to-small ordering and "ja-Latn" or "en" for small-to-large). In this
+     * way, the most specific line of an address can be selected based on the
+     * language.
      * The minimum permitted structural representation of an address consists
-     * of a region_code with all remaining information placed in the
-     * address_lines. It would be possible to format such an address very
+     * of a `region_code` with all remaining information placed in the
+     * `address_lines`. It would be possible to format such an address very
      * approximately without geocoding, but no semantic reasoning could be
      * made about any of the address components until it was at least
      * partially resolved.
-     * Creating an address only containing a region_code and address_lines, and
+     * Creating an address only containing a `region_code` and `address_lines` and
      * then geocoding is the recommended way to handle completely unstructured
      * addresses (as opposed to guessing which parts of the address should be
      * localities or administrative areas).
@@ -158,8 +158,8 @@ class PostalAddress extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobu
      *     @type string $region_code
      *           Required. CLDR region code of the country/region of the address. This
      *           is never inferred and it is up to the user to ensure the value is
-     *           correct. See http://cldr.unicode.org/ and
-     *           http://www.unicode.org/cldr/charts/30/supplemental/territory_information.html
+     *           correct. See https://cldr.unicode.org/ and
+     *           https://www.unicode.org/cldr/charts/30/supplemental/territory_information.html
      *           for details. Example: "CH" for Switzerland.
      *     @type string $language_code
      *           Optional. BCP-47 language code of the contents of this address (if
@@ -175,47 +175,48 @@ class PostalAddress extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobu
      *     @type string $postal_code
      *           Optional. Postal code of the address. Not all countries use or require
      *           postal codes to be present, but where they are used, they may trigger
-     *           additional validation with other parts of the address (e.g. state/zip
-     *           validation in the U.S.A.).
+     *           additional validation with other parts of the address (for example,
+     *           state or zip code validation in the United States).
      *     @type string $sorting_code
      *           Optional. Additional, country-specific, sorting code. This is not used
      *           in most regions. Where it is used, the value is either a string like
-     *           "CEDEX", optionally followed by a number (e.g. "CEDEX 7"), or just a number
-     *           alone, representing the "sector code" (Jamaica), "delivery area indicator"
-     *           (Malawi) or "post office indicator" (e.g. Côte d'Ivoire).
+     *           "CEDEX", optionally followed by a number (for example, "CEDEX 7"), or just
+     *           a number alone, representing the "sector code" (Jamaica), "delivery area
+     *           indicator" (Malawi) or "post office indicator" (Côte d'Ivoire).
      *     @type string $administrative_area
      *           Optional. Highest administrative subdivision which is used for postal
      *           addresses of a country or region.
      *           For example, this can be a state, a province, an oblast, or a prefecture.
-     *           Specifically, for Spain this is the province and not the autonomous
-     *           community (e.g. "Barcelona" and not "Catalonia").
-     *           Many countries don't use an administrative area in postal addresses. E.g.
-     *           in Switzerland this should be left unpopulated.
+     *           For Spain, this is the province and not the autonomous
+     *           community (for example, "Barcelona" and not "Catalonia").
+     *           Many countries don't use an administrative area in postal addresses. For
+     *           example, in Switzerland, this should be left unpopulated.
      *     @type string $locality
-     *           Optional. Generally refers to the city/town portion of the address.
+     *           Optional. Generally refers to the city or town portion of the address.
      *           Examples: US city, IT comune, UK post town.
      *           In regions of the world where localities are not well defined or do not fit
-     *           into this structure well, leave locality empty and use address_lines.
+     *           into this structure well, leave `locality` empty and use `address_lines`.
      *     @type string $sublocality
      *           Optional. Sublocality of the address.
-     *           For example, this can be neighborhoods, boroughs, districts.
+     *           For example, this can be a neighborhood, borough, or district.
      *     @type string[] $address_lines
      *           Unstructured address lines describing the lower levels of an address.
-     *           Because values in address_lines do not have type information and may
-     *           sometimes contain multiple values in a single field (e.g.
+     *           Because values in `address_lines` do not have type information and may
+     *           sometimes contain multiple values in a single field (for example,
      *           "Austin, TX"), it is important that the line order is clear. The order of
-     *           address lines should be "envelope order" for the country/region of the
-     *           address. In places where this can vary (e.g. Japan), address_language is
-     *           used to make it explicit (e.g. "ja" for large-to-small ordering and
-     *           "ja-Latn" or "en" for small-to-large). This way, the most specific line of
-     *           an address can be selected based on the language.
+     *           address lines should be "envelope order" for the country or region of the
+     *           address. In places where this can vary (for example, Japan),
+     *           `address_language` is used to make it explicit (for example, "ja" for
+     *           large-to-small ordering and "ja-Latn" or "en" for small-to-large). In this
+     *           way, the most specific line of an address can be selected based on the
+     *           language.
      *           The minimum permitted structural representation of an address consists
-     *           of a region_code with all remaining information placed in the
-     *           address_lines. It would be possible to format such an address very
+     *           of a `region_code` with all remaining information placed in the
+     *           `address_lines`. It would be possible to format such an address very
      *           approximately without geocoding, but no semantic reasoning could be
      *           made about any of the address components until it was at least
      *           partially resolved.
-     *           Creating an address only containing a region_code and address_lines, and
+     *           Creating an address only containing a `region_code` and `address_lines` and
      *           then geocoding is the recommended way to handle completely unstructured
      *           addresses (as opposed to guessing which parts of the address should be
      *           localities or administrative areas).
@@ -262,8 +263,8 @@ class PostalAddress extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobu
     /**
      * Required. CLDR region code of the country/region of the address. This
      * is never inferred and it is up to the user to ensure the value is
-     * correct. See http://cldr.unicode.org/ and
-     * http://www.unicode.org/cldr/charts/30/supplemental/territory_information.html
+     * correct. See https://cldr.unicode.org/ and
+     * https://www.unicode.org/cldr/charts/30/supplemental/territory_information.html
      * for details. Example: "CH" for Switzerland.
      *
      * Generated from protobuf field <code>string region_code = 2;</code>
@@ -276,8 +277,8 @@ class PostalAddress extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobu
     /**
      * Required. CLDR region code of the country/region of the address. This
      * is never inferred and it is up to the user to ensure the value is
-     * correct. See http://cldr.unicode.org/ and
-     * http://www.unicode.org/cldr/charts/30/supplemental/territory_information.html
+     * correct. See https://cldr.unicode.org/ and
+     * https://www.unicode.org/cldr/charts/30/supplemental/territory_information.html
      * for details. Example: "CH" for Switzerland.
      *
      * Generated from protobuf field <code>string region_code = 2;</code>
@@ -334,8 +335,8 @@ class PostalAddress extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobu
     /**
      * Optional. Postal code of the address. Not all countries use or require
      * postal codes to be present, but where they are used, they may trigger
-     * additional validation with other parts of the address (e.g. state/zip
-     * validation in the U.S.A.).
+     * additional validation with other parts of the address (for example,
+     * state or zip code validation in the United States).
      *
      * Generated from protobuf field <code>string postal_code = 4;</code>
      * @return string
@@ -347,8 +348,8 @@ class PostalAddress extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobu
     /**
      * Optional. Postal code of the address. Not all countries use or require
      * postal codes to be present, but where they are used, they may trigger
-     * additional validation with other parts of the address (e.g. state/zip
-     * validation in the U.S.A.).
+     * additional validation with other parts of the address (for example,
+     * state or zip code validation in the United States).
      *
      * Generated from protobuf field <code>string postal_code = 4;</code>
      * @param string $var
@@ -363,9 +364,9 @@ class PostalAddress extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobu
     /**
      * Optional. Additional, country-specific, sorting code. This is not used
      * in most regions. Where it is used, the value is either a string like
-     * "CEDEX", optionally followed by a number (e.g. "CEDEX 7"), or just a number
-     * alone, representing the "sector code" (Jamaica), "delivery area indicator"
-     * (Malawi) or "post office indicator" (e.g. Côte d'Ivoire).
+     * "CEDEX", optionally followed by a number (for example, "CEDEX 7"), or just
+     * a number alone, representing the "sector code" (Jamaica), "delivery area
+     * indicator" (Malawi) or "post office indicator" (Côte d'Ivoire).
      *
      * Generated from protobuf field <code>string sorting_code = 5;</code>
      * @return string
@@ -377,9 +378,9 @@ class PostalAddress extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobu
     /**
      * Optional. Additional, country-specific, sorting code. This is not used
      * in most regions. Where it is used, the value is either a string like
-     * "CEDEX", optionally followed by a number (e.g. "CEDEX 7"), or just a number
-     * alone, representing the "sector code" (Jamaica), "delivery area indicator"
-     * (Malawi) or "post office indicator" (e.g. Côte d'Ivoire).
+     * "CEDEX", optionally followed by a number (for example, "CEDEX 7"), or just
+     * a number alone, representing the "sector code" (Jamaica), "delivery area
+     * indicator" (Malawi) or "post office indicator" (Côte d'Ivoire).
      *
      * Generated from protobuf field <code>string sorting_code = 5;</code>
      * @param string $var
@@ -395,10 +396,10 @@ class PostalAddress extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobu
      * Optional. Highest administrative subdivision which is used for postal
      * addresses of a country or region.
      * For example, this can be a state, a province, an oblast, or a prefecture.
-     * Specifically, for Spain this is the province and not the autonomous
-     * community (e.g. "Barcelona" and not "Catalonia").
-     * Many countries don't use an administrative area in postal addresses. E.g.
-     * in Switzerland this should be left unpopulated.
+     * For Spain, this is the province and not the autonomous
+     * community (for example, "Barcelona" and not "Catalonia").
+     * Many countries don't use an administrative area in postal addresses. For
+     * example, in Switzerland, this should be left unpopulated.
      *
      * Generated from protobuf field <code>string administrative_area = 6;</code>
      * @return string
@@ -411,10 +412,10 @@ class PostalAddress extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobu
      * Optional. Highest administrative subdivision which is used for postal
      * addresses of a country or region.
      * For example, this can be a state, a province, an oblast, or a prefecture.
-     * Specifically, for Spain this is the province and not the autonomous
-     * community (e.g. "Barcelona" and not "Catalonia").
-     * Many countries don't use an administrative area in postal addresses. E.g.
-     * in Switzerland this should be left unpopulated.
+     * For Spain, this is the province and not the autonomous
+     * community (for example, "Barcelona" and not "Catalonia").
+     * Many countries don't use an administrative area in postal addresses. For
+     * example, in Switzerland, this should be left unpopulated.
      *
      * Generated from protobuf field <code>string administrative_area = 6;</code>
      * @param string $var
@@ -427,10 +428,10 @@ class PostalAddress extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobu
         return $this;
     }
     /**
-     * Optional. Generally refers to the city/town portion of the address.
+     * Optional. Generally refers to the city or town portion of the address.
      * Examples: US city, IT comune, UK post town.
      * In regions of the world where localities are not well defined or do not fit
-     * into this structure well, leave locality empty and use address_lines.
+     * into this structure well, leave `locality` empty and use `address_lines`.
      *
      * Generated from protobuf field <code>string locality = 7;</code>
      * @return string
@@ -440,10 +441,10 @@ class PostalAddress extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobu
         return $this->locality;
     }
     /**
-     * Optional. Generally refers to the city/town portion of the address.
+     * Optional. Generally refers to the city or town portion of the address.
      * Examples: US city, IT comune, UK post town.
      * In regions of the world where localities are not well defined or do not fit
-     * into this structure well, leave locality empty and use address_lines.
+     * into this structure well, leave `locality` empty and use `address_lines`.
      *
      * Generated from protobuf field <code>string locality = 7;</code>
      * @param string $var
@@ -457,7 +458,7 @@ class PostalAddress extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobu
     }
     /**
      * Optional. Sublocality of the address.
-     * For example, this can be neighborhoods, boroughs, districts.
+     * For example, this can be a neighborhood, borough, or district.
      *
      * Generated from protobuf field <code>string sublocality = 8;</code>
      * @return string
@@ -468,7 +469,7 @@ class PostalAddress extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobu
     }
     /**
      * Optional. Sublocality of the address.
-     * For example, this can be neighborhoods, boroughs, districts.
+     * For example, this can be a neighborhood, borough, or district.
      *
      * Generated from protobuf field <code>string sublocality = 8;</code>
      * @param string $var
@@ -482,21 +483,22 @@ class PostalAddress extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobu
     }
     /**
      * Unstructured address lines describing the lower levels of an address.
-     * Because values in address_lines do not have type information and may
-     * sometimes contain multiple values in a single field (e.g.
+     * Because values in `address_lines` do not have type information and may
+     * sometimes contain multiple values in a single field (for example,
      * "Austin, TX"), it is important that the line order is clear. The order of
-     * address lines should be "envelope order" for the country/region of the
-     * address. In places where this can vary (e.g. Japan), address_language is
-     * used to make it explicit (e.g. "ja" for large-to-small ordering and
-     * "ja-Latn" or "en" for small-to-large). This way, the most specific line of
-     * an address can be selected based on the language.
+     * address lines should be "envelope order" for the country or region of the
+     * address. In places where this can vary (for example, Japan),
+     * `address_language` is used to make it explicit (for example, "ja" for
+     * large-to-small ordering and "ja-Latn" or "en" for small-to-large). In this
+     * way, the most specific line of an address can be selected based on the
+     * language.
      * The minimum permitted structural representation of an address consists
-     * of a region_code with all remaining information placed in the
-     * address_lines. It would be possible to format such an address very
+     * of a `region_code` with all remaining information placed in the
+     * `address_lines`. It would be possible to format such an address very
      * approximately without geocoding, but no semantic reasoning could be
      * made about any of the address components until it was at least
      * partially resolved.
-     * Creating an address only containing a region_code and address_lines, and
+     * Creating an address only containing a `region_code` and `address_lines` and
      * then geocoding is the recommended way to handle completely unstructured
      * addresses (as opposed to guessing which parts of the address should be
      * localities or administrative areas).
@@ -510,21 +512,22 @@ class PostalAddress extends \DeliciousBrains\WP_Offload_Media\Gcp\Google\Protobu
     }
     /**
      * Unstructured address lines describing the lower levels of an address.
-     * Because values in address_lines do not have type information and may
-     * sometimes contain multiple values in a single field (e.g.
+     * Because values in `address_lines` do not have type information and may
+     * sometimes contain multiple values in a single field (for example,
      * "Austin, TX"), it is important that the line order is clear. The order of
-     * address lines should be "envelope order" for the country/region of the
-     * address. In places where this can vary (e.g. Japan), address_language is
-     * used to make it explicit (e.g. "ja" for large-to-small ordering and
-     * "ja-Latn" or "en" for small-to-large). This way, the most specific line of
-     * an address can be selected based on the language.
+     * address lines should be "envelope order" for the country or region of the
+     * address. In places where this can vary (for example, Japan),
+     * `address_language` is used to make it explicit (for example, "ja" for
+     * large-to-small ordering and "ja-Latn" or "en" for small-to-large). In this
+     * way, the most specific line of an address can be selected based on the
+     * language.
      * The minimum permitted structural representation of an address consists
-     * of a region_code with all remaining information placed in the
-     * address_lines. It would be possible to format such an address very
+     * of a `region_code` with all remaining information placed in the
+     * `address_lines`. It would be possible to format such an address very
      * approximately without geocoding, but no semantic reasoning could be
      * made about any of the address components until it was at least
      * partially resolved.
-     * Creating an address only containing a region_code and address_lines, and
+     * Creating an address only containing a `region_code` and `address_lines` and
      * then geocoding is the recommended way to handle completely unstructured
      * addresses (as opposed to guessing which parts of the address should be
      * localities or administrative areas).

@@ -45,7 +45,7 @@ class StorageClient
 {
     use ArrayTrait;
     use ClientTrait;
-    const VERSION = '1.49.2';
+    const VERSION = '2.5.1';
     const FULL_CONTROL_SCOPE = 'https://www.googleapis.com/auth/devstorage.full_control';
     const READ_ONLY_SCOPE = 'https://www.googleapis.com/auth/devstorage.read_only';
     const READ_WRITE_SCOPE = 'https://www.googleapis.com/auth/devstorage.read_write';
@@ -414,6 +414,27 @@ class StorageClient
      *           `projects/my-project/locations/kr-location/keyRings/my-kr/cryptoKeys/my-key`.
      *           Please note the KMS key ring must use the same location as the
      *           bucket.
+     *     @type array $encryption.googleManagedEncryptionEnforcementConfig
+     *           Enforcement configuration for Google-managed encryption.
+     *     @type string $encryption.googleManagedEncryptionEnforcementConfig.restrictionMode
+     *           The restriction state of the encryption policy. Acceptable values are
+     *           `"NotRestricted"` and `"FullyRestricted"`.
+     *     @type string $encryption.googleManagedEncryptionEnforcementConfig.effectiveTime
+     *           [readonly] The time from which the policy was effective in RFC 3339 format.
+     *     @type array $encryption.customerManagedEncryptionEnforcementConfig
+     *           Enforcement configuration for Cloud KMS (customer-managed) encryption.
+     *     @type string $encryption.customerManagedEncryptionEnforcementConfig.restrictionMode
+     *           The restriction state of the encryption policy. Acceptable values are
+     *           `"NotRestricted"` and `"FullyRestricted"`.
+     *     @type string $encryption.customerManagedEncryptionEnforcementConfig.effectiveTime
+     *           [readonly] The time from which the policy was effective in RFC 3339 format.
+     *     @type array $encryption.customerSuppliedEncryptionEnforcementConfig
+     *           Enforcement configuration for customer-supplied encryption keys (CSEK).
+     *     @type string $encryption.customerSuppliedEncryptionEnforcementConfig.restrictionMode
+     *           The restriction state of the encryption policy. Acceptable values are
+     *           `"NotRestricted"` and `"FullyRestricted"`.
+     *     @type string $encryption.customerSuppliedEncryptionEnforcementConfig.effectiveTime
+     *           [readonly] The time from which the policy was effective in RFC 3339 format.
      *     @type bool $defaultEventBasedHold When `true`, newly created objects
      *           in this bucket will be retained indefinitely until an event
      *           occurs, signified by the hold's release.
@@ -435,6 +456,16 @@ class StorageClient
      *           [feature documentation](https://cloud.google.com/storage/docs/uniform-bucket-level-access),
      *           as well as
      *           [Should You Use uniform bucket-level access](https://cloud.google.com/storage/docs/uniform-bucket-level-access#should-you-use)
+     *     @type array $ipFilter The bucket's IP filter configuration.
+     *           @type string $ipFilter.mode The IP filter mode. Accepted values are 'Enabled' and 'Disabled'.
+     *           @type array $ipFilter.publicNetworkSource Public network configuration.
+     *                 @type array $ipFilter.publicNetworkSource.allowedIpCidrRanges Allowed IP/CIDR ranges.
+     *           @type array $ipFilter.vpcNetworkSources List of private VPC networks configurations.
+     *                 Each element contains:
+     *                 @type string $ipFilter.vpcNetworkSources[].network Fully qualified VPC network URL/name.
+     *                 @type array $ipFilter.vpcNetworkSources[].allowedIpCidrRanges Allowed IP/CIDR ranges.
+     *           @type bool $ipFilter.allowCrossOrgVpcs Set true to allow VPCs outside the org.
+     *           @type bool $ipFilter.allowAllServiceAgentAccess Set true to allow service-to-service agent interactions.
      *     @type string $rpo Specifies the Turbo Replication setting for a dual-region bucket.
      *           The possible values are DEFAULT and ASYNC_TURBO. Trying to set the rpo for a non dual-region
      *           bucket will throw an exception. Non existence of this parameter is equivalent to it being DEFAULT.
