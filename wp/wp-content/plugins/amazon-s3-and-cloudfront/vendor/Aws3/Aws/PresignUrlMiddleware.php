@@ -11,7 +11,7 @@ use DeliciousBrains\WP_Offload_Media\Aws3\Psr\Http\Message\RequestInterface;
  */
 class PresignUrlMiddleware
 {
-    private $client;
+    private \WeakReference $client;
     private $endpointProvider;
     private $nextHandler;
     /** @var array names of operations that require presign url */
@@ -27,7 +27,7 @@ class PresignUrlMiddleware
     public function __construct(array $options, $endpointProvider, AwsClientInterface $client, callable $nextHandler)
     {
         $this->endpointProvider = $endpointProvider;
-        $this->client = $client;
+        $this->client = \WeakReference::create($client);
         $this->nextHandler = $nextHandler;
         $this->commandPool = $options['operations'];
         $this->serviceName = $options['service'];
@@ -37,20 +37,20 @@ class PresignUrlMiddleware
     }
     public static function wrap(AwsClientInterface $client, $endpointProvider, array $options = [])
     {
-        return function (callable $handler) use($endpointProvider, $client, $options) {
-            $f = new PresignUrlMiddleware($options, $endpointProvider, $client, $handler);
-            return $f;
+        return static function (callable $handler) use($endpointProvider, $client, $options) {
+            return new PresignUrlMiddleware($options, $endpointProvider, $client, $handler);
         };
     }
     public function __invoke(CommandInterface $cmd, ?RequestInterface $request = null)
     {
         if (\in_array($cmd->getName(), $this->commandPool) && !isset($cmd['__skip' . $cmd->getName()])) {
-            $cmd['DestinationRegion'] = $this->client->getRegion();
+            $client = $this->client->get();
+            $cmd['DestinationRegion'] = $client->getRegion();
             if (!empty($cmd['SourceRegion']) && !empty($cmd[$this->presignParam])) {
                 goto nexthandler;
             }
             if (!$this->requireDifferentRegion || !empty($cmd['SourceRegion']) && $cmd['SourceRegion'] !== $cmd['DestinationRegion']) {
-                $cmd[$this->presignParam] = $this->createPresignedUrl($this->client, $cmd);
+                $cmd[$this->presignParam] = $this->createPresignedUrl($client, $cmd);
             }
         }
         nexthandler:
@@ -67,7 +67,7 @@ class PresignUrlMiddleware
         $request = \DeliciousBrains\WP_Offload_Media\Aws3\Aws\serialize($newCmd);
         // Create the new endpoint for the target endpoint.
         if ($this->endpointProvider instanceof \DeliciousBrains\WP_Offload_Media\Aws3\Aws\EndpointV2\EndpointProviderV2) {
-            $providerArgs = \array_merge($this->client->getEndpointProviderArgs(), ['Region' => $cmd['SourceRegion']]);
+            $providerArgs = \array_merge($this->client->get()->getEndpointProviderArgs(), ['Region' => $cmd['SourceRegion']]);
             $endpoint = $this->endpointProvider->resolveEndpoint($providerArgs)->getUrl();
         } else {
             $endpoint = EndpointProvider::resolve($this->endpointProvider, ['region' => $cmd['SourceRegion'], 'service' => $this->serviceName])['endpoint'];

@@ -5,7 +5,6 @@ namespace DeliciousBrains\WP_Offload_Media\Aws3\Aws\Signature;
 use DeliciousBrains\WP_Offload_Media\Aws3\Aws\Credentials\CredentialsInterface;
 use DeliciousBrains\WP_Offload_Media\Aws3\AWS\CRT\Auth\Signable;
 use DeliciousBrains\WP_Offload_Media\Aws3\AWS\CRT\Auth\SignatureType;
-use DeliciousBrains\WP_Offload_Media\Aws3\AWS\CRT\Auth\SignedBodyHeaderType;
 use DeliciousBrains\WP_Offload_Media\Aws3\AWS\CRT\Auth\Signing;
 use DeliciousBrains\WP_Offload_Media\Aws3\AWS\CRT\Auth\SigningAlgorithm;
 use DeliciousBrains\WP_Offload_Media\Aws3\AWS\CRT\Auth\SigningConfigAWS;
@@ -42,7 +41,21 @@ class SignatureV4 implements SignatureInterface
      */
     protected function getHeaderBlacklist()
     {
-        return ['cache-control' => \true, 'content-type' => \true, 'content-length' => \true, 'expect' => \true, 'max-forwards' => \true, 'pragma' => \true, 'range' => \true, 'te' => \true, 'if-match' => \true, 'if-none-match' => \true, 'if-modified-since' => \true, 'if-unmodified-since' => \true, 'if-range' => \true, 'accept' => \true, 'authorization' => \true, 'proxy-authorization' => \true, 'from' => \true, 'referer' => \true, 'user-agent' => \true, 'X-Amz-User-Agent' => \true, 'x-amzn-trace-id' => \true, 'aws-sdk-invocation-id' => \true, 'aws-sdk-retry' => \true];
+        return ['cache-control' => \true, 'content-length' => \true, 'expect' => \true, 'max-forwards' => \true, 'pragma' => \true, 'range' => \true, 'te' => \true, 'if-match' => \true, 'if-none-match' => \true, 'if-modified-since' => \true, 'if-unmodified-since' => \true, 'if-range' => \true, 'accept' => \true, 'authorization' => \true, 'proxy-authorization' => \true, 'from' => \true, 'referer' => \true, 'user-agent' => \true, 'x-amzn-trace-id' => \true, 'amz-sdk-invocation-id' => \true, 'amz-sdk-request' => \true];
+    }
+    /**
+     * Headers that must be excluded from presigned URLs (in addition to
+     * the regular header blacklist). These headers are excluded because the
+     * consumer of the presigned URL cannot reliably reproduce them at the
+     * time the URL is used:
+     *  - content-type: caller-determined at upload time
+     *  - x-amz-user-agent: specific to the SDK that generated the URL
+     *
+     * @return array
+     */
+    protected function getPresignHeaderDenyList()
+    {
+        return ['content-type' => \true, 'x-amz-user-agent' => \true];
     }
     /**
      * @param string $service Service name to use when signing
@@ -103,6 +116,7 @@ class SignatureV4 implements SignatureInterface
                 $presignHeaders[] = $lName;
             }
         }
+        \sort($presignHeaders);
         return $presignHeaders;
     }
     /**
@@ -240,12 +254,14 @@ class SignatureV4 implements SignatureInterface
             return '';
         }
         $qs = '';
-        \ksort($query);
+        \uksort($query, static function (string $a, string $b) : int {
+            return \strcmp(\rawurlencode($a), \rawurlencode($b));
+        });
         foreach ($query as $k => $v) {
             if (!\is_array($v)) {
                 $qs .= \rawurlencode($k) . '=' . \rawurlencode($v !== null ? $v : '') . '&';
             } else {
-                \sort($v);
+                \sort($v, \SORT_STRING);
                 foreach ($v as $value) {
                     $qs .= \rawurlencode($k) . '=' . \rawurlencode($value !== null ? $value : '') . '&';
                 }
@@ -275,14 +291,15 @@ class SignatureV4 implements SignatureInterface
     }
     private function moveHeadersToQuery(array $parsedRequest)
     {
-        //x-amz-user-agent shouldn't be put in a query param
-        unset($parsedRequest['headers']['X-Amz-User-Agent']);
+        $presignDenyList = $this->getPresignHeaderDenyList();
+        $blacklist = $this->getHeaderBlacklist() + $presignDenyList;
         foreach ($parsedRequest['headers'] as $name => $header) {
             $lname = \strtolower($name);
-            if (\substr($lname, 0, 5) == 'x-amz') {
+            // Move x-amz-* headers into the query string, but skip those that
+            // must not appear in presigned URLs (e.g. x-amz-user-agent).
+            if (\substr($lname, 0, 5) == 'x-amz' && !isset($presignDenyList[$lname])) {
                 $parsedRequest['query'][$name] = $header;
             }
-            $blacklist = $this->getHeaderBlacklist();
             if (isset($blacklist[$lname]) || $lname === \strtolower(self::AMZ_CONTENT_SHA256_HEADER)) {
                 unset($parsedRequest['headers'][$name]);
             }
@@ -295,7 +312,8 @@ class SignatureV4 implements SignatureInterface
         /** @var RequestInterface $request */
         $request = $request->withoutHeader('X-Amz-Date')->withoutHeader('Date')->withoutHeader('Authorization');
         $uri = $request->getUri();
-        return ['method' => $request->getMethod(), 'path' => $uri->getPath(), 'query' => Psr7\Query::parse($uri->getQuery()), 'uri' => $uri, 'headers' => $request->getHeaders(), 'body' => $request->getBody(), 'version' => $request->getProtocolVersion()];
+        $path = \method_exists(Psr7\Uri::class, 'rawPath') ? Psr7\Uri::rawPath($uri) : $uri->getPath();
+        return ['method' => $request->getMethod(), 'path' => $path, 'query' => Psr7\Query::parse($uri->getQuery()), 'uri' => $uri, 'headers' => $request->getHeaders(), 'body' => $request->getBody(), 'version' => $request->getProtocolVersion()];
     }
     private function buildRequest(array $req)
     {
@@ -316,7 +334,7 @@ class SignatureV4 implements SignatureInterface
     }
     private function removeIllegalV4aHeaders(&$request)
     {
-        static $illegalV4aHeaders = [self::AMZ_CONTENT_SHA256_HEADER, 'aws-sdk-invocation-id', 'aws-sdk-retry', 'x-amz-region-set', 'transfer-encoding'];
+        static $illegalV4aHeaders = [self::AMZ_CONTENT_SHA256_HEADER, 'amz-sdk-invocation-id', 'amz-sdk-request', 'x-amz-region-set', 'transfer-encoding'];
         $storedHeaders = [];
         foreach ($illegalV4aHeaders as $header) {
             if ($request->hasHeader($header)) {
@@ -369,7 +387,8 @@ class SignatureV4 implements SignatureInterface
         $credentials_provider = $this->createCRTStaticCredentialsProvider($credentials);
         $signingConfig = new SigningConfigAWS(['algorithm' => SigningAlgorithm::SIGv4_ASYMMETRIC, 'signature_type' => SignatureType::HTTP_REQUEST_QUERY_PARAMS, 'credentials_provider' => $credentials_provider, 'signed_body_value' => $this->getPresignedPayload($request), 'region' => "*", 'service' => $this->service, 'date' => \time(), 'expiration_in_seconds' => $expires]);
         $this->removeIllegalV4aHeaders($request);
-        foreach ($this->getHeaderBlacklist() as $headerName => $headerValue) {
+        $denyList = $this->getHeaderBlacklist() + $this->getPresignHeaderDenyList();
+        foreach ($denyList as $headerName => $headerValue) {
             if ($request->hasHeader($headerName)) {
                 $request = $request->withoutHeader($headerName);
             }

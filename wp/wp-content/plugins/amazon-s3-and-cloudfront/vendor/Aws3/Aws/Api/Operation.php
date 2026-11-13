@@ -78,7 +78,7 @@ class Operation extends AbstractModel
     /**
      * Get an array of operation error shapes.
      *
-     * @return Shape[]
+     * @return StructureShape[]
      */
     public function getErrors()
     {

@@ -14,7 +14,7 @@ class Color
             return;
         }
         \DeliciousBrains\WP_Offload_Media\Gcp\GPBMetadata\Google\Protobuf\Wrappers::initOnce();
-        $pool->internalAddGeneratedFile("\n\xef\x01\n\x17google/type/color.proto\x12\vgoogle.type\"]\n\x05Color\x12\v\n\x03red\x18\x01 \x01(\x02\x12\r\n\x05green\x18\x02 \x01(\x02\x12\f\n\x04blue\x18\x03 \x01(\x02\x12*\n\x05alpha\x18\x04 \x01(\v2\x1b.google.protobuf.FloatValueB`\n\x0fcom.google.typeB\nColorProtoP\x01Z6google.golang.org/genproto/googleapis/type/color;color\xf8\x01\x01\xa2\x02\x03GTPb\x06proto3", \true);
+        $pool->internalAddGeneratedFile("\n\xec\x01\n\x17google/type/color.proto\x12\vgoogle.type\"]\n\x05Color\x12\v\n\x03red\x18\x01 \x01(\x02\x12\r\n\x05green\x18\x02 \x01(\x02\x12\f\n\x04blue\x18\x03 \x01(\x02\x12*\n\x05alpha\x18\x04 \x01(\v2\x1b.google.protobuf.FloatValueB]\n\x0fcom.google.typeB\nColorProtoP\x01Z6google.golang.org/genproto/googleapis/type/color;color\xa2\x02\x03GTPb\x06proto3", \true);
         static::$is_initialized = \true;
     }
 }

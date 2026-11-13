@@ -3,9 +3,10 @@
 namespace DeliciousBrains\WP_Offload_Media\Upgrades;
 
 /**
- * Clear_Postmeta_Cache Class
+ * Upgrade_Clear_Postmeta_Cache Class
  *
- * This class clears the postmeta cache after upgrade to 2.6.1
+ * This upgrade is redundant, superseded by upgrade 14,
+ * but needs to be kept for sequence continuity.
  *
  * @since 2.6.1
  */
@@ -14,73 +15,36 @@ class Upgrade_Clear_Postmeta_Cache extends Upgrade {
 	/**
 	 * @var int
 	 */
-	protected $upgrade_id = 11;
+	protected int $upgrade_id = 11;
 
 	/**
 	 * @var string
 	 */
-	protected $upgrade_name = 'clear_postmeta_cache';
+	protected string $upgrade_name = 'clear_postmeta_cache';
 
 	/**
 	 * @var string 'metadata', 'attachment'
 	 */
-	protected $upgrade_type = 'metadata';
-
-	/**
-	 * @var int
-	 */
-	private $batch_limit = 1000;
+	protected string $upgrade_type = 'metadata';
 
 	/**
 	 * Get running update text.
 	 *
 	 * @return string
 	 */
-	protected function get_running_update_text() {
+	protected function get_running_update_text(): string {
 		return __( 'and clear old post meta cache items.', 'amazon-s3-and-cloudfront' );
 	}
 
 	/**
 	 * Remove one chunk of post meta cache records.
 	 *
-	 * @param string $item Table prefix for the current blog.
+	 * @param mixed $item Table prefix for the current blog.
 	 *
 	 * @return bool
 	 */
-	protected function upgrade_item( $item ) {
-		global $wpdb;
-
-		if ( empty( $item ) || ! is_string( $item ) || empty( $this->session[ $item ] ) || ! is_int( $this->session[ $item ] ) ) {
-			return false;
-		}
-
-		$meta_id = $this->session[ $item ];
-
-		$sql = "DELETE FROM {$item}postmeta WHERE meta_key = 'amazonS3_cache' AND meta_id <= %d LIMIT $this->batch_limit";
-		// phpcs:ignore WordPress.DB, PluginCheck.Security.DirectDB.UnescapedDBParameter
-		$wpdb->query( $wpdb->prepare( $sql, $meta_id ) );
-
+	protected function upgrade_item( mixed $item ): bool {
 		return true;
-	}
-
-	/**
-	 * Count items left to process for the current blog.
-	 *
-	 * @return int
-	 */
-	protected function count_items_to_process() {
-		global $wpdb;
-
-		// Store the highest known meta_id at the time we begin processing.
-		if ( empty( $this->session[ $this->blog_prefix ] ) ) {
-			$sql = "SELECT meta_id FROM {$this->blog_prefix}postmeta WHERE meta_key = 'amazonS3_cache' ORDER BY meta_id DESC LIMIT 0, 1;";
-			// phpcs:ignore WordPress.DB, PluginCheck.Security.DirectDB -- safe query, must not be cached
-			$last = $wpdb->get_var( $sql );
-
-			$this->session[ $this->blog_prefix ] = $last;
-		}
-
-		return count( $this->get_items_to_process( $this->blog_prefix, 0 ) );
 	}
 
 	/**
@@ -92,37 +56,7 @@ class Upgrade_Clear_Postmeta_Cache extends Upgrade {
 	 *
 	 * @return array
 	 */
-	protected function get_items_to_process( $prefix, $limit, $offset = false ) {
-		$count = $this->get_real_count( $prefix );
-		if ( 0 === $count ) {
-			return array();
-		}
-
-		$chunks = ceil( $count / $this->batch_limit );
-
-		return array_fill( 0, $chunks, $prefix );
-	}
-
-	/**
-	 * Return the real number of remaining amazonS3_cache items to clear out.
-	 *
-	 * @param string $prefix
-	 *
-	 * @return int
-	 */
-	private function get_real_count( $prefix ) {
-		global $wpdb;
-
-		if ( empty( $prefix ) || ! is_string( $prefix ) || empty( $this->session[ $prefix ] ) || ! is_int( $this->session[ $prefix ] ) ) {
-			return 0;
-		}
-
-		$meta_id = $this->session[ $prefix ];
-
-		$sql = "SELECT count(meta_id) FROM {$prefix}postmeta WHERE meta_key = 'amazonS3_cache' AND meta_id <= %d";
-		// phpcs:ignore WordPress.DB, PluginCheck.Security.DirectDB -- safe query, must not be cached
-		$count = $wpdb->get_var( $wpdb->prepare( $sql, $meta_id ) );
-
-		return (int) $count;
+	protected function get_items_to_process( string $prefix, int $limit, $offset = false ): array {
+		return array();
 	}
 }

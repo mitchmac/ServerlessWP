@@ -2,9 +2,7 @@
 
 namespace DeliciousBrains\WP_Offload_Media\Aws3\Aws\Handler\Guzzle;
 
-use Exception;
-use DeliciousBrains\WP_Offload_Media\Aws3\GuzzleHttp\Exception\ConnectException;
-use DeliciousBrains\WP_Offload_Media\Aws3\GuzzleHttp\Exception\RequestException;
+use DeliciousBrains\WP_Offload_Media\Aws3\Aws\Handler\HttpHandlerError;
 use DeliciousBrains\WP_Offload_Media\Aws3\GuzzleHttp\Utils;
 use DeliciousBrains\WP_Offload_Media\Aws3\GuzzleHttp\Promise;
 use DeliciousBrains\WP_Offload_Media\Aws3\GuzzleHttp\Client;
@@ -29,17 +27,13 @@ class GuzzleHandler
      * @param Psr7Request $request
      * @param array       $options
      *
-     * @return Promise\Promise
+     * @return Promise\PromiseInterface
      */
     public function __invoke(Psr7Request $request, array $options = [])
     {
         $request = $request->withHeader('User-Agent', $request->getHeaderLine('User-Agent') . ' ' . Utils::defaultUserAgent());
-        return $this->client->sendAsync($request, $this->parseOptions($options))->otherwise(static function ($e) {
-            $error = ['exception' => $e, 'connection_error' => $e instanceof ConnectException, 'response' => null];
-            if ($e instanceof RequestException && $e->getResponse()) {
-                $error['response'] = $e->getResponse();
-            }
-            return new Promise\RejectedPromise($error);
+        return $this->client->sendAsync($request, $this->parseOptions($options))->otherwise(static function (\Throwable $e) {
+            return new Promise\RejectedPromise(['exception' => $e, 'connection_error' => HttpHandlerError::isConnectionError($e), 'response' => HttpHandlerError::getResponse($e)]);
         });
     }
     private function parseOptions(array $options)

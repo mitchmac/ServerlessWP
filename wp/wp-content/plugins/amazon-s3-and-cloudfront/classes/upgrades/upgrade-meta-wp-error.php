@@ -29,24 +29,24 @@ class Upgrade_Meta_WP_Error extends Upgrade {
 	/**
 	 * @var int
 	 */
-	protected $upgrade_id = 3;
+	protected int $upgrade_id = 3;
 
 	/**
 	 * @var string
 	 */
-	protected $upgrade_name = 'meta_error';
+	protected string $upgrade_name = 'meta_error';
 
 	/**
 	 * @var string 'metadata', 'attachment'
 	 */
-	protected $upgrade_type = 'attachments';
+	protected string $upgrade_type = 'attachments';
 
 	/**
 	 * Get running update text.
 	 *
 	 * @return string
 	 */
-	protected function get_running_update_text() {
+	protected function get_running_update_text(): string {
 		return __(
 			'and rebuilding the metadata for attachments that may have been corrupted.',
 			'amazon-s3-and-cloudfront'
@@ -60,7 +60,7 @@ class Upgrade_Meta_WP_Error extends Upgrade {
 	 *
 	 * @return bool
 	 */
-	protected function upgrade_item( $item ) {
+	protected function upgrade_item( mixed $item ): bool {
 		$provider_object = AS3CF_Utils::maybe_fix_serialized_string( $item->provider_object );
 		$fixed           = $item->provider_object !== $provider_object;
 
@@ -95,8 +95,8 @@ class Upgrade_Meta_WP_Error extends Upgrade {
 		$file = get_attached_file( $item->ID, true );
 
 		if ( ! file_exists( $file ) ) {
-			// Copy back the file to the server if doesn't exist so we can successfully
-			// regenerate the attachment metadata
+			// Copy back the file to the server if it doesn't exist so we can successfully
+			// regenerate the attachment metadata.
 			try {
 				$args = array(
 					'Bucket' => $provider_object['bucket'],
@@ -136,12 +136,12 @@ class Upgrade_Meta_WP_Error extends Upgrade {
 	 *
 	 * @return int
 	 */
-	protected function count_items_to_process() {
+	protected function count_items_to_process(): int {
 		return (int) $this->get_attachments_with_error_metadata( $this->blog_prefix, true );
 	}
 
 	/**
-	 * Get all attachments that don't have region in their S3 meta data for a blog
+	 * Get all attachments that don't have region in their S3 metadata for a blog
 	 *
 	 * @param string     $prefix
 	 * @param int        $limit
@@ -149,22 +149,24 @@ class Upgrade_Meta_WP_Error extends Upgrade {
 	 *
 	 * @return array
 	 */
-	protected function get_items_to_process( $prefix, $limit, $offset = false ) {
-		$attachments = $this->get_attachments_with_error_metadata( $prefix, false, $limit );
-
-		return $attachments;
+	protected function get_items_to_process( string $prefix, int $limit, $offset = false ): array {
+		return $this->get_attachments_with_error_metadata( $prefix, false, $limit );
 	}
 
 	/**
 	 * Get S3 attachments that have had their _wp_attachment_metadata corrupted
 	 *
-	 * @param string     $prefix
-	 * @param bool|false $count
-	 * @param null|int   $limit
+	 * @param string   $prefix
+	 * @param bool     $count
+	 * @param int|null $limit
 	 *
 	 * @return array|int
 	 */
-	protected function get_attachments_with_error_metadata( $prefix, $count = false, $limit = null ) {
+	protected function get_attachments_with_error_metadata(
+		string $prefix,
+		bool $count = false,
+		?int $limit = null
+	): array|int {
 		global $wpdb;
 
 		$sql = "FROM `{$prefix}postmeta` pm1
@@ -184,7 +186,7 @@ class Upgrade_Meta_WP_Error extends Upgrade {
 		$sql = "SELECT pm1.`post_id` as `ID`, pm1.`meta_value` AS 'provider_object'" . $sql;
 
 		if ( $limit && $limit > 0 ) {
-			$sql .= sprintf( ' LIMIT %d', (int) $limit );
+			$sql .= sprintf( ' LIMIT %d', $limit );
 		}
 
 		// phpcs:ignore WordPress.DB,PluginCheck.Security.DirectDB.UnescapedDBParameter -- safe query, must not be cached

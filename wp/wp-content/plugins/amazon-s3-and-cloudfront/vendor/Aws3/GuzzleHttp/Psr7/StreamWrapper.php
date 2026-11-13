@@ -13,10 +13,9 @@ final class StreamWrapper
 {
     /** @var resource */
     public $context;
-    /** @var StreamInterface */
-    private $stream;
+    private StreamInterface $stream;
     /** @var string r, r+, or w */
-    private $mode;
+    private string $mode;
     /**
      * Returns a resource representing the stream.
      *
@@ -36,7 +35,11 @@ final class StreamWrapper
         } else {
             throw new \InvalidArgumentException('The stream must be readable, ' . 'writable, or both.');
         }
-        return \fopen('guzzle://stream', $mode, \false, self::createStreamContext($stream));
+        $resource = @\fopen('guzzle://stream', $mode, \false, self::createStreamContext($stream));
+        if ($resource === \false) {
+            throw new \RuntimeException('Unable to create stream resource');
+        }
+        return $resource;
     }
     /**
      * Creates a stream context that can be used to open a stream as a php stream resource.
@@ -59,32 +62,59 @@ final class StreamWrapper
     public function stream_open(string $path, string $mode, int $options, ?string &$opened_path = null) : bool
     {
         $options = \stream_context_get_options($this->context);
-        if (!isset($options['guzzle']['stream'])) {
+        $stream = $options['guzzle']['stream'] ?? null;
+        if (!$stream instanceof StreamInterface) {
             return \false;
         }
         $this->mode = $mode;
-        $this->stream = $options['guzzle']['stream'];
+        $this->stream = $stream;
         return \true;
     }
-    public function stream_read(int $count) : string
+    /**
+     * @return string|false
+     */
+    public function stream_read(int $count)
     {
-        return $this->stream->read($count);
+        try {
+            return $this->stream->read($count);
+        } catch (\RuntimeException $e) {
+            return \false;
+        }
     }
     public function stream_write(string $data) : int
     {
-        return $this->stream->write($data);
+        try {
+            return $this->stream->write($data);
+        } catch (\RuntimeException $e) {
+            return -1;
+        }
     }
-    public function stream_tell() : int
+    /**
+     * @return int|false
+     */
+    public function stream_tell()
     {
-        return $this->stream->tell();
+        try {
+            return $this->stream->tell();
+        } catch (\RuntimeException $e) {
+            return \false;
+        }
     }
     public function stream_eof() : bool
     {
-        return $this->stream->eof();
+        try {
+            return $this->stream->eof();
+        } catch (\RuntimeException $e) {
+            return \true;
+        }
     }
     public function stream_seek(int $offset, int $whence) : bool
     {
-        $this->stream->seek($offset, $whence);
+        try {
+            $this->stream->seek($offset, $whence);
+        } catch (\RuntimeException $e) {
+            return \false;
+        }
         return \true;
     }
     /**
@@ -92,8 +122,12 @@ final class StreamWrapper
      */
     public function stream_cast(int $cast_as)
     {
-        $stream = clone $this->stream;
-        $resource = $stream->detach();
+        try {
+            $stream = clone $this->stream;
+            $resource = $stream->detach();
+        } catch (\RuntimeException $e) {
+            return \false;
+        }
         return $resource ?? \false;
     }
     /**
@@ -115,11 +149,16 @@ final class StreamWrapper
      */
     public function stream_stat()
     {
-        if ($this->stream->getSize() === null) {
+        try {
+            $size = $this->stream->getSize();
+        } catch (\RuntimeException $e) {
+            return \false;
+        }
+        if ($size === null) {
             return \false;
         }
         static $modeMap = ['r' => 33060, 'rb' => 33060, 'r+' => 33206, 'w' => 33188, 'wb' => 33188];
-        return ['dev' => 0, 'ino' => 0, 'mode' => $modeMap[$this->mode], 'nlink' => 0, 'uid' => 0, 'gid' => 0, 'rdev' => 0, 'size' => $this->stream->getSize() ?: 0, 'atime' => 0, 'mtime' => 0, 'ctime' => 0, 'blksize' => 0, 'blocks' => 0];
+        return ['dev' => 0, 'ino' => 0, 'mode' => $modeMap[$this->mode] ?? 0, 'nlink' => 0, 'uid' => 0, 'gid' => 0, 'rdev' => 0, 'size' => $size, 'atime' => 0, 'mtime' => 0, 'ctime' => 0, 'blksize' => 0, 'blocks' => 0];
     }
     /**
      * @return array{

@@ -1,5 +1,6 @@
 <?php
 
+declare (strict_types=1);
 namespace DeliciousBrains\WP_Offload_Media\Aws3\GuzzleHttp;
 
 use DeliciousBrains\WP_Offload_Media\Aws3\Psr\Http\Message\RequestInterface;
@@ -11,22 +12,10 @@ use DeliciousBrains\WP_Offload_Media\Aws3\Psr\Http\Message\UriInterface;
  */
 final class TransferStats
 {
-    /**
-     * @var RequestInterface
-     */
-    private $request;
-    /**
-     * @var ResponseInterface|null
-     */
-    private $response;
-    /**
-     * @var float|null
-     */
-    private $transferTime;
-    /**
-     * @var array
-     */
-    private $handlerStats;
+    private RequestInterface $request;
+    private ?ResponseInterface $response;
+    private ?float $transferTime;
+    private array $handlerStats;
     /**
      * @var mixed|null
      */

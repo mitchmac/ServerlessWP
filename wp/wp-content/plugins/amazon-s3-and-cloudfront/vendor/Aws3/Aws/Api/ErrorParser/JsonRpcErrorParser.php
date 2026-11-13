@@ -2,6 +2,7 @@
 
 namespace DeliciousBrains\WP_Offload_Media\Aws3\Aws\Api\ErrorParser;
 
+use DeliciousBrains\WP_Offload_Media\Aws3\Aws\Api\Parser\AbstractParser;
 use DeliciousBrains\WP_Offload_Media\Aws3\Aws\Api\Parser\JsonParser;
 use DeliciousBrains\WP_Offload_Media\Aws3\Aws\Api\Service;
 use DeliciousBrains\WP_Offload_Media\Aws3\Aws\CommandInterface;
@@ -20,6 +21,7 @@ class JsonRpcErrorParser extends AbstractErrorParser
     }
     public function __invoke(ResponseInterface $response, ?CommandInterface $command = null)
     {
+        $response = AbstractParser::getResponseWithCachingStream($response);
         $data = $this->genericHandler($response);
         // Make the casing consistent across services.
         if ($data['parsed']) {

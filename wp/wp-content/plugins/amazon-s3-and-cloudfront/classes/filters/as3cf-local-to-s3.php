@@ -2,7 +2,20 @@
 
 use DeliciousBrains\WP_Offload_Media\Items\Item;
 
+// Exit if accessed directly.
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 class AS3CF_Local_To_S3 extends AS3CF_Filter {
+
+	/**
+	 * The key used for storing the URL cache.
+	 *
+	 * @var string
+	 */
+	protected static $cache_key = 'as3cf_url_cache_local';
+
 	/**
 	 * @inheritDoc
 	 */
@@ -11,6 +24,12 @@ class AS3CF_Local_To_S3 extends AS3CF_Filter {
 
 		// EDD
 		add_filter( 'edd_download_files', array( $this, 'filter_edd_download_files' ) );
+
+		// While above might be needed even if URL rewriting is turned off, rest are not.
+		if ( ! $this->should_filter_content() ) {
+			return;
+		}
+
 		// Customizer
 		add_filter( 'theme_mod_background_image', array( $this, 'filter_customizer_image' ) );
 		add_filter( 'theme_mod_header_image', array( $this, 'filter_customizer_image' ) );
@@ -86,19 +105,18 @@ class AS3CF_Local_To_S3 extends AS3CF_Filter {
 
 		global $pages;
 
-		$cache    = $this->get_post_cache( $post->ID );
-		$to_cache = array();
+		list( $cached, $to_cache ) = $this->maybe_init_post_cache( $post->ID );
 
 		if ( is_array( $pages ) && 1 === count( $pages ) && ! empty( $pages[0] ) ) {
 			// Post already filtered and available on global $page array, continue
 			$post->post_content = $pages[0];
 		} else {
-			$post->post_content = $this->process_content( $post->post_content, $cache, $to_cache );
+			$post->post_content = $this->process_content( $post->post_content, $cached, $to_cache );
 		}
 
-		$post->post_excerpt = $this->process_content( $post->post_excerpt, $cache, $to_cache );
+		$post->post_excerpt = $this->process_content( $post->post_excerpt, $cached, $to_cache );
 
-		$this->maybe_update_post_cache( $to_cache );
+		$this->maybe_update_post_cache( $post->ID, $cached, $to_cache );
 	}
 
 	/**
@@ -109,14 +127,15 @@ class AS3CF_Local_To_S3 extends AS3CF_Filter {
 	 * @return array
 	 */
 	public function filter_content_pagination( $pages ) {
-		$cache    = $this->get_post_cache();
-		$to_cache = array();
+		$post_id = AS3CF_Utils::get_post_id();
+
+		list( $cached, $to_cache ) = $this->maybe_init_post_cache( $post_id );
 
 		foreach ( $pages as $key => $page ) {
-			$pages[ $key ] = $this->process_content( $page, $cache, $to_cache );
+			$pages[ $key ] = $this->process_content( $page, $cached, $to_cache );
 		}
 
-		$this->maybe_update_post_cache( $to_cache );
+		$this->maybe_update_post_cache( $post_id, $cached, $to_cache );
 
 		return $pages;
 	}
@@ -155,16 +174,11 @@ class AS3CF_Local_To_S3 extends AS3CF_Filter {
 			return $content;
 		}
 
-		$cache    = $this->get_option_cache();
-		$to_cache = array();
-
-		$changed_content = $this->process_content( $content, $cache, $to_cache );
+		$changed_content = $this->process_content( $content, array(), $this->url_cache );
 
 		if ( ! empty( $changed_content ) && $changed_content !== $content ) {
 			$content = $changed_content;
 		}
-
-		$this->maybe_update_option_cache( $to_cache );
 
 		return $content;
 	}
@@ -276,29 +290,16 @@ class AS3CF_Local_To_S3 extends AS3CF_Filter {
 			$urls = array( $urls );
 		}
 
-		$query_set = array();
 		$paths     = array();
 		$full_urls = array();
 
-		// Quickly parse given URLs to add versions without size as we should lookup with size info first as that could be the "full" size.
 		foreach ( $urls as $url ) {
-			$query_set[]  = $url;
-			$size_removed = AS3CF_Utils::remove_size_from_filename( $url );
-
-			if ( $url !== $size_removed ) {
-				$query_set[] = $size_removed;
-			}
-		}
-
-		foreach ( $query_set as $url ) {
 			// Path to search for in query set should be based on bare URL.
 			$bare_url = AS3CF_Utils::remove_scheme( $url );
-			// There can be multiple URLs in the query set that belong to the same full URL for the Media Library item.
-			$full_url = AS3CF_Utils::remove_size_from_filename( $bare_url );
 
-			if ( isset( $this->query_cache[ $full_url ] ) ) {
+			if ( isset( $this->query_cache[ $bare_url ] ) ) {
 				// ID already cached, use it.
-				$results[ $url ] = $this->query_cache[ $full_url ];
+				$results[ $url ] = $this->query_cache[ $bare_url ];
 
 				continue;
 			}
@@ -307,8 +308,11 @@ class AS3CF_Local_To_S3 extends AS3CF_Filter {
 				ltrim( str_replace( $this->get_bare_upload_base_urls(), '', $bare_url ), '/' )
 			);
 
-			$paths[ $path ]           = $full_url;
-			$full_urls[ $full_url ][] = $url;
+			$paths[ $path ] = $bare_url;
+
+			// Might be handling same bare URL for multiple schemes.
+			$full_urls[ $bare_url ][] = $url;
+			unset( $bare_url );
 		}
 
 		if ( ! empty( $paths ) ) {
@@ -317,30 +321,20 @@ class AS3CF_Local_To_S3 extends AS3CF_Filter {
 			if ( ! empty( $as3cf_items ) ) {
 				/* @var Item $as3cf_item */
 				foreach ( $as3cf_items as $as3cf_item ) {
-					// Each returned item may have matched on either the source_path or original_source_path.
-					// Because the base image file name of a thumbnail might match the primary rather scaled or rotated full image
-					// it's possible that both source paths are used by separate URLs.
-					foreach (
-						array(
-							$as3cf_item->source_path(),
-							$as3cf_item->original_source_path(),
-						) as $source_path
-					) {
-						if ( ! empty( $paths[ $source_path ] ) ) {
-							$matched_full_url = $paths[ $source_path ];
+					// Check each source file for a match.
+					foreach ( $as3cf_item->files() as $as3cf_file ) {
+						if ( ! empty( $paths[ $as3cf_file->source_path() ] ) ) {
+							$matched_bare_url = $paths[ $as3cf_file->source_path() ];
 
-							if ( ! empty( $full_urls[ $matched_full_url ] ) ) {
-								$item_source = array(
-									'id'          => $as3cf_item->source_id(),
-									'source_type' => $as3cf_item->source_type(),
-								);
+							if ( ! empty( $full_urls[ $matched_bare_url ] ) ) {
+								$item_source = $as3cf_item->get_item_source_array();
 
-								$this->query_cache[ $matched_full_url ] = $item_source;
+								$this->query_cache[ $matched_bare_url ] = $item_source;
 
-								foreach ( $full_urls[ $matched_full_url ] as $url ) {
+								foreach ( $full_urls[ $matched_bare_url ] as $url ) {
 									$results[ $url ] = $item_source;
 								}
-								unset( $full_urls[ $matched_full_url ] );
+								unset( $full_urls[ $matched_bare_url ] );
 							}
 						}
 					}
@@ -348,11 +342,11 @@ class AS3CF_Local_To_S3 extends AS3CF_Filter {
 			}
 
 			// No more item IDs found, set remaining results as false.
-			if ( count( $query_set ) !== count( $results ) ) {
-				foreach ( $full_urls as $full_url => $schema_urls ) {
-					foreach ( $schema_urls as $url ) {
+			if ( count( $urls ) !== count( $results ) ) {
+				foreach ( $full_urls as $bare_url => $scheme_urls ) {
+					foreach ( $scheme_urls as $url ) {
 						if ( ! array_key_exists( $url, $results ) ) {
-							$this->query_cache[ $full_url ] = false;
+							$this->query_cache[ $bare_url ] = false;
 							$results[ $url ]                = false;
 						}
 					}

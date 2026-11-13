@@ -148,6 +148,15 @@ trait GapicClientTrait
         $this->prependMiddlewareCallables[] = $middlewareCallable;
     }
     /**
+     * Get the default scopes required by the service.
+     *
+     * @return array
+     */
+    public static function getServiceScopes() : array
+    {
+        return self::$serviceScopes;
+    }
+    /**
      * Initiates an orderly shutdown in which preexisting calls continue but new
      * calls are immediately cancelled.
      *
@@ -290,7 +299,9 @@ trait GapicClientTrait
         if (isset($options['apiKey'])) {
             $this->credentialsWrapper = new ApiKeyHeaderCredentials($options['apiKey'], $options['credentialsConfig']['quotaProject'] ?? null);
         } else {
-            $this->credentialsWrapper = $this->createCredentialsWrapper($options['credentials'], $options['credentialsConfig'], $options['universeDomain']);
+            $enableRegionalAccessBoundary = \filter_var(\getenv('GOOGLE_AUTH_TRUST_BOUNDARY_ENABLE_EXPERIMENT'), \FILTER_VALIDATE_BOOLEAN);
+            $isRegional = \str_ends_with($options['apiEndpoint'], '.rep.googleapis.com') || \str_ends_with($options['apiEndpoint'], '.rep.sandbox.googleapis.com');
+            $this->credentialsWrapper = $this->createCredentialsWrapper($options['credentials'], $options['credentialsConfig'] + ['enableRegionalAccessBoundary' => $enableRegionalAccessBoundary && !$isRegional], $options['universeDomain']);
         }
         $transport = $options['transport'] ?: self::defaultTransport();
         $this->transport = $transport instanceof TransportInterface ? $transport : $this->createTransport($options['apiEndpoint'], $transport, $options['transportConfig'], $options['clientCertSource'], $hasEmulator);
@@ -548,7 +559,7 @@ trait GapicClientTrait
         $callStack = new FixedHeaderMiddleware($callStack, $fixedHeaders, \true);
         $callStack = new RetryMiddleware($callStack, $callConstructionOptions['retrySettings']);
         $callStack = new RequestAutoPopulationMiddleware($callStack, $callConstructionOptions['autoPopulationSettings']);
-        $callStack = new OptionsFilterMiddleware($callStack, ['headers', 'timeoutMillis', 'transportOptions', 'metadataCallback', 'audience', 'metadataReturnType']);
+        $callStack = new OptionsFilterMiddleware($callStack, ['headers', 'timeoutMillis', 'transportOptions', 'metadataCallback', 'audience', 'metadataReturnType', 'middlewareOptions']);
         foreach (\array_reverse($this->middlewareCallables) as $fn) {
             /** @var MiddlewareInterface $callStack */
             $callStack = $fn($callStack);
