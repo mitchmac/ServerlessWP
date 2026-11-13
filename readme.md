@@ -10,7 +10,7 @@ WordPress runs on demand in serverless functions, with a SQLite database stored 
 
 **Just want to try?** Deploy on Vercel with a private [Vercel Blob](https://vercel.com/docs/vercel-blob) store for your SQLite database and media uploads. No separate database hosting or credentials to copy.
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fmitchmac%2Fserverlesswp&project-name=serverlesswp&repository-name=serverlesswp&stores=%5B%7B%22type%22%3A%22blob%22%2C%22access%22%3A%22private%22%2C%22envVarPrefix%22%3A%22SQLITE%22%7D%5D&env=SERVERLESSWP_STREAM_PROVIDER,SERVERLESSWP_STREAM_VERCEL_ACCESS&envDefaults=%7B%22SERVERLESSWP_STREAM_PROVIDER%22%3A%22vercel-blob%22%2C%22SERVERLESSWP_STREAM_VERCEL_ACCESS%22%3A%22private%22%7D&envDescription=Stores%20media%20uploads%20in%20the%20same%20private%20Blob%20store.%20Leave%20these%20as%20they%20are.&envLink=https%3A%2F%2Fgithub.com%2Fmitchmac%2Fserverlesswp%23media-uploads-on-vercel-blob)
+[![Deploy with Vercel](https://vercel.com/button)](https://serverlesswp.com/vercel-deploy)
 
 Leave the two pre-filled deploy settings as they are to enable [media uploads](#media-uploads-on-vercel-blob). Once deployed, open your site’s URL and complete the WordPress setup.
 
@@ -33,7 +33,6 @@ The deploy button uses Vercel for the simplest setup, with Blob storage, [CDN de
 
 ## Other deployment options
 
-- **[Vercel with an S3 demo database](https://serverlesswp.com/vercel-deploy):** try SQLite + S3 with a temporary database that expires after a few days.
 - **[Netlify](https://app.netlify.com/start/deploy?repository=https://github.com/mitchmac/serverlesswp):** bring your own [SQLite + S3](#sqlite--s3) or [MySQL](#mysql-database-option) database.
 - **AWS Lambda:** deploy with the Serverless Framework using `npm install && serverless deploy`.
 
