@@ -1,0 +1,13 @@
+# Opens a pull request when a new serverlesswp package is published to npm.
+# Only the framework package is tracked; WordPress core and plugins are handled
+# by the Update WordPress workflow.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: daily
+    allow:
+      - dependency-name: serverlesswp
+    commit-message:
+      prefix: "Bump serverlesswp"
