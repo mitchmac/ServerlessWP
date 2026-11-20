@@ -9,5 +9,10 @@ updates:
       interval: daily
     allow:
       - dependency-name: serverlesswp
+    # Dependabot otherwise waits 3 days after a release before opening a PR.
+    # The framework package is first-party, so take its releases right away.
+    cooldown:
+      exclude:
+        - serverlesswp
     commit-message:
       prefix: "Bump serverlesswp"
