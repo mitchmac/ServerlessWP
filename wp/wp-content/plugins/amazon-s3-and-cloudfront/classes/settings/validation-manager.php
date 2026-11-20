@@ -5,6 +5,11 @@ namespace DeliciousBrains\WP_Offload_Media\Settings;
 use Amazon_S3_And_CloudFront;
 use WP_Error;
 
+// Exit if accessed directly.
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 class Validation_Manager {
 	/**
 	 * @var Amazon_S3_And_CloudFront

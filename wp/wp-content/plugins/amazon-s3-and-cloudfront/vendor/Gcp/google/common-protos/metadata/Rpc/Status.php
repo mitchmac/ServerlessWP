@@ -14,7 +14,7 @@ class Status
             return;
         }
         \DeliciousBrains\WP_Offload_Media\Gcp\GPBMetadata\Google\Protobuf\Any::initOnce();
-        $pool->internalAddGeneratedFile("\n\xe0\x01\n\x17google/rpc/status.proto\x12\ngoogle.rpc\"N\n\x06Status\x12\f\n\x04code\x18\x01 \x01(\x05\x12\x0f\n\x07message\x18\x02 \x01(\t\x12%\n\x07details\x18\x03 \x03(\v2\x14.google.protobuf.AnyBa\n\x0ecom.google.rpcB\vStatusProtoP\x01Z7google.golang.org/genproto/googleapis/rpc/status;status\xf8\x01\x01\xa2\x02\x03RPCb\x06proto3", \true);
+        $pool->internalAddGeneratedFile("\n\xdd\x01\n\x17google/rpc/status.proto\x12\ngoogle.rpc\"N\n\x06Status\x12\f\n\x04code\x18\x01 \x01(\x05\x12\x0f\n\x07message\x18\x02 \x01(\t\x12%\n\x07details\x18\x03 \x03(\v2\x14.google.protobuf.AnyB^\n\x0ecom.google.rpcB\vStatusProtoP\x01Z7google.golang.org/genproto/googleapis/rpc/status;status\xa2\x02\x03RPCb\x06proto3", \true);
         static::$is_initialized = \true;
     }
 }
