@@ -155,4 +155,6 @@ deployment configuration and workflows. Bring changes to those files into your
 site through Git. The npm package contains the framework implementation, without
 scaffold templates or configuration migration tooling.
 
-Update the package and lockfile, test and deploy.
+Update the package and lockfile, test and deploy. [Dependabot](.github/dependabot.yml)
+checks npm daily and opens a pull request when a new `serverlesswp` release is
+published; merging it redeploys your site.
