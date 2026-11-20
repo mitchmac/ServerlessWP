@@ -15,7 +15,8 @@ class Upload_Handler extends Item_Handler {
 	protected static $item_handler_key = 'upload';
 
 	/**
-	 * Keep track of individual files we've already attempted to upload
+	 * Keep track of individual files we've already attempted to upload,
+	 * as upload results keyed by a hash of the upload args.
 	 *
 	 * @var array
 	 */
@@ -267,7 +268,7 @@ class Upload_Handler extends Item_Handler {
 			}
 
 			// If we've already attempted to offload this source file, leave it out of the manifest.
-			if ( in_array( md5( serialize( $args ) ), $this->attempted_upload ) ) {
+			if ( $this->attempted_upload( $args ) ) {
 				continue;
 			}
 
@@ -339,7 +340,16 @@ class Upload_Handler extends Item_Handler {
 				continue;
 			}
 
-			$this->attempted_upload[] = md5( serialize( $args ) );
+			// Several objects can share a source file, e.g. when every size of an SVG
+			// references the original. Upload each distinct set of args only once,
+			// as some providers rate limit repeated writes to the same object.
+			$attempted = $this->attempted_upload( $args );
+
+			if ( $attempted ) {
+				$object['upload_result'] = $attempted;
+
+				continue;
+			}
 
 			// Try to do the upload
 			try {
@@ -359,6 +369,8 @@ class Upload_Handler extends Item_Handler {
 				$object['upload_result']['status']  = self::STATUS_FAILED;
 				$object['upload_result']['message'] = $error_msg;
 			}
+
+			$this->attempted_upload[ $this->attempted_upload_key( $args ) ] = $object['upload_result'];
 		}
 
 		return true;
@@ -501,5 +513,27 @@ class Upload_Handler extends Item_Handler {
 		}
 
 		return array_key_exists( $filename, $options['offloaded_files'] );
+	}
+
+	/**
+	 * Get the result of an earlier upload attempt with the same args.
+	 *
+	 * @param array $args
+	 *
+	 * @return array|false
+	 */
+	private function attempted_upload( array $args ): array|false {
+		return $this->attempted_upload[ $this->attempted_upload_key( $args ) ] ?? false;
+	}
+
+	/**
+	 * Get the key for a set of upload args in the attempted uploads.
+	 *
+	 * @param array $args
+	 *
+	 * @return string
+	 */
+	private function attempted_upload_key( array $args ): string {
+		return wp_hash( serialize( $args ) );
 	}
 }

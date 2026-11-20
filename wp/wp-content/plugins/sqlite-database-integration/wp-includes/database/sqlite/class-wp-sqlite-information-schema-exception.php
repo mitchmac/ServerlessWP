@@ -12,6 +12,7 @@ class WP_SQLite_Information_Schema_Exception extends Exception {
 	// Information schema exception types.
 	const TYPE_DUPLICATE_TABLE_NAME           = 'duplicate-table-name';
 	const TYPE_DUPLICATE_COLUMN_NAME          = 'duplicate-column-name';
+	const TYPE_COLUMN_NOT_FOUND               = 'column-not-found';
 	const TYPE_DUPLICATE_KEY_NAME             = 'duplicate-key-name';
 	const TYPE_KEY_COLUMN_NOT_FOUND           = 'key-column-not-found';
 	const TYPE_CONSTRAINT_DOES_NOT_EXIST      = 'constraint-does-not-exist';
@@ -94,6 +95,24 @@ class WP_SQLite_Information_Schema_Exception extends Exception {
 			self::TYPE_DUPLICATE_COLUMN_NAME,
 			sprintf( "Column '%s' already exists.", $column_name ),
 			array( 'column_name' => $column_name )
+		);
+	}
+
+	/**
+	 * Create a column not found exception.
+	 *
+	 * @param  string $column_name The name of the affected column.
+	 * @param  string $table_name  The name of the affected table.
+	 * @return self                The exception instance.
+	 */
+	public static function column_not_found( string $column_name, string $table_name ): WP_SQLite_Information_Schema_Exception {
+		return new self(
+			self::TYPE_COLUMN_NOT_FOUND,
+			sprintf( "Unknown column '%s' in '%s'.", $column_name, $table_name ),
+			array(
+				'column_name' => $column_name,
+				'table_name'  => $table_name,
+			)
 		);
 	}
 

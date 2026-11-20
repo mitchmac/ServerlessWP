@@ -21,6 +21,7 @@ final class MetricsBuilder
     const S3_TRANSFER = "G";
     const S3_CRYPTO_V1N = "H";
     const S3_CRYPTO_V2 = "I";
+    const S3_CRYPTO_V3 = "AE";
     const S3_EXPRESS_BUCKET = "J";
     const GZIP_REQUEST_COMPRESSION = "L";
     const ENDPOINT_OVERRIDE = "N";
@@ -52,6 +53,9 @@ final class MetricsBuilder
     const CREDENTIALS_PROFILE_PROCESS = "v";
     const CREDENTIALS_PROFILE_SSO = "r";
     const CREDENTIALS_PROFILE_SSO_LEGACY = "t";
+    const S3_TRANSFER_UPLOAD_DIRECTORY = "9";
+    const S3_TRANSFER_DOWNLOAD_DIRECTORY = "+";
+    const CREDENTIALS_PROFILE_LOGIN = "AC";
     /** @var int */
     private static $MAX_METRICS_SIZE = 1024;
     // 1KB or 1024 B
@@ -191,7 +195,7 @@ final class MetricsBuilder
         if (empty($source)) {
             return;
         }
-        static $credentialsMetricMapping = [CredentialSources::STATIC => self::CREDENTIALS_CODE, CredentialSources::ENVIRONMENT => self::CREDENTIALS_ENV_VARS, CredentialSources::ENVIRONMENT_STS_WEB_ID_TOKEN => self::CREDENTIALS_ENV_VARS_STS_WEB_ID_TOKEN, CredentialSources::STS_ASSUME_ROLE => self::CREDENTIALS_STS_ASSUME_ROLE, CredentialSources::STS_WEB_ID_TOKEN => self::CREDENTIALS_STS_ASSUME_ROLE_WEB_ID, CredentialSources::PROFILE => self::CREDENTIALS_PROFILE, CredentialSources::IMDS => self::CREDENTIALS_IMDS, CredentialSources::ECS => self::CREDENTIALS_HTTP, CredentialSources::PROFILE_STS_WEB_ID_TOKEN => self::CREDENTIALS_PROFILE_STS_WEB_ID_TOKEN, CredentialSources::PROFILE_PROCESS => self::CREDENTIALS_PROFILE_PROCESS, CredentialSources::PROFILE_SSO => self::CREDENTIALS_PROFILE_SSO, CredentialSources::PROFILE_SSO_LEGACY => self::CREDENTIALS_PROFILE_SSO_LEGACY];
+        static $credentialsMetricMapping = [CredentialSources::STATIC => self::CREDENTIALS_CODE, CredentialSources::ENVIRONMENT => self::CREDENTIALS_ENV_VARS, CredentialSources::ENVIRONMENT_STS_WEB_ID_TOKEN => self::CREDENTIALS_ENV_VARS_STS_WEB_ID_TOKEN, CredentialSources::STS_ASSUME_ROLE => self::CREDENTIALS_STS_ASSUME_ROLE, CredentialSources::STS_WEB_ID_TOKEN => self::CREDENTIALS_STS_ASSUME_ROLE_WEB_ID, CredentialSources::PROFILE => self::CREDENTIALS_PROFILE, CredentialSources::IMDS => self::CREDENTIALS_IMDS, CredentialSources::ECS => self::CREDENTIALS_HTTP, CredentialSources::PROFILE_STS_WEB_ID_TOKEN => self::CREDENTIALS_PROFILE_STS_WEB_ID_TOKEN, CredentialSources::PROFILE_PROCESS => self::CREDENTIALS_PROFILE_PROCESS, CredentialSources::PROFILE_SSO => self::CREDENTIALS_PROFILE_SSO, CredentialSources::PROFILE_SSO_LEGACY => self::CREDENTIALS_PROFILE_SSO_LEGACY, CredentialSources::PROFILE_LOGIN => self::CREDENTIALS_PROFILE_LOGIN];
         if (isset($credentialsMetricMapping[$source])) {
             $this->append($credentialsMetricMapping[$source]);
         }
