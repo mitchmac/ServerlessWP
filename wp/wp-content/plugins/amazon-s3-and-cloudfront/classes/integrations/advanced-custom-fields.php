@@ -10,6 +10,11 @@ use Exception;
 use WP_Error;
 use WP_Post;
 
+// Exit if accessed directly.
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 class Advanced_Custom_Fields extends Integration {
 	/**
 	 * Is installed?
@@ -50,10 +55,13 @@ class Advanced_Custom_Fields extends Integration {
 		add_filter( 'acf/update_value/type=link', array( $this, 'filter_link_provider' ) );
 
 		/*
-		 * Image Crop Add-on
+		 * Image Crop Add-on (closed)
 		 * https://en-gb.wordpress.org/plugins/acf-image-crop-add-on/
+		 *
+		 * Advanced Custom Fields: Image Aspect Ratio Crop Field
+		 * https://wordpress.org/plugins/acf-image-aspect-ratio-crop/
 		 */
-		if ( class_exists( 'acf_field_image_crop' ) ) {
+		if ( is_admin() && class_exists( 'acf_field_image_crop' ) ) {
 			add_filter( 'wp_get_attachment_metadata', array( $this, 'download_image' ), 10, 2 );
 			add_filter( 'sanitize_file_name', array( $this, 'remove_original_after_download' ) );
 		}

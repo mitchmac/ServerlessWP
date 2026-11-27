@@ -5,6 +5,11 @@
 use DeliciousBrains\WP_Offload_Media\Integrations\Media_Library;
 use DeliciousBrains\WP_Offload_Media\Pro\Integrations\Media_Library_Pro;
 
+// Exit if accessed directly.
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 /** @var Amazon_S3_And_CloudFront|Amazon_S3_And_CloudFront_Pro $this */
 /** @var array|bool $provider_object */
 /** @var WP_Post $post */

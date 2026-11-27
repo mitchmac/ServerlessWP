@@ -1,10 +1,19 @@
 <?php
 
+declare (strict_types=1);
 namespace DeliciousBrains\WP_Offload_Media\Aws3\GuzzleHttp\Handler;
 
-use DeliciousBrains\WP_Offload_Media\Aws3\GuzzleHttp\Psr7\Response;
+use DeliciousBrains\WP_Offload_Media\Aws3\GuzzleHttp\Exception\InvalidArgumentException;
+use DeliciousBrains\WP_Offload_Media\Aws3\GuzzleHttp\Exception\ResponseException;
+use DeliciousBrains\WP_Offload_Media\Aws3\GuzzleHttp\Exception\ResponseTransferException;
+use DeliciousBrains\WP_Offload_Media\Aws3\GuzzleHttp\NonSerializableTrait;
+use DeliciousBrains\WP_Offload_Media\Aws3\GuzzleHttp\Psr7\DiagnosticValue;
+use DeliciousBrains\WP_Offload_Media\Aws3\GuzzleHttp\Psr7\Exception\TimeoutException;
+use DeliciousBrains\WP_Offload_Media\Aws3\GuzzleHttp\Psr7\HttpFactory;
+use DeliciousBrains\WP_Offload_Media\Aws3\GuzzleHttp\RequestOptions;
 use DeliciousBrains\WP_Offload_Media\Aws3\GuzzleHttp\Utils;
 use DeliciousBrains\WP_Offload_Media\Aws3\Psr\Http\Message\RequestInterface;
+use DeliciousBrains\WP_Offload_Media\Aws3\Psr\Http\Message\ResponseFactoryInterface;
 use DeliciousBrains\WP_Offload_Media\Aws3\Psr\Http\Message\ResponseInterface;
 use DeliciousBrains\WP_Offload_Media\Aws3\Psr\Http\Message\StreamInterface;
 /**
@@ -14,42 +23,95 @@ use DeliciousBrains\WP_Offload_Media\Aws3\Psr\Http\Message\StreamInterface;
  */
 final class EasyHandle
 {
+    use NonSerializableTrait;
     /**
      * @var resource|\CurlHandle cURL resource
      */
     public $handle;
+    public StreamInterface $sink;
+    public RequestInterface $request;
     /**
-     * @var StreamInterface Where data is being written
+     * @var list<string> Received HTTP headers so far
      */
-    public $sink;
+    public array $headers = [];
     /**
-     * @var array Received HTTP headers so far
+     * @var list<string> Valid trailer lines, retained only when an
+     *                   on_trailers callback is configured
      */
-    public $headers = [];
+    public array $trailers = [];
+    /**
+     * @var bool Whether this handle was configured with CURLOPT_PIPEWAIT
+     */
+    public bool $usesPipewait = \false;
     /**
      * @var ResponseInterface|null Received response (if any)
      */
-    public $response;
-    /**
-     * @var RequestInterface Request being sent
-     */
-    public $request;
+    public ?ResponseInterface $response = null;
     /**
      * @var array Request options
      */
-    public $options = [];
+    public array $options = [];
     /**
      * @var int cURL error number (if any)
      */
-    public $errno = 0;
+    public int $errno = 0;
+    /**
+     * @var string|null Effective CURLOPT_PROXY value the handle was created with (if any)
+     */
+    public ?string $effectiveProxy = null;
+    /**
+     * Proxy tunnel or SOCKS proxy section signature for connection-reuse
+     * isolation, or null when the request does not require sectioning.
+     */
+    public ?string $proxyTunnelSignature = null;
     /**
      * @var \Throwable|null Exception during on_headers (if any)
      */
-    public $onHeadersException;
+    public ?\Throwable $onHeadersException = null;
     /**
-     * @var \Exception|null Exception during createResponse (if any)
+     * @var \Throwable|null Exception during progress callback (if any)
      */
-    public $createResponseException;
+    public ?\Throwable $progressException = null;
+    /**
+     * @var bool Whether the progress callback requested abort
+     */
+    public bool $progressAborted = \false;
+    /**
+     * @var \Throwable|null Exception during createResponse (if any)
+     */
+    public ?\Throwable $createResponseException = null;
+    /**
+     * @var ResponseException|null Response header failure, if any.
+     */
+    public ?ResponseException $responseHeaderException = null;
+    /**
+     * @var TimeoutException|null Exception during request body read timeout.
+     */
+    public ?TimeoutException $bodyReadTimeoutException = null;
+    /**
+     * @var \Throwable|null Exception during request body read.
+     */
+    public ?\Throwable $bodyReadException = null;
+    /**
+     * @var TimeoutException|null Exception during response sink write timeout.
+     */
+    public ?TimeoutException $sinkWriteTimeoutException = null;
+    /**
+     * @var \Throwable|null Exception during response sink write.
+     */
+    public ?\Throwable $sinkWriteException = null;
+    /**
+     * @var bool Whether the response sink accepted a different byte count.
+     */
+    public bool $sinkWriteIncomplete = \false;
+    /**
+     * @var int Number of response body bytes accepted by the sink.
+     */
+    public int $responseBodyBytes = 0;
+    /**
+     * @var \OverflowException|null Unrepresentable response body size or byte count.
+     */
+    public ?\OverflowException $responseBodySizeException = null;
     /**
      * Attach a response to the easy handle based on the received headers.
      *
@@ -58,34 +120,73 @@ final class EasyHandle
      */
     public function createResponse() : void
     {
+        $this->response = null;
+        $this->responseBodyBytes = 0;
+        $this->responseBodySizeException = null;
+        $this->responseHeaderException = null;
         [$ver, $status, $reason, $headers] = HeaderProcessor::parseHeaders($this->headers);
+        // Non-101 informational responses precede the final response. Do not
+        // expose them as the response for a transfer that ends before the final
+        // response arrives. 101 switches protocol and is kept as terminal.
+        if ($status < 200 && $status !== 101) {
+            return;
+        }
+        $framingFailure = null;
+        try {
+            $declaredLength = HeaderProcessor::validateResponseFraming($this->request->getMethod(), $status, $headers);
+            HeaderProcessor::assertContentLengthWithinPlatformLimit($declaredLength);
+        } catch (\RuntimeException $e) {
+            $framingFailure = $e;
+        }
         $normalizedKeys = Utils::normalizeHeaderKeys($headers);
-        if (!empty($this->options['decode_content']) && isset($normalizedKeys['content-encoding'])) {
+        $decodeContent = $this->options['decode_content'] ?? \false;
+        if ($framingFailure === null && $decodeContent !== \false && isset($normalizedKeys['content-encoding'])) {
             $headers['x-encoded-content-encoding'] = $headers[$normalizedKeys['content-encoding']];
             unset($headers[$normalizedKeys['content-encoding']]);
-            if (isset($normalizedKeys['content-length'])) {
-                $headers['x-encoded-content-length'] = $headers[$normalizedKeys['content-length']];
-                $bodyLength = (int) $this->sink->getSize();
+            $encodedContentLength = HeaderProcessor::removeHeader('Content-Length', $headers);
+            if ($encodedContentLength !== []) {
+                $headers['x-encoded-content-length'] = $encodedContentLength;
+                try {
+                    $bodyLength = $this->sink->getSize();
+                } catch (\Exception $e) {
+                    $bodyLength = null;
+                }
                 if ($bodyLength) {
-                    $headers[$normalizedKeys['content-length']] = $bodyLength;
-                } else {
-                    unset($headers[$normalizedKeys['content-length']]);
+                    $headers['Content-Length'] = [(string) $bodyLength];
                 }
             }
         }
-        // Attach a response to the easy handle with the parsed headers.
-        $this->response = new Response($status, $headers, $this->sink, $ver, $reason);
+        // Attach a response to the easy handle with the parsed headers. Any
+        // exception propagates to the caller (CurlFactory), which records it as
+        // the createResponseException — do not catch it here.
+        $responseFactory = self::requireResponseFactory($this->options[RequestOptions::RESPONSE_FACTORY] ?? new HttpFactory());
+        $response = $responseFactory->createResponse($status, $reason ?? '')->withProtocolVersion($ver);
+        foreach ($headers as $name => $value) {
+            $response = $response->withAddedHeader((string) $name, $value);
+        }
+        $this->response = $response->withBody($this->sink);
+        if ($framingFailure instanceof \OverflowException) {
+            $this->responseHeaderException = new ResponseException($framingFailure->getMessage(), $this->request, $this->response, $framingFailure);
+        } elseif ($framingFailure !== null) {
+            $this->responseHeaderException = new ResponseTransferException($framingFailure->getMessage(), $this->request, $this->response, $framingFailure);
+        }
     }
     /**
-     * @param string $name
-     *
-     * @return void
-     *
+     * @param mixed $factory
+     */
+    private static function requireResponseFactory($factory) : ResponseFactoryInterface
+    {
+        if (!$factory instanceof ResponseFactoryInterface) {
+            throw new InvalidArgumentException(\sprintf('%s must be an instance of %s', RequestOptions::RESPONSE_FACTORY, ResponseFactoryInterface::class));
+        }
+        return $factory;
+    }
+    /**
      * @throws \BadMethodCallException
      */
-    public function __get($name)
+    public function __get(string $name) : void
     {
-        $msg = $name === 'handle' ? 'The EasyHandle has been released' : 'Invalid property: ' . $name;
+        $msg = $name === 'handle' ? 'The EasyHandle has been released' : \sprintf('Invalid property: %s', DiagnosticValue::escape($name));
         throw new \BadMethodCallException($msg);
     }
 }

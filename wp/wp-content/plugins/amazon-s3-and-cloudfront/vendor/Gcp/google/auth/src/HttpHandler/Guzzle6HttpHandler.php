@@ -23,6 +23,9 @@ use DeliciousBrains\WP_Offload_Media\Gcp\GuzzleHttp\ClientInterface;
 use DeliciousBrains\WP_Offload_Media\Gcp\Psr\Http\Message\RequestInterface;
 use DeliciousBrains\WP_Offload_Media\Gcp\Psr\Http\Message\ResponseInterface;
 use DeliciousBrains\WP_Offload_Media\Gcp\Psr\Log\LoggerInterface;
+/**
+ * @deprecated Guzzle 6 is no longer supported; use Guzzle7HttpHandler.
+ */
 class Guzzle6HttpHandler
 {
     use LoggingTrait;

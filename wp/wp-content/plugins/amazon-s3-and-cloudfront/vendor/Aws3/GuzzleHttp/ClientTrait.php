@@ -1,10 +1,18 @@
 <?php
 
+declare (strict_types=1);
 namespace DeliciousBrains\WP_Offload_Media\Aws3\GuzzleHttp;
 
+use DeliciousBrains\WP_Offload_Media\Aws3\GuzzleHttp\Cookie\CookieJarInterface;
 use DeliciousBrains\WP_Offload_Media\Aws3\GuzzleHttp\Exception\GuzzleException;
 use DeliciousBrains\WP_Offload_Media\Aws3\GuzzleHttp\Promise\PromiseInterface;
+use DeliciousBrains\WP_Offload_Media\Aws3\Psr\Http\Message\RequestFactoryInterface;
+use DeliciousBrains\WP_Offload_Media\Aws3\Psr\Http\Message\RequestInterface;
+use DeliciousBrains\WP_Offload_Media\Aws3\Psr\Http\Message\ResponseFactoryInterface;
 use DeliciousBrains\WP_Offload_Media\Aws3\Psr\Http\Message\ResponseInterface;
+use DeliciousBrains\WP_Offload_Media\Aws3\Psr\Http\Message\StreamFactoryInterface;
+use DeliciousBrains\WP_Offload_Media\Aws3\Psr\Http\Message\StreamInterface;
+use DeliciousBrains\WP_Offload_Media\Aws3\Psr\Http\Message\UriFactoryInterface;
 use DeliciousBrains\WP_Offload_Media\Aws3\Psr\Http\Message\UriInterface;
 /**
  * Client interface for sending HTTP requests.
@@ -18,9 +26,82 @@ trait ClientTrait
      * relative path to append to the base path of the client. The URL can
      * contain the query string as well.
      *
-     * @param string              $method  HTTP method.
-     * @param string|UriInterface $uri     URI object or string.
-     * @param array               $options Request options to apply.
+     * @param string              $method HTTP method.
+     * @param string|UriInterface $uri    URI object or string.
+     * @param array{
+     *     base_uri?: string|UriInterface,
+     *     allow_redirects?: bool|array{
+     *         max?: int,
+     *         strict?: bool,
+     *         referer?: bool,
+     *         protocols?: non-empty-array<array-key, string>,
+     *         on_redirect?: callable(RequestInterface, ResponseInterface, UriInterface): mixed,
+     *         track_redirects?: bool
+     *     },
+     *     auth?: array{
+     *         0: string,
+     *         1: string,
+     *         2?: string|null
+     *     }|string|false|null,
+     *     body?: resource|string|null|StreamInterface|(callable&object)|\Iterator|\Stringable,
+     *     cert?: string|array{
+     *         0: string,
+     *         1?: string|null
+     *     },
+     *     cert_type?: string,
+     *     connect_timeout?: int|float,
+     *     cookies?: false|CookieJarInterface,
+     *     crypto_method?: int,
+     *     crypto_method_max?: int,
+     *     debug?: bool|resource,
+     *     decode_content?: bool|string,
+     *     delay?: int|float,
+     *     expect?: bool|int,
+     *     form_params?: array<array-key, string|int|float|bool|null|array>,
+     *     force_ip_resolve?: string,
+     *     headers?: array<array-key, string|non-empty-array<array-key, string>>|null,
+     *     http_errors?: bool,
+     *     idn_conversion?: bool|int|null,
+     *     json?: mixed,
+     *     multipart?: array<array-key, array{
+     *         name: string|int,
+     *         contents: mixed,
+     *         headers?: array<array-key, string>,
+     *         filename?: string
+     *     }>,
+     *     multiplex?: string,
+     *     on_headers?: callable(ResponseInterface, RequestInterface): mixed,
+     *     on_stats?: callable(TransferStats): mixed,
+     *     on_trailers?: callable(array<string, list<string>>, ResponseInterface, RequestInterface): mixed,
+     *     progress?: callable(int, int, int, int): mixed,
+     *     protocols?: non-empty-array<array-key, string>,
+     *     proxy?: string|array{
+     *         http?: string|null,
+     *         https?: string|null,
+     *         no?: string|array<array-key, string>|null
+     *     },
+     *     query?: array<array-key, mixed>|string,
+     *     read_timeout?: int|float,
+     *     retries?: int,
+     *     request_factory?: RequestFactoryInterface,
+     *     response_factory?: ResponseFactoryInterface,
+     *     sink?: resource|string|StreamInterface,
+     *     ssl_key?: string|array{
+     *         0: string,
+     *         1?: string|null
+     *     },
+     *     ssl_key_type?: string,
+     *     stream?: bool,
+     *     stream_factory?: StreamFactoryInterface,
+     *     stream_context?: array<array-key, mixed>,
+     *     synchronous?: bool,
+     *     timeout?: int|float,
+     *     uri_factory?: UriFactoryInterface,
+     *     verify?: bool|string,
+     *     version?: string|int|float,
+     *     curl?: array<int|string, mixed>,
+     *     ...
+     * } $options Request options to apply.
      *
      * @throws GuzzleException
      */
@@ -32,12 +113,85 @@ trait ClientTrait
      * relative path to append to the base path of the client. The URL can
      * contain the query string as well.
      *
-     * @param string|UriInterface $uri     URI object or string.
-     * @param array               $options Request options to apply.
+     * @param string|UriInterface $uri URI object or string.
+     * @param array{
+     *     base_uri?: string|UriInterface,
+     *     allow_redirects?: bool|array{
+     *         max?: int,
+     *         strict?: bool,
+     *         referer?: bool,
+     *         protocols?: non-empty-array<array-key, string>,
+     *         on_redirect?: callable(RequestInterface, ResponseInterface, UriInterface): mixed,
+     *         track_redirects?: bool
+     *     },
+     *     auth?: array{
+     *         0: string,
+     *         1: string,
+     *         2?: string|null
+     *     }|string|false|null,
+     *     body?: resource|string|null|StreamInterface|(callable&object)|\Iterator|\Stringable,
+     *     cert?: string|array{
+     *         0: string,
+     *         1?: string|null
+     *     },
+     *     cert_type?: string,
+     *     connect_timeout?: int|float,
+     *     cookies?: false|CookieJarInterface,
+     *     crypto_method?: int,
+     *     crypto_method_max?: int,
+     *     debug?: bool|resource,
+     *     decode_content?: bool|string,
+     *     delay?: int|float,
+     *     expect?: bool|int,
+     *     form_params?: array<array-key, string|int|float|bool|null|array>,
+     *     force_ip_resolve?: string,
+     *     headers?: array<array-key, string|non-empty-array<array-key, string>>|null,
+     *     http_errors?: bool,
+     *     idn_conversion?: bool|int|null,
+     *     json?: mixed,
+     *     multipart?: array<array-key, array{
+     *         name: string|int,
+     *         contents: mixed,
+     *         headers?: array<array-key, string>,
+     *         filename?: string
+     *     }>,
+     *     multiplex?: string,
+     *     on_headers?: callable(ResponseInterface, RequestInterface): mixed,
+     *     on_stats?: callable(TransferStats): mixed,
+     *     on_trailers?: callable(array<string, list<string>>, ResponseInterface, RequestInterface): mixed,
+     *     progress?: callable(int, int, int, int): mixed,
+     *     protocols?: non-empty-array<array-key, string>,
+     *     proxy?: string|array{
+     *         http?: string|null,
+     *         https?: string|null,
+     *         no?: string|array<array-key, string>|null
+     *     },
+     *     query?: array<array-key, mixed>|string,
+     *     read_timeout?: int|float,
+     *     retries?: int,
+     *     request_factory?: RequestFactoryInterface,
+     *     response_factory?: ResponseFactoryInterface,
+     *     sink?: resource|string|StreamInterface,
+     *     ssl_key?: string|array{
+     *         0: string,
+     *         1?: string|null
+     *     },
+     *     ssl_key_type?: string,
+     *     stream?: bool,
+     *     stream_factory?: StreamFactoryInterface,
+     *     stream_context?: array<array-key, mixed>,
+     *     synchronous?: bool,
+     *     timeout?: int|float,
+     *     uri_factory?: UriFactoryInterface,
+     *     verify?: bool|string,
+     *     version?: string|int|float,
+     *     curl?: array<int|string, mixed>,
+     *     ...
+     * } $options Request options to apply.
      *
      * @throws GuzzleException
      */
-    public function get($uri, array $options = []) : ResponseInterface
+    public function get($uri, #[\SensitiveParameter] array $options = []) : ResponseInterface
     {
         return $this->request('GET', $uri, $options);
     }
@@ -48,12 +202,85 @@ trait ClientTrait
      * relative path to append to the base path of the client. The URL can
      * contain the query string as well.
      *
-     * @param string|UriInterface $uri     URI object or string.
-     * @param array               $options Request options to apply.
+     * @param string|UriInterface $uri URI object or string.
+     * @param array{
+     *     base_uri?: string|UriInterface,
+     *     allow_redirects?: bool|array{
+     *         max?: int,
+     *         strict?: bool,
+     *         referer?: bool,
+     *         protocols?: non-empty-array<array-key, string>,
+     *         on_redirect?: callable(RequestInterface, ResponseInterface, UriInterface): mixed,
+     *         track_redirects?: bool
+     *     },
+     *     auth?: array{
+     *         0: string,
+     *         1: string,
+     *         2?: string|null
+     *     }|string|false|null,
+     *     body?: resource|string|null|StreamInterface|(callable&object)|\Iterator|\Stringable,
+     *     cert?: string|array{
+     *         0: string,
+     *         1?: string|null
+     *     },
+     *     cert_type?: string,
+     *     connect_timeout?: int|float,
+     *     cookies?: false|CookieJarInterface,
+     *     crypto_method?: int,
+     *     crypto_method_max?: int,
+     *     debug?: bool|resource,
+     *     decode_content?: bool|string,
+     *     delay?: int|float,
+     *     expect?: bool|int,
+     *     form_params?: array<array-key, string|int|float|bool|null|array>,
+     *     force_ip_resolve?: string,
+     *     headers?: array<array-key, string|non-empty-array<array-key, string>>|null,
+     *     http_errors?: bool,
+     *     idn_conversion?: bool|int|null,
+     *     json?: mixed,
+     *     multipart?: array<array-key, array{
+     *         name: string|int,
+     *         contents: mixed,
+     *         headers?: array<array-key, string>,
+     *         filename?: string
+     *     }>,
+     *     multiplex?: string,
+     *     on_headers?: callable(ResponseInterface, RequestInterface): mixed,
+     *     on_stats?: callable(TransferStats): mixed,
+     *     on_trailers?: callable(array<string, list<string>>, ResponseInterface, RequestInterface): mixed,
+     *     progress?: callable(int, int, int, int): mixed,
+     *     protocols?: non-empty-array<array-key, string>,
+     *     proxy?: string|array{
+     *         http?: string|null,
+     *         https?: string|null,
+     *         no?: string|array<array-key, string>|null
+     *     },
+     *     query?: array<array-key, mixed>|string,
+     *     read_timeout?: int|float,
+     *     retries?: int,
+     *     request_factory?: RequestFactoryInterface,
+     *     response_factory?: ResponseFactoryInterface,
+     *     sink?: resource|string|StreamInterface,
+     *     ssl_key?: string|array{
+     *         0: string,
+     *         1?: string|null
+     *     },
+     *     ssl_key_type?: string,
+     *     stream?: bool,
+     *     stream_factory?: StreamFactoryInterface,
+     *     stream_context?: array<array-key, mixed>,
+     *     synchronous?: bool,
+     *     timeout?: int|float,
+     *     uri_factory?: UriFactoryInterface,
+     *     verify?: bool|string,
+     *     version?: string|int|float,
+     *     curl?: array<int|string, mixed>,
+     *     ...
+     * } $options Request options to apply.
      *
      * @throws GuzzleException
      */
-    public function head($uri, array $options = []) : ResponseInterface
+    public function head($uri, #[\SensitiveParameter] array $options = []) : ResponseInterface
     {
         return $this->request('HEAD', $uri, $options);
     }
@@ -64,12 +291,85 @@ trait ClientTrait
      * relative path to append to the base path of the client. The URL can
      * contain the query string as well.
      *
-     * @param string|UriInterface $uri     URI object or string.
-     * @param array               $options Request options to apply.
+     * @param string|UriInterface $uri URI object or string.
+     * @param array{
+     *     base_uri?: string|UriInterface,
+     *     allow_redirects?: bool|array{
+     *         max?: int,
+     *         strict?: bool,
+     *         referer?: bool,
+     *         protocols?: non-empty-array<array-key, string>,
+     *         on_redirect?: callable(RequestInterface, ResponseInterface, UriInterface): mixed,
+     *         track_redirects?: bool
+     *     },
+     *     auth?: array{
+     *         0: string,
+     *         1: string,
+     *         2?: string|null
+     *     }|string|false|null,
+     *     body?: resource|string|null|StreamInterface|(callable&object)|\Iterator|\Stringable,
+     *     cert?: string|array{
+     *         0: string,
+     *         1?: string|null
+     *     },
+     *     cert_type?: string,
+     *     connect_timeout?: int|float,
+     *     cookies?: false|CookieJarInterface,
+     *     crypto_method?: int,
+     *     crypto_method_max?: int,
+     *     debug?: bool|resource,
+     *     decode_content?: bool|string,
+     *     delay?: int|float,
+     *     expect?: bool|int,
+     *     form_params?: array<array-key, string|int|float|bool|null|array>,
+     *     force_ip_resolve?: string,
+     *     headers?: array<array-key, string|non-empty-array<array-key, string>>|null,
+     *     http_errors?: bool,
+     *     idn_conversion?: bool|int|null,
+     *     json?: mixed,
+     *     multipart?: array<array-key, array{
+     *         name: string|int,
+     *         contents: mixed,
+     *         headers?: array<array-key, string>,
+     *         filename?: string
+     *     }>,
+     *     multiplex?: string,
+     *     on_headers?: callable(ResponseInterface, RequestInterface): mixed,
+     *     on_stats?: callable(TransferStats): mixed,
+     *     on_trailers?: callable(array<string, list<string>>, ResponseInterface, RequestInterface): mixed,
+     *     progress?: callable(int, int, int, int): mixed,
+     *     protocols?: non-empty-array<array-key, string>,
+     *     proxy?: string|array{
+     *         http?: string|null,
+     *         https?: string|null,
+     *         no?: string|array<array-key, string>|null
+     *     },
+     *     query?: array<array-key, mixed>|string,
+     *     read_timeout?: int|float,
+     *     retries?: int,
+     *     request_factory?: RequestFactoryInterface,
+     *     response_factory?: ResponseFactoryInterface,
+     *     sink?: resource|string|StreamInterface,
+     *     ssl_key?: string|array{
+     *         0: string,
+     *         1?: string|null
+     *     },
+     *     ssl_key_type?: string,
+     *     stream?: bool,
+     *     stream_factory?: StreamFactoryInterface,
+     *     stream_context?: array<array-key, mixed>,
+     *     synchronous?: bool,
+     *     timeout?: int|float,
+     *     uri_factory?: UriFactoryInterface,
+     *     verify?: bool|string,
+     *     version?: string|int|float,
+     *     curl?: array<int|string, mixed>,
+     *     ...
+     * } $options Request options to apply.
      *
      * @throws GuzzleException
      */
-    public function put($uri, array $options = []) : ResponseInterface
+    public function put($uri, #[\SensitiveParameter] array $options = []) : ResponseInterface
     {
         return $this->request('PUT', $uri, $options);
     }
@@ -80,12 +380,85 @@ trait ClientTrait
      * relative path to append to the base path of the client. The URL can
      * contain the query string as well.
      *
-     * @param string|UriInterface $uri     URI object or string.
-     * @param array               $options Request options to apply.
+     * @param string|UriInterface $uri URI object or string.
+     * @param array{
+     *     base_uri?: string|UriInterface,
+     *     allow_redirects?: bool|array{
+     *         max?: int,
+     *         strict?: bool,
+     *         referer?: bool,
+     *         protocols?: non-empty-array<array-key, string>,
+     *         on_redirect?: callable(RequestInterface, ResponseInterface, UriInterface): mixed,
+     *         track_redirects?: bool
+     *     },
+     *     auth?: array{
+     *         0: string,
+     *         1: string,
+     *         2?: string|null
+     *     }|string|false|null,
+     *     body?: resource|string|null|StreamInterface|(callable&object)|\Iterator|\Stringable,
+     *     cert?: string|array{
+     *         0: string,
+     *         1?: string|null
+     *     },
+     *     cert_type?: string,
+     *     connect_timeout?: int|float,
+     *     cookies?: false|CookieJarInterface,
+     *     crypto_method?: int,
+     *     crypto_method_max?: int,
+     *     debug?: bool|resource,
+     *     decode_content?: bool|string,
+     *     delay?: int|float,
+     *     expect?: bool|int,
+     *     form_params?: array<array-key, string|int|float|bool|null|array>,
+     *     force_ip_resolve?: string,
+     *     headers?: array<array-key, string|non-empty-array<array-key, string>>|null,
+     *     http_errors?: bool,
+     *     idn_conversion?: bool|int|null,
+     *     json?: mixed,
+     *     multipart?: array<array-key, array{
+     *         name: string|int,
+     *         contents: mixed,
+     *         headers?: array<array-key, string>,
+     *         filename?: string
+     *     }>,
+     *     multiplex?: string,
+     *     on_headers?: callable(ResponseInterface, RequestInterface): mixed,
+     *     on_stats?: callable(TransferStats): mixed,
+     *     on_trailers?: callable(array<string, list<string>>, ResponseInterface, RequestInterface): mixed,
+     *     progress?: callable(int, int, int, int): mixed,
+     *     protocols?: non-empty-array<array-key, string>,
+     *     proxy?: string|array{
+     *         http?: string|null,
+     *         https?: string|null,
+     *         no?: string|array<array-key, string>|null
+     *     },
+     *     query?: array<array-key, mixed>|string,
+     *     read_timeout?: int|float,
+     *     retries?: int,
+     *     request_factory?: RequestFactoryInterface,
+     *     response_factory?: ResponseFactoryInterface,
+     *     sink?: resource|string|StreamInterface,
+     *     ssl_key?: string|array{
+     *         0: string,
+     *         1?: string|null
+     *     },
+     *     ssl_key_type?: string,
+     *     stream?: bool,
+     *     stream_factory?: StreamFactoryInterface,
+     *     stream_context?: array<array-key, mixed>,
+     *     synchronous?: bool,
+     *     timeout?: int|float,
+     *     uri_factory?: UriFactoryInterface,
+     *     verify?: bool|string,
+     *     version?: string|int|float,
+     *     curl?: array<int|string, mixed>,
+     *     ...
+     * } $options Request options to apply.
      *
      * @throws GuzzleException
      */
-    public function post($uri, array $options = []) : ResponseInterface
+    public function post($uri, #[\SensitiveParameter] array $options = []) : ResponseInterface
     {
         return $this->request('POST', $uri, $options);
     }
@@ -96,12 +469,85 @@ trait ClientTrait
      * relative path to append to the base path of the client. The URL can
      * contain the query string as well.
      *
-     * @param string|UriInterface $uri     URI object or string.
-     * @param array               $options Request options to apply.
+     * @param string|UriInterface $uri URI object or string.
+     * @param array{
+     *     base_uri?: string|UriInterface,
+     *     allow_redirects?: bool|array{
+     *         max?: int,
+     *         strict?: bool,
+     *         referer?: bool,
+     *         protocols?: non-empty-array<array-key, string>,
+     *         on_redirect?: callable(RequestInterface, ResponseInterface, UriInterface): mixed,
+     *         track_redirects?: bool
+     *     },
+     *     auth?: array{
+     *         0: string,
+     *         1: string,
+     *         2?: string|null
+     *     }|string|false|null,
+     *     body?: resource|string|null|StreamInterface|(callable&object)|\Iterator|\Stringable,
+     *     cert?: string|array{
+     *         0: string,
+     *         1?: string|null
+     *     },
+     *     cert_type?: string,
+     *     connect_timeout?: int|float,
+     *     cookies?: false|CookieJarInterface,
+     *     crypto_method?: int,
+     *     crypto_method_max?: int,
+     *     debug?: bool|resource,
+     *     decode_content?: bool|string,
+     *     delay?: int|float,
+     *     expect?: bool|int,
+     *     form_params?: array<array-key, string|int|float|bool|null|array>,
+     *     force_ip_resolve?: string,
+     *     headers?: array<array-key, string|non-empty-array<array-key, string>>|null,
+     *     http_errors?: bool,
+     *     idn_conversion?: bool|int|null,
+     *     json?: mixed,
+     *     multipart?: array<array-key, array{
+     *         name: string|int,
+     *         contents: mixed,
+     *         headers?: array<array-key, string>,
+     *         filename?: string
+     *     }>,
+     *     multiplex?: string,
+     *     on_headers?: callable(ResponseInterface, RequestInterface): mixed,
+     *     on_stats?: callable(TransferStats): mixed,
+     *     on_trailers?: callable(array<string, list<string>>, ResponseInterface, RequestInterface): mixed,
+     *     progress?: callable(int, int, int, int): mixed,
+     *     protocols?: non-empty-array<array-key, string>,
+     *     proxy?: string|array{
+     *         http?: string|null,
+     *         https?: string|null,
+     *         no?: string|array<array-key, string>|null
+     *     },
+     *     query?: array<array-key, mixed>|string,
+     *     read_timeout?: int|float,
+     *     retries?: int,
+     *     request_factory?: RequestFactoryInterface,
+     *     response_factory?: ResponseFactoryInterface,
+     *     sink?: resource|string|StreamInterface,
+     *     ssl_key?: string|array{
+     *         0: string,
+     *         1?: string|null
+     *     },
+     *     ssl_key_type?: string,
+     *     stream?: bool,
+     *     stream_factory?: StreamFactoryInterface,
+     *     stream_context?: array<array-key, mixed>,
+     *     synchronous?: bool,
+     *     timeout?: int|float,
+     *     uri_factory?: UriFactoryInterface,
+     *     verify?: bool|string,
+     *     version?: string|int|float,
+     *     curl?: array<int|string, mixed>,
+     *     ...
+     * } $options Request options to apply.
      *
      * @throws GuzzleException
      */
-    public function patch($uri, array $options = []) : ResponseInterface
+    public function patch($uri, #[\SensitiveParameter] array $options = []) : ResponseInterface
     {
         return $this->request('PATCH', $uri, $options);
     }
@@ -112,12 +558,85 @@ trait ClientTrait
      * relative path to append to the base path of the client. The URL can
      * contain the query string as well.
      *
-     * @param string|UriInterface $uri     URI object or string.
-     * @param array               $options Request options to apply.
+     * @param string|UriInterface $uri URI object or string.
+     * @param array{
+     *     base_uri?: string|UriInterface,
+     *     allow_redirects?: bool|array{
+     *         max?: int,
+     *         strict?: bool,
+     *         referer?: bool,
+     *         protocols?: non-empty-array<array-key, string>,
+     *         on_redirect?: callable(RequestInterface, ResponseInterface, UriInterface): mixed,
+     *         track_redirects?: bool
+     *     },
+     *     auth?: array{
+     *         0: string,
+     *         1: string,
+     *         2?: string|null
+     *     }|string|false|null,
+     *     body?: resource|string|null|StreamInterface|(callable&object)|\Iterator|\Stringable,
+     *     cert?: string|array{
+     *         0: string,
+     *         1?: string|null
+     *     },
+     *     cert_type?: string,
+     *     connect_timeout?: int|float,
+     *     cookies?: false|CookieJarInterface,
+     *     crypto_method?: int,
+     *     crypto_method_max?: int,
+     *     debug?: bool|resource,
+     *     decode_content?: bool|string,
+     *     delay?: int|float,
+     *     expect?: bool|int,
+     *     form_params?: array<array-key, string|int|float|bool|null|array>,
+     *     force_ip_resolve?: string,
+     *     headers?: array<array-key, string|non-empty-array<array-key, string>>|null,
+     *     http_errors?: bool,
+     *     idn_conversion?: bool|int|null,
+     *     json?: mixed,
+     *     multipart?: array<array-key, array{
+     *         name: string|int,
+     *         contents: mixed,
+     *         headers?: array<array-key, string>,
+     *         filename?: string
+     *     }>,
+     *     multiplex?: string,
+     *     on_headers?: callable(ResponseInterface, RequestInterface): mixed,
+     *     on_stats?: callable(TransferStats): mixed,
+     *     on_trailers?: callable(array<string, list<string>>, ResponseInterface, RequestInterface): mixed,
+     *     progress?: callable(int, int, int, int): mixed,
+     *     protocols?: non-empty-array<array-key, string>,
+     *     proxy?: string|array{
+     *         http?: string|null,
+     *         https?: string|null,
+     *         no?: string|array<array-key, string>|null
+     *     },
+     *     query?: array<array-key, mixed>|string,
+     *     read_timeout?: int|float,
+     *     retries?: int,
+     *     request_factory?: RequestFactoryInterface,
+     *     response_factory?: ResponseFactoryInterface,
+     *     sink?: resource|string|StreamInterface,
+     *     ssl_key?: string|array{
+     *         0: string,
+     *         1?: string|null
+     *     },
+     *     ssl_key_type?: string,
+     *     stream?: bool,
+     *     stream_factory?: StreamFactoryInterface,
+     *     stream_context?: array<array-key, mixed>,
+     *     synchronous?: bool,
+     *     timeout?: int|float,
+     *     uri_factory?: UriFactoryInterface,
+     *     verify?: bool|string,
+     *     version?: string|int|float,
+     *     curl?: array<int|string, mixed>,
+     *     ...
+     * } $options Request options to apply.
      *
      * @throws GuzzleException
      */
-    public function delete($uri, array $options = []) : ResponseInterface
+    public function delete($uri, #[\SensitiveParameter] array $options = []) : ResponseInterface
     {
         return $this->request('DELETE', $uri, $options);
     }
@@ -126,12 +645,86 @@ trait ClientTrait
      *
      * Use an absolute path to override the base path of the client, or a
      * relative path to append to the base path of the client. The URL can
-     * contain the query string as well. Use an array to provide a URL
-     * template and additional variables to use in the URL template expansion.
+     * contain the query string as well.
      *
-     * @param string              $method  HTTP method
-     * @param string|UriInterface $uri     URI object or string.
-     * @param array               $options Request options to apply.
+     * @param string              $method HTTP method
+     * @param string|UriInterface $uri    URI object or string.
+     * @param array{
+     *     base_uri?: string|UriInterface,
+     *     allow_redirects?: bool|array{
+     *         max?: int,
+     *         strict?: bool,
+     *         referer?: bool,
+     *         protocols?: non-empty-array<array-key, string>,
+     *         on_redirect?: callable(RequestInterface, ResponseInterface, UriInterface): mixed,
+     *         track_redirects?: bool
+     *     },
+     *     auth?: array{
+     *         0: string,
+     *         1: string,
+     *         2?: string|null
+     *     }|string|false|null,
+     *     body?: resource|string|null|StreamInterface|(callable&object)|\Iterator|\Stringable,
+     *     cert?: string|array{
+     *         0: string,
+     *         1?: string|null
+     *     },
+     *     cert_type?: string,
+     *     connect_timeout?: int|float,
+     *     cookies?: false|CookieJarInterface,
+     *     crypto_method?: int,
+     *     crypto_method_max?: int,
+     *     debug?: bool|resource,
+     *     decode_content?: bool|string,
+     *     delay?: int|float,
+     *     expect?: bool|int,
+     *     form_params?: array<array-key, string|int|float|bool|null|array>,
+     *     force_ip_resolve?: string,
+     *     headers?: array<array-key, string|non-empty-array<array-key, string>>|null,
+     *     http_errors?: bool,
+     *     idn_conversion?: bool|int|null,
+     *     json?: mixed,
+     *     multipart?: array<array-key, array{
+     *         name: string|int,
+     *         contents: mixed,
+     *         headers?: array<array-key, string>,
+     *         filename?: string
+     *     }>,
+     *     multiplex?: string,
+     *     on_headers?: callable(ResponseInterface, RequestInterface): mixed,
+     *     on_stats?: callable(TransferStats): mixed,
+     *     on_trailers?: callable(array<string, list<string>>, ResponseInterface, RequestInterface): mixed,
+     *     progress?: callable(int, int, int, int): mixed,
+     *     protocols?: non-empty-array<array-key, string>,
+     *     proxy?: string|array{
+     *         http?: string|null,
+     *         https?: string|null,
+     *         no?: string|array<array-key, string>|null
+     *     },
+     *     query?: array<array-key, mixed>|string,
+     *     read_timeout?: int|float,
+     *     retries?: int,
+     *     request_factory?: RequestFactoryInterface,
+     *     response_factory?: ResponseFactoryInterface,
+     *     sink?: resource|string|StreamInterface,
+     *     ssl_key?: string|array{
+     *         0: string,
+     *         1?: string|null
+     *     },
+     *     ssl_key_type?: string,
+     *     stream?: bool,
+     *     stream_factory?: StreamFactoryInterface,
+     *     stream_context?: array<array-key, mixed>,
+     *     synchronous?: bool,
+     *     timeout?: int|float,
+     *     uri_factory?: UriFactoryInterface,
+     *     verify?: bool|string,
+     *     version?: string|int|float,
+     *     curl?: array<int|string, mixed>,
+     *     ...
+     * } $options Request options to apply.
+     *
+     * @return PromiseInterface<ResponseInterface, mixed>
      */
     public abstract function requestAsync(string $method, $uri, array $options = []) : PromiseInterface;
     /**
@@ -139,13 +732,87 @@ trait ClientTrait
      *
      * Use an absolute path to override the base path of the client, or a
      * relative path to append to the base path of the client. The URL can
-     * contain the query string as well. Use an array to provide a URL
-     * template and additional variables to use in the URL template expansion.
+     * contain the query string as well.
      *
-     * @param string|UriInterface $uri     URI object or string.
-     * @param array               $options Request options to apply.
+     * @param string|UriInterface $uri URI object or string.
+     * @param array{
+     *     base_uri?: string|UriInterface,
+     *     allow_redirects?: bool|array{
+     *         max?: int,
+     *         strict?: bool,
+     *         referer?: bool,
+     *         protocols?: non-empty-array<array-key, string>,
+     *         on_redirect?: callable(RequestInterface, ResponseInterface, UriInterface): mixed,
+     *         track_redirects?: bool
+     *     },
+     *     auth?: array{
+     *         0: string,
+     *         1: string,
+     *         2?: string|null
+     *     }|string|false|null,
+     *     body?: resource|string|null|StreamInterface|(callable&object)|\Iterator|\Stringable,
+     *     cert?: string|array{
+     *         0: string,
+     *         1?: string|null
+     *     },
+     *     cert_type?: string,
+     *     connect_timeout?: int|float,
+     *     cookies?: false|CookieJarInterface,
+     *     crypto_method?: int,
+     *     crypto_method_max?: int,
+     *     debug?: bool|resource,
+     *     decode_content?: bool|string,
+     *     delay?: int|float,
+     *     expect?: bool|int,
+     *     form_params?: array<array-key, string|int|float|bool|null|array>,
+     *     force_ip_resolve?: string,
+     *     headers?: array<array-key, string|non-empty-array<array-key, string>>|null,
+     *     http_errors?: bool,
+     *     idn_conversion?: bool|int|null,
+     *     json?: mixed,
+     *     multipart?: array<array-key, array{
+     *         name: string|int,
+     *         contents: mixed,
+     *         headers?: array<array-key, string>,
+     *         filename?: string
+     *     }>,
+     *     multiplex?: string,
+     *     on_headers?: callable(ResponseInterface, RequestInterface): mixed,
+     *     on_stats?: callable(TransferStats): mixed,
+     *     on_trailers?: callable(array<string, list<string>>, ResponseInterface, RequestInterface): mixed,
+     *     progress?: callable(int, int, int, int): mixed,
+     *     protocols?: non-empty-array<array-key, string>,
+     *     proxy?: string|array{
+     *         http?: string|null,
+     *         https?: string|null,
+     *         no?: string|array<array-key, string>|null
+     *     },
+     *     query?: array<array-key, mixed>|string,
+     *     read_timeout?: int|float,
+     *     retries?: int,
+     *     request_factory?: RequestFactoryInterface,
+     *     response_factory?: ResponseFactoryInterface,
+     *     sink?: resource|string|StreamInterface,
+     *     ssl_key?: string|array{
+     *         0: string,
+     *         1?: string|null
+     *     },
+     *     ssl_key_type?: string,
+     *     stream?: bool,
+     *     stream_factory?: StreamFactoryInterface,
+     *     stream_context?: array<array-key, mixed>,
+     *     synchronous?: bool,
+     *     timeout?: int|float,
+     *     uri_factory?: UriFactoryInterface,
+     *     verify?: bool|string,
+     *     version?: string|int|float,
+     *     curl?: array<int|string, mixed>,
+     *     ...
+     * } $options Request options to apply.
+     *
+     * @return PromiseInterface<ResponseInterface, mixed>
      */
-    public function getAsync($uri, array $options = []) : PromiseInterface
+    public function getAsync($uri, #[\SensitiveParameter] array $options = []) : PromiseInterface
     {
         return $this->requestAsync('GET', $uri, $options);
     }
@@ -154,13 +821,87 @@ trait ClientTrait
      *
      * Use an absolute path to override the base path of the client, or a
      * relative path to append to the base path of the client. The URL can
-     * contain the query string as well. Use an array to provide a URL
-     * template and additional variables to use in the URL template expansion.
+     * contain the query string as well.
      *
-     * @param string|UriInterface $uri     URI object or string.
-     * @param array               $options Request options to apply.
+     * @param string|UriInterface $uri URI object or string.
+     * @param array{
+     *     base_uri?: string|UriInterface,
+     *     allow_redirects?: bool|array{
+     *         max?: int,
+     *         strict?: bool,
+     *         referer?: bool,
+     *         protocols?: non-empty-array<array-key, string>,
+     *         on_redirect?: callable(RequestInterface, ResponseInterface, UriInterface): mixed,
+     *         track_redirects?: bool
+     *     },
+     *     auth?: array{
+     *         0: string,
+     *         1: string,
+     *         2?: string|null
+     *     }|string|false|null,
+     *     body?: resource|string|null|StreamInterface|(callable&object)|\Iterator|\Stringable,
+     *     cert?: string|array{
+     *         0: string,
+     *         1?: string|null
+     *     },
+     *     cert_type?: string,
+     *     connect_timeout?: int|float,
+     *     cookies?: false|CookieJarInterface,
+     *     crypto_method?: int,
+     *     crypto_method_max?: int,
+     *     debug?: bool|resource,
+     *     decode_content?: bool|string,
+     *     delay?: int|float,
+     *     expect?: bool|int,
+     *     form_params?: array<array-key, string|int|float|bool|null|array>,
+     *     force_ip_resolve?: string,
+     *     headers?: array<array-key, string|non-empty-array<array-key, string>>|null,
+     *     http_errors?: bool,
+     *     idn_conversion?: bool|int|null,
+     *     json?: mixed,
+     *     multipart?: array<array-key, array{
+     *         name: string|int,
+     *         contents: mixed,
+     *         headers?: array<array-key, string>,
+     *         filename?: string
+     *     }>,
+     *     multiplex?: string,
+     *     on_headers?: callable(ResponseInterface, RequestInterface): mixed,
+     *     on_stats?: callable(TransferStats): mixed,
+     *     on_trailers?: callable(array<string, list<string>>, ResponseInterface, RequestInterface): mixed,
+     *     progress?: callable(int, int, int, int): mixed,
+     *     protocols?: non-empty-array<array-key, string>,
+     *     proxy?: string|array{
+     *         http?: string|null,
+     *         https?: string|null,
+     *         no?: string|array<array-key, string>|null
+     *     },
+     *     query?: array<array-key, mixed>|string,
+     *     read_timeout?: int|float,
+     *     retries?: int,
+     *     request_factory?: RequestFactoryInterface,
+     *     response_factory?: ResponseFactoryInterface,
+     *     sink?: resource|string|StreamInterface,
+     *     ssl_key?: string|array{
+     *         0: string,
+     *         1?: string|null
+     *     },
+     *     ssl_key_type?: string,
+     *     stream?: bool,
+     *     stream_factory?: StreamFactoryInterface,
+     *     stream_context?: array<array-key, mixed>,
+     *     synchronous?: bool,
+     *     timeout?: int|float,
+     *     uri_factory?: UriFactoryInterface,
+     *     verify?: bool|string,
+     *     version?: string|int|float,
+     *     curl?: array<int|string, mixed>,
+     *     ...
+     * } $options Request options to apply.
+     *
+     * @return PromiseInterface<ResponseInterface, mixed>
      */
-    public function headAsync($uri, array $options = []) : PromiseInterface
+    public function headAsync($uri, #[\SensitiveParameter] array $options = []) : PromiseInterface
     {
         return $this->requestAsync('HEAD', $uri, $options);
     }
@@ -169,13 +910,87 @@ trait ClientTrait
      *
      * Use an absolute path to override the base path of the client, or a
      * relative path to append to the base path of the client. The URL can
-     * contain the query string as well. Use an array to provide a URL
-     * template and additional variables to use in the URL template expansion.
+     * contain the query string as well.
      *
-     * @param string|UriInterface $uri     URI object or string.
-     * @param array               $options Request options to apply.
+     * @param string|UriInterface $uri URI object or string.
+     * @param array{
+     *     base_uri?: string|UriInterface,
+     *     allow_redirects?: bool|array{
+     *         max?: int,
+     *         strict?: bool,
+     *         referer?: bool,
+     *         protocols?: non-empty-array<array-key, string>,
+     *         on_redirect?: callable(RequestInterface, ResponseInterface, UriInterface): mixed,
+     *         track_redirects?: bool
+     *     },
+     *     auth?: array{
+     *         0: string,
+     *         1: string,
+     *         2?: string|null
+     *     }|string|false|null,
+     *     body?: resource|string|null|StreamInterface|(callable&object)|\Iterator|\Stringable,
+     *     cert?: string|array{
+     *         0: string,
+     *         1?: string|null
+     *     },
+     *     cert_type?: string,
+     *     connect_timeout?: int|float,
+     *     cookies?: false|CookieJarInterface,
+     *     crypto_method?: int,
+     *     crypto_method_max?: int,
+     *     debug?: bool|resource,
+     *     decode_content?: bool|string,
+     *     delay?: int|float,
+     *     expect?: bool|int,
+     *     form_params?: array<array-key, string|int|float|bool|null|array>,
+     *     force_ip_resolve?: string,
+     *     headers?: array<array-key, string|non-empty-array<array-key, string>>|null,
+     *     http_errors?: bool,
+     *     idn_conversion?: bool|int|null,
+     *     json?: mixed,
+     *     multipart?: array<array-key, array{
+     *         name: string|int,
+     *         contents: mixed,
+     *         headers?: array<array-key, string>,
+     *         filename?: string
+     *     }>,
+     *     multiplex?: string,
+     *     on_headers?: callable(ResponseInterface, RequestInterface): mixed,
+     *     on_stats?: callable(TransferStats): mixed,
+     *     on_trailers?: callable(array<string, list<string>>, ResponseInterface, RequestInterface): mixed,
+     *     progress?: callable(int, int, int, int): mixed,
+     *     protocols?: non-empty-array<array-key, string>,
+     *     proxy?: string|array{
+     *         http?: string|null,
+     *         https?: string|null,
+     *         no?: string|array<array-key, string>|null
+     *     },
+     *     query?: array<array-key, mixed>|string,
+     *     read_timeout?: int|float,
+     *     retries?: int,
+     *     request_factory?: RequestFactoryInterface,
+     *     response_factory?: ResponseFactoryInterface,
+     *     sink?: resource|string|StreamInterface,
+     *     ssl_key?: string|array{
+     *         0: string,
+     *         1?: string|null
+     *     },
+     *     ssl_key_type?: string,
+     *     stream?: bool,
+     *     stream_factory?: StreamFactoryInterface,
+     *     stream_context?: array<array-key, mixed>,
+     *     synchronous?: bool,
+     *     timeout?: int|float,
+     *     uri_factory?: UriFactoryInterface,
+     *     verify?: bool|string,
+     *     version?: string|int|float,
+     *     curl?: array<int|string, mixed>,
+     *     ...
+     * } $options Request options to apply.
+     *
+     * @return PromiseInterface<ResponseInterface, mixed>
      */
-    public function putAsync($uri, array $options = []) : PromiseInterface
+    public function putAsync($uri, #[\SensitiveParameter] array $options = []) : PromiseInterface
     {
         return $this->requestAsync('PUT', $uri, $options);
     }
@@ -184,13 +999,87 @@ trait ClientTrait
      *
      * Use an absolute path to override the base path of the client, or a
      * relative path to append to the base path of the client. The URL can
-     * contain the query string as well. Use an array to provide a URL
-     * template and additional variables to use in the URL template expansion.
+     * contain the query string as well.
      *
-     * @param string|UriInterface $uri     URI object or string.
-     * @param array               $options Request options to apply.
+     * @param string|UriInterface $uri URI object or string.
+     * @param array{
+     *     base_uri?: string|UriInterface,
+     *     allow_redirects?: bool|array{
+     *         max?: int,
+     *         strict?: bool,
+     *         referer?: bool,
+     *         protocols?: non-empty-array<array-key, string>,
+     *         on_redirect?: callable(RequestInterface, ResponseInterface, UriInterface): mixed,
+     *         track_redirects?: bool
+     *     },
+     *     auth?: array{
+     *         0: string,
+     *         1: string,
+     *         2?: string|null
+     *     }|string|false|null,
+     *     body?: resource|string|null|StreamInterface|(callable&object)|\Iterator|\Stringable,
+     *     cert?: string|array{
+     *         0: string,
+     *         1?: string|null
+     *     },
+     *     cert_type?: string,
+     *     connect_timeout?: int|float,
+     *     cookies?: false|CookieJarInterface,
+     *     crypto_method?: int,
+     *     crypto_method_max?: int,
+     *     debug?: bool|resource,
+     *     decode_content?: bool|string,
+     *     delay?: int|float,
+     *     expect?: bool|int,
+     *     form_params?: array<array-key, string|int|float|bool|null|array>,
+     *     force_ip_resolve?: string,
+     *     headers?: array<array-key, string|non-empty-array<array-key, string>>|null,
+     *     http_errors?: bool,
+     *     idn_conversion?: bool|int|null,
+     *     json?: mixed,
+     *     multipart?: array<array-key, array{
+     *         name: string|int,
+     *         contents: mixed,
+     *         headers?: array<array-key, string>,
+     *         filename?: string
+     *     }>,
+     *     multiplex?: string,
+     *     on_headers?: callable(ResponseInterface, RequestInterface): mixed,
+     *     on_stats?: callable(TransferStats): mixed,
+     *     on_trailers?: callable(array<string, list<string>>, ResponseInterface, RequestInterface): mixed,
+     *     progress?: callable(int, int, int, int): mixed,
+     *     protocols?: non-empty-array<array-key, string>,
+     *     proxy?: string|array{
+     *         http?: string|null,
+     *         https?: string|null,
+     *         no?: string|array<array-key, string>|null
+     *     },
+     *     query?: array<array-key, mixed>|string,
+     *     read_timeout?: int|float,
+     *     retries?: int,
+     *     request_factory?: RequestFactoryInterface,
+     *     response_factory?: ResponseFactoryInterface,
+     *     sink?: resource|string|StreamInterface,
+     *     ssl_key?: string|array{
+     *         0: string,
+     *         1?: string|null
+     *     },
+     *     ssl_key_type?: string,
+     *     stream?: bool,
+     *     stream_factory?: StreamFactoryInterface,
+     *     stream_context?: array<array-key, mixed>,
+     *     synchronous?: bool,
+     *     timeout?: int|float,
+     *     uri_factory?: UriFactoryInterface,
+     *     verify?: bool|string,
+     *     version?: string|int|float,
+     *     curl?: array<int|string, mixed>,
+     *     ...
+     * } $options Request options to apply.
+     *
+     * @return PromiseInterface<ResponseInterface, mixed>
      */
-    public function postAsync($uri, array $options = []) : PromiseInterface
+    public function postAsync($uri, #[\SensitiveParameter] array $options = []) : PromiseInterface
     {
         return $this->requestAsync('POST', $uri, $options);
     }
@@ -199,13 +1088,87 @@ trait ClientTrait
      *
      * Use an absolute path to override the base path of the client, or a
      * relative path to append to the base path of the client. The URL can
-     * contain the query string as well. Use an array to provide a URL
-     * template and additional variables to use in the URL template expansion.
+     * contain the query string as well.
      *
-     * @param string|UriInterface $uri     URI object or string.
-     * @param array               $options Request options to apply.
+     * @param string|UriInterface $uri URI object or string.
+     * @param array{
+     *     base_uri?: string|UriInterface,
+     *     allow_redirects?: bool|array{
+     *         max?: int,
+     *         strict?: bool,
+     *         referer?: bool,
+     *         protocols?: non-empty-array<array-key, string>,
+     *         on_redirect?: callable(RequestInterface, ResponseInterface, UriInterface): mixed,
+     *         track_redirects?: bool
+     *     },
+     *     auth?: array{
+     *         0: string,
+     *         1: string,
+     *         2?: string|null
+     *     }|string|false|null,
+     *     body?: resource|string|null|StreamInterface|(callable&object)|\Iterator|\Stringable,
+     *     cert?: string|array{
+     *         0: string,
+     *         1?: string|null
+     *     },
+     *     cert_type?: string,
+     *     connect_timeout?: int|float,
+     *     cookies?: false|CookieJarInterface,
+     *     crypto_method?: int,
+     *     crypto_method_max?: int,
+     *     debug?: bool|resource,
+     *     decode_content?: bool|string,
+     *     delay?: int|float,
+     *     expect?: bool|int,
+     *     form_params?: array<array-key, string|int|float|bool|null|array>,
+     *     force_ip_resolve?: string,
+     *     headers?: array<array-key, string|non-empty-array<array-key, string>>|null,
+     *     http_errors?: bool,
+     *     idn_conversion?: bool|int|null,
+     *     json?: mixed,
+     *     multipart?: array<array-key, array{
+     *         name: string|int,
+     *         contents: mixed,
+     *         headers?: array<array-key, string>,
+     *         filename?: string
+     *     }>,
+     *     multiplex?: string,
+     *     on_headers?: callable(ResponseInterface, RequestInterface): mixed,
+     *     on_stats?: callable(TransferStats): mixed,
+     *     on_trailers?: callable(array<string, list<string>>, ResponseInterface, RequestInterface): mixed,
+     *     progress?: callable(int, int, int, int): mixed,
+     *     protocols?: non-empty-array<array-key, string>,
+     *     proxy?: string|array{
+     *         http?: string|null,
+     *         https?: string|null,
+     *         no?: string|array<array-key, string>|null
+     *     },
+     *     query?: array<array-key, mixed>|string,
+     *     read_timeout?: int|float,
+     *     retries?: int,
+     *     request_factory?: RequestFactoryInterface,
+     *     response_factory?: ResponseFactoryInterface,
+     *     sink?: resource|string|StreamInterface,
+     *     ssl_key?: string|array{
+     *         0: string,
+     *         1?: string|null
+     *     },
+     *     ssl_key_type?: string,
+     *     stream?: bool,
+     *     stream_factory?: StreamFactoryInterface,
+     *     stream_context?: array<array-key, mixed>,
+     *     synchronous?: bool,
+     *     timeout?: int|float,
+     *     uri_factory?: UriFactoryInterface,
+     *     verify?: bool|string,
+     *     version?: string|int|float,
+     *     curl?: array<int|string, mixed>,
+     *     ...
+     * } $options Request options to apply.
+     *
+     * @return PromiseInterface<ResponseInterface, mixed>
      */
-    public function patchAsync($uri, array $options = []) : PromiseInterface
+    public function patchAsync($uri, #[\SensitiveParameter] array $options = []) : PromiseInterface
     {
         return $this->requestAsync('PATCH', $uri, $options);
     }
@@ -214,13 +1177,87 @@ trait ClientTrait
      *
      * Use an absolute path to override the base path of the client, or a
      * relative path to append to the base path of the client. The URL can
-     * contain the query string as well. Use an array to provide a URL
-     * template and additional variables to use in the URL template expansion.
+     * contain the query string as well.
      *
-     * @param string|UriInterface $uri     URI object or string.
-     * @param array               $options Request options to apply.
+     * @param string|UriInterface $uri URI object or string.
+     * @param array{
+     *     base_uri?: string|UriInterface,
+     *     allow_redirects?: bool|array{
+     *         max?: int,
+     *         strict?: bool,
+     *         referer?: bool,
+     *         protocols?: non-empty-array<array-key, string>,
+     *         on_redirect?: callable(RequestInterface, ResponseInterface, UriInterface): mixed,
+     *         track_redirects?: bool
+     *     },
+     *     auth?: array{
+     *         0: string,
+     *         1: string,
+     *         2?: string|null
+     *     }|string|false|null,
+     *     body?: resource|string|null|StreamInterface|(callable&object)|\Iterator|\Stringable,
+     *     cert?: string|array{
+     *         0: string,
+     *         1?: string|null
+     *     },
+     *     cert_type?: string,
+     *     connect_timeout?: int|float,
+     *     cookies?: false|CookieJarInterface,
+     *     crypto_method?: int,
+     *     crypto_method_max?: int,
+     *     debug?: bool|resource,
+     *     decode_content?: bool|string,
+     *     delay?: int|float,
+     *     expect?: bool|int,
+     *     form_params?: array<array-key, string|int|float|bool|null|array>,
+     *     force_ip_resolve?: string,
+     *     headers?: array<array-key, string|non-empty-array<array-key, string>>|null,
+     *     http_errors?: bool,
+     *     idn_conversion?: bool|int|null,
+     *     json?: mixed,
+     *     multipart?: array<array-key, array{
+     *         name: string|int,
+     *         contents: mixed,
+     *         headers?: array<array-key, string>,
+     *         filename?: string
+     *     }>,
+     *     multiplex?: string,
+     *     on_headers?: callable(ResponseInterface, RequestInterface): mixed,
+     *     on_stats?: callable(TransferStats): mixed,
+     *     on_trailers?: callable(array<string, list<string>>, ResponseInterface, RequestInterface): mixed,
+     *     progress?: callable(int, int, int, int): mixed,
+     *     protocols?: non-empty-array<array-key, string>,
+     *     proxy?: string|array{
+     *         http?: string|null,
+     *         https?: string|null,
+     *         no?: string|array<array-key, string>|null
+     *     },
+     *     query?: array<array-key, mixed>|string,
+     *     read_timeout?: int|float,
+     *     retries?: int,
+     *     request_factory?: RequestFactoryInterface,
+     *     response_factory?: ResponseFactoryInterface,
+     *     sink?: resource|string|StreamInterface,
+     *     ssl_key?: string|array{
+     *         0: string,
+     *         1?: string|null
+     *     },
+     *     ssl_key_type?: string,
+     *     stream?: bool,
+     *     stream_factory?: StreamFactoryInterface,
+     *     stream_context?: array<array-key, mixed>,
+     *     synchronous?: bool,
+     *     timeout?: int|float,
+     *     uri_factory?: UriFactoryInterface,
+     *     verify?: bool|string,
+     *     version?: string|int|float,
+     *     curl?: array<int|string, mixed>,
+     *     ...
+     * } $options Request options to apply.
+     *
+     * @return PromiseInterface<ResponseInterface, mixed>
      */
-    public function deleteAsync($uri, array $options = []) : PromiseInterface
+    public function deleteAsync($uri, #[\SensitiveParameter] array $options = []) : PromiseInterface
     {
         return $this->requestAsync('DELETE', $uri, $options);
     }

@@ -77,7 +77,11 @@ class OperationsClient
     private const DEFAULT_SERVICE_PORT = 443;
     /** The name of the code generator, to be included in the agent header. */
     private const CODEGEN_NAME = 'gapic';
-    /** The default scopes required by the service. */
+    /**
+     * The default scopes required by the service.
+     *
+     * @internal
+     */
     public static $serviceScopes = [];
     private static function getClientDefaults()
     {

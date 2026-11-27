@@ -8,6 +8,11 @@ use WP_HTTP_Response;
 use WP_REST_Request;
 use WP_REST_Response;
 
+// Exit if accessed directly.
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 abstract class API {
 	const NAMESPACE_BASE = 'wp-offload-media';
 
@@ -113,7 +118,8 @@ abstract class API {
 	}
 
 	/**
-	 * All API requests must be from administrator or user granted "manage_options" capability.
+	 * All API requests must be from administrator or user granted "manage_options" capability,
+	 * or "manage_network_options" for a multisite.
 	 *
 	 * This function is used as the "permission_callback" for all routes.
 	 *
@@ -122,7 +128,7 @@ abstract class API {
 	 * @return bool
 	 */
 	public function check_permissions( WP_REST_Request $request ) {
-		return current_user_can( 'manage_options' );
+		return current_user_can( Amazon_S3_And_CloudFront::get_default_admin_capability() );
 	}
 
 	/**
