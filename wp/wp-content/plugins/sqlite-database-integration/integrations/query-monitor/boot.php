@@ -153,12 +153,17 @@ if ( ! QM_PHP::version_met() ) {
 	return;
 }
 
-if ( ! file_exists( "{$qm_dir}/vendor/autoload.php" ) ) {
-	add_action( 'all_admin_notices', 'QM_PHP::vendor_nope' );
+if ( is_readable( "{$qm_dir}/autoload.php" ) ) {
+	require_once "{$qm_dir}/autoload.php";
+} elseif ( is_readable( "{$qm_dir}/vendor/autoload.php" ) ) {
+	// Query Monitor used Composer's autoloader before 4.1.2.
+	require_once "{$qm_dir}/vendor/autoload.php";
+} else {
+	if ( is_callable( 'QM_PHP::vendor_nope' ) ) {
+		add_action( 'all_admin_notices', 'QM_PHP::vendor_nope' );
+	}
 	return;
 }
-
-require_once "{$qm_dir}/vendor/autoload.php";
 
 if ( ! class_exists( 'QM_Backtrace' ) ) {
 	return;

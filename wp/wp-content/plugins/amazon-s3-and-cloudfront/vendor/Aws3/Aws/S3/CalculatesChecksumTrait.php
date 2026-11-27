@@ -8,7 +8,7 @@ use DeliciousBrains\WP_Offload_Media\Aws3\GuzzleHttp\Psr7;
 use InvalidArgumentException;
 trait CalculatesChecksumTrait
 {
-    private static $supportedAlgorithms = ['crc32c' => \true, 'crc32' => \true, 'sha256' => \true, 'sha1' => \true];
+    public static array $supportedAlgorithms = ['crc32c' => \true, 'crc32' => \true, 'sha256' => \true, 'sha1' => \true];
     /**
      * @param string $requestedAlgorithm  the algorithm to encode with
      * @param string $value               the value to be encoded
@@ -36,9 +36,26 @@ trait CalculatesChecksumTrait
             if ($requestedAlgorithm === "crc32") {
                 $requestedAlgorithm = "crc32b";
             }
-            return \base64_encode(Psr7\Utils::hash($value, $requestedAlgorithm, \true));
+            return \base64_encode(Psr7\Utils::hash(Psr7\Utils::streamFor($value), $requestedAlgorithm, \true));
         }
         $validAlgorithms = \implode(', ', \array_keys(self::$supportedAlgorithms));
         throw new InvalidArgumentException("Invalid checksum requested: {$requestedAlgorithm}." . "  Valid algorithms supported by the runtime are {$validAlgorithms}.");
+    }
+    /**
+     * Returns the first checksum available, if available.
+     *
+     * @param array $parameters
+     *
+     * @return string|null
+     */
+    public static function filterChecksum(array $parameters) : ?string
+    {
+        foreach (self::$supportedAlgorithms as $algorithm => $_) {
+            $checksumAlgorithm = "Checksum" . \strtoupper($algorithm);
+            if (isset($parameters[$checksumAlgorithm])) {
+                return $checksumAlgorithm;
+            }
+        }
+        return null;
     }
 }

@@ -33,7 +33,7 @@ class SysVCacheItemPool implements CacheItemPoolInterface
     const VAR_KEY = 1;
     const DEFAULT_PROJ = 'A';
     const DEFAULT_SEM_PROJ = 'B';
-    const DEFAULT_MEMSIZE = 10000;
+    const DEFAULT_MEMSIZE = 100000;
     const DEFAULT_PERM = 0600;
     /**
      * @var int

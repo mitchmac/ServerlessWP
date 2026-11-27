@@ -9,13 +9,13 @@
     "license": "BSD-3-Clause",
     "require": {
         "php": "^8.1",
-        "google\/auth": "^1.49",
+        "google\/auth": "^1.53",
         "google\/grpc-gcp": "^0.4",
         "grpc\/grpc": "^1.13",
-        "google\/protobuf": "^4.31||^5.0",
-        "guzzlehttp\/promises": "^2.0",
-        "guzzlehttp\/psr7": "^2.0",
-        "google\/common-protos": "^4.4",
+        "google\/protobuf": "^4.31||^5.34",
+        "guzzlehttp\/promises": "^2.0.3||^3.0",
+        "guzzlehttp\/psr7": "^2.6.3||^3.0",
+        "google\/common-protos": "^4.9",
         "google\/longrunning": "~0.4",
         "ramsey\/uuid": "^4.0"
     },
@@ -25,28 +25,29 @@
         "phpstan\/phpstan": "^2.0",
         "google\/cloud-tools": "^0.16.1"
     },
+    "extra": {
+        "component": {
+            "id": "gax",
+            "target": "googleapis\/gax-php.git",
+            "path": "Gax",
+            "entry": "README.md"
+        }
+    },
     "conflict": {
         "ext-protobuf": "<4.31.0"
     },
     "autoload": {
         "psr-4": {
-            "DeliciousBrains\\WP_Offload_Media\\Gcp\\Google\\ApiCore\\": "src",
-            "DeliciousBrains\\WP_Offload_Media\\Gcp\\GPBMetadata\\ApiCore\\": "metadata\/ApiCore"
+            "DeliciousBrains\\WP_Offload_Media\\Gcp\\Google\\ApiCore\\": "src"
         }
     },
     "autoload-dev": {
         "psr-4": {
-            "DeliciousBrains\\WP_Offload_Media\\Gcp\\Google\\ApiCore\\Dev\\": "dev\/src",
             "DeliciousBrains\\WP_Offload_Media\\Gcp\\Google\\ApiCore\\Tests\\": "tests",
-            "DeliciousBrains\\WP_Offload_Media\\Gcp\\GPBMetadata\\Google\\": "metadata\/Google",
+            "DeliciousBrains\\WP_Offload_Media\\Gcp\\Google\\ApiCore\\Testing\\": "tests\/Unit\/testdata\/generated",
+            "DeliciousBrains\\WP_Offload_Media\\Gcp\\GPBMetadata\\ApiCore\\Testing\\": "tests\/Unit\/testdata\/metadata",
             "DeliciousBrains\\WP_Offload_Media\\Gcp\\Google\\Showcase\\": "tests\/Conformance\/src",
             "DeliciousBrains\\WP_Offload_Media\\Gcp\\GPBMetadata\\Google\\Showcase\\": "tests\/Conformance\/metadata"
         }
-    },
-    "scripts": {
-        "regenerate-test-protos": "dev\/sh\/regenerate-test-protos.sh",
-        "test": ".\/vendor\/bin\/phpunit",
-        "cs-lint": "vendor\/bin\/php-tools cs-fixer googleapis\/gax-php --ref $(git rev-parse --abbrev-ref HEAD) --flags \"\\-n --dry-run\"",
-        "cs-fix": "vendor\/bin\/php-tools cs-fixer googleapis\/gax-php --ref $(git rev-parse --abbrev-ref HEAD) --flags \"\\-n\""
     }
 }

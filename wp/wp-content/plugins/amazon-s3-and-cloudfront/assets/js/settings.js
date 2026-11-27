@@ -155,7 +155,8 @@ const EFFECT_OFFSCREEN = 1 << 25;
 /**
  * Tells that we marked this derived and its reactions as visited during the "mark as (maybe) dirty"-phase.
  * Will be lifted during execution of the derived and during checking its dirty state (both are necessary
- * because a derived might be checked but not executed).
+ * because a derived might be checked but not executed). This is a pure performance optimization flag and
+ * should not be used for any other purpose!
  */
 const WAS_MARKED = 1 << 16;
 
@@ -169,6 +170,13 @@ const STATE_SYMBOL = Symbol('$state');
 const LEGACY_PROPS = Symbol('legacy props');
 const LOADING_ATTR_SYMBOL = Symbol('');
 const PROXY_PATH_SYMBOL = Symbol('proxy path');
+const ATTRIBUTES_CACHE = Symbol('attributes');
+const CLASS_CACHE = Symbol('class');
+const STYLE_CACHE = Symbol('style');
+const TEXT_CACHE = Symbol('text');
+const FORM_RESET_HANDLER = Symbol('form reset');
+/** An anchor might change, via this symbol on the original anchor we can tell HMR about the updated anchor */
+const HMR_ANCHOR = Symbol('hmr anchor');
 
 /** allow users to ignore aborted signal errors if `reason.name === 'StaleReactionError` */
 const STALE_REACTION = new (class StaleReactionError extends Error {
@@ -608,7 +616,7 @@ const TRANSITION_GLOBAL = 1 << 2;
 const TEMPLATE_FRAGMENT = 1;
 const TEMPLATE_USE_IMPORT_NODE = 1 << 1;
 
-const UNINITIALIZED = Symbol();
+const UNINITIALIZED = Symbol('uninitialized');
 
 // Dev-time component properties
 const FILENAME = Symbol('filename');
@@ -645,6 +653,17 @@ function await_waterfall(name, location) {
 		console.warn(`%c[svelte] await_waterfall\n%cAn async derived, \`${name}\` (${location}) was not read immediately after it resolved. This often indicates an unnecessary waterfall, which can slow down your app\nhttps://svelte.dev/e/await_waterfall`, bold, normal);
 	} else {
 		console.warn(`https://svelte.dev/e/await_waterfall`);
+	}
+}
+
+/**
+ * Reading a derived belonging to a now-destroyed effect may result in stale values
+ */
+function derived_inert() {
+	if (DEV) {
+		console.warn(`%c[svelte] derived_inert\n%cReading a derived belonging to a now-destroyed effect may result in stale values\nhttps://svelte.dev/e/derived_inert`, bold, normal);
+	} else {
+		console.warn(`https://svelte.dev/e/derived_inert`);
 	}
 }
 
@@ -1171,6 +1190,10 @@ function handle_error(error) {
  * @param {Effect | null} effect
  */
 function invoke_error_boundary(error, effect) {
+	if (effect !== null && (effect.f & DESTROYED) !== 0) {
+		return;
+	}
+
 	while (effect !== null) {
 		if ((effect.f & BOUNDARY_EFFECT) !== 0) {
 			if ((effect.f & REACTION_RAN) === 0) {
@@ -1551,7 +1574,7 @@ let legacy_is_updating_store = false;
  */
 let is_store_binding = false;
 
-let IS_UNMOUNTED = Symbol();
+let IS_UNMOUNTED = Symbol('unmounted');
 
 /**
  * Gets the current value of a store. If the store isn't subscribed to yet, it will create a proxy
@@ -1712,14 +1735,1279 @@ function capture_store_binding(fn) {
 	}
 }
 
+let listening_to_form_reset = false;
+
+function add_form_reset_listener() {
+	if (!listening_to_form_reset) {
+		listening_to_form_reset = true;
+		document.addEventListener(
+			'reset',
+			(evt) => {
+				// Needs to happen one tick later or else the dom properties of the form
+				// elements have not updated to their reset values yet
+				Promise.resolve().then(() => {
+					if (!evt.defaultPrevented) {
+						for (const e of /**@type {HTMLFormElement} */ (evt.target).elements) {
+							/** @type {any} */ (e)[FORM_RESET_HANDLER]?.();
+						}
+					}
+				});
+			},
+			// In the capture phase to guarantee we get noticed of it (no possibility of stopPropagation)
+			{ capture: true }
+		);
+	}
+}
+
+/**
+ * @template T
+ * @param {() => T} fn
+ */
+function without_reactive_context(fn) {
+	var previous_reaction = active_reaction;
+	var previous_effect = active_effect;
+	set_active_reaction(null);
+	set_active_effect(null);
+	try {
+		return fn();
+	} finally {
+		set_active_reaction(previous_reaction);
+		set_active_effect(previous_effect);
+	}
+}
+
+/**
+ * Listen to the given event, and then instantiate a global form reset listener if not already done,
+ * to notify all bindings when the form is reset
+ * @param {HTMLElement} element
+ * @param {string} event
+ * @param {(is_reset?: true) => void} handler
+ * @param {(is_reset?: true) => void} [on_reset]
+ */
+function listen_to_event_and_reset_event(element, event, handler, on_reset = handler) {
+	element.addEventListener(event, () => without_reactive_context(handler));
+	const prev = /** @type {any} */ (element)[FORM_RESET_HANDLER];
+	if (prev) {
+		// special case for checkbox that can have multiple binds (group & checked)
+		/** @type {any} */ (element)[FORM_RESET_HANDLER] = () => {
+			prev();
+			on_reset(true);
+		};
+	} else {
+		/** @type {any} */ (element)[FORM_RESET_HANDLER] = () => on_reset(true);
+	}
+
+	add_form_reset_listener();
+}
+
+/**
+ * Returns a `subscribe` function that integrates external event-based systems with Svelte's reactivity.
+ * It's particularly useful for integrating with web APIs like `MediaQuery`, `IntersectionObserver`, or `WebSocket`.
+ *
+ * If `subscribe` is called inside an effect (including indirectly, for example inside a getter),
+ * the `start` callback will be called with an `update` function. Whenever `update` is called, the effect re-runs.
+ *
+ * If `start` returns a cleanup function, it will be called when the effect is destroyed.
+ *
+ * If `subscribe` is called in multiple effects, `start` will only be called once as long as the effects
+ * are active, and the returned teardown function will only be called when all effects are destroyed.
+ *
+ * It's best understood with an example. Here's an implementation of [`MediaQuery`](https://svelte.dev/docs/svelte/svelte-reactivity#MediaQuery):
+ *
+ * ```js
+ * import { createSubscriber } from 'svelte/reactivity';
+ * import { on } from 'svelte/events';
+ *
+ * export class MediaQuery {
+ * 	#query;
+ * 	#subscribe;
+ *
+ * 	constructor(query) {
+ * 		this.#query = window.matchMedia(`(${query})`);
+ *
+ * 		this.#subscribe = createSubscriber((update) => {
+ * 			// when the `change` event occurs, re-run any effects that read `this.current`
+ * 			const off = on(this.#query, 'change', update);
+ *
+ * 			// stop listening when all the effects are destroyed
+ * 			return () => off();
+ * 		});
+ * 	}
+ *
+ * 	get current() {
+ * 		// This makes the getter reactive, if read in an effect
+ * 		this.#subscribe();
+ *
+ * 		// Return the current state of the query, whether or not we're in an effect
+ * 		return this.#query.matches;
+ * 	}
+ * }
+ * ```
+ * @param {(update: () => void) => (() => void) | void} start
+ * @since 5.7.0
+ */
+function createSubscriber(start) {
+	let subscribers = 0;
+	let version = source(0);
+	/** @type {(() => void) | void} */
+	let stop;
+
+	if (DEV) {
+		tag(version, 'createSubscriber version');
+	}
+
+	return () => {
+		if (effect_tracking()) {
+			get(version);
+
+			render_effect(() => {
+				if (subscribers === 0) {
+					stop = untrack(() => start(() => increment(version)));
+				}
+
+				subscribers += 1;
+
+				return () => {
+					queue_micro_task(() => {
+						// Only count down after a microtask, else we would reach 0 before our own render effect reruns,
+						// but reach 1 again when the tick callback of the prior teardown runs. That would mean we
+						// re-subcribe unnecessarily and create a memory leak because the old subscription is never cleaned up.
+						subscribers -= 1;
+
+						if (subscribers === 0) {
+							stop?.();
+							stop = undefined;
+							// Increment the version to ensure any dependent deriveds are marked dirty when the subscription is picked up again later.
+							// If we didn't do this then the comparison of write versions would determine that the derived has a later version than
+							// the subscriber, and it would not be re-run.
+							increment(version);
+						}
+					});
+				};
+			});
+		}
+	};
+}
+
+/** @import { Effect, Source, TemplateNode, } from '#client' */
+
+/**
+ * @typedef {{
+ * 	 onerror?: ((error: unknown, reset: () => void) => void) | null;
+ *   failed?: ((anchor: Node, error: () => unknown, reset: () => () => void) => void) | null;
+ *   pending?: ((anchor: Node) => void) | null;
+ * }} BoundaryProps
+ */
+
+var flags = EFFECT_TRANSPARENT | EFFECT_PRESERVED;
+
+/**
+ * @param {TemplateNode} node
+ * @param {BoundaryProps} props
+ * @param {((anchor: Node) => void)} children
+ * @param {((error: unknown) => unknown) | undefined} [transform_error]
+ * @returns {void}
+ */
+function boundary(node, props, children, transform_error) {
+	new Boundary(node, props, children, transform_error);
+}
+
+class Boundary {
+	/** @type {Boundary | null} */
+	parent;
+
+	is_pending = false;
+
+	/**
+	 * API-level transformError transform function. Transforms errors before they reach the `failed` snippet.
+	 * Inherited from parent boundary, or defaults to identity.
+	 * @type {(error: unknown) => unknown}
+	 */
+	transform_error;
+
+	/** @type {TemplateNode} */
+	#anchor;
+
+	/** @type {TemplateNode | null} */
+	#hydrate_open = null;
+
+	/** @type {BoundaryProps} */
+	#props;
+
+	/** @type {((anchor: Node) => void)} */
+	#children;
+
+	/** @type {Effect} */
+	#effect;
+
+	/** @type {Effect | null} */
+	#main_effect = null;
+
+	/** @type {Effect | null} */
+	#pending_effect = null;
+
+	/** @type {Effect | null} */
+	#failed_effect = null;
+
+	/** @type {DocumentFragment | null} */
+	#offscreen_fragment = null;
+
+	#local_pending_count = 0;
+	#pending_count = 0;
+	#pending_count_update_queued = false;
+
+	/** @type {Set<Effect>} */
+	#dirty_effects = new Set();
+
+	/** @type {Set<Effect>} */
+	#maybe_dirty_effects = new Set();
+
+	/**
+	 * A source containing the number of pending async deriveds/expressions.
+	 * Only created if `$effect.pending()` is used inside the boundary,
+	 * otherwise updating the source results in needless `Batch.ensure()`
+	 * calls followed by no-op flushes
+	 * @type {Source<number> | null}
+	 */
+	#effect_pending = null;
+
+	#effect_pending_subscriber = createSubscriber(() => {
+		this.#effect_pending = source(this.#local_pending_count);
+
+		if (DEV) {
+			tag(this.#effect_pending, '$effect.pending()');
+		}
+
+		return () => {
+			this.#effect_pending = null;
+		};
+	});
+
+	/**
+	 * @param {TemplateNode} node
+	 * @param {BoundaryProps} props
+	 * @param {((anchor: Node) => void)} children
+	 * @param {((error: unknown) => unknown) | undefined} [transform_error]
+	 */
+	constructor(node, props, children, transform_error) {
+		this.#anchor = node;
+		this.#props = props;
+
+		this.#children = (anchor) => {
+			var effect = /** @type {Effect} */ (active_effect);
+
+			effect.b = this;
+			effect.f |= BOUNDARY_EFFECT;
+
+			children(anchor);
+		};
+
+		this.parent = /** @type {Effect} */ (active_effect).b;
+
+		// Inherit transform_error from parent boundary, or use the provided one, or default to identity
+		this.transform_error = transform_error ?? this.parent?.transform_error ?? ((e) => e);
+
+		this.#effect = block(() => {
+			{
+				this.#render();
+			}
+		}, flags);
+	}
+
+	#hydrate_resolved_content() {
+		try {
+			this.#main_effect = branch(() => this.#children(this.#anchor));
+		} catch (error) {
+			this.error(error);
+		}
+	}
+
+	/**
+	 * @param {unknown} error The deserialized error from the server's hydration comment
+	 */
+	#hydrate_failed_content(error) {
+		const failed = this.#props.failed;
+		const { reset, invoke_onerror } = this.#create_reset(error);
+
+		// `onerror` may mutate state, which is disallowed while hydrating
+		queue_micro_task(invoke_onerror);
+
+		if (!failed) return;
+
+		this.#failed_effect = branch(() => {
+			failed(
+				this.#anchor,
+				() => error,
+				() => reset
+			);
+		});
+	}
+
+	/**
+	 * Creates the `reset` function for a failed boundary, along with a function
+	 * that invokes `onerror` with it (if provided)
+	 * @param {unknown} error
+	 * @returns {{ reset: () => void, invoke_onerror: () => void }}
+	 */
+	#create_reset(error) {
+		var did_reset = false;
+		var calling_on_error = false;
+
+		const reset = () => {
+			if (did_reset) {
+				svelte_boundary_reset_noop();
+				return;
+			}
+
+			did_reset = true;
+
+			if (calling_on_error) {
+				svelte_boundary_reset_onerror();
+			}
+
+			if (this.#failed_effect !== null) {
+				pause_effect(this.#failed_effect, () => {
+					this.#failed_effect = null;
+				});
+			}
+
+			this.#run(() => {
+				this.#render();
+			});
+		};
+
+		const invoke_onerror = () => {
+			try {
+				calling_on_error = true;
+				this.#props.onerror?.(error, reset);
+				calling_on_error = false;
+			} catch (err) {
+				invoke_error_boundary(err, this.#effect && this.#effect.parent);
+			}
+		};
+
+		return { reset, invoke_onerror };
+	}
+
+	#hydrate_pending_content() {
+		const pending = this.#props.pending;
+		if (!pending) return;
+
+		this.is_pending = true;
+		this.#pending_effect = branch(() => pending(this.#anchor));
+
+		queue_micro_task(() => {
+			var fragment = (this.#offscreen_fragment = document.createDocumentFragment());
+			var anchor = create_text();
+
+			fragment.append(anchor);
+
+			this.#main_effect = this.#run(() => {
+				return branch(() => this.#children(anchor));
+			});
+
+			if (this.#pending_count === 0) {
+				this.#anchor.before(fragment);
+				this.#offscreen_fragment = null;
+
+				pause_effect(/** @type {Effect} */ (this.#pending_effect), () => {
+					this.#pending_effect = null;
+				});
+
+				this.#resolve(/** @type {Batch} */ (current_batch));
+			}
+		});
+	}
+
+	#render() {
+		try {
+			this.is_pending = this.has_pending_snippet();
+			this.#pending_count = 0;
+			this.#local_pending_count = 0;
+
+			this.#main_effect = branch(() => {
+				this.#children(this.#anchor);
+			});
+
+			if (this.#pending_count > 0) {
+				var fragment = (this.#offscreen_fragment = document.createDocumentFragment());
+				move_effect(this.#main_effect, fragment);
+
+				const pending = /** @type {(anchor: Node) => void} */ (this.#props.pending);
+				this.#pending_effect = branch(() => pending(this.#anchor));
+			} else {
+				this.#resolve(/** @type {Batch} */ (current_batch));
+			}
+		} catch (error) {
+			this.error(error);
+		}
+	}
+
+	/**
+	 * @param {Batch} batch
+	 */
+	#resolve(batch) {
+		this.is_pending = false;
+
+		// any effects that were previously deferred should be transferred
+		// to the batch, which will flush in the next microtask
+		batch.transfer_effects(this.#dirty_effects, this.#maybe_dirty_effects);
+	}
+
+	/**
+	 * Defer an effect inside a pending boundary until the boundary resolves
+	 * @param {Effect} effect
+	 */
+	defer_effect(effect) {
+		defer_effect(effect, this.#dirty_effects, this.#maybe_dirty_effects);
+	}
+
+	/**
+	 * Returns `false` if the effect exists inside a boundary whose pending snippet is shown
+	 * @returns {boolean}
+	 */
+	is_rendered() {
+		return !this.is_pending && (!this.parent || this.parent.is_rendered());
+	}
+
+	has_pending_snippet() {
+		return !!this.#props.pending;
+	}
+
+	/**
+	 * @template T
+	 * @param {() => T} fn
+	 */
+	#run(fn) {
+		var previous_effect = active_effect;
+		var previous_reaction = active_reaction;
+		var previous_ctx = component_context;
+
+		set_active_effect(this.#effect);
+		set_active_reaction(this.#effect);
+		set_component_context(this.#effect.ctx);
+
+		try {
+			Batch.ensure();
+			return fn();
+		} catch (e) {
+			handle_error(e);
+			return null;
+		} finally {
+			set_active_effect(previous_effect);
+			set_active_reaction(previous_reaction);
+			set_component_context(previous_ctx);
+		}
+	}
+
+	/**
+	 * Updates the pending count associated with the currently visible pending snippet,
+	 * if any, such that we can replace the snippet with content once work is done
+	 * @param {1 | -1} d
+	 * @param {Batch} batch
+	 */
+	#update_pending_count(d, batch) {
+		if (!this.has_pending_snippet()) {
+			if (this.parent) {
+				this.parent.#update_pending_count(d, batch);
+			}
+
+			// if there's no parent, we're in a scope with no pending snippet
+			return;
+		}
+
+		this.#pending_count += d;
+
+		if (this.#pending_count === 0) {
+			this.#resolve(batch);
+
+			if (this.#pending_effect) {
+				pause_effect(this.#pending_effect, () => {
+					this.#pending_effect = null;
+				});
+			}
+
+			if (this.#offscreen_fragment) {
+				this.#anchor.before(this.#offscreen_fragment);
+				this.#offscreen_fragment = null;
+			}
+		}
+	}
+
+	/**
+	 * Update the source that powers `$effect.pending()` inside this boundary,
+	 * and controls when the current `pending` snippet (if any) is removed.
+	 * Do not call from inside the class
+	 * @param {1 | -1} d
+	 * @param {Batch} batch
+	 */
+	update_pending_count(d, batch) {
+		this.#update_pending_count(d, batch);
+
+		this.#local_pending_count += d;
+
+		if (!this.#effect_pending || this.#pending_count_update_queued) return;
+		this.#pending_count_update_queued = true;
+
+		queue_micro_task(() => {
+			this.#pending_count_update_queued = false;
+			if (this.#effect_pending) {
+				internal_set(this.#effect_pending, this.#local_pending_count);
+			}
+		});
+	}
+
+	get_effect_pending() {
+		this.#effect_pending_subscriber();
+		return get(/** @type {Source<number>} */ (this.#effect_pending));
+	}
+
+	/** @param {unknown} error */
+	error(error) {
+		// If we have nothing to capture the error, or if we hit an error while
+		// rendering the fallback, re-throw for another boundary to handle
+		if (!this.#props.onerror && !this.#props.failed) {
+			throw error;
+		}
+
+		if (current_batch?.is_fork) {
+			if (this.#main_effect) current_batch.skip_effect(this.#main_effect);
+			if (this.#pending_effect) current_batch.skip_effect(this.#pending_effect);
+			if (this.#failed_effect) current_batch.skip_effect(this.#failed_effect);
+
+			current_batch.oncommit(() => {
+				this.#handle_error(error);
+			});
+		} else {
+			this.#handle_error(error);
+		}
+	}
+
+	/**
+	 * @param {unknown} error
+	 */
+	#handle_error(error) {
+		if (this.#main_effect) {
+			destroy_effect(this.#main_effect);
+			this.#main_effect = null;
+		}
+
+		if (this.#pending_effect) {
+			destroy_effect(this.#pending_effect);
+			this.#pending_effect = null;
+		}
+
+		if (this.#failed_effect) {
+			destroy_effect(this.#failed_effect);
+			this.#failed_effect = null;
+		}
+
+		let failed = this.#props.failed;
+
+		/** @param {unknown} transformed_error */
+		const handle_error_result = (transformed_error) => {
+			const { reset, invoke_onerror } = this.#create_reset(transformed_error);
+
+			invoke_onerror();
+
+			if (failed) {
+				this.#failed_effect = this.#run(() => {
+					try {
+						return branch(() => {
+							// errors in `failed` snippets cause the boundary to error again
+							// TODO Svelte 6: revisit this decision, most likely better to go to parent boundary instead
+							var effect = /** @type {Effect} */ (active_effect);
+
+							effect.b = this;
+							effect.f |= BOUNDARY_EFFECT;
+
+							failed(
+								this.#anchor,
+								() => transformed_error,
+								() => reset
+							);
+						});
+					} catch (error) {
+						invoke_error_boundary(error, /** @type {Effect} */ (this.#effect.parent));
+						return null;
+					}
+				});
+			}
+		};
+
+		queue_micro_task(() => {
+			// Run the error through the API-level transformError transform (e.g. SvelteKit's handleError)
+			/** @type {unknown} */
+			var result;
+			try {
+				result = this.transform_error(error);
+			} catch (e) {
+				invoke_error_boundary(e, this.#effect && this.#effect.parent);
+				return;
+			}
+
+			if (
+				result !== null &&
+				typeof result === 'object' &&
+				typeof (/** @type {any} */ (result).then) === 'function'
+			) {
+				// transformError returned a Promise — wait for it
+				/** @type {any} */ (result).then(
+					handle_error_result,
+					/** @param {unknown} e */
+					(e) => invoke_error_boundary(e, this.#effect && this.#effect.parent)
+				);
+			} else {
+				// Synchronous result — handle immediately
+				handle_error_result(result);
+			}
+		});
+	}
+}
+
+/** @import { Blocker, Effect, Source, Value } from '#client' */
+
+/**
+ * @param {Blocker[]} blockers
+ * @param {Array<() => any>} sync
+ * @param {Array<() => Promise<any>>} async
+ * @param {(values: Value[]) => any} fn
+ */
+function flatten(blockers, sync, async, fn) {
+	const d = is_runes() ? derived : derived_safe_equal;
+
+	// Filter out already-settled blockers - no need to wait for them
+	var pending = blockers.filter((b) => !b.settled);
+
+	var deriveds = sync.map(d);
+
+	if (DEV) {
+		deriveds.forEach((d, i) => {
+			// TODO this is kinda useful for debugging but a lousy implementation —
+			// maybe the compiler could pass through the template string
+			d.label = sync[i]
+				.toString()
+				.replace('() => ', '')
+				.replaceAll('$.eager(() => ', '$state.eager(')
+				.replace(/\$\.get\((.+?)\)/g, (_, id) => id);
+		});
+	}
+
+	if (async.length === 0 && pending.length === 0) {
+		fn(deriveds);
+		return;
+	}
+
+	var parent = /** @type {Effect} */ (active_effect);
+
+	var restore = capture();
+	var blocker_promise =
+		pending.length === 1
+			? pending[0].promise
+			: pending.length > 1
+				? Promise.all(pending.map((b) => b.promise))
+				: null;
+
+	/**
+	 * @param {Source[]} async
+	 */
+	function finish(async) {
+		if ((parent.f & DESTROYED) !== 0) {
+			return;
+		}
+
+		restore();
+
+		try {
+			fn([...deriveds, ...async]);
+		} catch (error) {
+			invoke_error_boundary(error, parent);
+		}
+
+		unset_context();
+	}
+
+	var decrement_pending = increment_pending();
+
+	// Fast path: blockers but no async expressions
+	if (async.length === 0) {
+		/** @type {Promise<any>} */ (blocker_promise).then(() => finish([])).finally(decrement_pending);
+		return;
+	}
+
+	// Full path: has async expressions
+	function run() {
+		Promise.all(async.map((expression) => async_derived(expression)))
+			.then(finish)
+			.catch((error) => invoke_error_boundary(error, parent))
+			.finally(decrement_pending);
+	}
+
+	if (blocker_promise) {
+		blocker_promise.then(() => {
+			restore();
+			run();
+			unset_context();
+		});
+	} else {
+		run();
+	}
+}
+
+/**
+ * Captures the current effect context so that we can restore it after
+ * some asynchronous work has happened (so that e.g. `await a + b`
+ * causes `b` to be registered as a dependency).
+ */
+function capture() {
+	var previous_effect = /** @type {Effect} */ (active_effect);
+	var previous_reaction = active_reaction;
+	var previous_component_context = component_context;
+	var previous_batch = /** @type {Batch} */ (current_batch);
+
+	if (DEV) {
+		var previous_dev_stack = dev_stack;
+	}
+
+	return function restore(activate_batch = true) {
+		set_active_effect(previous_effect);
+		set_active_reaction(previous_reaction);
+		set_component_context(previous_component_context);
+
+		if (activate_batch && (previous_effect.f & DESTROYED) === 0) {
+			// TODO we only need optional chaining here because `{#await ...}` blocks
+			// are anomalous. Once we retire them we can get rid of it
+			previous_batch?.activate();
+			previous_batch?.apply();
+		}
+
+		if (DEV) {
+			set_reactivity_loss_tracker(null);
+			set_dev_stack(previous_dev_stack);
+		}
+	};
+}
+
+/**
+ * Reset `current_async_effect` after the `promise` resolves, so
+ * that we can emit `await_reactivity_loss` warnings
+ * @template T
+ * @param {Promise<T>} promise
+ * @returns {Promise<() => T>}
+ */
+async function track_reactivity_loss(promise) {
+	var previous_reactivity_loss_tracker = reactivity_loss_tracker;
+	// Ensure that unrelated reads after an async operation is kicked off don't cause false positives
+	queueMicrotask(() => {
+		if (reactivity_loss_tracker === previous_reactivity_loss_tracker) {
+			set_reactivity_loss_tracker(null);
+		}
+	});
+
+	var value = await promise;
+
+	return () => {
+		set_reactivity_loss_tracker(previous_reactivity_loss_tracker);
+		// While this can result in false negatives it also guards against the more important
+		// false positives that would occur if this is the last in a chain of async operations,
+		// and the reactivity_loss_tracker would then stay around until the next async operation happens.
+		queueMicrotask(() => {
+			if (reactivity_loss_tracker === previous_reactivity_loss_tracker) {
+				set_reactivity_loss_tracker(null);
+			}
+		});
+
+		return value;
+	};
+}
+
+function unset_context(deactivate_batch = true) {
+	set_active_effect(null);
+	set_active_reaction(null);
+	set_component_context(null);
+	if (deactivate_batch) current_batch?.deactivate();
+
+	if (DEV) {
+		set_reactivity_loss_tracker(null);
+		set_dev_stack(null);
+	}
+}
+
+/**
+ * @returns {(skip?: boolean) => void}
+ */
+function increment_pending() {
+	var effect = /** @type {Effect} */ (active_effect);
+	var boundary = effect.b; // undefined if called outside the render tree, e.g. a standalone $effect.root
+	var batch = /** @type {Batch} */ (current_batch);
+	var blocking = !!boundary?.is_rendered();
+
+	boundary?.update_pending_count(1, batch);
+	batch.increment(blocking, effect);
+
+	return () => {
+		boundary?.update_pending_count(-1, batch);
+		batch.decrement(blocking, effect);
+	};
+}
+
+/** @import { Derived, Effect, Reaction, Source, Value } from '#client' */
+/** @import { Batch } from './batch.js'; */
+/** @import { Boundary } from '../dom/blocks/boundary.js'; */
+
+/**
+ * This allows us to track 'reactivity loss' that occurs when signals
+ * are read after a non-context-restoring `await`. Dev-only
+ * @type {{ effect: Effect, effect_deps: Set<Value>, warned: boolean } | null}
+ */
+let reactivity_loss_tracker = null;
+
+/** @param {{ effect: Effect, effect_deps: Set<Value>, warned: boolean } | null} v */
+function set_reactivity_loss_tracker(v) {
+	reactivity_loss_tracker = v;
+}
+
+const recent_async_deriveds = new Set();
+
+/**
+ * @template V
+ * @param {() => V} fn
+ * @returns {Derived<V>}
+ */
+/*#__NO_SIDE_EFFECTS__*/
+function derived(fn) {
+	var flags = DERIVED | DIRTY;
+
+	if (active_effect !== null) {
+		// Since deriveds are evaluated lazily, any effects created inside them are
+		// created too late to ensure that the parent effect is added to the tree
+		active_effect.f |= EFFECT_PRESERVED;
+	}
+
+	/** @type {Derived<V>} */
+	const signal = {
+		ctx: component_context,
+		deps: null,
+		effects: null,
+		equals: equals$1,
+		f: flags,
+		fn,
+		reactions: null,
+		rv: 0,
+		v: /** @type {V} */ (UNINITIALIZED),
+		wv: 0,
+		parent: active_effect,
+		ac: null
+	};
+
+	if (DEV && tracing_mode_flag) {
+		signal.created = get_error('created at');
+	}
+
+	return signal;
+}
+
+const OBSOLETE = Symbol('obsolete');
+
+/**
+ * @template V
+ * @param {() => V | Promise<V>} fn
+ * @param {string} [label]
+ * @param {string} [location] If provided, print a warning if the value is not read immediately after update
+ * @returns {Promise<Source<V>>}
+ */
+/*#__NO_SIDE_EFFECTS__*/
+function async_derived(fn, label, location) {
+	let parent = /** @type {Effect | null} */ (active_effect);
+
+	if (parent === null) {
+		async_derived_orphan();
+	}
+
+	var promise = /** @type {Promise<V>} */ (/** @type {unknown} */ (undefined));
+	var signal = source(/** @type {V} */ (UNINITIALIZED));
+
+	if (DEV) signal.label = label ?? fn.toString();
+
+	// only suspend in async deriveds created on initialisation
+	var should_suspend = !active_reaction;
+
+	/** @type {Set<ReturnType<typeof deferred<V>>>} */
+	var deferreds = new Set();
+
+	async_effect(() => {
+		var effect = /** @type {Effect} */ (active_effect);
+
+		if (DEV) {
+			reactivity_loss_tracker = { effect, effect_deps: new Set(), warned: false };
+		}
+
+		/** @type {ReturnType<typeof deferred<V>>} */
+		var d = deferred();
+		promise = d.promise;
+
+		try {
+			// If this code is changed at some point, make sure to still access the then property
+			// of fn() to read any signals it might access, so that we track them as dependencies.
+			// We call `unset_context` to undo any `save` calls that happen inside `fn()`
+			Promise.resolve(fn())
+				.then(d.resolve, (e) => {
+					// if the promise was rejected by the user, via `getAbortSignal`, then
+					// wait for a subsequent resolution instead of flushing the batch
+					if (e !== STALE_REACTION) d.reject(e);
+				})
+				.finally(unset_context);
+		} catch (error) {
+			d.reject(error);
+			unset_context();
+		}
+
+		if (DEV) {
+			if (reactivity_loss_tracker) {
+				// Reused deps from previous run (indices 0 to skipped_deps-1)
+				// We deliberately only track direct dependencies of the async expression to encourage
+				// dependencies being directly visible at the point of the expression
+				if (effect.deps !== null) {
+					for (let i = 0; i < skipped_deps; i += 1) {
+						reactivity_loss_tracker.effect_deps.add(effect.deps[i]);
+					}
+				}
+
+				// New deps discovered this run
+				if (new_deps !== null) {
+					for (let i = 0; i < new_deps.length; i += 1) {
+						reactivity_loss_tracker.effect_deps.add(new_deps[i]);
+					}
+				}
+			}
+
+			reactivity_loss_tracker = null;
+		}
+
+		var batch = /** @type {Batch} */ (current_batch);
+
+		if (should_suspend) {
+			// we only increment the batch's pending state for updates, not creation, otherwise
+			// we will decrement to zero before the work that depends on this promise (e.g. a
+			// template effect) has initialized, causing the batch to resolve prematurely
+			if ((effect.f & REACTION_RAN) !== 0) {
+				var decrement_pending = increment_pending();
+			}
+
+			if (
+				// boundary can be null if the async derived is inside an $effect.root not connected to the component render tree
+				parent.b?.is_rendered()
+			) {
+				batch.async_deriveds.get(effect)?.reject(OBSOLETE);
+			} else {
+				// While the boundary is still showing pending, a new run supersedes all older in-flight runs
+				// for this async expression. Cancel eagerly so resolution cannot commit stale values.
+				for (const d of deferreds.values()) {
+					d.reject(OBSOLETE);
+				}
+			}
+
+			deferreds.add(d);
+			batch.async_deriveds.set(effect, d);
+		}
+
+		/**
+		 * @param {any} value
+		 * @param {unknown} error
+		 */
+		const handler = (value, error = undefined) => {
+			if (DEV) {
+				reactivity_loss_tracker = null;
+			}
+
+			decrement_pending?.();
+			deferreds.delete(d);
+
+			if (error === OBSOLETE) return;
+
+			batch.activate();
+
+			if (error) {
+				signal.f |= ERROR_VALUE;
+
+				// @ts-expect-error the error is the wrong type, but we don't care
+				internal_set(signal, error);
+			} else {
+				if ((signal.f & ERROR_VALUE) !== 0) {
+					signal.f ^= ERROR_VALUE;
+				}
+
+				if (DEV && location !== undefined && !signal.equals(value)) {
+					recent_async_deriveds.add(signal);
+
+					setTimeout(() => {
+						if (recent_async_deriveds.has(signal) && (effect.f & DESTROYED) === 0) {
+							await_waterfall(/** @type {string} */ (signal.label), location);
+							recent_async_deriveds.delete(signal);
+						}
+					});
+				}
+
+				internal_set(signal, value);
+			}
+
+			batch.deactivate();
+		};
+
+		d.promise.then(handler, (e) => handler(null, e || 'unknown'));
+	});
+
+	teardown(() => {
+		for (const d of deferreds) {
+			d.reject(OBSOLETE);
+		}
+	});
+
+	if (DEV) {
+		// add a flag that lets this be printed as a derived
+		// when using `$inspect.trace()`
+		signal.f |= ASYNC;
+	}
+
+	return new Promise((fulfil) => {
+		/** @param {Promise<V>} p */
+		function next(p) {
+			function go() {
+				if (p === promise) {
+					fulfil(signal);
+				} else {
+					// if the effect re-runs before the initial promise
+					// resolves, delay resolution until we have a value
+					next(promise);
+				}
+			}
+
+			p.then(go, go);
+		}
+
+		next(promise);
+	});
+}
+
+/**
+ * @template V
+ * @param {() => V} fn
+ * @returns {Derived<V>}
+ */
+/*#__NO_SIDE_EFFECTS__*/
+function user_derived(fn) {
+	const d = derived(fn);
+
+	push_reaction_value(d);
+
+	return d;
+}
+
+/**
+ * @template V
+ * @param {() => V} fn
+ * @returns {Derived<V>}
+ */
+/*#__NO_SIDE_EFFECTS__*/
+function derived_safe_equal(fn) {
+	const signal = derived(fn);
+	signal.equals = safe_equals;
+	return signal;
+}
+
+/**
+ * @param {Derived} derived
+ * @returns {void}
+ */
+function destroy_derived_effects(derived) {
+	var effects = derived.effects;
+
+	if (effects !== null) {
+		derived.effects = null;
+
+		for (var i = 0; i < effects.length; i += 1) {
+			destroy_effect(/** @type {Effect} */ (effects[i]));
+		}
+	}
+}
+
+/**
+ * The currently updating deriveds, used to detect infinite recursion
+ * in dev mode and provide a nicer error than 'too much recursion'
+ * @type {Derived[]}
+ */
+let stack = [];
+
+/**
+ * @template T
+ * @param {Derived} derived
+ * @returns {T}
+ */
+function execute_derived(derived) {
+	var value;
+	var prev_active_effect = active_effect;
+	var parent = derived.parent;
+
+	if (
+		!is_destroying_effect &&
+		parent !== null &&
+		derived.v !== UNINITIALIZED && // if it was never evaluated before, it's guaranteed to fail downstream, so we try to execute instead
+		(parent.f & (DESTROYED | INERT)) !== 0
+	) {
+		derived_inert();
+
+		return derived.v;
+	}
+
+	set_active_effect(parent);
+
+	if (DEV) {
+		let prev_eager_effects = eager_effects;
+		set_eager_effects(new Set());
+		try {
+			if (includes.call(stack, derived)) {
+				derived_references_self();
+			}
+
+			stack.push(derived);
+
+			derived.f &= ~WAS_MARKED;
+			destroy_derived_effects(derived);
+			value = update_reaction(derived);
+		} finally {
+			set_active_effect(prev_active_effect);
+			set_eager_effects(prev_eager_effects);
+			stack.pop();
+		}
+	} else {
+		try {
+			derived.f &= ~WAS_MARKED;
+			destroy_derived_effects(derived);
+			value = update_reaction(derived);
+		} finally {
+			set_active_effect(prev_active_effect);
+		}
+	}
+
+	return value;
+}
+
+/**
+ * @param {Derived} derived
+ * @returns {void}
+ */
+function update_derived(derived) {
+	var value = execute_derived(derived);
+
+	if (!derived.equals(value)) {
+		derived.wv = increment_write_version();
+
+		// in a fork, we don't update the underlying value, just `batch_values`.
+		// the underlying value will be updated when the fork is committed.
+		// otherwise, the next time we get here after a 'real world' state
+		// change, `derived.equals` may incorrectly return `true`
+		if (!current_batch?.is_fork || derived.deps === null) {
+			if (current_batch !== null) {
+				// We also write to previous_batch because if it exists, it is a sign that we're
+				// currently in the process of flushing effects. These updates to deriveds may belong
+				// to the previous batch, not the new one (which can already exist if an earlier
+				// effect wrote to a source). This can cause bugs when running batch.#commit() later,
+				// but not adding it to current_batch can, too, so we add it to both.
+				// See https://github.com/sveltejs/svelte/pull/18117 for more details.
+				current_batch.capture(derived, value, true);
+				previous_batch?.capture(derived, value, true);
+			} else {
+				derived.v = value;
+			}
+
+			// deriveds without dependencies should never be recomputed
+			if (derived.deps === null) {
+				set_signal_status(derived, CLEAN);
+				return;
+			}
+		}
+	}
+
+	// don't mark derived clean if we're reading it inside a
+	// cleanup function, or it will cache a stale value
+	if (is_destroying_effect) {
+		return;
+	}
+
+	// During time traveling we don't want to reset the status so that
+	// traversal of the graph in the other batches still happens
+	if (batch_values !== null) {
+		// only cache the value if we're in a tracking context, otherwise we won't
+		// clear the cache in `mark_reactions` when dependencies are updated
+		if (effect_tracking() || current_batch?.is_fork) {
+			batch_values.set(derived, value);
+		}
+	} else {
+		update_derived_status(derived);
+	}
+}
+
+/**
+ * @param {Derived} derived
+ */
+function freeze_derived_effects(derived) {
+	if (derived.effects === null) return;
+
+	for (const e of derived.effects) {
+		// if the effect has a teardown function or abort signal, call it
+		if (e.teardown || e.ac) {
+			e.teardown?.();
+			if (e.ac !== null) {
+				without_reactive_context(() => {
+					/** @type {AbortController} */ (e.ac).abort(STALE_REACTION);
+					e.ac = null;
+				});
+			}
+
+			// make it a noop so it doesn't get called again if the derived
+			// is unfrozen. we don't set it to `null`, because the existence
+			// of a teardown function is what determines whether the
+			// effect runs again during unfreezing (but not for teardown-only effects)
+			if (e.fn !== null) e.teardown = noop;
+
+			remove_reactions(e, 0);
+			destroy_effect_children(e);
+		}
+	}
+}
+
+/**
+ * @param {Derived} derived
+ */
+function unfreeze_derived_effects(derived) {
+	if (derived.effects === null) return;
+
+	for (const e of derived.effects) {
+		// if the effect was previously frozen — indicated by the presence
+		// of a teardown function — unfreeze it
+		if (e.teardown && e.fn !== null) {
+			update_effect(e);
+		}
+	}
+}
+
 /** @import { Fork } from 'svelte' */
 /** @import { Derived, Effect, Reaction, Source, Value } from '#client' */
 
-/** @type {Set<Batch>} */
-const batches = new Set();
+/** @type {Batch | null} */
+let first_batch = null;
+
+/** @type {Batch | null} */
+let last_batch = null;
 
 /** @type {Batch | null} */
 let current_batch = null;
+
+/**
+ * This is needed to avoid overwriting inputs
+ * @type {Batch | null}
+ */
+let previous_batch = null;
 
 /**
  * When time travelling (i.e. working in one batch, while other batches
@@ -1753,12 +3041,28 @@ let collected_effects = null;
 let legacy_updates = null;
 
 var flush_count = 0;
-var source_stacks = DEV ? new Set() : null;
+
+/** @type {Set<Value>} */
+var source_stacks = new Set();
 
 let uid = 1;
 
 class Batch {
 	id = uid++;
+
+	/** True as soon as `#process` was called */
+	#started = false;
+
+	linked = true;
+
+	/** @type {Batch | null} */
+	#prev = null;
+
+	/** @type {Batch | null} */
+	#next = null;
+
+	/** @type {Map<Effect, ReturnType<typeof deferred<any>>>} */
+	async_deriveds = new Map();
 
 	/**
 	 * The current values of any signals that are updated in this batch.
@@ -1789,10 +3093,9 @@ class Batch {
 	#discard_callbacks = new Set();
 
 	/**
-	 * Async effects that are currently in flight
-	 * @type {Map<Effect, number>}
+	 * The number of async effects that are currently in flight
 	 */
-	#pending = new Map();
+	#pending = 0;
 
 	/**
 	 * Async effects that are currently in flight, _not_ inside a pending boundary
@@ -1850,31 +3153,36 @@ class Batch {
 
 	#decrement_queued = false;
 
-	/** @type {Set<Batch>} */
-	#blockers = new Set();
+	constructor() {
+		// link batch
+		if (last_batch === null) {
+			first_batch = last_batch = this;
+		} else {
+			last_batch.#next = this;
+			this.#prev = last_batch;
+		}
 
-	#is_deferred() {
-		return this.is_fork || this.#blocking_pending.size > 0;
+		last_batch = this;
 	}
 
-	#is_blocked() {
-		for (const batch of this.#blockers) {
-			for (const effect of batch.#blocking_pending.keys()) {
-				var skipped = false;
-				var e = effect;
+	#is_deferred() {
+		if (this.is_fork) return true;
 
-				while (e.parent !== null) {
-					if (this.#skipped_branches.has(e)) {
-						skipped = true;
-						break;
-					}
+		for (const effect of this.#blocking_pending.keys()) {
+			var e = effect;
+			var skipped = false;
 
-					e = e.parent;
+			while (e.parent !== null) {
+				if (this.#skipped_branches.has(e)) {
+					skipped = true;
+					break;
 				}
 
-				if (!skipped) {
-					return true;
-				}
+				e = e.parent;
+			}
+
+			if (!skipped) {
+				return true;
 			}
 		}
 
@@ -1917,24 +3225,34 @@ class Batch {
 	}
 
 	#process() {
+		this.#started = true;
+
 		if (flush_count++ > 1000) {
-			batches.delete(this);
+			this.#unlink();
 			infinite_loop_guard();
 		}
 
-		// we only reschedule previously-deferred effects if we expect
-		// to be able to run them after processing the batch
-		if (!this.#is_deferred()) {
-			for (const e of this.#dirty_effects) {
-				this.#maybe_dirty_effects.delete(e);
-				set_signal_status(e, DIRTY);
-				this.schedule(e);
+		if (DEV) {
+			// track all the values that were updated during this flush,
+			// so that they can be reset afterwards
+			for (const value of this.current.keys()) {
+				source_stacks.add(value);
 			}
+		}
 
-			for (const e of this.#maybe_dirty_effects) {
-				set_signal_status(e, MAYBE_DIRTY);
-				this.schedule(e);
-			}
+		// We always reschedule previously-deferred effects, not just when
+		// #is_deferred() is true, because traversing the tree could make
+		// an if block that contains the last blocking pending effect falsy,
+		// causing the block to no longer be deferred.
+		for (const e of this.#dirty_effects) {
+			this.#maybe_dirty_effects.delete(e);
+			set_signal_status(e, DIRTY);
+			this.schedule(e);
+		}
+
+		for (const e of this.#maybe_dirty_effects) {
+			set_signal_status(e, MAYBE_DIRTY);
+			this.schedule(e);
 		}
 
 		const roots = this.#roots;
@@ -1959,6 +3277,12 @@ class Batch {
 				this.#traverse(root, effects, render_effects);
 			} catch (e) {
 				reset_all(root);
+				// If there's no async work left, this branch is now dead and needs
+				// to be discarded to not become a zombie that is never cleaned up.
+				// See https://github.com/sveltejs/svelte/issues/18221#issuecomment-4497918414
+				// for a (non-minimal) reproduction that demonstrates a case where this is necessary
+				// to not get follow-up false-positives via "batch has scheduled roots" invariant errors.
+				if (!this.#is_deferred()) this.discard();
 				throw e;
 			}
 		}
@@ -1976,50 +3300,67 @@ class Batch {
 		collected_effects = null;
 		legacy_updates = null;
 
-		if (this.#is_deferred() || this.#is_blocked()) {
+		// if the batch has outstanding pending work, stash effects and bail
+		if (this.#is_deferred()) {
 			this.#defer_effects(render_effects);
 			this.#defer_effects(effects);
 
 			for (const [e, t] of this.#skipped_branches) {
 				reset_branch(e, t);
 			}
-		} else {
-			if (this.#pending.size === 0) {
-				batches.delete(this);
+
+			if (updates.length > 0) {
+				/** @type {Batch} */ (/** @type {unknown} */ (current_batch)).#process();
 			}
 
-			// clear effects. Those that are still needed will be rescheduled through unskipping the skipped branches.
-			this.#dirty_effects.clear();
-			this.#maybe_dirty_effects.clear();
-
-			// append/remove branches
-			for (const fn of this.#commit_callbacks) fn(this);
-			this.#commit_callbacks.clear();
-			flush_queued_effects(render_effects);
-			flush_queued_effects(effects);
-
-			this.#deferred?.resolve();
+			return;
 		}
 
+		const earlier_batch = this.#find_earlier_batch();
+
+		if (earlier_batch) {
+			// If this batch collected deferred effects during traversal, they still need
+			// to run after being merged into the earlier batch.
+			this.#defer_effects(render_effects);
+			this.#defer_effects(effects);
+			earlier_batch.#merge(this);
+			return;
+		}
+
+		// clear effects. Those that are still needed will be rescheduled through unskipping the skipped branches.
+		this.#dirty_effects.clear();
+		this.#maybe_dirty_effects.clear();
+
+		// append/remove branches
+		for (const fn of this.#commit_callbacks) fn(this);
+		this.#commit_callbacks.clear();
+
+		previous_batch = this;
+		flush_queued_effects(render_effects);
+		flush_queued_effects(effects);
+		previous_batch = null;
+
+		this.#deferred?.resolve();
+
 		var next_batch = /** @type {Batch | null} */ (/** @type {unknown} */ (current_batch));
+
+		if (this.#pending === 0 && (this.#roots.length === 0 || next_batch !== null)) {
+			this.#unlink();
+		}
 
 		// Edge case: During traversal new branches might create effects that run immediately and set state,
 		// causing an effect and therefore a root to be scheduled again. We need to traverse the current batch
 		// once more in that case - most of the time this will just clean up dirty branches.
 		if (this.#roots.length > 0) {
-			const batch = (next_batch ??= this);
-			batch.#roots.push(...this.#roots.filter((r) => !batch.#roots.includes(r)));
+			if (next_batch !== null) {
+				const batch = next_batch;
+				batch.#roots.push(...this.#roots.filter((r) => !batch.#roots.includes(r)));
+			} else {
+				next_batch = this;
+			}
 		}
 
 		if (next_batch !== null) {
-			batches.add(next_batch);
-
-			if (DEV) {
-				for (const source of this.current.keys()) {
-					/** @type {Set<Source>} */ (source_stacks).add(source);
-				}
-			}
-
 			next_batch.#process();
 		}
 	}
@@ -2074,6 +3415,95 @@ class Batch {
 		}
 	}
 
+	#find_earlier_batch() {
+		var batch = this.#prev;
+
+		while (batch !== null) {
+			if (!batch.is_fork) {
+				// if the batches are connected, break
+				for (const [value, [, is_derived]] of this.current) {
+					if (batch.current.has(value) && !is_derived) {
+						return batch;
+					}
+				}
+			}
+
+			batch = batch.#prev;
+		}
+
+		return null;
+	}
+
+	/**
+	 * @param {Batch} batch
+	 */
+	#merge(batch) {
+		for (const [source, value] of batch.current) {
+			if (!this.previous.has(source) && batch.previous.has(source)) {
+				this.previous.set(source, batch.previous.get(source));
+			}
+
+			this.current.set(source, value);
+		}
+
+		for (const [effect, deferred] of batch.async_deriveds) {
+			const d = this.async_deriveds.get(effect);
+			if (d) deferred.promise.then(d.resolve).catch(d.reject);
+		}
+
+		// Clear them or else those that are still pending might get rejected on discard (after merged-into batch is done).
+		// This can happen when batch Y merged into X and Y has a pending boundary and therefore still-pending async deriveds inside.
+		batch.async_deriveds.clear();
+
+		// Mark is not guaranteed not touch these, so we transfer them
+		this.transfer_effects(batch.#dirty_effects, batch.#maybe_dirty_effects);
+
+		/**
+		 * mark all effects that depend on `batch.current`, except the
+		 * async effects that we just resolved (TODO unless they depend
+		 * on values in this batch that are NOT in the later batch?).
+		 * Through this we also will populate the correct #skipped_branches,
+		 * oncommit callbacks etc, so we don't need to merge them separately.
+		 * @param {Value} value
+		 */
+		const mark = (value) => {
+			var reactions = value.reactions;
+			if (reactions === null) return;
+			// skip if value is derived and is neither dirty nor maybe dirty. transitive
+			// deriveds (a derived depending on another derived) are only MAYBE_DIRTY, so
+			// we must continue traversing them to reach the effects that depend on them
+			if ((value.f & DERIVED) !== 0 && (value.f & (DIRTY | MAYBE_DIRTY)) === 0) {
+				return;
+			}
+
+			for (const reaction of reactions) {
+				var flags = reaction.f;
+
+				if ((flags & DERIVED) !== 0) {
+					mark(/** @type {Derived} */ (reaction));
+				} else {
+					var effect = /** @type {Effect} */ (reaction);
+
+					if (flags & (ASYNC | BLOCK_EFFECT) && !this.async_deriveds.has(effect)) {
+						this.#maybe_dirty_effects.delete(effect);
+						set_signal_status(effect, DIRTY);
+						this.schedule(effect);
+					}
+				}
+			}
+		};
+
+		for (const source of this.current.keys()) {
+			mark(source);
+		}
+
+		this.oncommit(() => batch.discard());
+		batch.#unlink();
+
+		current_batch = this;
+		this.#process();
+	}
+
 	/**
 	 * @param {Effect[]} effects
 	 */
@@ -2116,9 +3546,11 @@ class Batch {
 	}
 
 	flush() {
-		var source_stacks = DEV ? new Set() : null;
-
 		try {
+			if (DEV) {
+				source_stacks.clear();
+			}
+
 			is_processing = true;
 			current_batch = this;
 
@@ -2136,7 +3568,7 @@ class Batch {
 			old_values.clear();
 
 			if (DEV) {
-				for (const source of /** @type {Set<Source>} */ (source_stacks)) {
+				for (const source of source_stacks) {
 					source.updated = null;
 				}
 			}
@@ -2147,7 +3579,12 @@ class Batch {
 		for (const fn of this.#discard_callbacks) fn(this);
 		this.#discard_callbacks.clear();
 
-		batches.delete(this);
+		for (const deferred of this.async_deriveds.values()) {
+			deferred.reject(OBSOLETE);
+		}
+
+		this.#unlink();
+		this.#deferred?.resolve();
 	}
 
 	/**
@@ -2162,7 +3599,7 @@ class Batch {
 		// in other words, we re-run block/async effects with the newly
 		// committed state, unless the batch in question has a more
 		// recent value for a given source
-		for (const batch of batches) {
+		for (let batch = first_batch; batch !== null; batch = batch.#next) {
 			var is_earlier = batch.id < this.id;
 
 			/** @type {Source[]} */
@@ -2185,8 +3622,24 @@ class Batch {
 				sources.push(source);
 			}
 
-			// Re-run async/block effects that depend on distinct values changed in both batches
-			var others = [...batch.current.keys()].filter((s) => !this.current.has(s));
+			if (is_earlier) {
+				// TODO do we need to restart these in some cases, instead of
+				// immediately resolving them? Likely not because of how this.apply() works.
+				for (const [effect, deferred] of this.async_deriveds) {
+					const d = batch.async_deriveds.get(effect);
+					if (d) deferred.promise.then(d.resolve).catch(d.reject);
+				}
+			}
+
+			var current = [...batch.current.keys()].filter(
+				(source) => !(/** @type {[any, boolean]} */ (batch.current.get(source))[1])
+			);
+
+			// If not started yet or no sources to update (which is e.g. possible for the very first batch) then bail
+			if (!batch.#started || current.length === 0) continue;
+
+			// Re-run async/block effects that depend on distinct values changed in both batches (ignoring deriveds)
+			var others = current.filter((source) => !this.current.has(source));
 
 			if (others.length === 0) {
 				if (is_earlier) {
@@ -2194,7 +3647,9 @@ class Batch {
 					batch.discard();
 				}
 			} else if (sources.length > 0) {
-				if (DEV) {
+				// The microtask queue can contain the batch already scheduled to run right
+				// after this one is finished, so throwing the invariant would be wrong here.
+				if (DEV && !batch.#decrement_queued) {
 					invariant(batch.#roots.length === 0, 'Batch has scheduled roots');
 				}
 
@@ -2224,26 +3679,34 @@ class Batch {
 				}
 
 				checked = new Map();
-				var current_unequal = [...batch.current.keys()].filter((c) =>
-					this.current.has(c) ? /** @type {[any, boolean]} */ (this.current.get(c))[0] !== c : true
-				);
+				var current_unequal = [...batch.current]
+					.filter(([c, v1]) => {
+						const v2 = this.current.get(c);
+						if (!v2) return true;
+						// Either their values are different or one is a derived but not the other
+						return v2[0] !== v1[0] || v2[1] !== v1[1];
+					})
+					.map(([c]) => c);
 
-				for (const effect of this.#new_effects) {
-					if (
-						(effect.f & (DESTROYED | INERT | EAGER_EFFECT)) === 0 &&
-						depends_on(effect, current_unequal, checked)
-					) {
-						if ((effect.f & (ASYNC | BLOCK_EFFECT)) !== 0) {
-							set_signal_status(effect, DIRTY);
-							batch.schedule(effect);
-						} else {
-							batch.#dirty_effects.add(effect);
+				if (current_unequal.length > 0) {
+					for (const effect of this.#new_effects) {
+						if (
+							(effect.f & (DESTROYED | INERT | EAGER_EFFECT)) === 0 &&
+							depends_on(effect, current_unequal, checked)
+						) {
+							if ((effect.f & (ASYNC | BLOCK_EFFECT)) !== 0) {
+								set_signal_status(effect, DIRTY);
+								batch.schedule(effect);
+							} else {
+								batch.#dirty_effects.add(effect);
+							}
 						}
 					}
 				}
 
 				// Only apply and traverse when we know we triggered async work with marking the effects
-				if (batch.#roots.length > 0) {
+				// and know this won't run anyway right afterwards
+				if (batch.#roots.length > 0 && !batch.#decrement_queued) {
 					batch.apply();
 
 					for (var root of batch.#roots) {
@@ -2256,17 +3719,6 @@ class Batch {
 				batch.deactivate();
 			}
 		}
-
-		for (const batch of batches) {
-			if (batch.#blockers.has(this)) {
-				batch.#blockers.delete(this);
-
-				if (batch.#blockers.size === 0 && !batch.#is_deferred()) {
-					batch.activate();
-					batch.#process();
-				}
-			}
-		}
 	}
 
 	/**
@@ -2274,8 +3726,7 @@ class Batch {
 	 * @param {Effect} effect
 	 */
 	increment(blocking, effect) {
-		let pending_count = this.#pending.get(effect) ?? 0;
-		this.#pending.set(effect, pending_count + 1);
+		this.#pending += 1;
 
 		if (blocking) {
 			let blocking_pending_count = this.#blocking_pending.get(effect) ?? 0;
@@ -2286,16 +3737,9 @@ class Batch {
 	/**
 	 * @param {boolean} blocking
 	 * @param {Effect} effect
-	 * @param {boolean} skip - whether to skip updates (because this is triggered by a stale reaction)
 	 */
-	decrement(blocking, effect, skip) {
-		let pending_count = this.#pending.get(effect) ?? 0;
-
-		if (pending_count === 1) {
-			this.#pending.delete(effect);
-		} else {
-			this.#pending.set(effect, pending_count - 1);
-		}
+	decrement(blocking, effect) {
+		this.#pending -= 1;
 
 		if (blocking) {
 			let blocking_pending_count = this.#blocking_pending.get(effect) ?? 0;
@@ -2307,12 +3751,15 @@ class Batch {
 			}
 		}
 
-		if (this.#decrement_queued || skip) return;
+		if (this.#decrement_queued) return;
 		this.#decrement_queued = true;
 
 		queue_micro_task(() => {
 			this.#decrement_queued = false;
-			this.flush();
+
+			if (this.linked) {
+				this.flush();
+			}
 		});
 	}
 
@@ -2351,19 +3798,12 @@ class Batch {
 		if (current_batch === null) {
 			const batch = (current_batch = new Batch());
 
-			if (!is_processing) {
-				batches.add(current_batch);
-
-				if (!is_flushing_sync) {
-					queue_micro_task(() => {
-						if (current_batch !== batch) {
-							// a flushSync happened in the meantime
-							return;
-						}
-
+			if (!is_processing && !is_flushing_sync) {
+				queue_micro_task(() => {
+					if (!batch.#started) {
 						batch.flush();
-					});
-				}
+					}
+				});
 			}
 		}
 
@@ -2431,6 +3871,29 @@ class Batch {
 		}
 
 		this.#roots.push(e);
+	}
+
+	#unlink() {
+		// #merge calls #unlink, discard later on does it again - prevent
+		// running it multiple times to not corrupt the linked list
+		if (!this.linked) return;
+
+		var prev = this.#prev;
+		var next = this.#next;
+
+		if (prev === null) {
+			first_batch = next;
+		} else {
+			prev.#next = next;
+		}
+
+		if (next === null) {
+			last_batch = prev;
+		} else {
+			next.#prev = prev;
+		}
+
+		this.linked = false;
 	}
 }
 
@@ -2692,1115 +4155,9 @@ function reset_all(effect) {
 	}
 }
 
-/**
- * Returns a `subscribe` function that integrates external event-based systems with Svelte's reactivity.
- * It's particularly useful for integrating with web APIs like `MediaQuery`, `IntersectionObserver`, or `WebSocket`.
- *
- * If `subscribe` is called inside an effect (including indirectly, for example inside a getter),
- * the `start` callback will be called with an `update` function. Whenever `update` is called, the effect re-runs.
- *
- * If `start` returns a cleanup function, it will be called when the effect is destroyed.
- *
- * If `subscribe` is called in multiple effects, `start` will only be called once as long as the effects
- * are active, and the returned teardown function will only be called when all effects are destroyed.
- *
- * It's best understood with an example. Here's an implementation of [`MediaQuery`](https://svelte.dev/docs/svelte/svelte-reactivity#MediaQuery):
- *
- * ```js
- * import { createSubscriber } from 'svelte/reactivity';
- * import { on } from 'svelte/events';
- *
- * export class MediaQuery {
- * 	#query;
- * 	#subscribe;
- *
- * 	constructor(query) {
- * 		this.#query = window.matchMedia(`(${query})`);
- *
- * 		this.#subscribe = createSubscriber((update) => {
- * 			// when the `change` event occurs, re-run any effects that read `this.current`
- * 			const off = on(this.#query, 'change', update);
- *
- * 			// stop listening when all the effects are destroyed
- * 			return () => off();
- * 		});
- * 	}
- *
- * 	get current() {
- * 		// This makes the getter reactive, if read in an effect
- * 		this.#subscribe();
- *
- * 		// Return the current state of the query, whether or not we're in an effect
- * 		return this.#query.matches;
- * 	}
- * }
- * ```
- * @param {(update: () => void) => (() => void) | void} start
- * @since 5.7.0
- */
-function createSubscriber(start) {
-	let subscribers = 0;
-	let version = source(0);
-	/** @type {(() => void) | void} */
-	let stop;
-
-	if (DEV) {
-		tag(version, 'createSubscriber version');
-	}
-
-	return () => {
-		if (effect_tracking()) {
-			get(version);
-
-			render_effect(() => {
-				if (subscribers === 0) {
-					stop = untrack(() => start(() => increment(version)));
-				}
-
-				subscribers += 1;
-
-				return () => {
-					queue_micro_task(() => {
-						// Only count down after a microtask, else we would reach 0 before our own render effect reruns,
-						// but reach 1 again when the tick callback of the prior teardown runs. That would mean we
-						// re-subcribe unnecessarily and create a memory leak because the old subscription is never cleaned up.
-						subscribers -= 1;
-
-						if (subscribers === 0) {
-							stop?.();
-							stop = undefined;
-							// Increment the version to ensure any dependent deriveds are marked dirty when the subscription is picked up again later.
-							// If we didn't do this then the comparison of write versions would determine that the derived has a later version than
-							// the subscriber, and it would not be re-run.
-							increment(version);
-						}
-					});
-				};
-			});
-		}
-	};
-}
-
-/** @import { Effect, Source, TemplateNode, } from '#client' */
-
-/**
- * @typedef {{
- * 	 onerror?: (error: unknown, reset: () => void) => void;
- *   failed?: (anchor: Node, error: () => unknown, reset: () => () => void) => void;
- *   pending?: (anchor: Node) => void;
- * }} BoundaryProps
- */
-
-var flags = EFFECT_TRANSPARENT | EFFECT_PRESERVED;
-
-/**
- * @param {TemplateNode} node
- * @param {BoundaryProps} props
- * @param {((anchor: Node) => void)} children
- * @param {((error: unknown) => unknown) | undefined} [transform_error]
- * @returns {void}
- */
-function boundary(node, props, children, transform_error) {
-	new Boundary(node, props, children, transform_error);
-}
-
-class Boundary {
-	/** @type {Boundary | null} */
-	parent;
-
-	is_pending = false;
-
-	/**
-	 * API-level transformError transform function. Transforms errors before they reach the `failed` snippet.
-	 * Inherited from parent boundary, or defaults to identity.
-	 * @type {(error: unknown) => unknown}
-	 */
-	transform_error;
-
-	/** @type {TemplateNode} */
-	#anchor;
-
-	/** @type {TemplateNode | null} */
-	#hydrate_open = null;
-
-	/** @type {BoundaryProps} */
-	#props;
-
-	/** @type {((anchor: Node) => void)} */
-	#children;
-
-	/** @type {Effect} */
-	#effect;
-
-	/** @type {Effect | null} */
-	#main_effect = null;
-
-	/** @type {Effect | null} */
-	#pending_effect = null;
-
-	/** @type {Effect | null} */
-	#failed_effect = null;
-
-	/** @type {DocumentFragment | null} */
-	#offscreen_fragment = null;
-
-	#local_pending_count = 0;
-	#pending_count = 0;
-	#pending_count_update_queued = false;
-
-	/** @type {Set<Effect>} */
-	#dirty_effects = new Set();
-
-	/** @type {Set<Effect>} */
-	#maybe_dirty_effects = new Set();
-
-	/**
-	 * A source containing the number of pending async deriveds/expressions.
-	 * Only created if `$effect.pending()` is used inside the boundary,
-	 * otherwise updating the source results in needless `Batch.ensure()`
-	 * calls followed by no-op flushes
-	 * @type {Source<number> | null}
-	 */
-	#effect_pending = null;
-
-	#effect_pending_subscriber = createSubscriber(() => {
-		this.#effect_pending = source(this.#local_pending_count);
-
-		if (DEV) {
-			tag(this.#effect_pending, '$effect.pending()');
-		}
-
-		return () => {
-			this.#effect_pending = null;
-		};
-	});
-
-	/**
-	 * @param {TemplateNode} node
-	 * @param {BoundaryProps} props
-	 * @param {((anchor: Node) => void)} children
-	 * @param {((error: unknown) => unknown) | undefined} [transform_error]
-	 */
-	constructor(node, props, children, transform_error) {
-		this.#anchor = node;
-		this.#props = props;
-
-		this.#children = (anchor) => {
-			var effect = /** @type {Effect} */ (active_effect);
-
-			effect.b = this;
-			effect.f |= BOUNDARY_EFFECT;
-
-			children(anchor);
-		};
-
-		this.parent = /** @type {Effect} */ (active_effect).b;
-
-		// Inherit transform_error from parent boundary, or use the provided one, or default to identity
-		this.transform_error = transform_error ?? this.parent?.transform_error ?? ((e) => e);
-
-		this.#effect = block(() => {
-			{
-				this.#render();
-			}
-		}, flags);
-	}
-
-	#hydrate_resolved_content() {
-		try {
-			this.#main_effect = branch(() => this.#children(this.#anchor));
-		} catch (error) {
-			this.error(error);
-		}
-	}
-
-	/**
-	 * @param {unknown} error The deserialized error from the server's hydration comment
-	 */
-	#hydrate_failed_content(error) {
-		const failed = this.#props.failed;
-		if (!failed) return;
-
-		this.#failed_effect = branch(() => {
-			failed(
-				this.#anchor,
-				() => error,
-				() => () => {}
-			);
-		});
-	}
-
-	#hydrate_pending_content() {
-		const pending = this.#props.pending;
-		if (!pending) return;
-
-		this.is_pending = true;
-		this.#pending_effect = branch(() => pending(this.#anchor));
-
-		queue_micro_task(() => {
-			var fragment = (this.#offscreen_fragment = document.createDocumentFragment());
-			var anchor = create_text();
-
-			fragment.append(anchor);
-
-			this.#main_effect = this.#run(() => {
-				return branch(() => this.#children(anchor));
-			});
-
-			if (this.#pending_count === 0) {
-				this.#anchor.before(fragment);
-				this.#offscreen_fragment = null;
-
-				pause_effect(/** @type {Effect} */ (this.#pending_effect), () => {
-					this.#pending_effect = null;
-				});
-
-				this.#resolve(/** @type {Batch} */ (current_batch));
-			}
-		});
-	}
-
-	#render() {
-		try {
-			this.is_pending = this.has_pending_snippet();
-			this.#pending_count = 0;
-			this.#local_pending_count = 0;
-
-			this.#main_effect = branch(() => {
-				this.#children(this.#anchor);
-			});
-
-			if (this.#pending_count > 0) {
-				var fragment = (this.#offscreen_fragment = document.createDocumentFragment());
-				move_effect(this.#main_effect, fragment);
-
-				const pending = /** @type {(anchor: Node) => void} */ (this.#props.pending);
-				this.#pending_effect = branch(() => pending(this.#anchor));
-			} else {
-				this.#resolve(/** @type {Batch} */ (current_batch));
-			}
-		} catch (error) {
-			this.error(error);
-		}
-	}
-
-	/**
-	 * @param {Batch} batch
-	 */
-	#resolve(batch) {
-		this.is_pending = false;
-
-		// any effects that were previously deferred should be transferred
-		// to the batch, which will flush in the next microtask
-		batch.transfer_effects(this.#dirty_effects, this.#maybe_dirty_effects);
-	}
-
-	/**
-	 * Defer an effect inside a pending boundary until the boundary resolves
-	 * @param {Effect} effect
-	 */
-	defer_effect(effect) {
-		defer_effect(effect, this.#dirty_effects, this.#maybe_dirty_effects);
-	}
-
-	/**
-	 * Returns `false` if the effect exists inside a boundary whose pending snippet is shown
-	 * @returns {boolean}
-	 */
-	is_rendered() {
-		return !this.is_pending && (!this.parent || this.parent.is_rendered());
-	}
-
-	has_pending_snippet() {
-		return !!this.#props.pending;
-	}
-
-	/**
-	 * @template T
-	 * @param {() => T} fn
-	 */
-	#run(fn) {
-		var previous_effect = active_effect;
-		var previous_reaction = active_reaction;
-		var previous_ctx = component_context;
-
-		set_active_effect(this.#effect);
-		set_active_reaction(this.#effect);
-		set_component_context(this.#effect.ctx);
-
-		try {
-			Batch.ensure();
-			return fn();
-		} catch (e) {
-			handle_error(e);
-			return null;
-		} finally {
-			set_active_effect(previous_effect);
-			set_active_reaction(previous_reaction);
-			set_component_context(previous_ctx);
-		}
-	}
-
-	/**
-	 * Updates the pending count associated with the currently visible pending snippet,
-	 * if any, such that we can replace the snippet with content once work is done
-	 * @param {1 | -1} d
-	 * @param {Batch} batch
-	 */
-	#update_pending_count(d, batch) {
-		if (!this.has_pending_snippet()) {
-			if (this.parent) {
-				this.parent.#update_pending_count(d, batch);
-			}
-
-			// if there's no parent, we're in a scope with no pending snippet
-			return;
-		}
-
-		this.#pending_count += d;
-
-		if (this.#pending_count === 0) {
-			this.#resolve(batch);
-
-			if (this.#pending_effect) {
-				pause_effect(this.#pending_effect, () => {
-					this.#pending_effect = null;
-				});
-			}
-
-			if (this.#offscreen_fragment) {
-				this.#anchor.before(this.#offscreen_fragment);
-				this.#offscreen_fragment = null;
-			}
-		}
-	}
-
-	/**
-	 * Update the source that powers `$effect.pending()` inside this boundary,
-	 * and controls when the current `pending` snippet (if any) is removed.
-	 * Do not call from inside the class
-	 * @param {1 | -1} d
-	 * @param {Batch} batch
-	 */
-	update_pending_count(d, batch) {
-		this.#update_pending_count(d, batch);
-
-		this.#local_pending_count += d;
-
-		if (!this.#effect_pending || this.#pending_count_update_queued) return;
-		this.#pending_count_update_queued = true;
-
-		queue_micro_task(() => {
-			this.#pending_count_update_queued = false;
-			if (this.#effect_pending) {
-				internal_set(this.#effect_pending, this.#local_pending_count);
-			}
-		});
-	}
-
-	get_effect_pending() {
-		this.#effect_pending_subscriber();
-		return get(/** @type {Source<number>} */ (this.#effect_pending));
-	}
-
-	/** @param {unknown} error */
-	error(error) {
-		var onerror = this.#props.onerror;
-		let failed = this.#props.failed;
-
-		// If we have nothing to capture the error, or if we hit an error while
-		// rendering the fallback, re-throw for another boundary to handle
-		if (!onerror && !failed) {
-			throw error;
-		}
-
-		if (this.#main_effect) {
-			destroy_effect(this.#main_effect);
-			this.#main_effect = null;
-		}
-
-		if (this.#pending_effect) {
-			destroy_effect(this.#pending_effect);
-			this.#pending_effect = null;
-		}
-
-		if (this.#failed_effect) {
-			destroy_effect(this.#failed_effect);
-			this.#failed_effect = null;
-		}
-
-		var did_reset = false;
-		var calling_on_error = false;
-
-		const reset = () => {
-			if (did_reset) {
-				svelte_boundary_reset_noop();
-				return;
-			}
-
-			did_reset = true;
-
-			if (calling_on_error) {
-				svelte_boundary_reset_onerror();
-			}
-
-			if (this.#failed_effect !== null) {
-				pause_effect(this.#failed_effect, () => {
-					this.#failed_effect = null;
-				});
-			}
-
-			this.#run(() => {
-				this.#render();
-			});
-		};
-
-		/** @param {unknown} transformed_error */
-		const handle_error_result = (transformed_error) => {
-			try {
-				calling_on_error = true;
-				onerror?.(transformed_error, reset);
-				calling_on_error = false;
-			} catch (error) {
-				invoke_error_boundary(error, this.#effect && this.#effect.parent);
-			}
-
-			if (failed) {
-				this.#failed_effect = this.#run(() => {
-					try {
-						return branch(() => {
-							// errors in `failed` snippets cause the boundary to error again
-							// TODO Svelte 6: revisit this decision, most likely better to go to parent boundary instead
-							var effect = /** @type {Effect} */ (active_effect);
-
-							effect.b = this;
-							effect.f |= BOUNDARY_EFFECT;
-
-							failed(
-								this.#anchor,
-								() => transformed_error,
-								() => reset
-							);
-						});
-					} catch (error) {
-						invoke_error_boundary(error, /** @type {Effect} */ (this.#effect.parent));
-						return null;
-					}
-				});
-			}
-		};
-
-		queue_micro_task(() => {
-			// Run the error through the API-level transformError transform (e.g. SvelteKit's handleError)
-			/** @type {unknown} */
-			var result;
-			try {
-				result = this.transform_error(error);
-			} catch (e) {
-				invoke_error_boundary(e, this.#effect && this.#effect.parent);
-				return;
-			}
-
-			if (
-				result !== null &&
-				typeof result === 'object' &&
-				typeof (/** @type {any} */ (result).then) === 'function'
-			) {
-				// transformError returned a Promise — wait for it
-				/** @type {any} */ (result).then(
-					handle_error_result,
-					/** @param {unknown} e */
-					(e) => invoke_error_boundary(e, this.#effect && this.#effect.parent)
-				);
-			} else {
-				// Synchronous result — handle immediately
-				handle_error_result(result);
-			}
-		});
-	}
-}
-
-/** @import { Blocker, Effect, Value } from '#client' */
-
-/**
- * @param {Blocker[]} blockers
- * @param {Array<() => any>} sync
- * @param {Array<() => Promise<any>>} async
- * @param {(values: Value[]) => any} fn
- */
-function flatten(blockers, sync, async, fn) {
-	const d = is_runes() ? derived : derived_safe_equal;
-
-	// Filter out already-settled blockers - no need to wait for them
-	var pending = blockers.filter((b) => !b.settled);
-
-	if (async.length === 0 && pending.length === 0) {
-		fn(sync.map(d));
-		return;
-	}
-
-	var parent = /** @type {Effect} */ (active_effect);
-
-	var restore = capture();
-	var blocker_promise =
-		pending.length === 1
-			? pending[0].promise
-			: pending.length > 1
-				? Promise.all(pending.map((b) => b.promise))
-				: null;
-
-	/** @param {Value[]} values */
-	function finish(values) {
-		restore();
-
-		try {
-			fn(values);
-		} catch (error) {
-			if ((parent.f & DESTROYED) === 0) {
-				invoke_error_boundary(error, parent);
-			}
-		}
-
-		unset_context();
-	}
-
-	// Fast path: blockers but no async expressions
-	if (async.length === 0) {
-		/** @type {Promise<any>} */ (blocker_promise).then(() => finish(sync.map(d)));
-		return;
-	}
-
-	var decrement_pending = increment_pending();
-
-	// Full path: has async expressions
-	function run() {
-		Promise.all(async.map((expression) => async_derived(expression)))
-			.then((result) => finish([...sync.map(d), ...result]))
-			.catch((error) => invoke_error_boundary(error, parent))
-			.finally(() => decrement_pending());
-	}
-
-	if (blocker_promise) {
-		blocker_promise.then(() => {
-			restore();
-			run();
-			unset_context();
-		});
-	} else {
-		run();
-	}
-}
-
-/**
- * Captures the current effect context so that we can restore it after
- * some asynchronous work has happened (so that e.g. `await a + b`
- * causes `b` to be registered as a dependency).
- */
-function capture() {
-	var previous_effect = /** @type {Effect} */ (active_effect);
-	var previous_reaction = active_reaction;
-	var previous_component_context = component_context;
-	var previous_batch = /** @type {Batch} */ (current_batch);
-
-	if (DEV) {
-		var previous_dev_stack = dev_stack;
-	}
-
-	return function restore(activate_batch = true) {
-		set_active_effect(previous_effect);
-		set_active_reaction(previous_reaction);
-		set_component_context(previous_component_context);
-
-		if (activate_batch && (previous_effect.f & DESTROYED) === 0) {
-			// TODO we only need optional chaining here because `{#await ...}` blocks
-			// are anomalous. Once we retire them we can get rid of it
-			previous_batch?.activate();
-			previous_batch?.apply();
-		}
-
-		if (DEV) {
-			set_reactivity_loss_tracker(null);
-			set_dev_stack(previous_dev_stack);
-		}
-	};
-}
-
-/**
- * Reset `current_async_effect` after the `promise` resolves, so
- * that we can emit `await_reactivity_loss` warnings
- * @template T
- * @param {Promise<T>} promise
- * @returns {Promise<() => T>}
- */
-async function track_reactivity_loss(promise) {
-	var previous_async_effect = reactivity_loss_tracker;
-	var value = await promise;
-
-	return () => {
-		set_reactivity_loss_tracker(previous_async_effect);
-		return value;
-	};
-}
-
-function unset_context(deactivate_batch = true) {
-	set_active_effect(null);
-	set_active_reaction(null);
-	set_component_context(null);
-	if (deactivate_batch) current_batch?.deactivate();
-
-	if (DEV) {
-		set_reactivity_loss_tracker(null);
-		set_dev_stack(null);
-	}
-}
-
-/**
- * @returns {(skip?: boolean) => void}
- */
-function increment_pending() {
-	var effect = /** @type {Effect} */ (active_effect);
-	var boundary = /** @type {Boundary} */ (effect.b);
-	var batch = /** @type {Batch} */ (current_batch);
-	var blocking = boundary.is_rendered();
-
-	boundary.update_pending_count(1, batch);
-	batch.increment(blocking, effect);
-
-	return (skip = false) => {
-		boundary.update_pending_count(-1, batch);
-		batch.decrement(blocking, effect, skip);
-	};
-}
-
-/** @import { Derived, Effect, Source } from '#client' */
-/** @import { Batch } from './batch.js'; */
-/** @import { Boundary } from '../dom/blocks/boundary.js'; */
-
-/**
- * This allows us to track 'reactivity loss' that occurs when signals
- * are read after a non-context-restoring `await`. Dev-only
- * @type {{ effect: Effect, warned: boolean } | null}
- */
-let reactivity_loss_tracker = null;
-
-/** @param {{ effect: Effect, warned: boolean } | null} v */
-function set_reactivity_loss_tracker(v) {
-	reactivity_loss_tracker = v;
-}
-
-const recent_async_deriveds = new Set();
-
-/**
- * @template V
- * @param {() => V} fn
- * @returns {Derived<V>}
- */
-/*#__NO_SIDE_EFFECTS__*/
-function derived(fn) {
-	var flags = DERIVED | DIRTY;
-	var parent_derived =
-		active_reaction !== null && (active_reaction.f & DERIVED) !== 0
-			? /** @type {Derived} */ (active_reaction)
-			: null;
-
-	if (active_effect !== null) {
-		// Since deriveds are evaluated lazily, any effects created inside them are
-		// created too late to ensure that the parent effect is added to the tree
-		active_effect.f |= EFFECT_PRESERVED;
-	}
-
-	/** @type {Derived<V>} */
-	const signal = {
-		ctx: component_context,
-		deps: null,
-		effects: null,
-		equals: equals$1,
-		f: flags,
-		fn,
-		reactions: null,
-		rv: 0,
-		v: /** @type {V} */ (UNINITIALIZED),
-		wv: 0,
-		parent: parent_derived ?? active_effect,
-		ac: null
-	};
-
-	if (DEV && tracing_mode_flag) {
-		signal.created = get_error('created at');
-	}
-
-	return signal;
-}
-
-/**
- * @template V
- * @param {() => V | Promise<V>} fn
- * @param {string} [label]
- * @param {string} [location] If provided, print a warning if the value is not read immediately after update
- * @returns {Promise<Source<V>>}
- */
-/*#__NO_SIDE_EFFECTS__*/
-function async_derived(fn, label, location) {
-	let parent = /** @type {Effect | null} */ (active_effect);
-
-	if (parent === null) {
-		async_derived_orphan();
-	}
-
-	var promise = /** @type {Promise<V>} */ (/** @type {unknown} */ (undefined));
-	var signal = source(/** @type {V} */ (UNINITIALIZED));
-
-	if (DEV) signal.label = label;
-
-	// only suspend in async deriveds created on initialisation
-	var should_suspend = !active_reaction;
-
-	/** @type {Map<Batch, ReturnType<typeof deferred<V>>>} */
-	var deferreds = new Map();
-
-	async_effect(() => {
-		if (DEV) {
-			reactivity_loss_tracker = {
-				effect: /** @type {Effect} */ (active_effect),
-				warned: false
-			};
-		}
-
-		var effect = /** @type {Effect} */ (active_effect);
-
-		/** @type {ReturnType<typeof deferred<V>>} */
-		var d = deferred();
-		promise = d.promise;
-
-		try {
-			// If this code is changed at some point, make sure to still access the then property
-			// of fn() to read any signals it might access, so that we track them as dependencies.
-			// We call `unset_context` to undo any `save` calls that happen inside `fn()`
-			Promise.resolve(fn()).then(d.resolve, d.reject).finally(unset_context);
-		} catch (error) {
-			d.reject(error);
-			unset_context();
-		}
-
-		if (DEV) {
-			reactivity_loss_tracker = null;
-		}
-
-		var batch = /** @type {Batch} */ (current_batch);
-
-		if (should_suspend) {
-			// we only increment the batch's pending state for updates, not creation, otherwise
-			// we will decrement to zero before the work that depends on this promise (e.g. a
-			// template effect) has initialized, causing the batch to resolve prematurely
-			if ((effect.f & REACTION_RAN) !== 0) {
-				var decrement_pending = increment_pending();
-			}
-
-			if (/** @type {Boundary} */ (parent.b).is_rendered()) {
-				deferreds.get(batch)?.reject(STALE_REACTION);
-				deferreds.delete(batch); // delete to ensure correct order in Map iteration below
-			} else {
-				// While the boundary is still showing pending, a new run supersedes all older in-flight runs
-				// for this async expression. Cancel eagerly so resolution cannot commit stale values.
-				for (const d of deferreds.values()) {
-					d.reject(STALE_REACTION);
-				}
-				deferreds.clear();
-			}
-
-			deferreds.set(batch, d);
-		}
-
-		/**
-		 * @param {any} value
-		 * @param {unknown} error
-		 */
-		const handler = (value, error = undefined) => {
-			if (DEV) {
-				reactivity_loss_tracker = null;
-			}
-
-			if (decrement_pending) {
-				// don't trigger an update if we're only here because
-				// the promise was superseded before it could resolve
-				var skip = error === STALE_REACTION;
-				decrement_pending(skip);
-			}
-
-			if (error === STALE_REACTION || (effect.f & DESTROYED) !== 0) {
-				return;
-			}
-
-			batch.activate();
-
-			if (error) {
-				signal.f |= ERROR_VALUE;
-
-				// @ts-expect-error the error is the wrong type, but we don't care
-				internal_set(signal, error);
-			} else {
-				if ((signal.f & ERROR_VALUE) !== 0) {
-					signal.f ^= ERROR_VALUE;
-				}
-
-				internal_set(signal, value);
-
-				// All prior async derived runs are now stale
-				for (const [b, d] of deferreds) {
-					deferreds.delete(b);
-					if (b === batch) break;
-					d.reject(STALE_REACTION);
-				}
-
-				if (DEV && location !== undefined) {
-					recent_async_deriveds.add(signal);
-
-					setTimeout(() => {
-						if (recent_async_deriveds.has(signal)) {
-							await_waterfall(/** @type {string} */ (signal.label), location);
-							recent_async_deriveds.delete(signal);
-						}
-					});
-				}
-			}
-
-			batch.deactivate();
-		};
-
-		d.promise.then(handler, (e) => handler(null, e || 'unknown'));
-	});
-
-	teardown(() => {
-		for (const d of deferreds.values()) {
-			d.reject(STALE_REACTION);
-		}
-	});
-
-	if (DEV) {
-		// add a flag that lets this be printed as a derived
-		// when using `$inspect.trace()`
-		signal.f |= ASYNC;
-	}
-
-	return new Promise((fulfil) => {
-		/** @param {Promise<V>} p */
-		function next(p) {
-			function go() {
-				if (p === promise) {
-					fulfil(signal);
-				} else {
-					// if the effect re-runs before the initial promise
-					// resolves, delay resolution until we have a value
-					next(promise);
-				}
-			}
-
-			p.then(go, go);
-		}
-
-		next(promise);
-	});
-}
-
-/**
- * @template V
- * @param {() => V} fn
- * @returns {Derived<V>}
- */
-/*#__NO_SIDE_EFFECTS__*/
-function user_derived(fn) {
-	const d = derived(fn);
-
-	push_reaction_value(d);
-
-	return d;
-}
-
-/**
- * @template V
- * @param {() => V} fn
- * @returns {Derived<V>}
- */
-/*#__NO_SIDE_EFFECTS__*/
-function derived_safe_equal(fn) {
-	const signal = derived(fn);
-	signal.equals = safe_equals;
-	return signal;
-}
-
-/**
- * @param {Derived} derived
- * @returns {void}
- */
-function destroy_derived_effects(derived) {
-	var effects = derived.effects;
-
-	if (effects !== null) {
-		derived.effects = null;
-
-		for (var i = 0; i < effects.length; i += 1) {
-			destroy_effect(/** @type {Effect} */ (effects[i]));
-		}
-	}
-}
-
-/**
- * The currently updating deriveds, used to detect infinite recursion
- * in dev mode and provide a nicer error than 'too much recursion'
- * @type {Derived[]}
- */
-let stack = [];
-
-/**
- * @param {Derived} derived
- * @returns {Effect | null}
- */
-function get_derived_parent_effect(derived) {
-	var parent = derived.parent;
-	while (parent !== null) {
-		if ((parent.f & DERIVED) === 0) {
-			// The original parent effect might've been destroyed but the derived
-			// is used elsewhere now - do not return the destroyed effect in that case
-			return (parent.f & DESTROYED) === 0 ? /** @type {Effect} */ (parent) : null;
-		}
-		parent = parent.parent;
-	}
-	return null;
-}
-
-/**
- * @template T
- * @param {Derived} derived
- * @returns {T}
- */
-function execute_derived(derived) {
-	var value;
-	var prev_active_effect = active_effect;
-
-	set_active_effect(get_derived_parent_effect(derived));
-
-	if (DEV) {
-		let prev_eager_effects = eager_effects;
-		set_eager_effects(new Set());
-		try {
-			if (includes.call(stack, derived)) {
-				derived_references_self();
-			}
-
-			stack.push(derived);
-
-			derived.f &= ~WAS_MARKED;
-			destroy_derived_effects(derived);
-			value = update_reaction(derived);
-		} finally {
-			set_active_effect(prev_active_effect);
-			set_eager_effects(prev_eager_effects);
-			stack.pop();
-		}
-	} else {
-		try {
-			derived.f &= ~WAS_MARKED;
-			destroy_derived_effects(derived);
-			value = update_reaction(derived);
-		} finally {
-			set_active_effect(prev_active_effect);
-		}
-	}
-
-	return value;
-}
-
-/**
- * @param {Derived} derived
- * @returns {void}
- */
-function update_derived(derived) {
-	var value = execute_derived(derived);
-
-	if (!derived.equals(value)) {
-		derived.wv = increment_write_version();
-
-		// in a fork, we don't update the underlying value, just `batch_values`.
-		// the underlying value will be updated when the fork is committed.
-		// otherwise, the next time we get here after a 'real world' state
-		// change, `derived.equals` may incorrectly return `true`
-		if (!current_batch?.is_fork || derived.deps === null) {
-			if (current_batch !== null) {
-				current_batch.capture(derived, value, true);
-			} else {
-				derived.v = value;
-			}
-
-			// deriveds without dependencies should never be recomputed
-			if (derived.deps === null) {
-				set_signal_status(derived, CLEAN);
-				return;
-			}
-		}
-	}
-
-	// don't mark derived clean if we're reading it inside a
-	// cleanup function, or it will cache a stale value
-	if (is_destroying_effect) {
-		return;
-	}
-
-	// During time traveling we don't want to reset the status so that
-	// traversal of the graph in the other batches still happens
-	if (batch_values !== null) {
-		// only cache the value if we're in a tracking context, otherwise we won't
-		// clear the cache in `mark_reactions` when dependencies are updated
-		if (effect_tracking() || current_batch?.is_fork) {
-			batch_values.set(derived, value);
-		}
-	} else {
-		update_derived_status(derived);
-	}
-}
-
-/**
- * @param {Derived} derived
- */
-function freeze_derived_effects(derived) {
-	if (derived.effects === null) return;
-
-	for (const e of derived.effects) {
-		// if the effect has a teardown function or abort signal, call it
-		if (e.teardown || e.ac) {
-			e.teardown?.();
-			e.ac?.abort(STALE_REACTION);
-
-			// make it a noop so it doesn't get called again if the derived
-			// is unfrozen. we don't set it to `null`, because the existence
-			// of a teardown function is what determines whether the
-			// effect runs again during unfreezing
-			e.teardown = noop;
-			e.ac = null;
-
-			remove_reactions(e, 0);
-			destroy_effect_children(e);
-		}
-	}
-}
-
-/**
- * @param {Derived} derived
- */
-function unfreeze_derived_effects(derived) {
-	if (derived.effects === null) return;
-
-	for (const e of derived.effects) {
-		// if the effect was previously frozen — indicated by the presence
-		// of a teardown function — unfreeze it
-		if (e.teardown) {
-			update_effect(e);
-		}
-	}
-}
-
 /** @import { Derived, Effect, Source, Value } from '#client' */
 
-/** @type {Set<any>} */
+/** @type {Set<Effect>} */
 let eager_effects = new Set();
 
 /** @type {Map<Source, any>} */
@@ -3898,7 +4255,7 @@ function set(source, value, should_proxy = false) {
 		(!untracking || (active_reaction.f & EAGER_EFFECT) !== 0) &&
 		is_runes() &&
 		(active_reaction.f & (DERIVED | BLOCK_EFFECT | ASYNC | EAGER_EFFECT)) !== 0 &&
-		(current_sources === null || !includes.call(current_sources, source))
+		(current_sources === null || !current_sources.has(source))
 	) {
 		state_unsafe_mutation();
 	}
@@ -4012,7 +4369,18 @@ function flush_eager_effects() {
 			set_signal_status(effect, MAYBE_DIRTY);
 		}
 
-		if (is_dirty(effect)) {
+		let dirty;
+
+		try {
+			dirty = is_dirty(effect);
+		} catch {
+			// Dirty-checking can evaluate derived dependencies and throw in cases where
+			// parent effects are about to destroy this eager effect. Run the effect so
+			// its own error handling can deal with transient failures.
+			dirty = true;
+		}
+
+		if (dirty) {
 			update_effect(effect);
 		}
 	}
@@ -4048,12 +4416,6 @@ function mark_reactions(signal, status, updated_during_traversal) {
 		// In legacy mode, skip the current effect to prevent infinite loops
 		if (!runes && reaction === active_effect) continue;
 
-		// Inspect effects need to run immediately, so that the stack trace makes sense
-		if (DEV && (flags & EAGER_EFFECT) !== 0) {
-			eager_effects.add(reaction);
-			continue;
-		}
-
 		var not_dirty = (flags & DIRTY) === 0;
 
 		// don't set a DIRTY reaction to MAYBE_DIRTY
@@ -4061,14 +4423,22 @@ function mark_reactions(signal, status, updated_during_traversal) {
 			set_signal_status(reaction, status);
 		}
 
-		if ((flags & DERIVED) !== 0) {
+		if ((flags & EAGER_EFFECT) !== 0) {
+			// Eager effects need to run immediately:
+			// - for $inspect so that the stack trace makes sense
+			// - for $state.eager because they might be without an effect parent
+			eager_effects.add(/** @type {Effect} */ (reaction));
+		} else if ((flags & DERIVED) !== 0) {
 			var derived = /** @type {Derived} */ (reaction);
 
 			batch_values?.delete(derived);
 
 			if ((flags & WAS_MARKED) === 0) {
-				// Only connected deriveds can be reliably unmarked right away
-				if (flags & CONNECTED) {
+				// Only connected deriveds being executed outside the update cycle can be reliably unmarked right away
+				if (
+					flags & CONNECTED &&
+					(active_effect === null || (active_effect.f & REACTION_IS_UPDATING) === 0)
+				) {
 					reaction.f |= WAS_MARKED;
 				}
 
@@ -4630,21 +5000,15 @@ function init_operations() {
 
 	if (is_extensible(element_prototype)) {
 		// the following assignments improve perf of lookups on DOM nodes
-		// @ts-expect-error
-		element_prototype.__click = undefined;
-		// @ts-expect-error
-		element_prototype.__className = undefined;
-		// @ts-expect-error
-		element_prototype.__attributes = null;
-		// @ts-expect-error
-		element_prototype.__style = undefined;
+		/** @type {any} */ (element_prototype)[CLASS_CACHE] = undefined;
+		/** @type {any} */ (element_prototype)[ATTRIBUTES_CACHE] = null;
+		/** @type {any} */ (element_prototype)[STYLE_CACHE] = undefined;
 		// @ts-expect-error
 		element_prototype.__e = undefined;
 	}
 
 	if (is_extensible(text_prototype)) {
-		// @ts-expect-error
-		text_prototype.__t = undefined;
+		/** @type {any} */ (text_prototype)[TEXT_CACHE] = undefined;
 	}
 
 	if (DEV) {
@@ -4750,6 +5114,12 @@ function should_defer_append() {
 }
 
 /**
+ * Branching here is intentional and load-bearing for perf. `createElement(tag)`
+ * hits a fast path in Blink that `createElementNS(NAMESPACE_HTML, tag)` doesn't,
+ * and passing an explicit `undefined` as the trailing options arg measurably
+ * slows both APIs. Funnelling every case through a single `createElementNS(ns,
+ * tag, options)` call would be smaller but slower on the HTML path.
+ *
  * @template {keyof HTMLElementTagNameMap | string} T
  * @param {T} tag
  * @param {string} [namespace]
@@ -4757,79 +5127,14 @@ function should_defer_append() {
  * @returns {T extends keyof HTMLElementTagNameMap ? HTMLElementTagNameMap[T] : Element}
  */
 function create_element(tag, namespace, is) {
-	let options = is ? { is } : undefined;
-	return /** @type {T extends keyof HTMLElementTagNameMap ? HTMLElementTagNameMap[T] : Element} */ (
-		document.createElementNS(namespace ?? NAMESPACE_HTML, tag, options)
-	);
-}
-
-let listening_to_form_reset = false;
-
-function add_form_reset_listener() {
-	if (!listening_to_form_reset) {
-		listening_to_form_reset = true;
-		document.addEventListener(
-			'reset',
-			(evt) => {
-				// Needs to happen one tick later or else the dom properties of the form
-				// elements have not updated to their reset values yet
-				Promise.resolve().then(() => {
-					if (!evt.defaultPrevented) {
-						for (const e of /**@type {HTMLFormElement} */ (evt.target).elements) {
-							// @ts-expect-error
-							e.__on_r?.();
-						}
-					}
-				});
-			},
-			// In the capture phase to guarantee we get noticed of it (no possibility of stopPropagation)
-			{ capture: true }
+	if (namespace == null || namespace === NAMESPACE_HTML) {
+		return /** @type {T extends keyof HTMLElementTagNameMap ? HTMLElementTagNameMap[T] : Element} */ (
+			is ? document.createElement(tag, { is }) : document.createElement(tag)
 		);
 	}
-}
-
-/**
- * @template T
- * @param {() => T} fn
- */
-function without_reactive_context(fn) {
-	var previous_reaction = active_reaction;
-	var previous_effect = active_effect;
-	set_active_reaction(null);
-	set_active_effect(null);
-	try {
-		return fn();
-	} finally {
-		set_active_reaction(previous_reaction);
-		set_active_effect(previous_effect);
-	}
-}
-
-/**
- * Listen to the given event, and then instantiate a global form reset listener if not already done,
- * to notify all bindings when the form is reset
- * @param {HTMLElement} element
- * @param {string} event
- * @param {(is_reset?: true) => void} handler
- * @param {(is_reset?: true) => void} [on_reset]
- */
-function listen_to_event_and_reset_event(element, event, handler, on_reset = handler) {
-	element.addEventListener(event, () => without_reactive_context(handler));
-	// @ts-expect-error
-	const prev = element.__on_r;
-	if (prev) {
-		// special case for checkbox that can have multiple binds (group & checked)
-		// @ts-expect-error
-		element.__on_r = () => {
-			prev();
-			on_reset(true);
-		};
-	} else {
-		// @ts-expect-error
-		element.__on_r = () => on_reset(true);
-	}
-
-	add_form_reset_listener();
+	return /** @type {T extends keyof HTMLElementTagNameMap ? HTMLElementTagNameMap[T] : Element} */ (
+		is ? document.createElementNS(namespace, tag, { is }) : document.createElementNS(namespace, tag)
+	);
 }
 
 /** @import { Blocker, ComponentContext, ComponentContextLegacy, Derived, Effect, TemplateNode, TransitionManager } from '#client' */
@@ -5000,7 +5305,11 @@ function user_effect(fn) {
 	// Non-nested `$effect(...)` in a component should be deferred
 	// until the component is mounted
 	var flags = /** @type {Effect} */ (active_effect).f;
-	var defer = !active_reaction && (flags & BRANCH_EFFECT) !== 0 && (flags & REACTION_RAN) === 0;
+	var defer =
+		!active_reaction &&
+		(flags & BRANCH_EFFECT) !== 0 &&
+		component_context !== null &&
+		!component_context.i;
 
 	if (defer) {
 		// Top-level `$effect(...)` in an unmounted component — defer until mount
@@ -5152,7 +5461,9 @@ function render_effect(fn, flags = 0) {
  */
 function template_effect(fn, sync = [], async = [], blockers = []) {
 	flatten(blockers, sync, async, (values) => {
-		create_effect(RENDER_EFFECT, () => fn(...values.map(get)));
+		create_effect(RENDER_EFFECT, () => {
+			fn(...values.map(get));
+		});
 	});
 }
 
@@ -5258,7 +5569,7 @@ function destroy_effect(effect, remove_dom = true) {
 		removed = true;
 	}
 
-	set_signal_status(effect, DESTROYING);
+	effect.f |= DESTROYING;
 	destroy_effect_children(effect, remove_dom && !removed);
 	remove_reactions(effect, 0);
 
@@ -5389,16 +5700,22 @@ function pause_children(effect, transitions, local) {
 
 	while (child !== null) {
 		var sibling = child.next;
-		var transparent =
-			(child.f & EFFECT_TRANSPARENT) !== 0 ||
-			// If this is a branch effect without a block effect parent,
-			// it means the parent block effect was pruned. In that case,
-			// transparency information was transferred to the branch effect.
-			((child.f & BRANCH_EFFECT) !== 0 && (effect.f & BLOCK_EFFECT) !== 0);
-		// TODO we don't need to call pause_children recursively with a linked list in place
-		// it's slightly more involved though as we have to account for `transparent` changing
-		// through the tree.
-		pause_children(child, transitions, transparent ? local : false);
+
+		// If this child is a root effect, then it will become an independent root when its parent
+		// is destroyed, it should therefore not become inert nor partake in transitions.
+		if ((child.f & ROOT_EFFECT) === 0) {
+			var transparent =
+				(child.f & EFFECT_TRANSPARENT) !== 0 ||
+				// If this is a branch effect without a block effect parent,
+				// it means the parent block effect was pruned. In that case,
+				// transparency information was transferred to the branch effect.
+				((child.f & BRANCH_EFFECT) !== 0 && (effect.f & BLOCK_EFFECT) !== 0);
+			// TODO we don't need to call pause_children recursively with a linked list in place
+			// it's slightly more involved though as we have to account for `transparent` changing
+			// through the tree.
+			pause_children(child, transitions, transparent ? local : false);
+		}
+
 		child = sibling;
 	}
 }
@@ -5474,6 +5791,9 @@ function move_effect(effect, fragment) {
 
 /** @import { Derived, Effect, Reaction, Source, Value } from '#client' */
 
+/**
+ * True if updating in an effect context that is reactive (i.e. not branch/root effects)
+ */
 let is_updating_effect = false;
 
 let is_destroying_effect = false;
@@ -5504,18 +5824,14 @@ function set_active_effect(effect) {
 /**
  * When sources are created within a reaction, reading and writing
  * them within that reaction should not cause a re-run
- * @type {null | Source[]}
+ * @type {null | Set<Source>}
  */
 let current_sources = null;
 
 /** @param {Value} value */
 function push_reaction_value(value) {
 	if (active_reaction !== null && (!async_mode_flag )) {
-		if (current_sources === null) {
-			current_sources = [value];
-		} else {
-			current_sources.push(value);
-		}
+		(current_sources ??= new Set()).add(value);
 	}
 }
 
@@ -5616,7 +5932,7 @@ function schedule_possible_effect_self_invalidation(signal, effect, root = true)
 	var reactions = signal.reactions;
 	if (reactions === null) return;
 
-	if (current_sources !== null && includes.call(current_sources, signal)) {
+	if (current_sources !== null && current_sources.has(signal)) {
 		return;
 	}
 
@@ -5822,6 +6138,16 @@ function remove_reaction(signal, dependency) {
 			update_derived_status(derived);
 		}
 
+		// Call abort controller, noone's listening to this derived anymore
+		if (derived.ac !== null) {
+			without_reactive_context(() => {
+				/** @type {AbortController} */ (derived.ac).abort(STALE_REACTION);
+				derived.ac = null;
+				// ensure it reruns right away next time instead of potentially returning a rejected promise as its value
+				set_signal_status(derived, DIRTY);
+			});
+		}
+
 		// freeze any effects inside this derived
 		freeze_derived_effects(derived);
 
@@ -5861,7 +6187,7 @@ function update_effect(effect) {
 	var was_updating_effect = is_updating_effect;
 
 	active_effect = effect;
-	is_updating_effect = true;
+	is_updating_effect = (flags & (BRANCH_EFFECT | ROOT_EFFECT)) === 0; // Branch/root effects are not reactive contexts
 
 	if (DEV) {
 		var previous_component_fn = dev_current_component_function;
@@ -5933,7 +6259,7 @@ function get(signal) {
 		// we don't add the dependency, because that would create a memory leak
 		var destroyed = active_effect !== null && (active_effect.f & DESTROYED) !== 0;
 
-		if (!destroyed && (current_sources === null || !includes.call(current_sources, signal))) {
+		if (!destroyed && (current_sources === null || !current_sources.has(signal))) {
 			var deps = active_reaction.deps;
 
 			if ((active_reaction.f & REACTION_IS_UPDATING) !== 0) {
@@ -5953,9 +6279,15 @@ function get(signal) {
 					}
 				}
 			} else {
-				// we're adding a dependency outside the init/update cycle
-				// (i.e. after an `await`)
-				(active_reaction.deps ??= []).push(signal);
+				// We're adding a dependency outside the init/update cycle (i.e. after an `await`).
+				// We have to deduplicate deps/reactions in this case or remove_reactions could
+				// disconnect deps/reactions that are actually still in use (if skip_deps says
+				// "disconnect all after this index" and some of the signals are also present in
+				// list prior to the cutoff index, i.e. that should be kept).
+				active_reaction.deps ??= [];
+				if (!includes.call(active_reaction.deps, signal)) {
+					active_reaction.deps.push(signal);
+				}
 
 				var reactions = signal.reactions;
 
@@ -5972,8 +6304,14 @@ function get(signal) {
 		if (
 			!untracking &&
 			reactivity_loss_tracker &&
+			// By checking that current/previous batch are null we filter out false positives.
+			// reactivity_loss_tracker is only reset after a microtask, so if a flush happens
+			// before that, we get warnings for things we shouldn't warn on.
+			current_batch === null &&
+			previous_batch === null &&
 			!reactivity_loss_tracker.warned &&
-			(reactivity_loss_tracker.effect.f & REACTION_IS_UPDATING) === 0
+			(reactivity_loss_tracker.effect.f & REACTION_IS_UPDATING) === 0 &&
+			!reactivity_loss_tracker.effect_deps.has(signal)
 		) {
 			reactivity_loss_tracker.warned = true;
 
@@ -6453,9 +6791,9 @@ function handle_event_propagation(event) {
 	});
 
 	// This started because of Chromium issue https://chromestatus.com/feature/5128696823545856,
-	// where removal or moving of of the DOM can cause sync `blur` events to fire, which can cause logic
+	// where removal or moving of the DOM can cause sync `blur` events to fire, which can cause logic
 	// to run inside the current `active_reaction`, which isn't what we want at all. However, on reflection,
-	// it's probably best that all event handled by Svelte have this behaviour, as we don't really want
+	// it's probably best that all events handled by Svelte have this behaviour, as we don't really want
 	// an event handler to run in the context of another reaction or effect.
 	var previous_reaction = active_reaction;
 	var previous_effect = active_effect;
@@ -6473,12 +6811,7 @@ function handle_event_propagation(event) {
 		var other_errors = [];
 
 		while (current_target !== null) {
-			/** @type {null | Element} */
-			var parent_element =
-				current_target.assignedSlot ||
-				current_target.parentNode ||
-				/** @type {any} */ (current_target).host ||
-				null;
+			if (current_target === handler_element) break;
 
 			try {
 				// @ts-expect-error
@@ -6500,10 +6833,10 @@ function handle_event_propagation(event) {
 					throw_error = error;
 				}
 			}
-			if (event.cancelBubble || parent_element === handler_element || parent_element === null) {
-				break;
-			}
-			current_target = parent_element;
+			if (event.cancelBubble) break;
+
+			path_idx++;
+			current_target = path_idx < path.length ? /** @type {Element} */ (path[path_idx]) : null;
 		}
 
 		if (throw_error) {
@@ -6712,10 +7045,9 @@ let should_intro = true;
 function set_text(text, value) {
 	// For objects, we apply string coercion (which might make things like $state array references in the template reactive) before diffing
 	var str = value == null ? '' : typeof value === 'object' ? `${value}` : value;
-	// @ts-expect-error
-	if (str !== (text.__t ??= text.nodeValue)) {
-		// @ts-expect-error
-		text.__t = str;
+	// prettier-ignore
+	if (str !== (/** @type {any} */ (text)[TEXT_CACHE] ??= text.nodeValue)) {
+		/** @type {any} */ (text)[TEXT_CACHE] = str;
 		text.nodeValue = `${str}`;
 	}
 }
@@ -7055,8 +7387,16 @@ class BranchManager {
 			var offscreen = this.#offscreen.get(key);
 
 			if (offscreen) {
+				// effect could have been outro'ed before through a prior batch — resume if necessary
+				resume_effect(offscreen.effect);
 				this.#onscreen.set(key, offscreen.effect);
 				this.#offscreen.delete(key);
+
+				if (DEV) {
+					// Tell hmr.js about the anchor it should use for updates,
+					// since the initial one will be removed
+					/** @type {any} */ (offscreen.fragment.lastChild)[HMR_ANCHOR] = this.anchor;
+				}
 
 				// remove the anchor...
 				/** @type {TemplateNode} */ (offscreen.fragment.lastChild).remove();
@@ -7216,16 +7556,16 @@ function await_block(node, get_input, pending_fn, then_fn, catch_fn) {
 	var value = runes ? source(v) : mutable_source(v, false, false);
 	var error = runes ? source(v) : mutable_source(v, false, false);
 
+	if (DEV) {
+		value.label = '{#await ...} value';
+		error.label = '{#await ...} error';
+	}
+
 	var branches = new BranchManager(node);
 
 	block(() => {
 		var batch = /** @type {Batch} */ (current_batch);
-
-		// we null out `current_batch` because otherwise `save(...)` will incorrectly restore it —
-		// the batch will already have been committed by the time it resolves
-		batch.deactivate();
 		var input = get_input();
-		batch.activate();
 
 		var destroyed = false;
 
@@ -7243,6 +7583,14 @@ function await_block(node, get_input, pending_fn, then_fn, catch_fn) {
 				// We don't want to restore the previous batch here; {#await} blocks don't follow the async logic
 				// we have elsewhere, instead pending/resolve/fail states are each their own batch so to speak.
 				restore(false);
+				// ...but it might still be set here. That means a `save(...)` has restored it — but that batch will
+				// likely already have been committed by the time it resolves, and this resolve should be processed
+				// in a separate batch. We're not using batch.deactivate()/activate() above because get_input()
+				// could write to sources, which would then incorrectly create a new batch or could mess with
+				// async_derived expecting a current_batch to exist.
+				if (current_batch === batch) {
+					batch.deactivate();
+				}
 				// Make sure we have a batch, since the branch manager expects one to exist
 				Batch.ensure();
 
@@ -7491,7 +7839,9 @@ function each(node, flags, get_collection, get_key, render_fn, fallback_fn = nul
 	var each_array = derived_safe_equal(() => {
 		var collection = get_collection();
 
-		return is_array(collection) ? collection : collection == null ? [] : array_from(collection);
+		return /** @type {V[]} */ (
+			is_array(collection) ? collection : collection == null ? [] : array_from(collection)
+		);
 	});
 
 	if (DEV) {
@@ -8381,15 +8731,24 @@ function transition(flags, element, get_fn, get_params) {
 				intro?.abort();
 			}
 
-			intro = animate(element, get_options(), outro, 1, () => {
-				dispatch_event(element, 'introend');
+			intro = animate(
+				element,
+				get_options(),
+				outro,
+				1,
+				() => {
+					dispatch_event(element, 'introstart');
+				},
+				() => {
+					dispatch_event(element, 'introend');
 
-				// Ensure we cancel the animation to prevent leaking
-				intro?.abort();
-				intro = current_options = undefined;
+					// Ensure we cancel the animation to prevent leaking
+					intro?.abort();
+					intro = current_options = undefined;
 
-				element.style.overflow = overflow;
-			});
+					element.style.overflow = overflow;
+				}
+			);
 		},
 		out(fn) {
 			if (!is_outro) {
@@ -8400,10 +8759,19 @@ function transition(flags, element, get_fn, get_params) {
 
 			element.inert = true;
 
-			outro = animate(element, get_options(), intro, 0, () => {
-				dispatch_event(element, 'outroend');
-				fn?.();
-			});
+			outro = animate(
+				element,
+				get_options(),
+				intro,
+				0,
+				() => {
+					dispatch_event(element, 'outrostart');
+				},
+				() => {
+					dispatch_event(element, 'outroend');
+					fn?.();
+				}
+			);
 		},
 		stop: () => {
 			intro?.abort();
@@ -8448,10 +8816,11 @@ function transition(flags, element, get_fn, get_params) {
  * @param {AnimationConfig | ((opts: { direction: 'in' | 'out' }) => AnimationConfig)} options
  * @param {Animation | undefined} counterpart The corresponding intro/outro to this outro/intro
  * @param {number} t2 The target `t` value — `1` for intro, `0` for outro
+ * @param {(() => void)} on_begin Called just before beginning the animation
  * @param {(() => void)} on_finish Called after successfully completing the animation
  * @returns {Animation}
  */
-function animate(element, options, counterpart, t2, on_finish) {
+function animate(element, options, counterpart, t2, on_begin, on_finish) {
 	var is_intro = t2 === 1;
 
 	if (is_function(options)) {
@@ -8465,7 +8834,7 @@ function animate(element, options, counterpart, t2, on_finish) {
 		queue_micro_task(() => {
 			if (aborted) return;
 			var o = options({ direction: is_intro ? 'in' : 'out' });
-			a = animate(element, o, counterpart, t2, on_finish);
+			a = animate(element, o, counterpart, t2, on_begin, on_finish);
 		});
 
 		// ...but we want to do so without using `async`/`await` everywhere, so
@@ -8484,7 +8853,7 @@ function animate(element, options, counterpart, t2, on_finish) {
 	counterpart?.deactivate();
 
 	if (!options?.duration && !options?.delay) {
-		dispatch_event(element, is_intro ? 'introstart' : 'outrostart');
+		on_begin();
 		on_finish();
 
 		return {
@@ -8524,7 +8893,7 @@ function animate(element, options, counterpart, t2, on_finish) {
 		// remove dummy animation from the stack to prevent conflict with main animation
 		animation.cancel();
 
-		dispatch_event(element, is_intro ? 'introstart' : 'outrostart');
+		on_begin();
 
 		// for bidirectional transitions, we start from the current position,
 		// rather than doing a full intro/outro
@@ -8855,8 +9224,7 @@ function to_style(value, styles) {
  * @returns {Record<string, boolean> | undefined}
  */
 function set_class(dom, is_html, value, hash, prev_classes, next_classes) {
-	// @ts-expect-error need to add __className to patched prototype
-	var prev = dom.__className;
+	var prev = /** @type {any} */ (dom)[CLASS_CACHE];
 
 	if (
 		prev !== value ||
@@ -8878,8 +9246,7 @@ function set_class(dom, is_html, value, hash, prev_classes, next_classes) {
 			}
 		}
 
-		// @ts-expect-error need to add __className to patched prototype
-		dom.__className = value;
+		/** @type {any} */ (dom)[CLASS_CACHE] = value;
 	} else if (next_classes && prev_classes !== next_classes) {
 		for (var key in next_classes) {
 			var is_present = !!next_classes[key];
@@ -8920,8 +9287,7 @@ function update_styles(dom, prev = {}, next, priority) {
  * @param {Record<string, any> | [Record<string, any>, Record<string, any>]} [next_styles]
  */
 function set_style(dom, value, prev_styles, next_styles) {
-	// @ts-expect-error
-	var prev = dom.__style;
+	var prev = /** @type {any} */ (dom)[STYLE_CACHE];
 
 	if (prev !== value) {
 		var next_style_attr = to_style(value, next_styles);
@@ -8934,8 +9300,7 @@ function set_style(dom, value, prev_styles, next_styles) {
 			}
 		}
 
-		// @ts-expect-error
-		dom.__style = value;
+		/** @type {any} */ (dom)[STYLE_CACHE] = value;
 	} else if (next_styles) {
 		if (Array.isArray(next_styles)) {
 			update_styles(dom, prev_styles?.[0], next_styles[0]);
@@ -8998,8 +9363,10 @@ function select_option(select, value, mounting = false) {
  */
 function init_select(select) {
 	var observer = new MutationObserver(() => {
-		// @ts-ignore
-		select_option(select, select.__value);
+		if ('__value' in select) {
+			// @ts-ignore
+			select_option(select, select.__value);
+		}
 		// Deliberately don't update the potential binding value,
 		// the model should be preserved unless explicitly changed
 	});
@@ -9171,8 +9538,7 @@ function set_attribute(element, attribute, value, skip_warning) {
  */
 function get_attributes(element) {
 	return /** @type {Record<string | symbol, unknown>} **/ (
-		// @ts-expect-error
-		element.__attributes ??= {
+		/** @type {any} */ (element)[ATTRIBUTES_CACHE] ??= {
 			[IS_CUSTOM_ELEMENT]: element.nodeName.includes('-'),
 			[IS_HTML]: element.namespaceURI === NAMESPACE_HTML
 		}
@@ -9193,13 +9559,19 @@ function get_setters(element) {
 	var proto = element; // In the case of custom elements there might be setters on the instance
 	var element_proto = Element.prototype;
 
-	// Stop at Element, from there on there's only unnecessary setters we're not interested in
-	// Do not use contructor.name here as that's unreliable in some browser environments
+	// Stop at Element, from there on there's only unnecessary (and dangerous, like innerHTML) setters we're not interested in
+	// Do not use constructor.name here as that's unreliable in some browser environments
 	while (element_proto !== proto) {
 		descriptors = get_descriptors(proto);
 
 		for (var key in descriptors) {
-			if (descriptors[key].set) {
+			if (
+				descriptors[key].set &&
+				// better safe than sorry, we don't want spread attributes to mess with HTML content
+				key !== 'innerHTML' &&
+				key !== 'textContent' &&
+				key !== 'innerText'
+			) {
 				setters.push(key);
 			}
 		}
@@ -9583,7 +9955,7 @@ function bind_this(element_or_component = {}, update, get_value, get_parts) {
 			parts = get_parts?.() || [];
 
 			untrack(() => {
-				if (element_or_component !== get_value(...parts)) {
+				if (!is_bound_this(get_value(...parts), element_or_component)) {
 					update(element_or_component, ...parts);
 					// If this is an effect rerun (cause: each block context changes), then nullify the binding at
 					// the previous position if it isn't already taken over by a different effect.
@@ -9717,7 +10089,7 @@ function bubble_event($$props, event) {
 	}
 }
 
-/** @import { Effect, Source } from './types.js' */
+/** @import { Derived, Effect, Source } from './types.js' */
 
 /**
  * The proxy handler for spread props. Handles the incoming array of props
@@ -9821,8 +10193,14 @@ function prop(props, key, flags, fallback) {
 
 	var fallback_value = /** @type {V} */ (fallback);
 	var fallback_dirty = true;
+	var fallback_signal = /** @type {Derived<V> | undefined} */ (undefined);
 
 	var get_fallback = () => {
+		if (lazy && runes) {
+			fallback_signal ??= derived(/** @type {() => V} */ (fallback));
+			return get(fallback_signal);
+		}
+
 		if (fallback_dirty) {
 			fallback_dirty = false;
 
@@ -11183,10 +11561,10 @@ function Router($$anchor, $$props) {
 	}
 
 	// Props for the component to render
-	let component$1 = mutable_source(null);
+	let component$1 = tag(mutable_source(null), 'component');
 
-	let componentParams = mutable_source(null);
-	let props = mutable_source({});
+	let componentParams = tag(mutable_source(null), 'componentParams');
+	let props = tag(mutable_source({}), 'props');
 
 	// Event dispatcher from Svelte
 	const dispatch = createEventDispatcher();
@@ -11666,7 +12044,7 @@ const routes = derived$1( pages, () => {
 
 Page[FILENAME] = 'ui/components/Page.svelte';
 
-var root$w = add_locations(from_html(`<div><!></div>`), Page[FILENAME], [[41, 0]]);
+var root$U = add_locations(from_html(`<div><!></div>`), Page[FILENAME], [[41, 0]]);
 
 function Page($$anchor, $$props) {
 	check_target(new.target);
@@ -11711,7 +12089,7 @@ function Page($$anchor, $$props) {
 	});
 
 	var $$exports = { ...legacy_api() };
-	var div = root$w();
+	var div = root$U();
 	let classes;
 	var node = child(div);
 
@@ -11728,8 +12106,8 @@ function Page($$anchor, $$props) {
 
 Button[FILENAME] = 'ui/components/Button.svelte';
 
-var root_1$u = add_locations(from_html(`<img/>`), Button[FILENAME], [[86, 2]]);
-var root$v = add_locations(from_html(`<button><!> <!></button>`), Button[FILENAME], [[65, 0]]);
+var root$T = add_locations(from_html(`<img/>`), Button[FILENAME], [[86, 2]]);
+var root_1$m = add_locations(from_html(`<button><!> <!></button>`), Button[FILENAME], [[65, 0]]);
 
 function Button($$anchor, $$props) {
 	check_target(new.target);
@@ -11797,13 +12175,13 @@ function Button($$anchor, $$props) {
 	}
 
 	var $$exports = { ...legacy_api() };
-	var button = root$v();
+	var button = root_1$m();
 	let classes_1;
 	var node = child(button);
 
 	{
 		var consequent = ($$anchor) => {
-			var img = root_1$u();
+			var img = root$T();
 			let classes_2;
 
 			template_effect(
@@ -11875,15 +12253,15 @@ delegate(['click', 'focusout', 'keyup']);
 
 Notification[FILENAME] = 'ui/components/Notification.svelte';
 
-var root_1$t = add_locations(from_html(`<div class="icon type"><img class="icon type"/></div>`), Notification[FILENAME], [[122, 3, [[123, 4]]]]);
-var root_4$6 = add_locations(from_html(`<p></p>`), Notification[FILENAME], [[131, 7]]);
-var root_5$8 = add_locations(from_html(`<h3></h3>`), Notification[FILENAME], [[133, 7]]);
-var root_6$5 = add_locations(from_html(`<button class="dismiss"> </button> <!>`, 1), Notification[FILENAME], [[137, 6]]);
-var root_8$5 = add_locations(from_html(`<button class="icon close"></button>`), Notification[FILENAME], [[142, 6]]);
-var root_2$c = add_locations(from_html(`<div class="heading"><!> <!></div>`), Notification[FILENAME], [[128, 4]]);
-var root_9$4 = add_locations(from_html(`<p></p>`), Notification[FILENAME], [[148, 4]]);
-var root_10$2 = add_locations(from_html(`<p class="links"></p>`), Notification[FILENAME], [[151, 4]]);
-var root$u = add_locations(from_html(`<div><div class="content"><!> <div class="body"><!> <!> <!> <!></div></div> <!></div>`), Notification[FILENAME], [[108, 0, [[120, 1, [[126, 2]]]]]]);
+var root$S = add_locations(from_html(`<div class="icon type"><img class="icon type"/></div>`), Notification[FILENAME], [[122, 3, [[123, 4]]]]);
+var root_1$l = add_locations(from_html(`<p></p>`), Notification[FILENAME], [[131, 7]]);
+var root_2$e = add_locations(from_html(`<h3></h3>`), Notification[FILENAME], [[133, 7]]);
+var root_3$8 = add_locations(from_html(`<button class="dismiss"> </button> <!>`, 1), Notification[FILENAME], [[137, 6]]);
+var root_4$6 = add_locations(from_html(`<button class="icon close"></button>`), Notification[FILENAME], [[142, 6]]);
+var root_5$5 = add_locations(from_html(`<div class="heading"><!> <!></div>`), Notification[FILENAME], [[128, 4]]);
+var root_6$5 = add_locations(from_html(`<p></p>`), Notification[FILENAME], [[148, 4]]);
+var root_7$4 = add_locations(from_html(`<p class="links"></p>`), Notification[FILENAME], [[151, 4]]);
+var root_8$3 = add_locations(from_html(`<div><div class="content"><!> <div class="body"><!> <!> <!> <!></div></div> <!></div>`), Notification[FILENAME], [[108, 0, [[120, 1, [[126, 2]]]]]]);
 
 function Notification($$anchor, $$props) {
 	check_target(new.target);
@@ -12000,14 +12378,14 @@ function Notification($$anchor, $$props) {
 
 	let linksHTML = tag(user_derived(() => getLinksHTML(links())), 'linksHTML');
 	var $$exports = { ...legacy_api() };
-	var div = root$u();
+	var div = root_8$3();
 	let classes_1;
 	var div_1 = child(div);
 	var node = child(div_1);
 
 	{
 		var consequent = ($$anchor) => {
-			var div_2 = root_1$t();
+			var div_2 = root$S();
 			var img = child(div_2);
 
 			template_effect(() => {
@@ -12038,7 +12416,7 @@ function Notification($$anchor, $$props) {
 
 	{
 		var consequent_6 = ($$anchor) => {
-			var div_4 = root_2$c();
+			var div_4 = root_5$5();
 			var node_2 = child(div_4);
 
 			{
@@ -12048,14 +12426,14 @@ function Notification($$anchor, $$props) {
 
 					{
 						var consequent_1 = ($$anchor) => {
-							var p = root_4$6();
+							var p = root_1$l();
 
 							html(p, heading, true);
 							append($$anchor, p);
 						};
 
 						var alternate = ($$anchor) => {
-							var h3 = root_5$8();
+							var h3 = root_2$e();
 
 							html(h3, heading, true);
 							append($$anchor, h3);
@@ -12090,7 +12468,7 @@ function Notification($$anchor, $$props) {
 
 			{
 				var consequent_3 = ($$anchor) => {
-					var fragment_1 = root_6$5();
+					var fragment_1 = root_3$8();
 					var button = first_child(fragment_1);
 					var text = child(button);
 
@@ -12153,7 +12531,7 @@ function Notification($$anchor, $$props) {
 				};
 
 				var consequent_5 = ($$anchor) => {
-					var button_1 = root_8$5();
+					var button_1 = root_4$6();
 
 					template_effect(() => set_attribute(button_1, 'title', $strings()["dismiss_notice"]));
 
@@ -12197,7 +12575,7 @@ function Notification($$anchor, $$props) {
 
 	{
 		var consequent_7 = ($$anchor) => {
-			var p_1 = root_9$4();
+			var p_1 = root_6$5();
 
 			html(p_1, extra, true);
 			append($$anchor, p_1);
@@ -12218,7 +12596,7 @@ function Notification($$anchor, $$props) {
 
 	{
 		var consequent_8 = ($$anchor) => {
-			var p_2 = root_10$2();
+			var p_2 = root_7$4();
 
 			html(p_2, () => get(linksHTML), true);
 			append($$anchor, p_2);
@@ -12268,8 +12646,8 @@ delegate(['click']);
 
 Notifications[FILENAME] = 'ui/components/Notifications.svelte';
 
-var root_5$7 = add_locations(from_html(`<p></p>`), Notifications[FILENAME], [[35, 6]]);
-var root_1$s = add_locations(from_html(`<div id="notifications" class="notifications wrapper"></div>`), Notifications[FILENAME], [[29, 1]]);
+var root$R = add_locations(from_html(`<p></p>`), Notifications[FILENAME], [[35, 6]]);
+var root_1$k = add_locations(from_html(`<div id="notifications" class="notifications wrapper"></div>`), Notifications[FILENAME], [[29, 1]]);
 
 function Notifications($$anchor, $$props) {
 	check_target(new.target);
@@ -12311,7 +12689,7 @@ function Notifications($$anchor, $$props) {
 
 	{
 		var consequent_2 = ($$anchor) => {
-			var div = root_1$s();
+			var div = root_1$k();
 
 			add_svelte_meta(
 				() => each(div, 5, $notifications, (notification) => notification.render_key, ($$anchor, notification) => {
@@ -12340,7 +12718,7 @@ function Notifications($$anchor, $$props) {
 
 											{
 												var consequent = ($$anchor) => {
-													var p = root_5$7();
+													var p = root$R();
 
 													html(p, () => get(notification).message, true);
 													reset(p);
@@ -12420,8 +12798,8 @@ function Notifications($$anchor, $$props) {
 
 SubNavItem[FILENAME] = 'ui/components/SubNavItem.svelte';
 
-var root_1$r = add_locations(from_html(`<div><img class="notice-icon svelte-1gifctk"/></div>`), SubNavItem[FILENAME], [[27, 3, [[28, 4]]]]);
-var root$t = add_locations(from_html(`<li><a> <!></a></li>`), SubNavItem[FILENAME], [[15, 0, [[16, 1]]]]);
+var root$Q = add_locations(from_html(`<div><img class="notice-icon svelte-1gifctk"/></div>`), SubNavItem[FILENAME], [[27, 3, [[28, 4]]]]);
+var root_1$j = add_locations(from_html(`<li><a> <!></a></li>`), SubNavItem[FILENAME], [[15, 0, [[16, 1]]]]);
 
 function SubNavItem($$anchor, $$props) {
 	check_target(new.target);
@@ -12450,7 +12828,7 @@ function SubNavItem($$anchor, $$props) {
 	);
 
 	var $$exports = { ...legacy_api() };
-	var li = root$t();
+	var li = root_1$j();
 	let classes;
 	var a = child(li);
 	var text = child(a);
@@ -12458,7 +12836,7 @@ function SubNavItem($$anchor, $$props) {
 
 	{
 		var consequent = ($$anchor) => {
-			var div = root_1$r();
+			var div = root$Q();
 			var img = child(div);
 
 			template_effect(() => {
@@ -12527,9 +12905,9 @@ delegate(['focusin', 'focusout']);
 
 SubNav[FILENAME] = 'ui/components/SubNav.svelte';
 
-var root_3$8 = add_locations(from_html(`<li class="step-arrow"><img alt=""/></li>`), SubNav[FILENAME], [[30, 4, [[31, 5]]]]);
-var root_2$b = add_locations(from_html(`<!> <!>`, 1), SubNav[FILENAME], []);
-var root_1$q = add_locations(from_html(`<ul></ul>`), SubNav[FILENAME], [[25, 1]]);
+var root$P = add_locations(from_html(`<li class="step-arrow"><img alt=""/></li>`), SubNav[FILENAME], [[30, 4, [[31, 5]]]]);
+var root_1$i = add_locations(from_html(`<!> <!>`, 1), SubNav[FILENAME], []);
+var root_2$d = add_locations(from_html(`<ul></ul>`), SubNav[FILENAME], [[25, 1]]);
 
 function SubNav($$anchor, $$props) {
 	check_target(new.target);
@@ -12562,12 +12940,12 @@ function SubNav($$anchor, $$props) {
 
 	{
 		var consequent_1 = ($$anchor) => {
-			var ul = root_1$q();
+			var ul = root_2$d();
 			let classes;
 
 			add_svelte_meta(
 				() => each(ul, 21, () => get(displayItems), index, ($$anchor, page, index) => {
-					var fragment_1 = root_2$b();
+					var fragment_1 = root_1$i();
 					var node_1 = first_child(fragment_1);
 
 					add_svelte_meta(
@@ -12587,7 +12965,7 @@ function SubNav($$anchor, $$props) {
 
 					{
 						var consequent = ($$anchor) => {
-							var li = root_3$8();
+							var li = root$P();
 							var img = child(li);
 
 							reset(li);
@@ -12639,7 +13017,7 @@ function SubNav($$anchor, $$props) {
 
 SubPages[FILENAME] = 'ui/components/SubPages.svelte';
 
-var root_1$p = add_locations(from_html(`<div><!> <!></div>`), SubPages[FILENAME], [[24, 1]]);
+var root$O = add_locations(from_html(`<div><!> <!></div>`), SubPages[FILENAME], [[24, 1]]);
 
 function SubPages($$anchor, $$props) {
 	check_target(new.target);
@@ -12664,7 +13042,7 @@ function SubPages($$anchor, $$props) {
 
 	{
 		var consequent_1 = ($$anchor) => {
-			var div = root_1$p();
+			var div = root$O();
 			var node_1 = child(div);
 
 			add_svelte_meta(
@@ -12841,7 +13219,7 @@ function active(node, opts) {
 
 SubPage[FILENAME] = 'ui/components/SubPage.svelte';
 
-var root$s = add_locations(from_html(`<div><!></div>`), SubPage[FILENAME], [[15, 0]]);
+var root$N = add_locations(from_html(`<div><!></div>`), SubPage[FILENAME], [[15, 0]]);
 
 function SubPage($$anchor, $$props) {
 	check_target(new.target);
@@ -12858,7 +13236,7 @@ function SubPage($$anchor, $$props) {
 		route = prop($$props, 'route', 3, "/");
 
 	var $$exports = { ...legacy_api() };
-	var div = root$s();
+	var div = root$N();
 	var node = child(div);
 
 	add_svelte_meta(() => snippet(node, () => $$props.children ?? noop), 'render', SubPage, 16, 1);
@@ -12980,7 +13358,7 @@ function scale(
 
 PanelContainer[FILENAME] = 'ui/components/PanelContainer.svelte';
 
-var root$r = add_locations(from_html(`<div><!></div>`), PanelContainer[FILENAME], [[12, 0]]);
+var root$M = add_locations(from_html(`<div><!></div>`), PanelContainer[FILENAME], [[12, 0]]);
 
 function PanelContainer($$anchor, $$props) {
 	check_target(new.target);
@@ -12995,7 +13373,7 @@ function PanelContainer($$anchor, $$props) {
 	let classes = prop($$props, 'class', 3, "");
 
 	var $$exports = { ...legacy_api() };
-	var div = root$r();
+	var div = root$M();
 	var node = child(div);
 
 	add_svelte_meta(() => snippet(node, () => $$props.children ?? noop), 'render', PanelContainer, 13, 1);
@@ -13007,8 +13385,8 @@ function PanelContainer($$anchor, $$props) {
 
 PanelRow[FILENAME] = 'ui/components/PanelRow.svelte';
 
-var root_1$o = add_locations(from_html(`<div class="gradient svelte-q90jdq"></div>`), PanelRow[FILENAME], [[23, 2]]);
-var root$q = add_locations(from_html(`<div><!> <!></div>`), PanelRow[FILENAME], [[21, 0]]);
+var root$L = add_locations(from_html(`<div class="gradient svelte-q90jdq"></div>`), PanelRow[FILENAME], [[23, 2]]);
+var root_1$h = add_locations(from_html(`<div><!> <!></div>`), PanelRow[FILENAME], [[21, 0]]);
 
 function PanelRow($$anchor, $$props) {
 	check_target(new.target);
@@ -13029,13 +13407,13 @@ function PanelRow($$anchor, $$props) {
 		classes = prop($$props, 'class', 3, "");
 
 	var $$exports = { ...legacy_api() };
-	var div = root$q();
+	var div = root_1$h();
 	let classes_1;
 	var node = child(div);
 
 	{
 		var consequent = ($$anchor) => {
-			var div_1 = root_1$o();
+			var div_1 = root$L();
 
 			append($$anchor, div_1);
 		};
@@ -13062,7 +13440,7 @@ function PanelRow($$anchor, $$props) {
 
 DefinedInWPConfig[FILENAME] = 'ui/components/DefinedInWPConfig.svelte';
 
-var root_1$n = add_locations(from_html(`<p class="wp-config"> </p>`), DefinedInWPConfig[FILENAME], [[14, 1]]);
+var root$K = add_locations(from_html(`<p class="wp-config"> </p>`), DefinedInWPConfig[FILENAME], [[14, 1]]);
 
 function DefinedInWPConfig($$anchor, $$props) {
 	check_target(new.target);
@@ -13088,7 +13466,7 @@ function DefinedInWPConfig($$anchor, $$props) {
 
 	{
 		var consequent = ($$anchor) => {
-			var p = root_1$n();
+			var p = root$K();
 			var text = child(p);
 			template_effect(() => set_text(text, $strings().defined_in_wp_config));
 			append($$anchor, p);
@@ -13116,7 +13494,7 @@ function DefinedInWPConfig($$anchor, $$props) {
 
 ToggleSwitch[FILENAME] = 'ui/components/ToggleSwitch.svelte';
 
-var root$p = add_locations(from_html(`<div><input type="checkbox"/> <label class="toggle-label"><!></label></div>`), ToggleSwitch[FILENAME], [[19, 0, [[20, 1], [26, 1]]]]);
+var root$J = add_locations(from_html(`<div><input type="checkbox"/> <label class="toggle-label"><!></label></div>`), ToggleSwitch[FILENAME], [[19, 0, [[20, 1], [26, 1]]]]);
 
 function ToggleSwitch($$anchor, $$props) {
 	check_target(new.target);
@@ -13135,7 +13513,7 @@ function ToggleSwitch($$anchor, $$props) {
 		disabled = prop($$props, 'disabled', 3, false);
 
 	var $$exports = { ...legacy_api() };
-	var div = root$p();
+	var div = root$J();
 	let classes;
 	var input = child(div);
 
@@ -13168,7 +13546,7 @@ function ToggleSwitch($$anchor, $$props) {
 
 HelpButton[FILENAME] = 'ui/components/HelpButton.svelte';
 
-var root_1$m = add_locations(from_html(`<a class="help" target="_blank"><img class="icon help"/></a>`), HelpButton[FILENAME], [[25, 1, [[26, 2]]]]);
+var root$I = add_locations(from_html(`<a class="help" target="_blank"><img class="icon help"/></a>`), HelpButton[FILENAME], [[25, 1, [[26, 2]]]]);
 
 function HelpButton($$anchor, $$props) {
 	check_target(new.target);
@@ -13213,7 +13591,7 @@ function HelpButton($$anchor, $$props) {
 
 	{
 		var consequent = ($$anchor) => {
-			var a = root_1$m();
+			var a = root$I();
 			var img = child(a);
 
 			template_effect(() => {
@@ -13249,13 +13627,13 @@ function HelpButton($$anchor, $$props) {
 
 Panel[FILENAME] = 'ui/components/Panel.svelte';
 
-var root_1$l = add_locations(from_html(`<div class="heading"><h2> </h2> <!> <!></div>`), Panel[FILENAME], [[130, 2, [[131, 3]]]]);
-var root_7$3 = add_locations(from_html(`<!>  <h3> </h3>`, 1), Panel[FILENAME], [[150, 5]]);
-var root_9$3 = add_locations(from_html(`<h3> </h3>`), Panel[FILENAME], [[152, 5]]);
-var root_12$3 = add_locations(from_html(`<div class="provider"><a href="/storage/provider" class="link"><img/> </a></div>`), Panel[FILENAME], [[159, 5, [[160, 6, [[161, 7]]]]]]);
-var root_6$4 = add_locations(from_html(`<!> <!> <!> <!> <!>`, 1), Panel[FILENAME], []);
-var root_4$5 = add_locations(from_html(`<!> <!>`, 1), Panel[FILENAME], []);
-var root$o = add_locations(from_html(`<div><!> <!></div>`), Panel[FILENAME], [[115, 0]]);
+var root$H = add_locations(from_html(`<div class="heading"><h2> </h2> <!> <!></div>`), Panel[FILENAME], [[130, 2, [[131, 3]]]]);
+var root_1$g = add_locations(from_html(`<!>  <h3> </h3>`, 1), Panel[FILENAME], [[150, 5]]);
+var root_2$c = add_locations(from_html(`<h3> </h3>`), Panel[FILENAME], [[152, 5]]);
+var root_3$7 = add_locations(from_html(`<div class="provider"><a href="/storage/provider" class="link"><img/> </a></div>`), Panel[FILENAME], [[159, 5, [[160, 6, [[161, 7]]]]]]);
+var root_4$5 = add_locations(from_html(`<!> <!> <!> <!> <!>`, 1), Panel[FILENAME], []);
+var root_5$4 = add_locations(from_html(`<!> <!>`, 1), Panel[FILENAME], []);
+var root_6$4 = add_locations(from_html(`<div><!> <!></div>`), Panel[FILENAME], [[115, 0]]);
 
 function Panel($$anchor, $$props) {
 	check_target(new.target);
@@ -13370,13 +13748,13 @@ function Panel($$anchor, $$props) {
 	}
 
 	var $$exports = { ...legacy_api() };
-	var div = root$o();
+	var div = root_6$4();
 	let classes_1;
 	var node = child(div);
 
 	{
 		var consequent_2 = ($$anchor) => {
-			var div_1 = root_1$l();
+			var div_1 = root$H();
 			var h2 = child(div_1);
 			var text = child(h2);
 
@@ -13470,7 +13848,7 @@ function Panel($$anchor, $$props) {
 			},
 
 			children: wrap_snippet(Panel, ($$anchor, $$slotProps) => {
-				var fragment_2 = root_4$5();
+				var fragment_2 = root_5$4();
 				var node_4 = first_child(fragment_2);
 
 				{
@@ -13479,12 +13857,12 @@ function Panel($$anchor, $$props) {
 							() => PanelRow($$anchor, {
 								header: true,
 								children: wrap_snippet(Panel, ($$anchor, $$slotProps) => {
-									var fragment_4 = root_6$4();
+									var fragment_4 = root_4$5();
 									var node_5 = first_child(fragment_4);
 
 									{
 										var consequent_3 = ($$anchor) => {
-											var fragment_5 = root_7$3();
+											var fragment_5 = root_1$g();
 											var node_6 = first_child(fragment_5);
 
 											{
@@ -13542,7 +13920,7 @@ function Panel($$anchor, $$props) {
 										};
 
 										var alternate = ($$anchor) => {
-											var h3_1 = root_9$3();
+											var h3_1 = root_2$c();
 											var text_3 = child(h3_1, true);
 
 											reset(h3_1);
@@ -13623,7 +14001,7 @@ function Panel($$anchor, $$props) {
 
 									{
 										var consequent_5 = ($$anchor) => {
-											var div_2 = root_12$3();
+											var div_2 = root_3$7();
 											var a = child(div_2);
 											var img = child(a);
 											var text_4 = sibling(img);
@@ -13778,7 +14156,7 @@ delegate(['focusout', 'mousedown', 'click', 'keyup']);
 
 StorageSettingsHeadingRow[FILENAME] = 'ui/components/StorageSettingsHeadingRow.svelte';
 
-var root_1$k = add_locations(from_html(`<img class="svelte-oic18e"/> <div class="provider-details svelte-oic18e"><h3 class="svelte-oic18e"> </h3> <p class="console-details svelte-oic18e"><a class="console svelte-oic18e" target="_blank"> </a> <span class="region svelte-oic18e"> </span></p></div> <!>`, 1), StorageSettingsHeadingRow[FILENAME], [[24, 1], [25, 1, [[26, 2], [27, 2, [[28, 3], [29, 3]]]]]]);
+var root$G = add_locations(from_html(`<img class="svelte-oic18e"/> <div class="provider-details svelte-oic18e"><h3 class="svelte-oic18e"> </h3> <p class="console-details svelte-oic18e"><a class="console svelte-oic18e" target="_blank"> </a> <span class="region svelte-oic18e"> </span></p></div> <!>`, 1), StorageSettingsHeadingRow[FILENAME], [[24, 1], [25, 1, [[26, 2], [27, 2, [[28, 3], [29, 3]]]]]]);
 
 function StorageSettingsHeadingRow($$anchor, $$props) {
 	check_target(new.target);
@@ -13834,7 +14212,7 @@ function StorageSettingsHeadingRow($$anchor, $$props) {
 			},
 
 			children: wrap_snippet(StorageSettingsHeadingRow, ($$anchor, $$slotProps) => {
-				var fragment_1 = root_1$k();
+				var fragment_1 = root$G();
 				var img = first_child(fragment_1);
 				var div = sibling(img, 2);
 				var h3 = child(div);
@@ -13930,7 +14308,7 @@ function delayMin( start, minTime ) {
 
 CheckAgain[FILENAME] = 'ui/components/CheckAgain.svelte';
 
-var root$n = add_locations(from_html(`<div class="check-again svelte-qs7gng"><!> <span class="last-update"> </span></div>`), CheckAgain[FILENAME], [[42, 0, [[52, 1]]]]);
+var root$F = add_locations(from_html(`<div class="check-again svelte-qs7gng"><!> <span class="last-update"> </span></div>`), CheckAgain[FILENAME], [[42, 0, [[52, 1]]]]);
 
 function CheckAgain($$anchor, $$props) {
 	check_target(new.target);
@@ -13980,7 +14358,7 @@ function CheckAgain($$anchor, $$props) {
 	}
 
 	var $$exports = { ...legacy_api() };
-	var div = root$n();
+	var div = root$F();
 	var node = child(div);
 
 	{
@@ -14074,7 +14452,7 @@ function CheckAgain($$anchor, $$props) {
 
 SettingsValidationStatusRow[FILENAME] = 'ui/components/SettingsValidationStatusRow.svelte';
 
-var root$m = add_locations(from_html(`<div><div class="content in-panel"><div class="icon type in-panel"><img class="icon type"/></div> <div class="body"></div> <!></div></div>`), SettingsValidationStatusRow[FILENAME], [[26, 0, [[33, 1, [[34, 2, [[35, 3]]], [38, 2]]]]]]);
+var root$E = add_locations(from_html(`<div><div class="content in-panel"><div class="icon type in-panel"><img class="icon type"/></div> <div class="body"></div> <!></div></div>`), SettingsValidationStatusRow[FILENAME], [[26, 0, [[33, 1, [[34, 2, [[35, 3]]], [38, 2]]]]]]);
 
 function SettingsValidationStatusRow($$anchor, $$props) {
 	check_target(new.target);
@@ -14107,7 +14485,7 @@ function SettingsValidationStatusRow($$anchor, $$props) {
 	let message = tag(user_derived(() => "<p>" + $settings_validation()[section()].message + "</p>"), 'message');
 	let iconURL = tag(user_derived(() => $urls().assets + "img/icon/notification-" + $settings_validation()[section()].type + ".svg"), 'iconURL');
 	var $$exports = { ...legacy_api() };
-	var div = root$m();
+	var div = root$E();
 	let classes;
 	var div_1 = child(div);
 	var div_2 = child(div_1);
@@ -14155,7 +14533,7 @@ function SettingsValidationStatusRow($$anchor, $$props) {
 
 SettingNotifications[FILENAME] = 'ui/components/SettingNotifications.svelte';
 
-var root_3$7 = add_locations(from_html(`<p></p>`), SettingNotifications[FILENAME], [[51, 3]]);
+var root$D = add_locations(from_html(`<p></p>`), SettingNotifications[FILENAME], [[51, 3]]);
 
 function SettingNotifications($$anchor, $$props) {
 	check_target(new.target);
@@ -14236,7 +14614,7 @@ function SettingNotifications($$anchor, $$props) {
 								},
 
 								children: wrap_snippet(SettingNotifications, ($$anchor, $$slotProps) => {
-									var p = root_3$7();
+									var p = root$D();
 
 									html(p, () => get(notification).message, true);
 									reset(p);
@@ -14285,14 +14663,14 @@ function SettingNotifications($$anchor, $$props) {
 
 SettingsPanelOption[FILENAME] = 'ui/components/SettingsPanelOption.svelte';
 
-var root_2$a = add_locations(from_html(`<!>  <h4> </h4>`, 1), SettingsPanelOption[FILENAME], [[119, 3]]);
-var root_4$4 = add_locations(from_html(`<h4> </h4>`), SettingsPanelOption[FILENAME], [[121, 3]]);
-var root_1$j = add_locations(from_html(`<!> <!>`, 1), SettingsPanelOption[FILENAME], []);
-var root_5$6 = add_locations(from_html(`<p></p>`), SettingsPanelOption[FILENAME], [[126, 2]]);
-var root_7$2 = add_locations(from_html(`<input type="text" minlength="1" size="10"/> <label> </label>`, 1), SettingsPanelOption[FILENAME], [[130, 3], [143, 3]]);
-var root_8$4 = add_locations(from_html(`<p class="input-error"> </p>`), SettingsPanelOption[FILENAME], [[148, 3]]);
+var root$C = add_locations(from_html(`<!>  <h4> </h4>`, 1), SettingsPanelOption[FILENAME], [[119, 3]]);
+var root_1$f = add_locations(from_html(`<h4> </h4>`), SettingsPanelOption[FILENAME], [[121, 3]]);
+var root_2$b = add_locations(from_html(`<!> <!>`, 1), SettingsPanelOption[FILENAME], []);
+var root_3$6 = add_locations(from_html(`<p></p>`), SettingsPanelOption[FILENAME], [[126, 2]]);
+var root_4$4 = add_locations(from_html(`<input type="text" minlength="1" size="10"/> <label> </label>`, 1), SettingsPanelOption[FILENAME], [[130, 3], [143, 3]]);
+var root_5$3 = add_locations(from_html(`<p class="input-error"> </p>`), SettingsPanelOption[FILENAME], [[148, 3]]);
 var root_6$3 = add_locations(from_html(`<!> <!>`, 1), SettingsPanelOption[FILENAME], []);
-var root$l = add_locations(from_html(`<div><!> <!> <!> <!> <!> <!></div>`), SettingsPanelOption[FILENAME], [[110, 0]]);
+var root_7$3 = add_locations(from_html(`<div><!> <!> <!> <!> <!> <!></div>`), SettingsPanelOption[FILENAME], [[110, 0]]);
 
 function SettingsPanelOption($$anchor, $$props) {
 	check_target(new.target);
@@ -14406,7 +14784,7 @@ function SettingsPanelOption($$anchor, $$props) {
 	}
 
 	var $$exports = { ...legacy_api() };
-	var div = root$l();
+	var div = root_7$3();
 	let classes;
 	var node = child(div);
 
@@ -14414,12 +14792,12 @@ function SettingsPanelOption($$anchor, $$props) {
 		() => PanelRow(node, {
 			class: 'option',
 			children: wrap_snippet(SettingsPanelOption, ($$anchor, $$slotProps) => {
-				var fragment = root_1$j();
+				var fragment = root_2$b();
 				var node_1 = first_child(fragment);
 
 				{
 					var consequent = ($$anchor) => {
-						var fragment_1 = root_2$a();
+						var fragment_1 = root$C();
 						var node_2 = first_child(fragment_1);
 
 						{
@@ -14478,7 +14856,7 @@ function SettingsPanelOption($$anchor, $$props) {
 					};
 
 					var alternate = ($$anchor) => {
-						var h4_1 = root_4$4();
+						var h4_1 = root_1$f();
 						var text_3 = child(h4_1, true);
 
 						reset(h4_1);
@@ -14538,7 +14916,7 @@ function SettingsPanelOption($$anchor, $$props) {
 		() => PanelRow(node_4, {
 			class: 'desc',
 			children: wrap_snippet(SettingsPanelOption, ($$anchor, $$slotProps) => {
-				var p = root_5$6();
+				var p = root_3$6();
 
 				html(p, description, true);
 				reset(p);
@@ -14564,7 +14942,7 @@ function SettingsPanelOption($$anchor, $$props) {
 				() => PanelRow(node_6, {
 					class: 'input',
 					children: wrap_snippet(SettingsPanelOption, ($$anchor, $$slotProps) => {
-						var fragment_4 = root_7$2();
+						var fragment_4 = root_4$4();
 						var input_1 = first_child(fragment_4);
 
 						remove_input_defaults(input_1);
@@ -14613,7 +14991,7 @@ function SettingsPanelOption($$anchor, $$props) {
 
 			{
 				var consequent_1 = ($$anchor) => {
-					var p_1 = root_8$4();
+					var p_1 = root_5$3();
 					var text_5 = child(p_1);
 					template_effect(() => set_text(text_5, get(validationError)));
 					transition(3, p_1, () => slide);
@@ -14720,7 +15098,7 @@ delegate(['click', 'input']);
 
 StorageSettingsPanel[FILENAME] = 'ui/components/StorageSettingsPanel.svelte';
 
-var root_1$i = add_locations(from_html(`<!> <!> <!> <!> <!> <!> <!>`, 1), StorageSettingsPanel[FILENAME], []);
+var root$B = add_locations(from_html(`<!> <!> <!> <!> <!> <!> <!>`, 1), StorageSettingsPanel[FILENAME], []);
 
 function StorageSettingsPanel($$anchor, $$props) {
 	check_target(new.target);
@@ -14749,7 +15127,7 @@ function StorageSettingsPanel($$anchor, $$props) {
 			},
 			helpKey: 'storage-provider',
 			children: wrap_snippet(StorageSettingsPanel, ($$anchor, $$slotProps) => {
-				var fragment_1 = root_1$i();
+				var fragment_1 = root$B();
 				var node = first_child(fragment_1);
 
 				add_svelte_meta(() => StorageSettingsHeadingRow(node, {}), 'component', StorageSettingsPanel, 11, 1, { componentTag: 'StorageSettingsHeadingRow' });
@@ -14953,7 +15331,7 @@ function StorageSettingsSubPage($$anchor, $$props) {
 
 DeliverySettingsHeadingRow[FILENAME] = 'ui/components/DeliverySettingsHeadingRow.svelte';
 
-var root_1$h = add_locations(from_html(`<img class="svelte-1azw2tb"/> <div class="provider-details svelte-1azw2tb"><h3 class="svelte-1azw2tb"> </h3> <p class="console-details svelte-1azw2tb"><a class="console svelte-1azw2tb" target="_blank"> </a></p></div> <!>`, 1), DeliverySettingsHeadingRow[FILENAME], [[27, 1], [28, 1, [[29, 2], [30, 2, [[31, 3]]]]]]);
+var root$A = add_locations(from_html(`<img class="svelte-1azw2tb"/> <div class="provider-details svelte-1azw2tb"><h3 class="svelte-1azw2tb"> </h3> <p class="console-details svelte-1azw2tb"><a class="console svelte-1azw2tb" target="_blank"> </a></p></div> <!>`, 1), DeliverySettingsHeadingRow[FILENAME], [[27, 1], [28, 1, [[29, 2], [30, 2, [[31, 3]]]]]]);
 
 function DeliverySettingsHeadingRow($$anchor, $$props) {
 	check_target(new.target);
@@ -15018,7 +15396,7 @@ function DeliverySettingsHeadingRow($$anchor, $$props) {
 			},
 
 			children: wrap_snippet(DeliverySettingsHeadingRow, ($$anchor, $$slotProps) => {
-				var fragment_1 = root_1$h();
+				var fragment_1 = root$A();
 				var img = first_child(fragment_1);
 				var div = sibling(img, 2);
 				var h3 = child(div);
@@ -15094,9 +15472,9 @@ function DeliverySettingsHeadingRow($$anchor, $$props) {
 
 DeliverySettingsPanel[FILENAME] = 'ui/components/DeliverySettingsPanel.svelte';
 
-var root_5$5 = add_locations(from_html(`<!> <!> <!>`, 1), DeliverySettingsPanel[FILENAME], []);
-var root_2$9 = add_locations(from_html(`<!> <!>`, 1), DeliverySettingsPanel[FILENAME], []);
-var root_1$g = add_locations(from_html(`<!> <!> <!> <!> <!>`, 1), DeliverySettingsPanel[FILENAME], []);
+var root$z = add_locations(from_html(`<!> <!> <!>`, 1), DeliverySettingsPanel[FILENAME], []);
+var root_1$e = add_locations(from_html(`<!> <!>`, 1), DeliverySettingsPanel[FILENAME], []);
+var root_2$a = add_locations(from_html(`<!> <!> <!> <!> <!>`, 1), DeliverySettingsPanel[FILENAME], []);
 
 function DeliverySettingsPanel($$anchor, $$props) {
 	check_target(new.target);
@@ -15153,7 +15531,7 @@ function DeliverySettingsPanel($$anchor, $$props) {
 			},
 			helpKey: 'delivery-provider',
 			children: wrap_snippet(DeliverySettingsPanel, ($$anchor, $$slotProps) => {
-				var fragment_1 = root_1$g();
+				var fragment_1 = root_2$a();
 				var node = first_child(fragment_1);
 
 				add_svelte_meta(() => DeliverySettingsHeadingRow(node, {}), 'component', DeliverySettingsPanel, 34, 1, { componentTag: 'DeliverySettingsHeadingRow' });
@@ -15194,7 +15572,7 @@ function DeliverySettingsPanel($$anchor, $$props) {
 
 				{
 					var consequent_2 = ($$anchor) => {
-						var fragment_2 = root_2$9();
+						var fragment_2 = root_1$e();
 						var node_4 = first_child(fragment_2);
 
 						add_svelte_meta(
@@ -15261,7 +15639,7 @@ function DeliverySettingsPanel($$anchor, $$props) {
 
 											{
 												var consequent = ($$anchor) => {
-													var fragment_5 = root_5$5();
+													var fragment_5 = root$z();
 													var node_7 = first_child(fragment_5);
 
 													add_svelte_meta(
@@ -15481,14 +15859,14 @@ function DeliverySettingsSubPage($$anchor, $$props) {
 
 MediaSettings[FILENAME] = 'ui/components/MediaSettings.svelte';
 
-var root$k = add_locations(from_html(`<!> <!>`, 1), MediaSettings[FILENAME], []);
+var root$y = add_locations(from_html(`<!> <!>`, 1), MediaSettings[FILENAME], []);
 
 function MediaSettings($$anchor, $$props) {
 	check_target(new.target);
 	push$1($$props, false, MediaSettings);
 
 	var $$exports = { ...legacy_api() };
-	var fragment = root$k();
+	var fragment = root$y();
 	var node = first_child(fragment);
 
 	add_svelte_meta(() => StorageSettingsSubPage(node, {}), 'component', MediaSettings, 6, 0, { componentTag: 'StorageSettingsSubPage' });
@@ -15503,10 +15881,10 @@ function MediaSettings($$anchor, $$props) {
 
 UrlPreview[FILENAME] = 'ui/components/UrlPreview.svelte';
 
-var root_3$6 = add_locations(from_html(`<p> </p>`), UrlPreview[FILENAME], [[47, 3]]);
-var root_5$4 = add_locations(from_html(`<div><dt> </dt> <dd> </dd></div>`), UrlPreview[FILENAME], [[52, 5, [[53, 6], [54, 6]]]]);
-var root_4$3 = add_locations(from_html(`<dl></dl>`), UrlPreview[FILENAME], [[50, 3]]);
-var root_2$8 = add_locations(from_html(`<!> <!>`, 1), UrlPreview[FILENAME], []);
+var root$x = add_locations(from_html(`<p> </p>`), UrlPreview[FILENAME], [[47, 3]]);
+var root_1$d = add_locations(from_html(`<div><dt> </dt> <dd> </dd></div>`), UrlPreview[FILENAME], [[52, 5, [[53, 6], [54, 6]]]]);
+var root_2$9 = add_locations(from_html(`<dl></dl>`), UrlPreview[FILENAME], [[50, 3]]);
+var root_3$5 = add_locations(from_html(`<!> <!>`, 1), UrlPreview[FILENAME], []);
 
 function UrlPreview($$anchor, $$props) {
 	check_target(new.target);
@@ -15581,14 +15959,14 @@ function UrlPreview($$anchor, $$props) {
 					},
 
 					children: wrap_snippet(UrlPreview, ($$anchor, $$slotProps) => {
-						var fragment_2 = root_2$8();
+						var fragment_2 = root_3$5();
 						var node_1 = first_child(fragment_2);
 
 						add_svelte_meta(
 							() => PanelRow(node_1, {
 								class: 'desc',
 								children: wrap_snippet(UrlPreview, ($$anchor, $$slotProps) => {
-									var p = root_3$6();
+									var p = root$x();
 									var text = child(p, true);
 
 									reset(p);
@@ -15610,11 +15988,11 @@ function UrlPreview($$anchor, $$props) {
 							() => PanelRow(node_2, {
 								class: 'body flex-row',
 								children: wrap_snippet(UrlPreview, ($$anchor, $$slotProps) => {
-									var dl = root_4$3();
+									var dl = root_2$9();
 
 									add_svelte_meta(
 										() => each(dl, 21, () => get(parts), (part) => part.title, ($$anchor, part) => {
-											var div = root_5$4();
+											var div = root_1$d();
 											var dt = child(div);
 											var text_1 = child(dt, true);
 
@@ -15698,7 +16076,7 @@ function scrollNotificationsIntoView() {
 
 Footer[FILENAME] = 'ui/components/Footer.svelte';
 
-var root_1$f = add_locations(from_html(`<div class="fixed-cta-block"><div class="buttons"><!> <!></div></div>`), Footer[FILENAME], [[66, 1, [[67, 2]]]]);
+var root$w = add_locations(from_html(`<div class="fixed-cta-block"><div class="buttons"><!> <!></div></div>`), Footer[FILENAME], [[66, 1, [[67, 2]]]]);
 
 function Footer($$anchor, $$props) {
 	check_target(new.target);
@@ -15779,7 +16157,7 @@ function Footer($$anchor, $$props) {
 
 	{
 		var consequent = ($$anchor) => {
-			var div = root_1$f();
+			var div = root$w();
 			var div_1 = child(div);
 			var node_1 = child(div_1);
 
@@ -15856,8 +16234,8 @@ function Footer($$anchor, $$props) {
 
 MediaPage[FILENAME] = 'ui/components/MediaPage.svelte';
 
-var root_2$7 = add_locations(from_html(`<!> <!> <!> <!>`, 1), MediaPage[FILENAME], []);
-var root$j = add_locations(from_html(`<!> <!> <!>`, 1), MediaPage[FILENAME], []);
+var root$v = add_locations(from_html(`<!> <!> <!> <!>`, 1), MediaPage[FILENAME], []);
+var root_1$c = add_locations(from_html(`<!> <!> <!>`, 1), MediaPage[FILENAME], []);
 
 function MediaPage($$anchor, $$props) {
 	check_target(new.target);
@@ -15927,7 +16305,7 @@ function MediaPage($$anchor, $$props) {
 	});
 
 	var $$exports = { ...legacy_api() };
-	var fragment = root$j();
+	var fragment = root_1$c();
 	var node = first_child(fragment);
 
 	add_svelte_meta(
@@ -15946,7 +16324,7 @@ function MediaPage($$anchor, $$props) {
 
 				{
 					var consequent = ($$anchor) => {
-						var fragment_2 = root_2$7();
+						var fragment_2 = root$v();
 						var node_2 = first_child(fragment_2);
 
 						add_svelte_meta(
@@ -16091,7 +16469,7 @@ function MediaPage($$anchor, $$props) {
 
 StoragePage[FILENAME] = 'ui/components/StoragePage.svelte';
 
-var root_1$e = add_locations(from_html(`<!> <!> <!>`, 1), StoragePage[FILENAME], []);
+var root$u = add_locations(from_html(`<!> <!> <!>`, 1), StoragePage[FILENAME], []);
 
 function StoragePage($$anchor, $$props) {
 	check_target(new.target);
@@ -16160,7 +16538,7 @@ function StoragePage($$anchor, $$props) {
 			},
 
 			children: wrap_snippet(StoragePage, ($$anchor, $$slotProps) => {
-				var fragment_1 = root_1$e();
+				var fragment_1 = root$u();
 				var node = first_child(fragment_1);
 
 				add_svelte_meta(() => Notifications(node, { tab: 'media', tabParent: 'media' }), 'component', StoragePage, 52, 1, { componentTag: 'Notifications' });
@@ -16251,10 +16629,10 @@ function needsRefresh( saving, previousSettings, currentSettings, previousDefine
 
 TabButton[FILENAME] = 'ui/components/TabButton.svelte';
 
-var root_1$d = add_locations(from_html(`<img type="image/svg+xml"/>`), TabButton[FILENAME], [[36, 2]]);
-var root_2$6 = add_locations(from_html(`<p> </p>`), TabButton[FILENAME], [[43, 2]]);
-var root_3$5 = add_locations(from_html(`<img class="checkmark" type="image/svg+xml"/>`), TabButton[FILENAME], [[46, 2]]);
-var root$i = add_locations(from_html(`<a><!> <!> <!></a>`), TabButton[FILENAME], [[27, 0]]);
+var root$t = add_locations(from_html(`<img type="image/svg+xml"/>`), TabButton[FILENAME], [[36, 2]]);
+var root_1$b = add_locations(from_html(`<p> </p>`), TabButton[FILENAME], [[43, 2]]);
+var root_2$8 = add_locations(from_html(`<img class="checkmark" type="image/svg+xml"/>`), TabButton[FILENAME], [[46, 2]]);
+var root_3$4 = add_locations(from_html(`<a><!> <!> <!></a>`), TabButton[FILENAME], [[27, 0]]);
 
 function TabButton($$anchor, $$props) {
 	check_target(new.target);
@@ -16291,13 +16669,13 @@ function TabButton($$anchor, $$props) {
 		url = prop($$props, 'url', 19, () => $urls().settings);
 
 	var $$exports = { ...legacy_api() };
-	var a = root$i();
+	var a = root_3$4();
 	let classes;
 	var node = child(a);
 
 	{
 		var consequent = ($$anchor) => {
-			var img = root_1$d();
+			var img = root$t();
 
 			template_effect(() => {
 				set_attribute(img, 'src', icon());
@@ -16322,7 +16700,7 @@ function TabButton($$anchor, $$props) {
 
 	{
 		var consequent_1 = ($$anchor) => {
-			var p = root_2$6();
+			var p = root_1$b();
 			var text_1 = child(p);
 			template_effect(() => set_text(text_1, text()));
 			append($$anchor, p);
@@ -16343,7 +16721,7 @@ function TabButton($$anchor, $$props) {
 
 	{
 		var consequent_2 = ($$anchor) => {
-			var img_1 = root_3$5();
+			var img_1 = root_2$8();
 
 			template_effect(() => {
 				set_attribute(img_1, 'src', $urls().assets + 'img/icon/licence-checked.svg');
@@ -16387,8 +16765,8 @@ delegate(['click']);
 
 RadioButton[FILENAME] = 'ui/components/RadioButton.svelte';
 
-var root_1$c = add_locations(from_html(`<p class="radio-desc"></p>`), RadioButton[FILENAME], [[32, 1]]);
-var root$h = add_locations(from_html(`<div><label><input type="radio"/> <!></label></div> <!>`, 1), RadioButton[FILENAME], [[25, 0, [[26, 1, [[27, 2]]]]]]);
+var root$s = add_locations(from_html(`<p class="radio-desc"></p>`), RadioButton[FILENAME], [[32, 1]]);
+var root_1$a = add_locations(from_html(`<div><label><input type="radio"/> <!></label></div> <!>`, 1), RadioButton[FILENAME], [[25, 0, [[26, 1, [[27, 2]]]]]]);
 
 function RadioButton($$anchor, $$props) {
 	check_target(new.target);
@@ -16415,7 +16793,7 @@ function RadioButton($$anchor, $$props) {
 		desc = prop($$props, 'desc', 3, "");
 
 	var $$exports = { ...legacy_api() };
-	var fragment = root$h();
+	var fragment = root_1$a();
 	var div = first_child(fragment);
 	let classes;
 	var label = child(div);
@@ -16430,7 +16808,7 @@ function RadioButton($$anchor, $$props) {
 
 	{
 		var consequent = ($$anchor) => {
-			var p = root_1$c();
+			var p = root$s();
 
 			html(p, desc, true);
 			append($$anchor, p);
@@ -16478,14 +16856,14 @@ function RadioButton($$anchor, $$props) {
 
 AccessKeysDefine[FILENAME] = 'ui/components/AccessKeysDefine.svelte';
 
-var root$g = add_locations(from_html(`<p></p> <pre> </pre>`, 1), AccessKeysDefine[FILENAME], [[5, 0], [7, 0]]);
+var root$r = add_locations(from_html(`<p></p> <pre> </pre>`, 1), AccessKeysDefine[FILENAME], [[5, 0], [7, 0]]);
 
 function AccessKeysDefine($$anchor, $$props) {
 	check_target(new.target);
 	push$1($$props, true, AccessKeysDefine);
 
 	var $$exports = { ...legacy_api() };
-	var fragment = root$g();
+	var fragment = root$r();
 	var p = first_child(fragment);
 
 	html(p, () => $$props.provider.define_access_keys_desc, true);
@@ -16500,7 +16878,7 @@ function AccessKeysDefine($$anchor, $$props) {
 
 BackNextButtonsRow[FILENAME] = 'ui/components/BackNextButtonsRow.svelte';
 
-var root$f = add_locations(from_html(`<div class="btn-row"><!> <!> <!></div>`), BackNextButtonsRow[FILENAME], [[69, 0]]);
+var root$q = add_locations(from_html(`<div class="btn-row"><!> <!> <!></div>`), BackNextButtonsRow[FILENAME], [[69, 0]]);
 
 function BackNextButtonsRow($$anchor, $$props) {
 	check_target(new.target);
@@ -16574,7 +16952,7 @@ function BackNextButtonsRow($$anchor, $$props) {
 	}
 
 	var $$exports = { ...legacy_api() };
-	var div = root$f();
+	var div = root$q();
 	var node = child(div);
 
 	{
@@ -16708,14 +17086,14 @@ function BackNextButtonsRow($$anchor, $$props) {
 
 KeyFileDefine[FILENAME] = 'ui/components/KeyFileDefine.svelte';
 
-var root$e = add_locations(from_html(`<p></p> <pre> </pre>`, 1), KeyFileDefine[FILENAME], [[5, 0], [7, 0]]);
+var root$p = add_locations(from_html(`<p></p> <pre> </pre>`, 1), KeyFileDefine[FILENAME], [[5, 0], [7, 0]]);
 
 function KeyFileDefine($$anchor, $$props) {
 	check_target(new.target);
 	push$1($$props, true, KeyFileDefine);
 
 	var $$exports = { ...legacy_api() };
-	var fragment = root$e();
+	var fragment = root$p();
 	var p = first_child(fragment);
 
 	html(p, () => $$props.provider.define_key_file_desc, true);
@@ -16730,14 +17108,14 @@ function KeyFileDefine($$anchor, $$props) {
 
 UseServerRolesDefine[FILENAME] = 'ui/components/UseServerRolesDefine.svelte';
 
-var root$d = add_locations(from_html(`<p></p> <pre> </pre>`, 1), UseServerRolesDefine[FILENAME], [[5, 0], [7, 0]]);
+var root$o = add_locations(from_html(`<p></p> <pre> </pre>`, 1), UseServerRolesDefine[FILENAME], [[5, 0], [7, 0]]);
 
 function UseServerRolesDefine($$anchor, $$props) {
 	check_target(new.target);
 	push$1($$props, true, UseServerRolesDefine);
 
 	var $$exports = { ...legacy_api() };
-	var fragment = root$d();
+	var fragment = root$o();
 	var p = first_child(fragment);
 
 	html(p, () => $$props.provider.use_server_roles_desc, true);
@@ -16752,7 +17130,7 @@ function UseServerRolesDefine($$anchor, $$props) {
 
 AccessKeysEntry[FILENAME] = 'ui/components/AccessKeysEntry.svelte';
 
-var root$c = add_locations(from_html(`<p></p> <label class="input-label"> </label> <input type="text" minlength="20" size="20"/> <label class="input-label"> </label> <input type="text" autocomplete="off" minlength="40" size="40"/>`, 1), AccessKeysEntry[FILENAME], [[27, 0], [29, 0], [30, 0], [41, 0], [42, 0]]);
+var root$n = add_locations(from_html(`<p></p> <label class="input-label"> </label> <input type="text" minlength="20" size="20"/> <label class="input-label"> </label> <input type="text" autocomplete="off" minlength="40" size="40"/>`, 1), AccessKeysEntry[FILENAME], [[27, 0], [29, 0], [30, 0], [41, 0], [42, 0]]);
 
 function AccessKeysEntry($$anchor, $$props) {
 	check_target(new.target);
@@ -16782,7 +17160,7 @@ function AccessKeysEntry($$anchor, $$props) {
 	let secretAccessKeyName = "secret-access-key";
 	let secretAccessKeyLabel = $strings().secret_access_key;
 	var $$exports = { ...legacy_api() };
-	var fragment = root$c();
+	var fragment = root$n();
 	var p = first_child(fragment);
 
 	html(p, () => $$props.provider.enter_access_keys_desc, true);
@@ -16850,7 +17228,7 @@ function AccessKeysEntry($$anchor, $$props) {
 
 KeyFileEntry[FILENAME] = 'ui/components/KeyFileEntry.svelte';
 
-var root$b = add_locations(from_html(`<p></p> <label class="input-label"> </label> <textarea rows="10"></textarea>`, 1), KeyFileEntry[FILENAME], [[18, 0], [20, 0], [21, 0]]);
+var root$m = add_locations(from_html(`<p></p> <label class="input-label"> </label> <textarea rows="10"></textarea>`, 1), KeyFileEntry[FILENAME], [[18, 0], [20, 0], [21, 0]]);
 
 function KeyFileEntry($$anchor, $$props) {
 	check_target(new.target);
@@ -16876,7 +17254,7 @@ function KeyFileEntry($$anchor, $$props) {
 	let name = "key-file";
 	let label = $strings().key_file;
 	var $$exports = { ...legacy_api() };
-	var fragment = root$b();
+	var fragment = root$m();
 	var p = first_child(fragment);
 
 	html(p, () => $$props.provider.enter_key_file_desc, true);
@@ -16920,11 +17298,11 @@ function KeyFileEntry($$anchor, $$props) {
 
 StorageProviderSubPage[FILENAME] = 'ui/components/StorageProviderSubPage.svelte';
 
-var root_3$4 = add_locations(from_html(`<p></p>`), StorageProviderSubPage[FILENAME], [[219, 3]]);
-var root_8$3 = add_locations(from_html(`<p></p>`), StorageProviderSubPage[FILENAME], [[239, 4]]);
-var root_5$3 = add_locations(from_html(`<!> <!>`, 1), StorageProviderSubPage[FILENAME], []);
-var root_10$1 = add_locations(from_html(`<!> <!> <!>`, 1), StorageProviderSubPage[FILENAME], []);
-var root_1$b = add_locations(from_html(`<!> <!> <!> <!> <!>`, 1), StorageProviderSubPage[FILENAME], []);
+var root$l = add_locations(from_html(`<p></p>`), StorageProviderSubPage[FILENAME], [[219, 3]]);
+var root_1$9 = add_locations(from_html(`<p></p>`), StorageProviderSubPage[FILENAME], [[239, 4]]);
+var root_2$7 = add_locations(from_html(`<!> <!>`, 1), StorageProviderSubPage[FILENAME], []);
+var root_3$3 = add_locations(from_html(`<!> <!> <!>`, 1), StorageProviderSubPage[FILENAME], []);
+var root_4$3 = add_locations(from_html(`<!> <!> <!> <!> <!>`, 1), StorageProviderSubPage[FILENAME], []);
 
 function StorageProviderSubPage($$anchor, $$props) {
 	check_target(new.target);
@@ -17163,7 +17541,7 @@ function StorageProviderSubPage($$anchor, $$props) {
 			name: 'storage-provider-settings',
 			route: '/storage/provider',
 			children: wrap_snippet(StorageProviderSubPage, ($$anchor, $$slotProps) => {
-				var fragment_1 = root_1$b();
+				var fragment_1 = root_4$3();
 				var node = first_child(fragment_1);
 
 				{
@@ -17177,7 +17555,7 @@ function StorageProviderSubPage($$anchor, $$props) {
 								},
 
 								children: wrap_snippet(StorageProviderSubPage, ($$anchor, $$slotProps) => {
-									var p = root_3$4();
+									var p = root$l();
 
 									html(p, () => get(storageProvider).media_already_offloaded_warning.message, true);
 									reset(p);
@@ -17221,7 +17599,7 @@ function StorageProviderSubPage($$anchor, $$props) {
 								() => PanelRow($$anchor, {
 									class: 'body flex-row tab-buttons',
 									children: wrap_snippet(StorageProviderSubPage, ($$anchor, $$slotProps) => {
-										var fragment_4 = root_5$3();
+										var fragment_4 = root_2$7();
 										var node_2 = first_child(fragment_4);
 
 										add_svelte_meta(
@@ -17295,7 +17673,7 @@ function StorageProviderSubPage($$anchor, $$props) {
 											() => Notification(node_4, {
 												class: 'notice-qsg',
 												children: wrap_snippet(StorageProviderSubPage, ($$anchor, $$slotProps) => {
-													var p_1 = root_8$3();
+													var p_1 = root_1$9();
 
 													html(p_1, () => get(storageProvider).get_access_keys_help, true);
 													reset(p_1);
@@ -17347,7 +17725,7 @@ function StorageProviderSubPage($$anchor, $$props) {
 								() => PanelRow($$anchor, {
 									class: 'body flex-column',
 									children: wrap_snippet(StorageProviderSubPage, ($$anchor, $$slotProps) => {
-										var fragment_8 = root_10$1();
+										var fragment_8 = root_3$3();
 										var node_6 = first_child(fragment_8);
 
 										{
@@ -17808,7 +18186,7 @@ function scrollIntoView( node, active ) {
 
 Loading[FILENAME] = 'ui/components/Loading.svelte';
 
-var root$a = add_locations(from_html(`<p> </p>`), Loading[FILENAME], [[5, 0]]);
+var root$k = add_locations(from_html(`<p> </p>`), Loading[FILENAME], [[5, 0]]);
 
 function Loading($$anchor, $$props) {
 	check_target(new.target);
@@ -17824,7 +18202,7 @@ function Loading($$anchor, $$props) {
 
 	init();
 
-	var p = root$a();
+	var p = root$k();
 	var text = child(p);
 	template_effect(() => set_text(text, $strings().loading));
 	append($$anchor, p);
@@ -17838,23 +18216,23 @@ function Loading($$anchor, $$props) {
 
 BucketSettingsSubPage[FILENAME] = 'ui/components/BucketSettingsSubPage.svelte';
 
-var root_3$3 = add_locations(from_html(`<!> <!>`, 1), BucketSettingsSubPage[FILENAME], []);
-var root_11 = add_locations(from_html(`<option> </option>`), BucketSettingsSubPage[FILENAME], [[328, 10]]);
-var root_10 = add_locations(from_html(`<div class="region flex-column"><label class="input-label" for="region"> <!></label> <select name="region" id="region"></select></div>`), BucketSettingsSubPage[FILENAME], [[322, 7, [[323, 8], [326, 8]]]]);
-var root_9$2 = add_locations(from_html(`<div class="flex-row align-center row"><div class="new-bucket-details flex-column"><label class="input-label" for="bucket-name"> </label> <input type="text" id="bucket-name" name="bucket" minlength="3"/></div> <!></div>`), BucketSettingsSubPage[FILENAME], [[306, 5, [[307, 6, [[308, 7], [309, 7]]]]]]);
-var root_14$1 = add_locations(from_html(`<option> </option>`), BucketSettingsSubPage[FILENAME], [[348, 8]]);
-var root_13$1 = add_locations(from_html(`<label class="input-label" for="list-region"> <!></label> <select name="region" id="list-region"></select>`, 1), BucketSettingsSubPage[FILENAME], [[343, 6], [346, 6]]);
-var root_18$1 = add_locations(from_html(`<img class="icon status" type="image/svg+xml"/>`), BucketSettingsSubPage[FILENAME], [[376, 11]]);
-var root_17$1 = add_locations(from_html(`<li><img class="icon bucket"/> <p> </p> <!></li>`), BucketSettingsSubPage[FILENAME], [[366, 9, [[373, 10], [374, 10]]]]);
-var root_19$1 = add_locations(from_html(`<li class="row nothing-found"><p> </p></li>`), BucketSettingsSubPage[FILENAME], [[381, 8, [[382, 9]]]]);
-var root_15$1 = add_locations(from_html(`<ul class="bucket-list"><!></ul>`), BucketSettingsSubPage[FILENAME], [[360, 6]]);
-var root_12$2 = add_locations(from_html(`<!> <!>`, 1), BucketSettingsSubPage[FILENAME], []);
-var root_21 = add_locations(from_html(`<p class="input-error"> </p>`), BucketSettingsSubPage[FILENAME], [[389, 5]]);
-var root_6$2 = add_locations(from_html(`<div class="flex-row align-center row radio-btns"><!> <!></div> <!> <!> <!>`, 1), BucketSettingsSubPage[FILENAME], [[300, 4]]);
-var root_25 = add_locations(from_html(`<option> </option>`), BucketSettingsSubPage[FILENAME], [[419, 8]]);
-var root_26 = add_locations(from_html(`<p class="input-error"> </p>`), BucketSettingsSubPage[FILENAME], [[430, 5]]);
+var root$j = add_locations(from_html(`<!> <!>`, 1), BucketSettingsSubPage[FILENAME], []);
+var root_1$8 = add_locations(from_html(`<option> </option>`), BucketSettingsSubPage[FILENAME], [[328, 10]]);
+var root_2$6 = add_locations(from_html(`<div class="region flex-column"><label class="input-label" for="region"> <!></label> <select name="region" id="region"></select></div>`), BucketSettingsSubPage[FILENAME], [[322, 7, [[323, 8], [326, 8]]]]);
+var root_3$2 = add_locations(from_html(`<div class="flex-row align-center row"><div class="new-bucket-details flex-column"><label class="input-label" for="bucket-name"> </label> <input type="text" id="bucket-name" name="bucket" minlength="3"/></div> <!></div>`), BucketSettingsSubPage[FILENAME], [[306, 5, [[307, 6, [[308, 7], [309, 7]]]]]]);
+var root_4$2 = add_locations(from_html(`<option> </option>`), BucketSettingsSubPage[FILENAME], [[348, 8]]);
+var root_5$2 = add_locations(from_html(`<label class="input-label" for="list-region"> <!></label> <select name="region" id="list-region"></select>`, 1), BucketSettingsSubPage[FILENAME], [[343, 6], [346, 6]]);
+var root_6$2 = add_locations(from_html(`<img class="icon status" type="image/svg+xml"/>`), BucketSettingsSubPage[FILENAME], [[376, 11]]);
+var root_7$2 = add_locations(from_html(`<li><img class="icon bucket"/> <p> </p> <!></li>`), BucketSettingsSubPage[FILENAME], [[366, 9, [[373, 10], [374, 10]]]]);
+var root_8$2 = add_locations(from_html(`<li class="row nothing-found"><p> </p></li>`), BucketSettingsSubPage[FILENAME], [[381, 8, [[382, 9]]]]);
+var root_9$2 = add_locations(from_html(`<ul class="bucket-list"><!></ul>`), BucketSettingsSubPage[FILENAME], [[360, 6]]);
+var root_10$2 = add_locations(from_html(`<!> <!>`, 1), BucketSettingsSubPage[FILENAME], []);
+var root_11$1 = add_locations(from_html(`<p class="input-error"> </p>`), BucketSettingsSubPage[FILENAME], [[389, 5]]);
+var root_12$1 = add_locations(from_html(`<div class="flex-row align-center row radio-btns"><!> <!></div> <!> <!> <!>`, 1), BucketSettingsSubPage[FILENAME], [[300, 4]]);
+var root_13$1 = add_locations(from_html(`<option> </option>`), BucketSettingsSubPage[FILENAME], [[419, 8]]);
+var root_14$1 = add_locations(from_html(`<p class="input-error"> </p>`), BucketSettingsSubPage[FILENAME], [[430, 5]]);
 
-var root_24 = add_locations(from_html(`<div class="flex-row align-center row"><div class="new-bucket-details flex-column"><label class="input-label" for="new-bucket-name"> </label> <input type="text" id="new-bucket-name" name="bucket" minlength="3"/></div> <div class="region flex-column"><label class="input-label" for="new-region"> <!></label> <select name="region" id="new-region"></select></div></div> <!>`, 1), BucketSettingsSubPage[FILENAME], [
+var root_15 = add_locations(from_html(`<div class="flex-row align-center row"><div class="new-bucket-details flex-column"><label class="input-label" for="new-bucket-name"> </label> <input type="text" id="new-bucket-name" name="bucket" minlength="3"/></div> <div class="region flex-column"><label class="input-label" for="new-region"> <!></label> <select name="region" id="new-region"></select></div></div> <!>`, 1), BucketSettingsSubPage[FILENAME], [
 	[
 		398,
 		4,
@@ -17865,7 +18243,7 @@ var root_24 = add_locations(from_html(`<div class="flex-row align-center row"><d
 	]
 ]);
 
-var root_1$a = add_locations(from_html(`<!> <!> <!> <!>`, 1), BucketSettingsSubPage[FILENAME], []);
+var root_16 = add_locations(from_html(`<!> <!> <!> <!>`, 1), BucketSettingsSubPage[FILENAME], []);
 
 function BucketSettingsSubPage($$anchor, $$props) {
 	check_target(new.target);
@@ -18162,7 +18540,7 @@ function BucketSettingsSubPage($$anchor, $$props) {
 			name: 'bucket-settings',
 			route: '/storage/bucket',
 			children: wrap_snippet(BucketSettingsSubPage, ($$anchor, $$slotProps) => {
-				var fragment_1 = root_1$a();
+				var fragment_1 = root_16();
 				var node = first_child(fragment_1);
 
 				add_svelte_meta(
@@ -18180,7 +18558,7 @@ function BucketSettingsSubPage($$anchor, $$props) {
 								() => PanelRow($$anchor, {
 									class: 'body flex-row tab-buttons',
 									children: wrap_snippet(BucketSettingsSubPage, ($$anchor, $$slotProps) => {
-										var fragment_3 = root_3$3();
+										var fragment_3 = root$j();
 										var node_1 = first_child(fragment_3);
 
 										{
@@ -18280,7 +18658,7 @@ function BucketSettingsSubPage($$anchor, $$props) {
 										() => PanelRow($$anchor, {
 											class: 'body flex-column',
 											children: wrap_snippet(BucketSettingsSubPage, ($$anchor, $$slotProps) => {
-												var fragment_6 = root_6$2();
+												var fragment_6 = root_12$1();
 												var div = first_child(fragment_6);
 												var node_4 = child(div);
 
@@ -18358,7 +18736,7 @@ function BucketSettingsSubPage($$anchor, $$props) {
 
 												{
 													var consequent_1 = ($$anchor) => {
-														var div_1 = root_9$2();
+														var div_1 = root_3$2();
 														var div_2 = child(div_1);
 														var label = child(div_2);
 														var text_2 = child(label, true);
@@ -18377,7 +18755,7 @@ function BucketSettingsSubPage($$anchor, $$props) {
 
 														{
 															var consequent = ($$anchor) => {
-																var div_3 = root_10();
+																var div_3 = root_2$6();
 																var label_1 = child(div_3);
 																var text_3 = child(label_1);
 																var node_8 = sibling(text_3);
@@ -18411,7 +18789,7 @@ function BucketSettingsSubPage($$anchor, $$props) {
 
 																		regionName();
 
-																		var option = root_11();
+																		var option = root_1$8();
 																		var text_4 = child(option, true);
 
 																		reset(option);
@@ -18505,12 +18883,12 @@ function BucketSettingsSubPage($$anchor, $$props) {
 
 												{
 													var consequent_5 = ($$anchor) => {
-														var fragment_9 = root_12$2();
+														var fragment_9 = root_10$2();
 														var node_10 = first_child(fragment_9);
 
 														{
 															var consequent_2 = ($$anchor) => {
-																var fragment_10 = root_13$1();
+																var fragment_10 = root_5$2();
 																var label_2 = first_child(fragment_10);
 																var text_5 = child(label_2);
 																var node_11 = sibling(text_5);
@@ -18544,7 +18922,7 @@ function BucketSettingsSubPage($$anchor, $$props) {
 
 																		regionName();
 
-																		var option_1 = root_14$1();
+																		var option_1 = root_4$2();
 																		var text_6 = child(option_1, true);
 
 																		reset(option_1);
@@ -18610,7 +18988,7 @@ function BucketSettingsSubPage($$anchor, $$props) {
 																	add_svelte_meta(() => Loading($$anchor, {}), 'component', BucketSettingsSubPage, 358, 6, { componentTag: 'Loading' });
 																},
 																($$anchor, buckets) => {
-																	var ul = root_15$1();
+																	var ul = root_9$2();
 																	var node_13 = child(ul);
 
 																	{
@@ -18620,7 +18998,7 @@ function BucketSettingsSubPage($$anchor, $$props) {
 
 																			add_svelte_meta(
 																				() => each(node_14, 17, () => get(buckets), index, ($$anchor, bucket) => {
-																					var li = root_17$1();
+																					var li = root_7$2();
 																					let classes_3;
 																					var img = child(li);
 																					var p = sibling(img, 2);
@@ -18632,7 +19010,7 @@ function BucketSettingsSubPage($$anchor, $$props) {
 
 																					{
 																						var consequent_3 = ($$anchor) => {
-																							var img_1 = root_18$1();
+																							var img_1 = root_6$2();
 
 																							template_effect(() => {
 																								set_attribute(img_1, 'src', $urls().assets + 'img/icon/licence-checked.svg');
@@ -18683,7 +19061,7 @@ function BucketSettingsSubPage($$anchor, $$props) {
 																		};
 
 																		var alternate = ($$anchor) => {
-																			var li_1 = root_19$1();
+																			var li_1 = root_8$2();
 																			var p_1 = child(li_1);
 																			var text_8 = child(p_1, true);
 
@@ -18732,7 +19110,7 @@ function BucketSettingsSubPage($$anchor, $$props) {
 
 												{
 													var consequent_6 = ($$anchor) => {
-														var p_2 = root_21();
+														var p_2 = root_11$1();
 														var text_9 = child(p_2, true);
 
 														reset(p_2);
@@ -18807,7 +19185,7 @@ function BucketSettingsSubPage($$anchor, $$props) {
 										() => PanelRow($$anchor, {
 											class: 'body flex-column',
 											children: wrap_snippet(BucketSettingsSubPage, ($$anchor, $$slotProps) => {
-												var fragment_15 = root_24();
+												var fragment_15 = root_15();
 												var div_4 = first_child(fragment_15);
 												var div_5 = child(div_4);
 												var label_3 = child(div_5);
@@ -18857,7 +19235,7 @@ function BucketSettingsSubPage($$anchor, $$props) {
 
 														regionName();
 
-														var option_2 = root_25();
+														var option_2 = root_13$1();
 														var text_12 = child(option_2, true);
 
 														reset(option_2);
@@ -18889,7 +19267,7 @@ function BucketSettingsSubPage($$anchor, $$props) {
 
 												{
 													var consequent_8 = ($$anchor) => {
-														var p_3 = root_26();
+														var p_3 = root_14$1();
 														var text_13 = child(p_3, true);
 
 														reset(p_3);
@@ -19021,7 +19399,7 @@ delegate(['click']);
 
 Checkbox[FILENAME] = 'ui/components/Checkbox.svelte';
 
-var root$9 = add_locations(from_html(`<div><label class="toggle-label"><input type="checkbox"/> <!></label></div>`), Checkbox[FILENAME], [[19, 0, [[20, 1, [[21, 2]]]]]]);
+var root$i = add_locations(from_html(`<div><label class="toggle-label"><input type="checkbox"/> <!></label></div>`), Checkbox[FILENAME], [[19, 0, [[20, 1, [[21, 2]]]]]]);
 
 function Checkbox($$anchor, $$props) {
 	check_target(new.target);
@@ -19040,7 +19418,7 @@ function Checkbox($$anchor, $$props) {
 		disabled = prop($$props, 'disabled', 3, false);
 
 	var $$exports = { ...legacy_api() };
-	var div = root$9();
+	var div = root$i();
 	let classes;
 	var label = child(div);
 	var input = child(label);
@@ -19073,21 +19451,21 @@ function Checkbox($$anchor, $$props) {
 
 SecuritySubPage[FILENAME] = 'ui/components/SecuritySubPage.svelte';
 
-var root_4$2 = add_locations(from_html(`<p></p> <p><!> <!></p>`, 1), SecuritySubPage[FILENAME], [[229, 4], [230, 4]]);
-var root_5$2 = add_locations(from_html(`<p></p> <p><!> <!></p>`, 1), SecuritySubPage[FILENAME], [[232, 4], [233, 4]]);
-var root_6$1 = add_locations(from_html(`<p></p> <p><!> <!></p>`, 1), SecuritySubPage[FILENAME], [[235, 4], [236, 4]]);
-var root_7$1 = add_locations(from_html(`<p></p> <p><!> <!></p>`, 1), SecuritySubPage[FILENAME], [[238, 4], [239, 4]]);
-var root_8$2 = add_locations(from_html(`<p></p> <p><!> <!></p>`, 1), SecuritySubPage[FILENAME], [[241, 4], [242, 4]]);
-var root_9$1 = add_locations(from_html(`<div><!></div>`), SecuritySubPage[FILENAME], [[246, 3]]);
-var root_2$5 = add_locations(from_html(`<!> <!>`, 1), SecuritySubPage[FILENAME], []);
-var root_14 = add_locations(from_html(`<p></p> <p><!> <!></p>`, 1), SecuritySubPage[FILENAME], [[264, 4], [265, 4]]);
-var root_15 = add_locations(from_html(`<p></p> <p><!> <!></p>`, 1), SecuritySubPage[FILENAME], [[267, 4], [268, 4]]);
-var root_16 = add_locations(from_html(`<p></p> <p><!> <!></p>`, 1), SecuritySubPage[FILENAME], [[270, 4], [271, 4]]);
-var root_17 = add_locations(from_html(`<p></p> <p><!> <!></p>`, 1), SecuritySubPage[FILENAME], [[273, 4], [274, 4]]);
-var root_18 = add_locations(from_html(`<p></p> <p><!> <!></p>`, 1), SecuritySubPage[FILENAME], [[276, 4], [277, 4]]);
-var root_19 = add_locations(from_html(`<div><!></div>`), SecuritySubPage[FILENAME], [[281, 3]]);
-var root_12$1 = add_locations(from_html(`<!> <!>`, 1), SecuritySubPage[FILENAME], []);
-var root_1$9 = add_locations(from_html(`<!> <!> <!>`, 1), SecuritySubPage[FILENAME], []);
+var root$h = add_locations(from_html(`<p></p> <p><!> <!></p>`, 1), SecuritySubPage[FILENAME], [[229, 4], [230, 4]]);
+var root_1$7 = add_locations(from_html(`<p></p> <p><!> <!></p>`, 1), SecuritySubPage[FILENAME], [[232, 4], [233, 4]]);
+var root_2$5 = add_locations(from_html(`<p></p> <p><!> <!></p>`, 1), SecuritySubPage[FILENAME], [[235, 4], [236, 4]]);
+var root_3$1 = add_locations(from_html(`<p></p> <p><!> <!></p>`, 1), SecuritySubPage[FILENAME], [[238, 4], [239, 4]]);
+var root_4$1 = add_locations(from_html(`<p></p> <p><!> <!></p>`, 1), SecuritySubPage[FILENAME], [[241, 4], [242, 4]]);
+var root_5$1 = add_locations(from_html(`<div><!></div>`), SecuritySubPage[FILENAME], [[246, 3]]);
+var root_6$1 = add_locations(from_html(`<!> <!>`, 1), SecuritySubPage[FILENAME], []);
+var root_7$1 = add_locations(from_html(`<p></p> <p><!> <!></p>`, 1), SecuritySubPage[FILENAME], [[264, 4], [265, 4]]);
+var root_8$1 = add_locations(from_html(`<p></p> <p><!> <!></p>`, 1), SecuritySubPage[FILENAME], [[267, 4], [268, 4]]);
+var root_9$1 = add_locations(from_html(`<p></p> <p><!> <!></p>`, 1), SecuritySubPage[FILENAME], [[270, 4], [271, 4]]);
+var root_10$1 = add_locations(from_html(`<p></p> <p><!> <!></p>`, 1), SecuritySubPage[FILENAME], [[273, 4], [274, 4]]);
+var root_11 = add_locations(from_html(`<p></p> <p><!> <!></p>`, 1), SecuritySubPage[FILENAME], [[276, 4], [277, 4]]);
+var root_12 = add_locations(from_html(`<div><!></div>`), SecuritySubPage[FILENAME], [[281, 3]]);
+var root_13 = add_locations(from_html(`<!> <!>`, 1), SecuritySubPage[FILENAME], []);
+var root_14 = add_locations(from_html(`<!> <!> <!>`, 1), SecuritySubPage[FILENAME], []);
 
 function SecuritySubPage($$anchor, $$props) {
 	check_target(new.target);
@@ -19315,7 +19693,7 @@ function SecuritySubPage($$anchor, $$props) {
 			name: 'bapa-settings',
 			route: '/storage/security',
 			children: wrap_snippet(SecuritySubPage, ($$anchor, $$slotProps) => {
-				var fragment_1 = root_1$9();
+				var fragment_1 = root_14();
 				var node = first_child(fragment_1);
 
 				add_svelte_meta(
@@ -19336,7 +19714,7 @@ function SecuritySubPage($$anchor, $$props) {
 						},
 
 						children: wrap_snippet(SecuritySubPage, ($$anchor, $$slotProps) => {
-							var fragment_2 = root_2$5();
+							var fragment_2 = root_6$1();
 							var node_1 = first_child(fragment_2);
 
 							add_svelte_meta(
@@ -19348,7 +19726,7 @@ function SecuritySubPage($$anchor, $$props) {
 
 										{
 											var consequent = ($$anchor) => {
-												var fragment_4 = root_4$2();
+												var fragment_4 = root$h();
 												var p = first_child(fragment_4);
 
 												html(p, () => $strings().block_public_access_enabled_setup_sub, true);
@@ -19367,7 +19745,7 @@ function SecuritySubPage($$anchor, $$props) {
 											};
 
 											var consequent_1 = ($$anchor) => {
-												var fragment_5 = root_5$2();
+												var fragment_5 = root_1$7();
 												var p_2 = first_child(fragment_5);
 
 												html(p_2, () => $strings().block_public_access_enabled_sub, true);
@@ -19386,7 +19764,7 @@ function SecuritySubPage($$anchor, $$props) {
 											};
 
 											var consequent_2 = ($$anchor) => {
-												var fragment_6 = root_6$1();
+												var fragment_6 = root_2$5();
 												var p_4 = first_child(fragment_6);
 
 												html(p_4, () => $strings().block_public_access_enabled_sub, true);
@@ -19405,7 +19783,7 @@ function SecuritySubPage($$anchor, $$props) {
 											};
 
 											var consequent_3 = ($$anchor) => {
-												var fragment_7 = root_7$1();
+												var fragment_7 = root_3$1();
 												var p_6 = first_child(fragment_7);
 
 												html(p_6, () => $strings().block_public_access_disabled_sub, true);
@@ -19424,7 +19802,7 @@ function SecuritySubPage($$anchor, $$props) {
 											};
 
 											var alternate = ($$anchor) => {
-												var fragment_8 = root_8$2();
+												var fragment_8 = root_4$1();
 												var p_8 = first_child(fragment_8);
 
 												html(p_8, () => $strings().block_public_access_disabled_sub, true);
@@ -19468,7 +19846,7 @@ function SecuritySubPage($$anchor, $$props) {
 
 							{
 								var consequent_4 = ($$anchor) => {
-									var div = root_9$1();
+									var div = root_5$1();
 									var node_14 = child(div);
 
 									add_svelte_meta(
@@ -19567,7 +19945,7 @@ function SecuritySubPage($$anchor, $$props) {
 						},
 
 						children: wrap_snippet(SecuritySubPage, ($$anchor, $$slotProps) => {
-							var fragment_11 = root_12$1();
+							var fragment_11 = root_13();
 							var node_17 = first_child(fragment_11);
 
 							add_svelte_meta(
@@ -19579,7 +19957,7 @@ function SecuritySubPage($$anchor, $$props) {
 
 										{
 											var consequent_5 = ($$anchor) => {
-												var fragment_13 = root_14();
+												var fragment_13 = root_7$1();
 												var p_10 = first_child(fragment_13);
 
 												html(p_10, () => $strings().object_ownership_enforced_setup_sub, true);
@@ -19598,7 +19976,7 @@ function SecuritySubPage($$anchor, $$props) {
 											};
 
 											var consequent_6 = ($$anchor) => {
-												var fragment_14 = root_15();
+												var fragment_14 = root_8$1();
 												var p_12 = first_child(fragment_14);
 
 												html(p_12, () => $strings().object_ownership_enforced_sub, true);
@@ -19617,7 +19995,7 @@ function SecuritySubPage($$anchor, $$props) {
 											};
 
 											var consequent_7 = ($$anchor) => {
-												var fragment_15 = root_16();
+												var fragment_15 = root_9$1();
 												var p_14 = first_child(fragment_15);
 
 												html(p_14, () => $strings().object_ownership_enforced_sub, true);
@@ -19636,7 +20014,7 @@ function SecuritySubPage($$anchor, $$props) {
 											};
 
 											var consequent_8 = ($$anchor) => {
-												var fragment_16 = root_17();
+												var fragment_16 = root_10$1();
 												var p_16 = first_child(fragment_16);
 
 												html(p_16, () => $strings().object_ownership_not_enforced_sub, true);
@@ -19655,7 +20033,7 @@ function SecuritySubPage($$anchor, $$props) {
 											};
 
 											var alternate_1 = ($$anchor) => {
-												var fragment_17 = root_18();
+												var fragment_17 = root_11();
 												var p_18 = first_child(fragment_17);
 
 												html(p_18, () => $strings().object_ownership_not_enforced_sub, true);
@@ -19699,7 +20077,7 @@ function SecuritySubPage($$anchor, $$props) {
 
 							{
 								var consequent_9 = ($$anchor) => {
-									var div_1 = root_19();
+									var div_1 = root_12();
 									var node_30 = child(div_1);
 
 									add_svelte_meta(
@@ -19817,9 +20195,9 @@ function SecuritySubPage($$anchor, $$props) {
 
 DeliveryPage[FILENAME] = 'ui/components/DeliveryPage.svelte';
 
-var root_5$1 = add_locations(from_html(`<div class="row"><!> <p class="speed"></p> <p class="private-media"></p> <!></div>`), DeliveryPage[FILENAME], [[163, 6, [[171, 7], [172, 7]]]]);
-var root_8$1 = add_locations(from_html(`<input type="text" class="cdn-name" id="cdn-name" name="cdn-name" minlength="4"/>`), DeliveryPage[FILENAME], [[183, 5]]);
-var root_1$8 = add_locations(from_html(`<!> <h2 class="page-title"> </h2> <div class="delivery-provider-settings-page wrapper"><!> <!> <!></div>`, 1), DeliveryPage[FILENAME], [[156, 1], [158, 1]]);
+var root$g = add_locations(from_html(`<div class="row"><!> <p class="speed"></p> <p class="private-media"></p> <!></div>`), DeliveryPage[FILENAME], [[163, 6, [[171, 7], [172, 7]]]]);
+var root_1$6 = add_locations(from_html(`<input type="text" class="cdn-name" id="cdn-name" name="cdn-name" minlength="4"/>`), DeliveryPage[FILENAME], [[183, 5]]);
+var root_2$4 = add_locations(from_html(`<!> <h2 class="page-title"> </h2> <div class="delivery-provider-settings-page wrapper"><!> <!> <!></div>`, 1), DeliveryPage[FILENAME], [[156, 1], [158, 1]]);
 
 function DeliveryPage($$anchor, $$props) {
 	check_target(new.target);
@@ -20007,7 +20385,7 @@ function DeliveryPage($$anchor, $$props) {
 			},
 
 			children: wrap_snippet(DeliveryPage, ($$anchor, $$slotProps) => {
-				var fragment_1 = root_1$8();
+				var fragment_1 = root_2$4();
 				var node = first_child(fragment_1);
 
 				add_svelte_meta(
@@ -20057,7 +20435,7 @@ function DeliveryPage($$anchor, $$props) {
 
 												{
 													var consequent = ($$anchor) => {
-														var div_1 = root_5$1();
+														var div_1 = root$g();
 														var node_4 = child(div_1);
 
 														{
@@ -20185,7 +20563,7 @@ function DeliveryPage($$anchor, $$props) {
 										() => PanelRow($$anchor, {
 											class: 'body flex-column',
 											children: wrap_snippet(DeliveryPage, ($$anchor, $$slotProps) => {
-												var input = root_8$1();
+												var input = root_1$6();
 
 												remove_input_defaults(input);
 
@@ -20407,9 +20785,9 @@ const defaultPages = [
 
 Upsell[FILENAME] = 'ui/components/Upsell.svelte';
 
-var root_2$4 = add_locations(from_html(`<li class="svelte-1rikdvh"><img class="svelte-1rikdvh"/> <span> </span></li>`), Upsell[FILENAME], [[26, 4, [[27, 5], [28, 5]]]]);
+var root$f = add_locations(from_html(`<li class="svelte-1rikdvh"><img class="svelte-1rikdvh"/> <span> </span></li>`), Upsell[FILENAME], [[26, 4, [[27, 5], [28, 5]]]]);
 
-var root_1$7 = add_locations(from_html(`<div class="branding"></div> <div class="content svelte-1rikdvh"><div class="heading svelte-1rikdvh"><!></div> <div class="description svelte-1rikdvh"><!></div> <div class="benefits svelte-1rikdvh"></div> <div class="call-to-action svelte-1rikdvh"><!> <div class="note svelte-1rikdvh"><!></div></div></div>`, 1), Upsell[FILENAME], [
+var root_1$5 = add_locations(from_html(`<div class="branding"></div> <div class="content svelte-1rikdvh"><div class="heading svelte-1rikdvh"><!></div> <div class="description svelte-1rikdvh"><!></div> <div class="benefits svelte-1rikdvh"></div> <div class="call-to-action svelte-1rikdvh"><!> <div class="note svelte-1rikdvh"><!></div></div></div>`, 1), Upsell[FILENAME], [
 	[14, 1],
 	[15, 1, [[16, 2], [20, 2], [24, 2], [33, 2, [[35, 3]]]]]
 ]);
@@ -20425,7 +20803,7 @@ function Upsell($$anchor, $$props) {
 			name: 'upsell',
 			class: 'upsell-panel',
 			children: wrap_snippet(Upsell, ($$anchor, $$slotProps) => {
-				var fragment_1 = root_1$7();
+				var fragment_1 = root_1$5();
 				var div = sibling(first_child(fragment_1), 2);
 				var div_1 = child(div);
 				var node = child(div_1);
@@ -20443,7 +20821,7 @@ function Upsell($$anchor, $$props) {
 
 				add_svelte_meta(
 					() => each(div_3, 21, () => $$props.benefits, index, ($$anchor, benefit) => {
-						var li = root_2$4();
+						var li = root$f();
 						var img = child(li);
 						var span = sibling(img, 2);
 						var text = child(span, true);
@@ -20495,9 +20873,9 @@ function Upsell($$anchor, $$props) {
 
 AssetsUpgrade[FILENAME] = 'ui/components/AssetsUpgrade.svelte';
 
-var root_1$6 = add_locations(from_html(`<div> </div>`), AssetsUpgrade[FILENAME], [[26, 2]]);
-var root_2$3 = add_locations(from_html(`<div></div>`), AssetsUpgrade[FILENAME], [[30, 2]]);
-var root_3$2 = add_locations(from_html(`<a class="button btn-lg btn-primary"><img alt="stars icon" style="margin-right: 5px;"/> </a>`), AssetsUpgrade[FILENAME], [[34, 2, [[35, 3]]]]);
+var root$e = add_locations(from_html(`<div> </div>`), AssetsUpgrade[FILENAME], [[26, 2]]);
+var root_1$4 = add_locations(from_html(`<div></div>`), AssetsUpgrade[FILENAME], [[30, 2]]);
+var root_2$3 = add_locations(from_html(`<a class="button btn-lg btn-primary"><img alt="stars icon" style="margin-right: 5px;"/> </a>`), AssetsUpgrade[FILENAME], [[34, 2, [[35, 3]]]]);
 
 function AssetsUpgrade($$anchor, $$props) {
 	check_target(new.target);
@@ -20543,7 +20921,7 @@ function AssetsUpgrade($$anchor, $$props) {
 		const heading = wrap_snippet(AssetsUpgrade, function ($$anchor) {
 			validate_snippet_args(...arguments);
 
-			var div = root_1$6();
+			var div = root$e();
 			var text = child(div, true);
 
 			reset(div);
@@ -20554,7 +20932,7 @@ function AssetsUpgrade($$anchor, $$props) {
 		const description = wrap_snippet(AssetsUpgrade, function ($$anchor) {
 			validate_snippet_args(...arguments);
 
-			var div_1 = root_2$3();
+			var div_1 = root_1$4();
 
 			html(div_1, () => $strings().assets_upsell_description, true);
 			reset(div_1);
@@ -20564,7 +20942,7 @@ function AssetsUpgrade($$anchor, $$props) {
 		const call_to_action = wrap_snippet(AssetsUpgrade, function ($$anchor) {
 			validate_snippet_args(...arguments);
 
-			var a = root_3$2();
+			var a = root_2$3();
 			var img = child(a);
 			var text_1 = sibling(img);
 
@@ -20606,7 +20984,7 @@ function AssetsUpgrade($$anchor, $$props) {
 
 AssetsPage[FILENAME] = 'ui/components/AssetsPage.svelte';
 
-var root_1$5 = add_locations(from_html(`<h2 class="page-title"> </h2> <!>`, 1), AssetsPage[FILENAME], [[17, 1]]);
+var root$d = add_locations(from_html(`<h2 class="page-title"> </h2> <!>`, 1), AssetsPage[FILENAME], [[17, 1]]);
 
 function AssetsPage($$anchor, $$props) {
 	check_target(new.target);
@@ -20640,7 +21018,7 @@ function AssetsPage($$anchor, $$props) {
 			},
 
 			children: wrap_snippet(AssetsPage, ($$anchor, $$slotProps) => {
-				var fragment_1 = root_1$5();
+				var fragment_1 = root$d();
 				var h2 = first_child(fragment_1);
 				var text = child(h2, true);
 
@@ -20670,9 +21048,9 @@ function AssetsPage($$anchor, $$props) {
 
 ToolsUpgrade[FILENAME] = 'ui/components/ToolsUpgrade.svelte';
 
-var root_1$4 = add_locations(from_html(`<div> </div>`), ToolsUpgrade[FILENAME], [[31, 2]]);
-var root_2$2 = add_locations(from_html(`<div></div>`), ToolsUpgrade[FILENAME], [[35, 2]]);
-var root_3$1 = add_locations(from_html(`<a class="button btn-lg btn-primary"><img alt="stars icon" style="margin-right: 5px;"/> </a>`), ToolsUpgrade[FILENAME], [[39, 2, [[40, 3]]]]);
+var root$c = add_locations(from_html(`<div> </div>`), ToolsUpgrade[FILENAME], [[31, 2]]);
+var root_1$3 = add_locations(from_html(`<div></div>`), ToolsUpgrade[FILENAME], [[35, 2]]);
+var root_2$2 = add_locations(from_html(`<a class="button btn-lg btn-primary"><img alt="stars icon" style="margin-right: 5px;"/> </a>`), ToolsUpgrade[FILENAME], [[39, 2, [[40, 3]]]]);
 
 function ToolsUpgrade($$anchor, $$props) {
 	check_target(new.target);
@@ -20724,7 +21102,7 @@ function ToolsUpgrade($$anchor, $$props) {
 		const heading = wrap_snippet(ToolsUpgrade, function ($$anchor) {
 			validate_snippet_args(...arguments);
 
-			var div = root_1$4();
+			var div = root$c();
 			var text = child(div, true);
 
 			reset(div);
@@ -20735,7 +21113,7 @@ function ToolsUpgrade($$anchor, $$props) {
 		const description = wrap_snippet(ToolsUpgrade, function ($$anchor) {
 			validate_snippet_args(...arguments);
 
-			var div_1 = root_2$2();
+			var div_1 = root_1$3();
 
 			html(div_1, () => $strings().tools_upsell_description, true);
 			reset(div_1);
@@ -20745,7 +21123,7 @@ function ToolsUpgrade($$anchor, $$props) {
 		const call_to_action = wrap_snippet(ToolsUpgrade, function ($$anchor) {
 			validate_snippet_args(...arguments);
 
-			var a = root_3$1();
+			var a = root_2$2();
 			var img = child(a);
 			var text_1 = sibling(img);
 
@@ -20787,7 +21165,7 @@ function ToolsUpgrade($$anchor, $$props) {
 
 ToolsPage[FILENAME] = 'ui/components/ToolsPage.svelte';
 
-var root_1$3 = add_locations(from_html(`<!> <h2 class="page-title"> </h2> <!>`, 1), ToolsPage[FILENAME], [[19, 1]]);
+var root$b = add_locations(from_html(`<!> <h2 class="page-title"> </h2> <!>`, 1), ToolsPage[FILENAME], [[19, 1]]);
 
 function ToolsPage($$anchor, $$props) {
 	check_target(new.target);
@@ -20821,7 +21199,7 @@ function ToolsPage($$anchor, $$props) {
 			},
 
 			children: wrap_snippet(ToolsPage, ($$anchor, $$slotProps) => {
-				var fragment_1 = root_1$3();
+				var fragment_1 = root$b();
 				var node = first_child(fragment_1);
 
 				add_svelte_meta(
@@ -20866,10 +21244,10 @@ function ToolsPage($$anchor, $$props) {
 
 SupportPage[FILENAME] = 'ui/components/SupportPage.svelte';
 
-var root_2$1 = add_locations(from_html(`<h2 class="page-title"> </h2>`), SupportPage[FILENAME], [[39, 2]]);
-var root_4$1 = add_locations(from_html(`<div class="lite-support"><p></p> <p></p> <p></p> <p></p></div>`), SupportPage[FILENAME], [[50, 5, [[51, 6], [52, 6], [53, 6], [54, 6]]]]);
+var root$a = add_locations(from_html(`<h2 class="page-title"> </h2>`), SupportPage[FILENAME], [[39, 2]]);
+var root_1$2 = add_locations(from_html(`<div class="lite-support"><p></p> <p></p> <p></p> <p></p></div>`), SupportPage[FILENAME], [[50, 5, [[51, 6], [52, 6], [53, 6], [54, 6]]]]);
 
-var root_1$2 = add_locations(from_html(`<!> <!> <div class="support-page wrapper"><!> <div class="columns"><div class="support-form"><!> <div class="diagnostic-info"><hr/> <h2 class="page-title"> </h2> <pre> </pre> <a class="button btn-md btn-outline"> </a></div></div> <!></div></div>`, 1), SupportPage[FILENAME], [
+var root_2$1 = add_locations(from_html(`<!> <!> <div class="support-page wrapper"><!> <div class="columns"><div class="support-form"><!> <div class="diagnostic-info"><hr/> <h2 class="page-title"> </h2> <pre> </pre> <a class="button btn-md btn-outline"> </a></div></div> <!></div></div>`, 1), SupportPage[FILENAME], [
 	[
 		41,
 		1,
@@ -20943,7 +21321,7 @@ function SupportPage($$anchor, $$props) {
 			},
 
 			children: wrap_snippet(SupportPage, ($$anchor, $$slotProps) => {
-				var fragment_1 = root_1$2();
+				var fragment_1 = root_2$1();
 				var node = first_child(fragment_1);
 
 				add_svelte_meta(
@@ -20963,7 +21341,7 @@ function SupportPage($$anchor, $$props) {
 
 				{
 					var consequent = ($$anchor) => {
-						var h2 = root_2$1();
+						var h2 = root$a();
 						var text = child(h2, true);
 
 						reset(h2);
@@ -21001,7 +21379,7 @@ function SupportPage($$anchor, $$props) {
 					};
 
 					var alternate = ($$anchor) => {
-						var div_3 = root_4$1();
+						var div_3 = root_1$2();
 						var p = child(div_3);
 
 						html(p, () => $strings().no_support, true);
@@ -21175,7 +21553,7 @@ const settingsNotifications = {
 
 Header[FILENAME] = 'ui/components/Header.svelte';
 
-var root$8 = add_locations(from_html(`<div class="header"><div class="header-wrapper"><img class="medallion"/> <h1> </h1> <div class="licence"><!></div></div></div>`), Header[FILENAME], [[14, 0, [[15, 1, [[16, 2], [17, 2], [18, 2]]]]]]);
+var root$9 = add_locations(from_html(`<div class="header"><div class="header-wrapper"><img class="medallion"/> <h1> </h1> <div class="licence"><!></div></div></div>`), Header[FILENAME], [[14, 0, [[15, 1, [[16, 2], [17, 2], [18, 2]]]]]]);
 
 function Header($$anchor, $$props) {
 	check_target(new.target);
@@ -21201,7 +21579,7 @@ function Header($$anchor, $$props) {
 	let header_img_url = tag(user_derived(() => $urls().assets + "img/brand/ome-medallion.svg"), 'header_img_url');
 
 	var $$exports = { ...legacy_api() };
-	var div = root$8();
+	var div = root$9();
 	var div_1 = child(div);
 	var img = child(div_1);
 	var h1 = sibling(img, 2);
@@ -21229,7 +21607,7 @@ function Header($$anchor, $$props) {
 
 Settings[FILENAME] = 'ui/components/Settings.svelte';
 
-var root$7 = add_locations(from_html(`<!> <!> <!>`, 1), Settings[FILENAME], []);
+var root$8 = add_locations(from_html(`<!> <!> <!>`, 1), Settings[FILENAME], []);
 
 function Settings($$anchor, $$props) {
 	check_target(new.target);
@@ -21271,7 +21649,7 @@ function Settings($$anchor, $$props) {
 	});
 
 	var $$exports = { ...legacy_api() };
-	var fragment = root$7();
+	var fragment = root$8();
 	var node = first_child(fragment);
 
 	{
@@ -21379,7 +21757,7 @@ function Settings($$anchor, $$props) {
 
 Header_1[FILENAME] = 'ui/lite/Header.svelte';
 
-var root_1$1 = add_locations(from_html(`<a class="button btn-lg btn-primary"> </a>`), Header_1[FILENAME], [[7, 1]]);
+var root$7 = add_locations(from_html(`<a class="button btn-lg btn-primary"> </a>`), Header_1[FILENAME], [[7, 1]]);
 
 function Header_1($$anchor, $$props) {
 	check_target(new.target);
@@ -21403,7 +21781,7 @@ function Header_1($$anchor, $$props) {
 	add_svelte_meta(
 		() => Header($$anchor, {
 			children: wrap_snippet(Header_1, ($$anchor, $$slotProps) => {
-				var a = root_1$1();
+				var a = root$7();
 				var text = child(a, true);
 
 				reset(a);
@@ -21719,6 +22097,7 @@ class Tween {
 				}
 
 				previous_task?.abort();
+				previous_task = null;
 			}
 
 			const elapsed = now - start;
@@ -21834,14 +22213,14 @@ delegate(['click']);
 
 OffloadStatusFlyout[FILENAME] = 'ui/components/OffloadStatusFlyout.svelte';
 
-var root_5 = add_locations(from_html(`<td class="numeric"><a> </a></td>`), OffloadStatusFlyout[FILENAME], [[172, 7, [[173, 8]]]]);
-var root_6 = add_locations(from_html(`<td class="numeric"> </td>`), OffloadStatusFlyout[FILENAME], [[176, 7]]);
-var root_7 = add_locations(from_html(`<td class="numeric"><a> </a></td>`), OffloadStatusFlyout[FILENAME], [[179, 7, [[180, 8]]]]);
-var root_8 = add_locations(from_html(`<td class="numeric"> </td>`), OffloadStatusFlyout[FILENAME], [[183, 7]]);
+var root$4 = add_locations(from_html(`<td class="numeric"><a> </a></td>`), OffloadStatusFlyout[FILENAME], [[172, 7, [[173, 8]]]]);
+var root_1$1 = add_locations(from_html(`<td class="numeric"> </td>`), OffloadStatusFlyout[FILENAME], [[176, 7]]);
+var root_2 = add_locations(from_html(`<td class="numeric"><a> </a></td>`), OffloadStatusFlyout[FILENAME], [[179, 7, [[180, 8]]]]);
+var root_3 = add_locations(from_html(`<td class="numeric"> </td>`), OffloadStatusFlyout[FILENAME], [[183, 7]]);
 var root_4 = add_locations(from_html(`<tr><td> </td><!><!></tr>`), OffloadStatusFlyout[FILENAME], [[169, 5, [[170, 6]]]]);
-var root_9 = add_locations(from_html(`<tfoot><tr><td> </td><td class="numeric"> </td><td class="numeric"> </td></tr></tfoot>`), OffloadStatusFlyout[FILENAME], [[190, 5, [[191, 5, [[192, 6], [193, 6], [194, 6]]]]]]);
+var root_5 = add_locations(from_html(`<tfoot><tr><td> </td><td class="numeric"> </td><td class="numeric"> </td></tr></tfoot>`), OffloadStatusFlyout[FILENAME], [[190, 5, [[191, 5, [[192, 6], [193, 6], [194, 6]]]]]]);
 
-var root_3 = add_locations(from_html(`<table><thead><tr><th> </th><th class="numeric"> </th><th class="numeric"> </th></tr></thead><tbody></tbody><!></table>`), OffloadStatusFlyout[FILENAME], [
+var root_6 = add_locations(from_html(`<table><thead><tr><th> </th><th class="numeric"> </th><th class="numeric"> </th></tr></thead><tbody></tbody><!></table>`), OffloadStatusFlyout[FILENAME], [
 	[
 		158,
 		3,
@@ -21852,10 +22231,10 @@ var root_3 = add_locations(from_html(`<table><thead><tr><th> </th><th class="num
 	]
 ]);
 
-var root_13 = add_locations(from_html(`<p></p>`), OffloadStatusFlyout[FILENAME], [[206, 5]]);
-var root_12 = add_locations(from_html(`<!> <a class="button btn-sm btn-primary licence" target="_blank"><img alt="stars icon" style="margin-right: 5px;"/> </a>`, 1), OffloadStatusFlyout[FILENAME], [[208, 4, [[209, 5]]]]);
-var root_2 = add_locations(from_html(`<!> <!>`, 1), OffloadStatusFlyout[FILENAME], []);
-var root$4 = add_locations(from_html(`<!> <!>`, 1), OffloadStatusFlyout[FILENAME], []);
+var root_7 = add_locations(from_html(`<p></p>`), OffloadStatusFlyout[FILENAME], [[206, 5]]);
+var root_8 = add_locations(from_html(`<!> <a class="button btn-sm btn-primary licence" target="_blank"><img alt="stars icon" style="margin-right: 5px;"/> </a>`, 1), OffloadStatusFlyout[FILENAME], [[208, 4, [[209, 5]]]]);
+var root_9 = add_locations(from_html(`<!> <!>`, 1), OffloadStatusFlyout[FILENAME], []);
+var root_10 = add_locations(from_html(`<!> <!>`, 1), OffloadStatusFlyout[FILENAME], []);
 
 function OffloadStatusFlyout($$anchor, $$props) {
 	check_target(new.target);
@@ -21992,7 +22371,7 @@ function OffloadStatusFlyout($$anchor, $$props) {
 	}
 
 	var $$exports = { ...legacy_api() };
-	var fragment = root$4();
+	var fragment = root_10();
 	var node = first_child(fragment);
 
 	{
@@ -22067,14 +22446,14 @@ function OffloadStatusFlyout($$anchor, $$props) {
 						},
 
 						children: wrap_snippet(OffloadStatusFlyout, ($$anchor, $$slotProps) => {
-							var fragment_2 = root_2();
+							var fragment_2 = root_9();
 							var node_2 = first_child(fragment_2);
 
 							add_svelte_meta(
 								() => PanelRow(node_2, {
 									class: 'summary',
 									children: wrap_snippet(OffloadStatusFlyout, ($$anchor, $$slotProps) => {
-										var table = root_3();
+										var table = root_6();
 										var thead = child(table);
 										var tr = child(thead);
 										var th = child(tr);
@@ -22108,7 +22487,7 @@ function OffloadStatusFlyout($$anchor, $$props) {
 
 												{
 													var consequent = ($$anchor) => {
-														var td_1 = root_5();
+														var td_1 = root$4();
 														var a = child(td_1);
 														var text_4 = child(a, true);
 
@@ -22127,7 +22506,7 @@ function OffloadStatusFlyout($$anchor, $$props) {
 													};
 
 													var alternate = ($$anchor) => {
-														var td_2 = root_6();
+														var td_2 = root_1$1();
 														var text_5 = child(td_2, true);
 
 														reset(td_2);
@@ -22150,7 +22529,7 @@ function OffloadStatusFlyout($$anchor, $$props) {
 
 												{
 													var consequent_1 = ($$anchor) => {
-														var td_3 = root_7();
+														var td_3 = root_2();
 														var a_1 = child(td_3);
 														var text_6 = child(a_1, true);
 
@@ -22169,7 +22548,7 @@ function OffloadStatusFlyout($$anchor, $$props) {
 													};
 
 													var alternate_1 = ($$anchor) => {
-														var td_4 = root_8();
+														var td_4 = root_3();
 														var text_7 = child(td_4, true);
 
 														reset(td_4);
@@ -22204,7 +22583,7 @@ function OffloadStatusFlyout($$anchor, $$props) {
 
 										{
 											var consequent_2 = ($$anchor) => {
-												var tfoot = root_9();
+												var tfoot = root_5();
 												var tr_2 = child(tfoot);
 												var td_5 = child(tr_2);
 												var text_8 = child(td_5, true);
@@ -22285,12 +22664,12 @@ function OffloadStatusFlyout($$anchor, $$props) {
 											footer: true,
 											class: 'upsell',
 											children: wrap_snippet(OffloadStatusFlyout, ($$anchor, $$slotProps) => {
-												var fragment_5 = root_12();
+												var fragment_5 = root_8();
 												var node_8 = first_child(fragment_5);
 
 												{
 													var consequent_4 = ($$anchor) => {
-														var p = root_13();
+														var p = root_7();
 
 														html(p, $offloadRemainingUpsell, true);
 														reset(p);
@@ -22378,8 +22757,8 @@ function OffloadStatusFlyout($$anchor, $$props) {
 
 OffloadStatus[FILENAME] = 'ui/components/OffloadStatus.svelte';
 
-var root_1 = add_locations(from_html(`<img class="icon type"/>`), OffloadStatus[FILENAME], [[103, 3]]);
-var root$3 = add_locations(from_html(`<div><div class="nav-status"><!> <p class="status-text"><strong> </strong> <span></span></p> <!></div> <!></div>`), OffloadStatus[FILENAME], [[92, 0, [[95, 1, [[110, 2, [[114, 3], [115, 3]]]]]]]]);
+var root$3 = add_locations(from_html(`<img class="icon type"/>`), OffloadStatus[FILENAME], [[103, 3]]);
+var root_1 = add_locations(from_html(`<div><div class="nav-status"><!> <p class="status-text"><strong> </strong> <span></span></p> <!></div> <!></div>`), OffloadStatus[FILENAME], [[92, 0, [[95, 1, [[110, 2, [[114, 3], [115, 3]]]]]]]]);
 
 function OffloadStatus($$anchor, $$props) {
 	check_target(new.target);
@@ -22483,14 +22862,14 @@ function OffloadStatus($$anchor, $$props) {
 	}
 
 	var $$exports = { ...legacy_api() };
-	var div = root$3();
+	var div = root_1();
 	let classes;
 	var div_1 = child(div);
 	var node = child(div_1);
 
 	{
 		var consequent = ($$anchor) => {
-			var img = root_1();
+			var img = root$3();
 
 			template_effect(() => {
 				set_attribute(img, 'src', $urls().assets + "img/icon/licence-checked.svg");

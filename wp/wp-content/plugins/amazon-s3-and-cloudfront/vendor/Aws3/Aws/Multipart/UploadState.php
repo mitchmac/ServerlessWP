@@ -28,14 +28,31 @@ class UploadState
     /** @var boolean Determines status for tracking the upload */
     private $displayProgress = \false;
     /**
+     * @var array Subset of upload-manager config retained for resume flows.
+     *
+     * Carries the original caller's directives (`metadata_directive`,
+     * `tags_directive`, `annotations_directive`) so a later
+     * `getStateFromService(...) → new MultipartCopy(['state' => $s])` can
+     * replay Phase 3 correctly without the caller having to re-specify.
+     */
+    private array $config = [];
+    /**
      * @param array $id Params used to identity the upload.
      */
     public function __construct(array $id, array $config = [])
     {
         $this->id = $id;
+        $this->config = $config;
         if (isset($config['display_progress']) && \is_bool($config['display_progress'])) {
             $this->displayProgress = $config['display_progress'];
         }
+    }
+    /**
+     * @return array The config array the state was constructed with.
+     */
+    public function getConfig() : array
+    {
+        return $this->config;
     }
     /**
      * Get the upload's ID, which is a tuple of parameters that can uniquely

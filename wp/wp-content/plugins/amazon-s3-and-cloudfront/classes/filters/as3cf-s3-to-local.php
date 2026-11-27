@@ -2,7 +2,20 @@
 
 use DeliciousBrains\WP_Offload_Media\Items\Item;
 
+// Exit if accessed directly.
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 class AS3CF_S3_To_Local extends AS3CF_Filter {
+
+	/**
+	 * The key used for storing the URL cache.
+	 *
+	 * @var string
+	 */
+	protected static $cache_key = 'as3cf_url_cache_remote';
+
 	/**
 	 * @inheritDoc
 	 */
